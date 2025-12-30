@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LAB007 - Citrix Audit Dashboard</title>
-    <link rel="icon" type="image/png" href="/images/lab007%20Icon.PNG">
-    <link rel="shortcut icon" type="image/png" href="/images/lab007%20Icon.PNG">
-    <link rel="apple-touch-icon" href="/images/lab007%20Icon.PNG">
+    <link rel="icon" type="image/png" href="images/lab007%20Icon.PNG">
+    <link rel="shortcut icon" type="image/png" href="images/lab007%20Icon.PNG">
+    <link rel="apple-touch-icon" href="images/lab007%20Icon.PNG">
     <link rel="stylesheet" href="styles.css">
     <style>
         .upload-container {
@@ -109,7 +109,7 @@
     <div class="container">
         <header>
             <div class="header-content">
-                <img src="/images/LAB007-LOGO-TRANS.png" alt="Lab007 Logo" class="logo">
+                <img src="images/LAB007-LOGO-TRANS.png" alt="Lab007 Logo" class="logo">
                 <div class="header-title">
                     <p class="header-subtitle" style="font-size: 1.5rem; margin: 0;">Citrix Environment Audit Dashboard</p>
                 </div>
@@ -159,10 +159,10 @@
 
             <!-- Quick Links -->
             <div style="margin-top: 40px; text-align: center; padding-top: 20px; border-top: 1px solid #ddd;">
-                <a href="/dashboard" class="btn btn-secondary" style="text-decoration: none; display: inline-block; margin: 5px;">
+                <a href="/citrix/dashboard" class="btn btn-secondary" style="text-decoration: none; display: inline-block; margin: 5px;">
                     View Dashboard
                 </a>
-                <a href="/todo" class="btn btn-secondary" style="text-decoration: none; display: inline-block; margin: 5px;">
+                <a href="/citrix/todo" class="btn btn-secondary" style="text-decoration: none; display: inline-block; margin: 5px;">
                     To-Do Checklist
                 </a>
             </div>
@@ -226,7 +226,7 @@
 
             showStatus('Uploading file...', 'info');
 
-            fetch('/api/upload', {
+            fetch('/citrix/api/upload', {
                 method: 'POST',
                 body: formData
             })
@@ -235,7 +235,7 @@
                 if (data.success) {
                     showStatus('File uploaded successfully! Redirecting to dashboard...', 'success');
                     setTimeout(() => {
-                        window.location.href = '/dashboard';
+                        window.location.href = '/citrix/dashboard';
                     }, 1500);
                 } else {
                     showStatus('Upload failed: ' + (data.error || 'Unknown error'), 'error');
@@ -248,12 +248,12 @@
 
         // Download audit files
         downloadAuditFilesBtn.addEventListener('click', () => {
-            window.location.href = '/api/download-audit-files';
+            window.location.href = '/citrix/api/download-audit-files';
         });
 
         // Load file list
         function loadFileList() {
-            fetch('/api/files')
+            fetch('/citrix/api/files')
                 .then(response => response.json())
                 .then(data => {
                     if (data.files && data.files.length > 0) {
@@ -265,10 +265,10 @@
                                     <div class="file-size">${formatFileSize(file.size)} - ${new Date(file.uploadedAt).toLocaleString()}</div>
                                 </div>
                                 <div>
-                                    <a href="/api/download/${file.filename}" class="btn btn-secondary" style="text-decoration: none; padding: 5px 15px; font-size: 0.9em;">
+                                    <a href="/citrix/api/download/${file.filename}" class="btn btn-secondary" style="text-decoration: none; padding: 5px 15px; font-size: 0.9em;">
                                         Download
                                     </a>
-                                    <a href="/dashboard?file=${file.filename}" class="btn btn-primary" style="text-decoration: none; padding: 5px 15px; font-size: 0.9em; margin-left: 5px;">
+                                    <a href="/citrix/dashboard?file=${file.filename}" class="btn btn-primary" style="text-decoration: none; padding: 5px 15px; font-size: 0.9em; margin-left: 5px;">
                                         View
                                     </a>
                                 </div>
@@ -300,4 +300,3 @@
     </script>
 </body>
 </html>
-
