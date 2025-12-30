@@ -80,8 +80,14 @@ if (fs.existsSync(citrixServerPath)) {
 }
 
 function setupCitrixFallback() {
-    app.use('/citrix', express.static(path.join(__dirname, 'Citrix-Horizon', 'Web')));
+    // Serve static files from Web directory
+    app.use('/citrix', express.static(path.join(__dirname, 'Citrix-Horizon', 'Web'), {
+        index: 'index.html',
+        fallthrough: false
+    }));
     app.use('/citrix/images', express.static(path.join(__dirname, 'Citrix-Horizon', 'images')));
+    
+    // Explicit route for /citrix to serve index.html
     app.get('/citrix', (req, res) => {
         const indexPath = path.join(__dirname, 'Citrix-Horizon', 'Web', 'index.html');
         if (fs.existsSync(indexPath)) {
@@ -90,6 +96,34 @@ function setupCitrixFallback() {
             res.status(404).send('Citrix service not available');
         }
     });
+    
+    // Handle subdirectories - serve index.html for any /citrix/* path
+    app.get('/citrix/*', (req, res) => {
+        const requestedPath = req.path.replace('/citrix', '');
+        const filePath = path.join(__dirname, 'Citrix-Horizon', 'Web', requestedPath);
+        
+        // If it's a directory or root, serve index.html
+        if (requestedPath === '/' || requestedPath === '' || !path.extname(requestedPath)) {
+            const indexPath = path.join(__dirname, 'Citrix-Horizon', 'Web', 'index.html');
+            if (fs.existsSync(indexPath)) {
+                return res.sendFile(indexPath);
+            }
+        }
+        
+        // Otherwise try to serve the requested file
+        if (fs.existsSync(filePath) && fs.statSync(filePath).isFile()) {
+            res.sendFile(filePath);
+        } else {
+            // Fallback to index.html if file doesn't exist
+            const indexPath = path.join(__dirname, 'Citrix-Horizon', 'Web', 'index.html');
+            if (fs.existsSync(indexPath)) {
+                res.sendFile(indexPath);
+            } else {
+                res.status(404).send('File not found');
+            }
+        }
+    });
+    
     app.get('/citrix/dashboard', (req, res) => {
         const indexPath = path.join(__dirname, 'Citrix-Horizon', 'Web', 'index.html');
         if (fs.existsSync(indexPath)) {

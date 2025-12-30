@@ -113,10 +113,8 @@
         .menu-overlay {
             position: fixed;
             top: 0;
-            left: 0;
             right: 0;
-            bottom: 0;
-            width: 100%;
+            width: 50%;
             height: 100%;
             background: rgba(0, 0, 0, 0.95);
             z-index: 1000;
@@ -126,6 +124,7 @@
             align-items: center;
             padding: 20px;
             overflow-y: auto;
+            box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
         }
 
         .menu-overlay.active {
@@ -287,6 +286,7 @@
             <li><a href="/3dprint">3D Print</a></li>
             <li><a href="/webalert">Web-Alerts</a></li>
             <li><a href="/vinvalue">VinValue</a></li>
+            <li><a href="https://lovesailing.ai" target="_blank">LoveSailing</a></li>
             <li><a href="https://lovesailing-chatbot.onrender.com/chat" target="_blank">SailBOT</a></li>
             <li><a href="https://lab007-sail-scanner2.onrender.com/sail-live-scan.html" target="_blank">SailScan</a></li>
         </ul>
@@ -354,12 +354,22 @@
             });
         });
 
-        // Close menu when clicking backdrop
+        // Close menu when clicking backdrop or outside menu
         backdrop.addEventListener('click', function() {
             menuToggle.classList.remove('active');
             menuOverlay.classList.remove('active');
             backdrop.style.display = 'none';
             backdrop.style.visibility = 'hidden';
+        });
+        
+        // Close menu when clicking outside the menu overlay
+        menuOverlay.addEventListener('click', function(e) {
+            if (e.target === menuOverlay) {
+                menuToggle.classList.remove('active');
+                menuOverlay.classList.remove('active');
+                backdrop.style.display = 'none';
+                backdrop.style.visibility = 'hidden';
+            }
         });
 
         // Triangle Animation
