@@ -27,13 +27,6 @@
             margin-top: 40px;
         }
 
-        .webglcanvas {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 0 auto;
-        }
-
         /* Hamburger Menu */
         .menu-toggle {
             position: fixed;
@@ -206,7 +199,21 @@
         </header>
 
         <div class="canvas-container">
-            <canvas id="comp-m02dsi4zwebglcanvas" class="K_YxMd webglcanvas" aria-label="Decorative" role="presentation" data-testid="canvas" style="object-fit: contain; object-position: center center;" width="512" height="480"></canvas>
+            <div id="triAnimWrap" style="position:relative;width:100%;max-width:1200px;aspect-ratio: 16 / 6; margin:0 auto;">
+                <canvas id="triAnim" style="width:100%;height:100%;display:block;"></canvas>
+
+                <!-- Optional speed control UI -->
+                <div id="triAnimControls"
+                     style="position:absolute;right:14px;bottom:14px;background:rgba(255,255,255,.85);
+                            border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:10px 12px;
+                            font:14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#333;">
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <span style="white-space:nowrap;">Speed</span>
+                        <input id="triSpeed" type="range" min="0" max="200" value="50" style="width:160px;">
+                        <span id="triSpeedVal" style="min-width:48px;text-align:right;">0.50×</span>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <footer>
@@ -247,6 +254,137 @@
             menuOverlay.classList.remove('active');
             backdrop.style.display = 'none';
         });
+
+        // Triangle Animation
+        (() => {
+            const wrap = document.getElementById('triAnimWrap');
+            const canvas = document.getElementById('triAnim');
+            const ctx = canvas.getContext('2d', { alpha: false });
+
+            const speedSlider = document.getElementById('triSpeed');
+            const speedVal = document.getElementById('triSpeedVal');
+
+            // --- Config you might tweak ---
+            const DOT_SPACING = 14;      // smaller = denser dots
+            const DOT_RADIUS  = 2;       // dot size
+            const BG_COLOR    = '#ffffff';
+
+            // Two triangle dot colors (subtle tech gray)
+            const C1 = 'rgb(150,160,165)';
+            const C2 = 'rgb(185,192,196)';
+
+            // Motion scale relative to canvas height
+            function triangleBaseSize(h) { return h * 0.42; }
+            function orbitOffset(h)      { return h * 0.10; }
+
+            // Speed multiplier (default: 0.50x -> 50% slower)
+            let speed = 0.50;
+
+            function setSpeedFromSlider() {
+                // slider 0..200 maps to 0.00x .. 2.00x
+                speed = Number(speedSlider.value) / 100;
+                speedVal.textContent = `${speed.toFixed(2)}×`;
+            }
+            setSpeedFromSlider();
+            speedSlider.addEventListener('input', setSpeedFromSlider);
+
+            // Resize canvas to device pixel ratio for crisp dots
+            function resize() {
+                const rect = wrap.getBoundingClientRect();
+                const dpr = Math.max(1, window.devicePixelRatio || 1);
+                canvas.width  = Math.round(rect.width * dpr);
+                canvas.height = Math.round(rect.height * dpr);
+                ctx.setTransform(dpr, 0, 0, dpr, 0, 0); // draw in CSS pixels
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            function triPoints(cx, cy, size, rotDeg) {
+                const pts = [];
+                for (const a of [0, 120, 240]) {
+                    const ang = (a + rotDeg) * Math.PI / 180;
+                    pts.push([cx + Math.cos(ang) * size, cy + Math.sin(ang) * size]);
+                }
+                return pts;
+            }
+
+            // Point-in-triangle using barycentric coordinates
+            function inTri(px, py, p1, p2, p3) {
+                const [x1,y1] = p1, [x2,y2] = p2, [x3,y3] = p3;
+                const denom = (y2 - y3)*(x1 - x3) + (x3 - x2)*(y1 - y3);
+                if (denom === 0) return false;
+                const a = ((y2 - y3)*(px - x3) + (x3 - x2)*(py - y3)) / denom;
+                const b = ((y3 - y1)*(px - x3) + (x1 - x3)*(py - y3)) / denom;
+                const c = 1 - a - b;
+                return a >= 0 && b >= 0 && c >= 0;
+            }
+
+            function drawDottedTriangle(pts, color) {
+                const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
+                const minX = Math.floor(Math.min(...xs));
+                const maxX = Math.ceil(Math.max(...xs));
+                const minY = Math.floor(Math.min(...ys));
+                const maxY = Math.ceil(Math.max(...ys));
+
+                ctx.fillStyle = color;
+
+                for (let x = minX; x <= maxX; x += DOT_SPACING) {
+                    for (let y = minY; y <= maxY; y += DOT_SPACING) {
+                        if (inTri(x, y, pts[0], pts[1], pts[2])) {
+                            ctx.beginPath();
+                            ctx.arc(x, y, DOT_RADIUS, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                }
+            }
+
+            let last = performance.now();
+            let time = 0; // seconds
+
+            function frame(now) {
+                const dt = (now - last) / 1000;
+                last = now;
+
+                // apply speed multiplier (0.50 = 50% slower than 1.0)
+                time += dt * speed;
+
+                const w = wrap.clientWidth;
+                const h = wrap.clientHeight;
+
+                // background
+                ctx.fillStyle = BG_COLOR;
+                ctx.fillRect(0, 0, w, h);
+
+                const cx = w * 0.5;
+                const cy = h * 0.52;
+
+                // "breathing" scale
+                const breathe = 0.85 + 0.25 * Math.sin(time * Math.PI * 2 * 0.20); // slow breathing
+                const base = triangleBaseSize(h);
+
+                // orbit around each other
+                const ox = orbitOffset(h) * Math.sin(time * Math.PI * 2 * 0.25);
+
+                // gentle rotations (counter-rotating)
+                const rot1 = (time * 360 * 0.20) % 360;
+                const rot2 = (-time * 360 * 0.20) % 360;
+
+                const t1 = triPoints(cx - ox, cy, base * breathe, rot1);
+                const t2 = triPoints(cx + ox, cy, base * (1.55 - breathe), rot2);
+
+                // draw order for nice overlap
+                drawDottedTriangle(t2, C2);
+                drawDottedTriangle(t1, C1);
+
+                requestAnimationFrame(frame);
+            }
+
+            requestAnimationFrame(frame);
+
+            // If you want to hide the controls, uncomment:
+            // document.getElementById('triAnimControls').style.display = 'none';
+        })();
     </script>
 </body>
 </html>
