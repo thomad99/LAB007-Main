@@ -35,7 +35,7 @@ app.get('/3dprint/admin', (req, res) => {
 app.use('/citrix', express.static(path.join(__dirname, 'Citrix-Horizon', 'Web')));
 app.use('/citrix/images', express.static(path.join(__dirname, 'Citrix-Horizon', 'images')));
 app.get('/citrix', (req, res) => {
-    res.sendFile(path.join(__dirname, 'Citrix-Horizon', 'Web', 'upload.html'));
+    res.sendFile(path.join(__dirname, 'Citrix-Horizon', 'Web', 'index.html'));
 });
 app.get('/citrix/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'Citrix-Horizon', 'Web', 'index.html'));
