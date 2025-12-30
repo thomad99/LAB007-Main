@@ -62,7 +62,7 @@ document.getElementById('alertForm').addEventListener('submit', async (e) => {
         console.log('Sending form data:', formData);
         statusBox.innerHTML += '<p>📡 Connecting to server...</p>';
         
-        const response = await fetch('/api/monitor', {
+        const response = await fetch('api/monitor', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
