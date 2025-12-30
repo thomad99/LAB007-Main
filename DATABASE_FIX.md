@@ -18,18 +18,28 @@ The database pool needs to be recreated with the correct hostname. To do this:
 
 This will restart the service and recreate the database pool with the current environment variable values.
 
-## Verify Environment Variable
+## Get the Correct Database Hostname
 
-**Before restarting**, verify in Render that `DB_HOST` is set correctly:
+**For Render PostgreSQL databases, you need the INTERNAL hostname** (for services on Render):
 
-1. Go to your service in Render dashboard
+1. Go to your **PostgreSQL database** in Render dashboard (not the web service)
+2. Click on the database name to open it
+3. Go to the **"Info"** or **"Connections"** tab
+4. Look for **"Internal Database URL"** or **"Internal Hostname"**
+5. The hostname should look like: `dpg-xxxxx-xxxxx-xxxxx-a` (ends with `-a`)
+   - It may also include `.render.com` at the end - that's fine, use the full hostname
+   - Example: `dpg-culanb8gph6c73d9j150-a.render.com` or `dpg-culanb8gph6c73d9j150-a`
+
+## Update Environment Variable
+
+1. Go to your **web service** (`lab007-main`) in Render dashboard
 2. Click on **"Environment"** tab
 3. Find `DB_HOST` in the list
-4. Verify it is: `dpg-culanb8gph6c73d9j150-a`
-   - ✅ CORRECT: `dpg-culanb8gph6c73d9j150-a` (has "1" before "50")
-   - ❌ WRONG: `dpg-culanb8gph6c73d9jl50-a` (missing "1")
+4. **Edit** it and paste the correct INTERNAL hostname from your database
+5. Click **"Save Changes"**
+6. **Restart the service** (see instructions above)
 
-If it's wrong, edit it and save, then restart the service.
+**Note:** For services running on Render, always use the INTERNAL hostname (ending with `-a`). External hostnames are only needed if connecting from outside Render.
 
 ## After Restart
 
