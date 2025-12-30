@@ -12,7 +12,7 @@ const quickPresetSelect = document.getElementById('quickPreset');
 // Load settings from server
 async function loadSettings() {
     try {
-        const response = await fetch('/api/settings');
+        const response = await fetch('api/settings');
         const settings = await response.json();
         
         // Populate form fields
@@ -52,7 +52,7 @@ form.addEventListener('submit', async (e) => {
     };
     
     try {
-        const response = await fetch('/api/settings', {
+        const response = await fetch('api/settings', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

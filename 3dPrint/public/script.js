@@ -229,7 +229,7 @@ function uploadFile(file) {
     addDebugLog('Sending POST request to /api/upload...');
     const startTime = Date.now();
     
-    fetch('/api/upload', {
+    fetch('api/upload', {
         method: 'POST',
         body: formData
     })
@@ -436,7 +436,7 @@ async function calculateShipping() {
         calculateShippingBtn.textContent = 'Calculating...';
         
         try {
-            const response = await fetch('/api/recalculate-shipping', {
+            const response = await fetch('api/recalculate-shipping', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -566,7 +566,7 @@ if (orderForm) {
         submitBtn.textContent = 'Submitting...';
         
         try {
-            const response = await fetch('/api/order', {
+            const response = await fetch('api/order', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
