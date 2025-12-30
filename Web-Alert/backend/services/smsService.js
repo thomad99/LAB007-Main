@@ -262,7 +262,15 @@ function formatPhoneNumber(phone) {
 async function sendAlert(phone, websiteUrl) {
     // Check if Twilio client is available
     if (!client) {
-        throw new Error('Twilio client not initialized. Please set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.');
+        console.warn('Twilio client not available. SMS via Twilio is disabled. Falling back to email-to-SMS gateway if available.');
+        // Try email-to-SMS gateway as fallback - it will auto-detect carrier
+        try {
+            return await sendViaEmailGateway(phone, null, `Change detected on ${websiteUrl}`, 'Web Alert: Change Detected');
+        } catch (error) {
+            console.warn('Email-to-SMS gateway also failed:', error.message);
+            // Return a mock success object to avoid breaking the calling code
+            return { status: 'skipped', reason: 'Twilio disabled and email-to-SMS gateway unavailable' };
+        }
     }
     
     try {
@@ -306,7 +314,14 @@ async function sendAlert(phone, websiteUrl) {
 async function sendWelcomeSMS(phone, websiteUrl, duration) {
     // Check if Twilio client is available
     if (!client) {
-        throw new Error('Twilio client not initialized. Please set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.');
+        console.warn('Twilio client not available. SMS via Twilio is disabled. Falling back to email-to-SMS gateway if available.');
+        const message = `🎉 Welcome to Web Alert! We're now monitoring ${websiteUrl} for ${duration} minutes. Checks every 3 min.`;
+        try {
+            return await sendViaEmailGateway(phone, null, message, 'Web Alert: Welcome');
+        } catch (error) {
+            console.warn('Email-to-SMS gateway also failed:', error.message);
+            return { status: 'skipped', reason: 'Twilio disabled and email-to-SMS gateway unavailable' };
+        }
     }
     
     try {
@@ -331,7 +346,17 @@ async function sendWelcomeSMS(phone, websiteUrl, duration) {
 async function sendSummarySMS(phone, websiteUrl, checkCount, changesDetected) {
     // Check if Twilio client is available
     if (!client) {
-        throw new Error('Twilio client not initialized. Please set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.');
+        console.warn('Twilio client not available. SMS via Twilio is disabled. Falling back to email-to-SMS gateway if available.');
+        const summaryText = changesDetected > 0 
+            ? `We detected ${changesDetected} change(s)`
+            : 'No changes were detected';
+        const message = `📊 Monitoring Complete: ${websiteUrl}. ${summaryText}. Total checks: ${checkCount}. Thank you for using Web Alert!`;
+        try {
+            return await sendViaEmailGateway(phone, null, message, 'Web Alert: Monitoring Complete');
+        } catch (error) {
+            console.warn('Email-to-SMS gateway also failed:', error.message);
+            return { status: 'skipped', reason: 'Twilio disabled and email-to-SMS gateway unavailable' };
+        }
     }
     
     try {
