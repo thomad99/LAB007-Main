@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAB007 - Admin Settings</title>
+    <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <img src="/images/3dprintlogo.png" alt="LAB007 AITECH - 3D Print Sarasota" class="logo">
+            <h1>Admin Settings</h1>
+            <p class="subtitle">Manage pricing and calculation parameters</p>
+        </header>
+
+        <main>
+            <form id="settingsForm">
+                <div class="settings-section">
+                    <h2>Pricing Settings</h2>
+                    
+                    <div class="form-group">
+                        <label for="filamentCostPerMeter">
+                            Filament Cost per Meter ($)
+                            <span class="tooltip" title="Cost of filament per meter used">ℹ️</span>
+                        </label>
+                        <input type="number" id="filamentCostPerMeter" step="0.001" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="electricityCostPerMinute">
+                            Electricity Cost per Minute ($)
+                            <span class="tooltip" title="Cost of electricity per minute of printing">ℹ️</span>
+                        </label>
+                        <input type="number" id="electricityCostPerMinute" step="0.0001" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="laborCostFixed">
+                            Labor Cost (Fixed) ($)
+                            <span class="tooltip" title="Fixed labor cost per order">ℹ️</span>
+                        </label>
+                        <input type="number" id="laborCostFixed" step="0.01" min="0" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="postageBaseCost">
+                            Base Postage Cost ($)
+                            <span class="tooltip" title="Base shipping/postage cost">ℹ️</span>
+                        </label>
+                        <input type="number" id="postageBaseCost" step="0.01" min="0" required>
+                    </div>
+                </div>
+
+                <div class="settings-section">
+                    <h2>Print Parameters</h2>
+
+                    <div class="form-group">
+                        <label for="quickPreset">
+                            Quick Preset
+                            <span class="tooltip" title="Apply common slicer-style presets. You can still tweak values after applying.">ℹ️</span>
+                        </label>
+                        <select id="quickPreset">
+                            <option value="">Custom</option>
+                            <option value="draft">Draft (e.g. 0.24mm)</option>
+                            <option value="high">High Quality (e.g. 0.16mm)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="layerHeight">
+                            Layer Height (mm)
+                            <span class="tooltip" title="Default layer height for print time estimation">ℹ️</span>
+                        </label>
+                        <input type="number" id="layerHeight" step="0.1" min="0.1" required>
+                    </div>
+
+                    <div class="form-group two-column">
+                        <div>
+                            <label for="draftLayerHeight">
+                                Draft Layer Height (mm)
+                                <span class="tooltip" title="Layer height for draft/fast prints (used when customer selects Draft).">ℹ️</span>
+                            </label>
+                            <input type="number" id="draftLayerHeight" step="0.01" min="0.1">
+                        </div>
+                        <div>
+                            <label for="highQualityLayerHeight">
+                                High Quality Layer Height (mm)
+                                <span class="tooltip" title="Layer height for high quality prints (used when customer selects High Quality).">ℹ️</span>
+                            </label>
+                            <input type="number" id="highQualityLayerHeight" step="0.01" min="0.05">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="printSpeed">
+                            Print Speed (mm/s)
+                            <span class="tooltip" title="Default print speed for time estimation">ℹ️</span>
+                        </label>
+                        <input type="number" id="printSpeed" step="1" min="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="infillPercentage">
+                            Infill Percentage (%)
+                            <span class="tooltip" title="Default infill percentage for calculations">ℹ️</span>
+                        </label>
+                        <input type="number" id="infillPercentage" step="1" min="0" max="100" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="wallThickness">
+                            Wall Thickness (mm)
+                            <span class="tooltip" title="Default wall thickness">ℹ️</span>
+                        </label>
+                        <input type="number" id="wallThickness" step="0.1" min="0.1" required>
+                    </div>
+                </div>
+
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Save Settings</button>
+                    <button type="button" class="btn btn-secondary" id="resetBtn">Reset to Defaults</button>
+                </div>
+            </form>
+
+            <div class="message" id="message" style="display: none;">
+                <p id="messageText"></p>
+            </div>
+        </main>
+
+        <footer>
+            <a href="/" class="back-link">← Back to Quote Page</a>
+        </footer>
+    </div>
+
+    <script src="admin.js"></script>
+</body>
+</html>
+

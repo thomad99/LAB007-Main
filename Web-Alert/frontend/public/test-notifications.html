@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Notifications - Web-Alert</title>
+    <link rel="stylesheet" href="/src/styles/main.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-control {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            color: white;
+        }
+        .btn-success {
+            background-color: #28a745;
+            color: white;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            color: black;
+        }
+        .btn-info {
+            background-color: #17a2b8;
+            color: white;
+        }
+        .result-box {
+            margin-top: 15px;
+            padding: 15px;
+            border-radius: 4px;
+            display: none;
+        }
+        .result-success {
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .result-error {
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .status-link {
+            display: inline-block;
+            margin-top: 20px;
+            color: #007bff;
+            text-decoration: none;
+            margin-right: 15px;
+        }
+        .status-link:hover {
+            text-decoration: underline;
+        }
+        
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .logo {
+            max-width: 200px;
+            height: auto;
+            margin-bottom: 15px;
+        }
+        
+        .header {
+            text-align: center;
+        }
+
+        .test-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .test-card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+
+        .test-card h3 {
+            margin-top: 0;
+            color: #333;
+        }
+
+        @media (max-width: 768px) {
+            .test-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo-container">
+            <img src="/lab007-trans.png" alt="LAB007 Logo" class="logo">
+        </div>
+        <div class="header">
+            <h1>🧪 Test Notifications</h1>
+            <p>Test the email and SMS notification services directly</p>
+            <a href="/" class="status-link">← Back to Main</a>
+            <a href="/status.html" class="status-link">View Monitoring Status</a>
+        </div>
+
+        <div class="test-grid">
+            <!-- Email Testing Section -->
+            <div class="test-card">
+                <h3>📧 Test Email Service</h3>
+                <p>Test email notifications without monitoring</p>
+                
+                <div class="form-group">
+                    <label for="testEmail">Email Address:</label>
+                    <input type="email" id="testEmail" class="form-control" value="test@example.com" placeholder="Enter email to test">
+                </div>
+                
+                <div class="form-group">
+                    <label for="testEmailSubject">Subject (optional):</label>
+                    <input type="text" id="testEmailSubject" class="form-control" value="Test Email from Web-Alert" placeholder="Custom subject line">
+                </div>
+                
+                <div class="form-group">
+                    <label for="testEmailMessage">Message (optional):</label>
+                    <textarea id="testEmailMessage" class="form-control" rows="3" placeholder="Custom message content">This is a test email from your Web-Alert system to verify the email service is working correctly.</textarea>
+                </div>
+                
+                <button class="btn btn-primary" onclick="testEmail()">Send Test Email</button>
+                <button class="btn btn-warning" onclick="quickTestEmail()">Quick Test</button>
+                
+                <div id="emailResult" class="result-box"></div>
+            </div>
+
+            <!-- SMS Testing Section -->
+            <div class="test-card">
+                <h3>📱 Test SMS Service</h3>
+                <p>Test SMS notifications without monitoring</p>
+                
+                <div style="background-color: #fff3cd; border: 1px solid #ffeaa7; color: #856404; padding: 12px; border-radius: 4px; margin-bottom: 15px; font-size: 0.85em;">
+                    <strong>⚠️ A2P 10DLC Compliance Notice:</strong><br>
+                    This test service uses automated text messaging. Message and data rates may apply. 
+                    By using this test feature, you consent to receive test messages from LAB007 Web Alert System.
+                </div>
+                
+                <div class="form-group">
+                    <label>SMS Service Status:</label>
+                    <div id="smsStatus" class="result-box" style="display: block; margin-bottom: 15px;">
+                        <p>⏳ Checking SMS service status...</p>
+                    </div>
+                </div>
+                
+                <div class="form-group">
+                    <label for="testPhone">Phone Number:</label>
+                    <input type="tel" id="testPhone" class="form-control" value="941 326 9015" placeholder="Enter phone number to test">
+                </div>
+                
+                <div class="form-group">
+                    <label for="testCarrier">Carrier (email-to-SMS):</label>
+                    <select id="testCarrier" class="form-control">
+                        <option value="firstnet">FirstNet (AT&T)</option>
+                        <option value="att">AT&amp;T</option>
+                        <option value="verizon">Verizon</option>
+                        <option value="comcast">Comcast/Xfinity Mobile</option>
+                        <option value="mint">Mint Mobile</option>
+                        <option value="tmobile">T-Mobile</option>
+                        <option value="google fi">Google Fi</option>
+                        <option value="cricket">Cricket</option>
+                        <option value="us cellular">US Cellular</option>
+                        <option value="metro">Metro by T-Mobile</option>
+                        <option value="boost">Boost Mobile</option>
+                        <option value="visible">Visible</option>
+                        <option value="straight talk">Straight Talk</option>
+                        <option value="tracfone">Tracfone</option>
+                        <option value="ting">Ting</option>
+                        <option value="consumer cellular">Consumer Cellular</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label><input type="checkbox" id="preferMms" checked> Prefer MMS gateway (more reliable)</label>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="tryAllGateways"> Try all gateways for this carrier</label>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="blankSubject"> Blank subject (reduce filtering)</label>
+                </div>
+                <div class="form-group">
+                    <label><input type="checkbox" id="shortMessage"> Short message (<=120 chars)</label>
+                </div>
+                
+                <div class="form-group">
+                    <label for="testSMSMessage">Message (optional):</label>
+                    <textarea id="testSMSMessage" class="form-control" rows="3" placeholder="Custom SMS message">This is a test SMS from your Web-Alert system to verify the SMS service is working correctly.</textarea>
+                </div>
+                
+                <button class="btn btn-success" onclick="testSMS()">Send Test SMS (Twilio)</button>
+                <button class="btn btn-warning" onclick="quickTestSMS()">Quick Test</button>
+                <button class="btn btn-primary" onclick="testSMSGateway()">Send via Email-to-SMS Gateway</button>
+                <button class="btn btn-info" onclick="testAllCarriers()">Test All Carriers</button>
+                
+                <div id="smsResult" class="result-box"></div>
+            </div>
+        </div>
+
+        <div class="test-section">
+            <h2>🔗 Quick Test Links</h2>
+            <p>Test both services with default values:</p>
+            
+            <button class="btn btn-info" onclick="testBothServices()">Test Both Services</button>
+            <button class="btn btn-warning" onclick="resetAllForms()">Reset All Forms</button>
+        </div>
+    </div>
+
+    <script>
+        // Check SMS service status on page load
+        async function checkSMSStatus() {
+            try {
+                const response = await fetch('/api/check-sms');
+                const data = await response.json();
+                const statusBox = document.getElementById('smsStatus');
+                
+                if (data.status === 'success' && data.connection.status === 'connected') {
+                    statusBox.className = 'result-box result-success';
+                    statusBox.innerHTML = `
+                        <p>✅ SMS Service: ${data.connection.friendlyName || 'Twilio'}</p>
+                        <p><strong>Status:</strong> ${data.connection.accountStatus}</p>
+                        <p><strong>Phone:</strong> ${data.connection.phoneNumber || 'N/A'}</p>
+                    `;
+                } else {
+                    statusBox.className = 'result-box result-error';
+                    statusBox.innerHTML = `
+                        <p>❌ SMS Service: ${data.error || 'Connection failed'}</p>
+                        <p>Using email-to-SMS gateway fallback</p>
+                    `;
+                }
+            } catch (error) {
+                const statusBox = document.getElementById('smsStatus');
+                statusBox.className = 'result-box result-error';
+                statusBox.innerHTML = `<p>❌ SMS Service: Error checking status</p>`;
+            }
+        }
+
+        // Check status when page loads
+        document.addEventListener('DOMContentLoaded', checkSMSStatus);
+
+        async function testEmail() {
+            const email = document.getElementById('testEmail').value;
+            const subject = document.getElementById('testEmailSubject').value;
+            const message = document.getElementById('testEmailMessage').value;
+            
+            if (!email) {
+                showResult('emailResult', 'error', 'Please enter an email address');
+                return;
+            }
+            
+            const resultBox = document.getElementById('emailResult');
+            resultBox.style.display = 'block';
+            resultBox.className = 'result-box result-success';
+            resultBox.innerHTML = '<p>⏳ Sending test email...</p>';
+            
+            try {
+                const response = await fetch('/api/test-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        subject: subject,
+                        message: message
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultBox.innerHTML = `
+                        <p>✅ Test email sent successfully!</p>
+                        <p><strong>Email ID:</strong> ${data.emailId || 'N/A'}</p>
+                        <p><strong>Status:</strong> ${data.status || 'Sent'}</p>
+                        <p><strong>Message:</strong> ${data.message || 'Email delivered'}</p>
+                    `;
+                } else {
+                    throw new Error(data.error || 'Failed to send test email');
+                }
+            } catch (error) {
+                showResult('emailResult', 'error', `Error sending test email: ${error.message}`);
+            }
+        }
+
+        async function testSMS() {
+            const phone = document.getElementById('testPhone').value;
+            const message = document.getElementById('testSMSMessage').value;
+            
+            if (!phone) {
+                showResult('smsResult', 'error', 'Please enter a phone number');
+                return;
+            }
+            
+            const resultBox = document.getElementById('smsResult');
+            resultBox.style.display = 'block';
+            resultBox.className = 'result-box result-success';
+            resultBox.innerHTML = '<p>⏳ Sending test SMS...</p>';
+            
+            try {
+                const response = await fetch('/api/test-sms', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        phone: phone,
+                        message: message
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    resultBox.innerHTML = `
+                        <p>✅ Test SMS sent successfully via Twilio!</p>
+                        <p><strong>SMS ID:</strong> ${data.smsId || 'N/A'}</p>
+                        <p><strong>Status:</strong> ${data.status || 'Sent'}</p>
+                        <p><strong>Message:</strong> ${data.message || 'SMS delivered'}</p>
+                    `;
+                } else {
+                    throw new Error(data.error || 'Failed to send test SMS');
+                }
+            } catch (error) {
+                showResult('smsResult', 'error', `Error sending test SMS: ${error.message}`);
+            }
+        }
+
+        async function testSMSGateway() {
+            const phone = document.getElementById('testPhone').value;
+            const carrier = document.getElementById('testCarrier').value;
+            const message = document.getElementById('testSMSMessage').value;
+            const preferMms = document.getElementById('preferMms').checked;
+            const tryAll = document.getElementById('tryAllGateways').checked;
+            const blankSubject = document.getElementById('blankSubject').checked;
+            const shortMessage = document.getElementById('shortMessage').checked;
+
+            if (!phone) {
+                showResult('smsResult', 'error', 'Please enter a phone number');
+                return;
+            }
+            if (!carrier) {
+                showResult('smsResult', 'error', 'Please select a carrier');
+                return;
+            }
+
+            const resultBox = document.getElementById('smsResult');
+            resultBox.style.display = 'block';
+            resultBox.className = 'result-box result-success';
+            resultBox.innerHTML = '<p>⏳ Sending test SMS via gateway...</p>';
+
+            try {
+                const response = await fetch('/api/test-sms-gateway', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        phone: phone,
+                        carrier: carrier,
+                        message: message,
+                        preferMms: preferMms,
+                        tryAll: tryAll,
+                        blankSubject: blankSubject,
+                        shortMessage: shortMessage
+                    })
+                });
+
+                const data = await response.json();
+
+                if (response.ok && data.success) {
+                    const r = data.result || {};
+                    if (r.triedAll || r.triedAll === true || r.success === false || Array.isArray(r.attempts)) {
+                        const attempts = (r.attempts || []).map(a => `<li>${a.domain} → ${a.to} : ${a.success ? '✅ ' + (a.messageId || '') : '❌ ' + (a.error || '')}</li>`).join('');
+                        resultBox.innerHTML = `
+                            <p>✅ Gateway test executed.</p>
+                            <p><strong>Carrier:</strong> ${r.carrier || carrier}</p>
+                            <p><strong>Any success:</strong> ${r.success ? 'Yes' : 'No'}</p>
+                            <ul>${attempts}</ul>
+                        `;
+                    } else {
+                        resultBox.innerHTML = `
+                            <p>✅ Test SMS (gateway) sent!</p>
+                            <p><strong>To:</strong> ${r.to || 'N/A'}</p>
+                            <p><strong>Carrier:</strong> ${r.carrier || carrier}</p>
+                            <p><strong>Domain:</strong> ${r.domain || 'N/A'}</p>
+                            <p><strong>Message ID:</strong> ${r.messageId || 'N/A'}</p>
+                            <p><strong>Accepted:</strong> ${(r.accepted && r.accepted.length ? r.accepted.join(', ') : 'N/A')}</p>
+                            <p><strong>Rejected:</strong> ${(r.rejected && r.rejected.length ? r.rejected.join(', ') : 'None')}</p>
+                        `;
+                    }
+                } else {
+                    throw new Error(data.error || 'Failed to send via gateway');
+                }
+            } catch (error) {
+                showResult('smsResult', 'error', `Error sending SMS via gateway: ${error.message}`);
+            }
+        }
+
+        async function testBothServices() {
+            // Test email first
+            await testEmail();
+            
+            // Wait a moment, then test SMS
+            setTimeout(() => {
+                testSMS();
+            }, 1000);
+        }
+
+        function quickTestEmail() {
+            document.getElementById('testEmail').value = 'test@example.com';
+            document.getElementById('testEmailSubject').value = 'Quick Test Email from Web-Alert';
+            document.getElementById('testEmailMessage').value = 'This is a quick test email to verify your email service is working.';
+            testEmail();
+        }
+
+        function quickTestSMS() {
+            document.getElementById('testPhone').value = '941 326 9015';
+            document.getElementById('testSMSMessage').value = 'Quick test SMS from Web-Alert - service verification.';
+            testSMS();
+        }
+
+        function resetAllForms() {
+            // Reset email form
+            document.getElementById('testEmail').value = 'test@example.com';
+            document.getElementById('testEmailSubject').value = 'Test Email from Web-Alert';
+            document.getElementById('testEmailMessage').value = 'This is a test email from your Web-Alert system to verify the email service is working correctly.';
+            
+            // Reset SMS form
+            document.getElementById('testPhone').value = '941 326 9015';
+            document.getElementById('testSMSMessage').value = 'This is a test SMS from your Web-Alert system to verify the SMS service is working correctly.';
+            
+            // Hide all result boxes
+            document.getElementById('emailResult').style.display = 'none';
+            document.getElementById('smsResult').style.display = 'none';
+        }
+
+        async function testAllCarriers() {
+            const phone = document.getElementById('testPhone').value;
+            const message = document.getElementById('testSMSMessage').value;
+            
+            if (!phone) {
+                showResult('smsResult', 'error', 'Please enter a phone number');
+                return;
+            }
+            
+            const resultBox = document.getElementById('smsResult');
+            resultBox.style.display = 'block';
+            resultBox.className = 'result-box result-success';
+            resultBox.innerHTML = '<p>⏳ Testing all carriers (this may take a minute)...</p>';
+            
+            try {
+                const response = await fetch('/api/test-all-carriers', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        phone: phone,
+                        message: message || 'Test'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const successful = data.results.filter(r => r.success);
+                    const failed = data.results.filter(r => !r.success);
+                    
+                    let html = `
+                        <p>✅ All carriers tested!</p>
+                        <p><strong>Summary:</strong> ${successful.length}/${data.results.length} carriers accepted the message</p>
+                        <h4>Successful carriers:</h4>
+                        <ul>
+                    `;
+                    
+                    successful.forEach(r => {
+                        html += `<li><strong>${r.carrier}</strong>: ${r.result.attempts ? r.result.attempts.length : 0} attempts</li>`;
+                    });
+                    
+                    html += '</ul><h4>Failed carriers:</h4><ul>';
+                    
+                    failed.forEach(r => {
+                        html += `<li><strong>${r.carrier}</strong>: ${r.error}</li>`;
+                    });
+                    
+                    html += '</ul>';
+                    resultBox.innerHTML = html;
+                } else {
+                    throw new Error(data.error || 'Failed to test carriers');
+                }
+            } catch (error) {
+                showResult('smsResult', 'error', `Error testing carriers: ${error.message}`);
+            }
+        }
+
+        function showResult(elementId, type, message) {
+            const resultBox = document.getElementById(elementId);
+            resultBox.style.display = 'block';
+            resultBox.className = `result-box result-${type}`;
+            resultBox.innerHTML = `<p>${type === 'error' ? '❌' : '✅'} ${message}</p>`;
+        }
+    </script>
+</body>
+</html>

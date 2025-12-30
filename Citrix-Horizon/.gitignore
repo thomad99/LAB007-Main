@@ -1,0 +1,37 @@
+# Ignore collected data files (keep sample data)
+Data/citrix-*.json
+Data/vmware-*.json
+Data/*.zip
+Data/debug.txt
+Data/citrix-policies-export.txt
+!Data/sample-*.json
+!Data/.gitkeep
+
+# Ignore sensitive configuration files
+lab007-config.json
+*config*.json
+*credential*.json
+*secret*.json
+*token*.txt
+*password*.txt
+
+# Ignore sensitive key files
+*.key
+*.pem
+*.pfx
+*.p12
+
+# Ignore uploaded files on server
+uploads/
+node_modules/
+
+# Ignore OS files
+.DS_Store
+Thumbs.db
+
+# Ignore editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~

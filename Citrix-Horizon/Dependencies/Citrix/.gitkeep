@@ -1,0 +1,3 @@
+# This file ensures the Dependencies/Citrix folder is tracked by Git
+# Place Citrix PowerShell SDK MSI installer files in this folder for automatic installation
+

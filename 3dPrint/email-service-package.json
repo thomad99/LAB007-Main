@@ -1,0 +1,15 @@
+{
+  "name": "email-service",
+  "version": "1.0.0",
+  "description": "Email service for handling SMTP sends from free Render services",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "nodemailer": "^6.9.7"
+  }
+}
+
+

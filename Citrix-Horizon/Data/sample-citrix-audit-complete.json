@@ -1,0 +1,125 @@
+{
+  "CollectionTimestamp": "2024-01-15 10:30:00",
+  "CollectionDate": "2024-01-15",
+  "SiteName": "Example Citrix Site",
+  "LicenseServer": "license.example.com",
+  "TotalPublishedApplications": 25,
+  "Applications": [
+    {
+      "Name": "Microsoft Word",
+      "Uid": 1,
+      "Enabled": true,
+      "PublishedName": "Word",
+      "DesktopGroup": "Office Apps",
+      "Description": "Microsoft Word 2019"
+    },
+    {
+      "Name": "Microsoft Excel",
+      "Uid": 2,
+      "Enabled": true,
+      "PublishedName": "Excel",
+      "DesktopGroup": "Office Apps",
+      "Description": "Microsoft Excel 2019"
+    }
+  ],
+  "TotalPublishedDesktops": 3,
+  "Desktops": [
+    {
+      "Name": "Shared Desktop Pool",
+      "Uid": 1,
+      "Enabled": true,
+      "DesktopKind": "Shared",
+      "SessionSupport": "MultiSession",
+      "TotalMachines": 10,
+      "AvailableCount": 5,
+      "InUseCount": 5,
+      "MaintenanceMode": false
+    }
+  ],
+  "NumberOfCatalogs": 5,
+  "Catalogs": [
+    {
+      "Name": "Office Catalog",
+      "Uid": 1,
+      "AllocationType": "Random",
+      "ProvisioningType": "MCS",
+      "SessionSupport": "MultiSession",
+      "TotalCount": 10,
+      "AvailableCount": 5,
+      "InUseCount": 5,
+      "PersistUserChanges": false
+    }
+  ],
+  "NumberOfDeliveryGroups": 4,
+  "DeliveryGroups": [
+    {
+      "Name": "Office Apps",
+      "Uid": 1,
+      "Enabled": true,
+      "DesktopKind": "Shared",
+      "SessionSupport": "MultiSession",
+      "TotalMachines": 10,
+      "AvailableCount": 5,
+      "InUseCount": 5,
+      "InMaintenanceMode": false
+    }
+  ],
+  "MaxConcurrentUsers_30Days": 150,
+  "UniqueUserConnections_30Days": 85,
+  "LicenseType": "User/Device",
+  "CurrentActiveSessions": 120,
+  "TotalNumberOfServers": 8,
+  "Servers": [
+    {
+      "Name": "CITRIX-VDA-01.example.com",
+      "Uid": 1,
+      "PowerState": "On",
+      "RegistrationState": "Registered",
+      "InMaintenanceMode": false,
+      "DesktopGroup": "Office Apps",
+      "Catalog": "Office Catalog",
+      "TotalRAM_GB": 32.0,
+      "AvailableRAM_GB": 8.5,
+      "OSVersion": "Microsoft Windows Server 2019 Datacenter",
+      "CPUCount": 2,
+      "CPUCores": 16,
+      "CPULogicalProcessors": 32,
+      "CPUName": "Intel Xeon Processor",
+      "DiskTotalSize_GB": 500.0,
+      "DiskFreeSpace_GB": 250.0,
+      "DiskUsedSpace_GB": 250.0
+    },
+    {
+      "Name": "CITRIX-VDA-02.example.com",
+      "Uid": 2,
+      "PowerState": "On",
+      "RegistrationState": "Registered",
+      "InMaintenanceMode": false,
+      "DesktopGroup": "Office Apps",
+      "Catalog": "Office Catalog",
+      "TotalRAM_GB": 32.0,
+      "AvailableRAM_GB": 10.2,
+      "OSVersion": "Microsoft Windows Server 2019 Datacenter",
+      "CPUCount": 2,
+      "CPUCores": 16,
+      "CPULogicalProcessors": 32,
+      "CPUName": "Intel Xeon Processor",
+      "DiskTotalSize_GB": 500.0,
+      "DiskFreeSpace_GB": 275.5,
+      "DiskUsedSpace_GB": 224.5
+    }
+  ],
+  "Summary": {
+    "SiteName": "Example Citrix Site",
+    "TotalPublishedApplications": 25,
+    "TotalPublishedDesktops": 3,
+    "NumberOfCatalogs": 5,
+    "NumberOfDeliveryGroups": 4,
+    "MaxConcurrentUsers_30Days": 150,
+    "UniqueUserConnections_30Days": 85,
+    "LicenseType": "User/Device",
+    "TotalNumberOfServers": 8,
+    "CollectionTimestamp": "2024-01-15 10:30:00"
+  }
+}
+

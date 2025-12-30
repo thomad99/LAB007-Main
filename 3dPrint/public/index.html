@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Primary Meta Tags -->
+    <!-- NOTE: Update all domain URLs (lab007-3dprint.onrender.com) with your actual Render domain after deployment -->
+    <title>3D Printing Online Quote & Pricing Calculator | LAB007 AITECH | Sarasota, Florida</title>
+    <meta name="title" content="3D Printing Online Quote & Pricing Calculator | LAB007 AITECH | Sarasota, Florida">
+    <meta name="description" content="Get instant 3D printing quotes online. Upload your CAD files (STL, OBJ, 3MF) and receive real-time pricing for 3D printing services in Sarasota, Florida. Fast, accurate quotes with detailed cost breakdown.">
+    <meta name="keywords" content="3d printing online quote, 3d printing pricing, 3d printing quote calculator, 3d printing services Sarasota, 3d printing Florida, online 3d printing quote, instant 3d printing price, cad file quote, stl file pricing, 3d print cost calculator, lab007, sarasota 3d printing">
+    <meta name="author" content="LAB007 AITECH">
+    <meta name="robots" content="index, follow">
+    <meta name="language" content="English">
+    <meta name="revisit-after" content="7 days">
+    <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
+    <link rel="canonical" href="https://lab007-3dprint.onrender.com/">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://lab007-3dprint.onrender.com/">
+    <meta property="og:title" content="3D Printing Online Quote & Pricing Calculator | LAB007 AITECH">
+    <meta property="og:description" content="Get instant 3D printing quotes online. Upload your CAD files and receive real-time pricing for 3D printing services in Sarasota, Florida.">
+    <meta property="og:image" content="https://lab007-3dprint.onrender.com/images/LAB007-Logo-Trans.png">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:site_name" content="LAB007 AITECH">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://lab007-3dprint.onrender.com/">
+    <meta property="twitter:title" content="3D Printing Online Quote & Pricing Calculator | LAB007 AITECH">
+    <meta property="twitter:description" content="Get instant 3D printing quotes online. Upload your CAD files and receive real-time pricing for 3D printing services in Sarasota, Florida.">
+    <meta property="twitter:image" content="https://lab007-3dprint.onrender.com/images/LAB007-Logo-Trans.png">
+    
+    <!-- Geo Tags -->
+    <meta name="geo.region" content="US-FL">
+    <meta name="geo.placename" content="Sarasota">
+    <meta name="geo.position" content="27.3364;-82.5307">
+    <meta name="ICBM" content="27.3364, -82.5307">
+    
+    <!-- Structured Data (JSON-LD) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "LocalBusiness",
+      "name": "LAB007 AITECH",
+      "image": "https://lab007-3dprint.onrender.com/images/LAB007-Logo-Trans.png",
+      "@id": "https://lab007-3dprint.onrender.com",
+      "url": "https://lab007-3dprint.onrender.com",
+      "telephone": "",
+      "priceRange": "$$",
+      "address": {
+        "@type": "PostalAddress",
+        "addressLocality": "Sarasota",
+        "addressRegion": "FL",
+        "addressCountry": "US"
+      },
+      "geo": {
+        "@type": "GeoCoordinates",
+        "latitude": 27.3364,
+        "longitude": -82.5307
+      },
+      "openingHoursSpecification": {
+        "@type": "OpeningHoursSpecification",
+        "dayOfWeek": [
+          "Monday",
+          "Tuesday",
+          "Wednesday",
+          "Thursday",
+          "Friday"
+        ],
+        "opens": "09:00",
+        "closes": "17:00"
+      },
+      "sameAs": [],
+      "hasOfferCatalog": {
+        "@type": "OfferCatalog",
+        "name": "3D Printing Services",
+        "itemListElement": [
+          {
+            "@type": "Offer",
+            "itemOffered": {
+              "@type": "Service",
+              "name": "3D Printing Quote Service",
+              "description": "Instant online quotes for 3D printing services. Upload CAD files (STL, OBJ, 3MF) and receive real-time pricing with detailed cost breakdown."
+            }
+          }
+        ]
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "Service",
+      "serviceType": "3D Printing Services",
+      "provider": {
+        "@type": "LocalBusiness",
+        "name": "LAB007 AITECH",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Sarasota",
+          "addressRegion": "FL",
+          "addressCountry": "US"
+        }
+      },
+      "areaServed": {
+        "@type": "City",
+        "name": "Sarasota",
+        "containedIn": {
+          "@type": "State",
+          "name": "Florida"
+        }
+      },
+      "description": "Professional 3D printing services with instant online quotes. Upload your CAD files and get accurate pricing for filament, labor, electricity, and shipping costs.",
+      "offers": {
+        "@type": "Offer",
+        "description": "Instant 3D printing quotes with detailed cost breakdown"
+      }
+    }
+    </script>
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "LAB007 3D Print Quote Calculator",
+      "applicationCategory": "BusinessApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "description": "Free online tool to get instant quotes for 3D printing services. Upload CAD files and calculate pricing based on volume, print time, and material costs."
+    }
+    </script>
+    
+    <link rel="stylesheet" href="styles.css">
+    <!-- Three.js for 3D rendering -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script>
+    // Load STLLoader, OBJLoader, and OrbitControls after Three.js loads
+    (function() {
+        // STLLoader
+        const script1 = document.createElement('script');
+        script1.src = 'https://threejs.org/examples/js/loaders/STLLoader.js';
+        script1.onerror = function() {
+            const fallback = document.createElement('script');
+            fallback.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/STLLoader.js';
+            document.head.appendChild(fallback);
+        };
+        document.head.appendChild(script1);
+        
+        // OBJLoader
+        const scriptObj = document.createElement('script');
+        scriptObj.src = 'https://threejs.org/examples/js/loaders/OBJLoader.js';
+        scriptObj.onerror = function() {
+            const fallback = document.createElement('script');
+            fallback.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/OBJLoader.js';
+            document.head.appendChild(fallback);
+        };
+        document.head.appendChild(scriptObj);
+        
+        // OrbitControls
+        const script2 = document.createElement('script');
+        script2.src = 'https://threejs.org/examples/js/controls/OrbitControls.js';
+        script2.onerror = function() {
+            const fallback = document.createElement('script');
+            fallback.src = 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js';
+            document.head.appendChild(fallback);
+        };
+        document.head.appendChild(script2);
+    })();
+    </script>
+</head>
+<body>
+    <header>
+        <img src="/images/LAB007-3D-Print-Header.png" alt="LAB007 - 3D Print Services" class="logo" onload="if(typeof addDebugLog==='function') addDebugLog('Header logo loaded successfully');" onerror="if(typeof addDebugLog==='function') addDebugLog('Header logo failed to load from /images/LAB007-3D-Print-Header.png', 'error');">
+        <p class="subtitle">Get an instant online quote for your 3D printing project</p>
+    </header>
+    <div class="container">
+        <main>
+            <div class="upload-section">
+                <div class="upload-box" id="uploadBox">
+                    <input type="file" id="fileInput" accept=".stl,.obj,.3mf" hidden>
+                    <div class="upload-content">
+                        <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <h2>Upload Your CAD File</h2>
+                        <p>Drag and drop your file here or click to browse</p>
+                        <p class="file-types">Supported formats: STL, OBJ, 3MF</p>
+                    </div>
+                </div>
+                <div class="file-info" id="fileInfo" style="display: none;">
+                    <p><strong>File:</strong> <span id="fileName"></span></p>
+                    <button class="btn btn-secondary" id="removeFile">Remove</button>
+                </div>
+                
+                <!-- 3D Preview Section -->
+                <div class="preview-section" id="previewSection" style="display: none;">
+                    <h3>3D Model Preview</h3>
+                    <p class="preview-hint">Drag to rotate • Scroll to zoom • Right-click to pan</p>
+                    <div id="viewer3d" class="viewer-3d"></div>
+                </div>
+            </div>
+
+            <div class="results-section" id="resultsSection" style="display: none;">
+                <h2>Quote Details</h2>
+                <div class="quote-card">
+                    <div class="quality-select quality-select-inline">
+                        <span class="quality-label">Print quality</span>
+                        <div class="quality-buttons">
+                            <button type="button" id="qualityDraftBtn" class="quality-btn active" title="Layer height: 0.24mm">Draft (0.24mm)</button>
+                            <button type="button" id="qualityHighBtn" class="quality-btn" title="Layer height: 0.10mm">High Quality (0.10mm)</button>
+                        </div>
+                    </div>
+                    <div class="quote-row">
+                        <span class="label">Volume:</span>
+                        <span class="value" id="volumeValue">-</span>
+                    </div>
+                    <div class="quote-row">
+                        <span class="label">Estimated Print Time:</span>
+                        <span class="value" id="printTimeValue">-</span>
+                    </div>
+                    <div class="quote-row">
+                        <span class="label">Postage:</span>
+                        <span class="value">Calculated at next step</span>
+                    </div>
+                    <div class="quote-divider"></div>
+                    <div class="quote-row total">
+                        <span class="label">Total Price:</span>
+                        <span class="value total-price">$<span id="totalPrice">0.00</span></span>
+                    </div>
+                    <!-- Hidden fields for detailed breakdown (used in email) -->
+                    <div style="display: none;">
+                        <span id="filamentValue">-</span>
+                        <span id="filamentWeightValue">-</span>
+                        <span id="filamentCost">0.00</span>
+                        <span id="electricityCost">0.00</span>
+                        <span id="laborCost">0.00</span>
+                        <span id="postageCost">0.00</span>
+                        <span id="subtotal">0.00</span>
+                    </div>
+                    <div class="quote-actions">
+                        <button class="btn btn-primary btn-order" id="orderNowBtn">Calculate Shipping</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Order Modal -->
+            <div class="modal" id="orderModal" style="display: none;">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>Place Your Order</h3>
+                        <button class="modal-close" id="closeModal">&times;</button>
+                    </div>
+                    <div class="modal-body">
+                        <p class="modal-info">Please provide your contact information. We will review your quote and get back to you with a payment link.</p>
+                        <form id="orderForm">
+                            <div class="form-group">
+                                <label for="customerName">Your Name *</label>
+                                <input type="text" id="customerName" name="customerName" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="customerEmail">Your Email *</label>
+                                <input type="email" id="customerEmail" name="customerEmail" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="quantity">Quantity *</label>
+                                <input type="number" id="quantity" name="quantity" min="1" value="1" required>
+                                <small class="form-hint">Shipping cost doubles for quantities above 5</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="colorChoice">Color Choice *</label>
+                                <select id="colorChoice" name="colorChoice" required>
+                                    <option value="">Select a color</option>
+                                    <option value="Black">Black</option>
+                                    <option value="Grey">Grey</option>
+                                    <option value="White">White</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="shippingOption">Shipping Option *</label>
+                                <div class="radio-group">
+                                    <label class="radio-label">
+                                        <input type="radio" name="shippingOption" id="shippingOptionShip" value="ship" checked>
+                                        <span>Shipping</span>
+                                    </label>
+                                    <label class="radio-label">
+                                        <input type="radio" name="shippingOption" id="shippingOptionCollection" value="collection">
+                                        <span>Collection</span>
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="form-group" id="zipcodeGroup">
+                                <label for="customerZip">Your Zipcode *</label>
+                                <div style="display: flex; gap: 10px;">
+                                    <input type="text" id="customerZip" name="customerZip" pattern="[0-9]{5}" maxlength="5" placeholder="34238" required style="flex: 1;">
+                                    <button type="button" id="calculateShippingBtn" class="btn btn-secondary" style="white-space: nowrap;">Calculate Shipping</button>
+                                </div>
+                                <small class="form-hint">Enter your 5-digit zipcode for shipping cost calculation</small>
+                            </div>
+                            <div class="form-group" id="shippingResult" style="display: none;">
+                                <div style="background: #f5f5f5; padding: 15px; border-radius: 6px; margin-top: 10px;">
+                                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                                        <span><strong>Shipping Cost:</strong></span>
+                                        <span id="calculatedShippingCost">$0.00</span>
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 1.1em; padding-top: 10px; border-top: 1px solid #ddd;">
+                                        <span><strong>Grand Total:</strong></span>
+                                        <span id="grandTotal" style="color: var(--primary-color); font-weight: bold;">$0.00</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary">Submit Order</button>
+                                <button type="button" class="btn btn-secondary" id="cancelOrder">Cancel</button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <div class="loading" id="loading" style="display: none;">
+                <div class="loading-content">
+                    <div class="spinner"></div>
+                    <div class="loading-steps">
+                        <div class="step active" id="step1">
+                            <span class="step-icon">📤</span>
+                            <span class="step-text">Uploading file...</span>
+                        </div>
+                        <div class="step" id="step2">
+                            <span class="step-icon">📐</span>
+                            <span class="step-text">Calculating volume...</span>
+                        </div>
+                        <div class="step" id="step3">
+                            <span class="step-icon">⏱️</span>
+                            <span class="step-text">Estimating print time...</span>
+                        </div>
+                        <div class="step" id="step4">
+                            <span class="step-icon">💰</span>
+                            <span class="step-text">Calculating pricing...</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="error" id="error" style="display: none;">
+                <p id="errorMessage"></p>
+            </div>
+
+            <section class="seo-content" aria-label="About our 3D printing services">
+                <h2>Professional 3D Printing Services in Sarasota, Florida</h2>
+                <p>LAB007 AITECH offers professional 3D printing services with instant online quotes. Our online quote calculator provides accurate pricing for your 3D printing projects based in Sarasota, Florida. Simply upload your CAD files (STL, OBJ, or 3MF format) and receive a detailed cost breakdown including filament usage, print time, labor costs, and shipping.</p>
+                <p>Whether you need rapid prototyping, custom parts, or small batch production, our 3D printing quote system gives you transparent pricing instantly. Our calculator factors in material costs, electricity, labor, and postage to provide you with a complete quote for your 3D printing needs in the Sarasota area.</p>
+            </section>
+        </main>
+
+        <footer>
+            <div class="footer-brand">
+                <img src="/images/LAB007-LOGO-T.png" alt="LAB007 AITECH" class="footer-logo">
+            </div>
+            <p>&copy; 2025 LAB007 AITECH. All rights reserved.</p>
+            <p class="footer-location">3D Printing Services in Sarasota, Florida | Instant Online Quotes & Pricing</p>
+            <p class="footer-location">Contact: <a href="mailto:info@lab007.ai">info@lab007.ai</a></p>
+            <a href="/admin" class="admin-link">Admin</a>
+        </footer>
+    </div>
+
+    <script src="viewer3d.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAB007 Discovery Tools - Citrix Environment Audit Dashboard</title>
+    <link rel="icon" type="image/png" href="images/lab007%20Icon.PNG">
+    <link rel="shortcut icon" type="image/png" href="images/lab007%20Icon.PNG">
+    <link rel="apple-touch-icon" href="images/lab007%20Icon.PNG">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <img src="images/LAB007-LOGO-GOLD.png" alt="LAB007 Logo" class="logo" style="opacity: 1;">
+                <div class="header-title">
+                    <p class="header-subtitle" style="margin: 0;">
+                        <span class="header-title-main">Citrix Environment</span><br>
+                        <span class="header-title-sub">Audit Dashboard</span>
+                    </p>
+                </div>
+            </div>
+            <div class="refresh-controls">
+                <a href="/api/download-audit-files" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Download Tools</a>
+                <a href="/todo" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">To-Do List</a>
+                <button id="loadFileBtn" class="btn btn-primary">Load Audit Data</button>
+                <input type="file" id="fileInput" accept=".json" style="display: none;">
+            </div>
+        </header>
+
+        <div id="loadingIndicator" class="loading">
+            <img src="images/LAB007-Loader.png" alt="Loading..." class="loader-spinner">
+            <p id="loadingText" class="loading-text">Awaiting your command</p>
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+        <div id="dashboard" style="display: none;">
+            <!-- Global Search -->
+            <section class="global-search-section">
+                <div class="global-search-container">
+                    <input type="text" id="globalSearch" placeholder="Search across all data..." class="global-search-input">
+                    <button id="clearSearchBtn" class="btn btn-secondary" style="display: none;" onclick="clearGlobalSearch()">Clear</button>
+                </div>
+                <div id="searchResults" class="search-results" style="display: none;"></div>
+            </section>
+
+            <!-- Summary Cards -->
+            <section class="summary-section">
+                <h2>Environment Overview</h2>
+                <div class="cards-grid">
+                    <div class="card">
+                        <div class="card-content">
+                            <h3>Site Name</h3>
+                            <p class="card-value" id="siteName">-</p>
+                        </div>
+                    </div>
+                    <div class="card clickable-card" id="appsCard" onclick="showAppDetails()" style="cursor: pointer;">
+                        <div class="card-content">
+                            <h3>Published Applications</h3>
+                            <p class="card-value" id="totalApps">-</p>
+                        </div>
+                    </div>
+                    <div class="card clickable-card" id="desktopsCard" onclick="showDesktopList()" style="cursor: pointer;">
+                        <div class="card-content">
+                            <h3>Published Desktops</h3>
+                            <p class="card-value" id="totalDesktops">-</p>
+                        </div>
+                    </div>
+                    <div class="card clickable-card" id="usersCard" onclick="showUserList()" style="cursor: pointer;">
+                        <div class="card-content">
+                            <h3>Max Concurrent Users (30d)</h3>
+                            <p class="card-value" id="maxConcurrent">-</p>
+                        </div>
+                    </div>
+                    <div class="card clickable-card" id="catalogsCard" onclick="showCatalogList()" style="cursor: pointer;">
+                        <div class="card-content">
+                            <h3>Catalogs</h3>
+                            <p class="card-value" id="numCatalogs">-</p>
+                        </div>
+                    </div>
+                    <div class="card clickable-card" id="deliveryGroupsCard" onclick="showDeliveryGroupList()" style="cursor: pointer;">
+                        <div class="card-content">
+                            <h3>Delivery Groups</h3>
+                            <p class="card-value" id="numDeliveryGroups">-</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-content">
+                            <h3>Unique Users (30d)</h3>
+                            <p class="card-value" id="uniqueUsers">-</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-content">
+                            <h3>Total Servers</h3>
+                            <p class="card-value" id="totalServers">-</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-content">
+                            <h3>License Type</h3>
+                            <p class="card-value" id="licenseType">-</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-content">
+                            <h3>Controllers</h3>
+                            <p class="card-value" id="controllerCount">-</p>
+                        </div>
+                    </div>
+                    <div class="card clickable-card" id="masterImagesCard" onclick="showMasterImagesList()" style="cursor: pointer;">
+                        <div class="card-content">
+                            <h3>Master Images</h3>
+                            <p class="card-value" id="totalMasterImages">-</p>
+                        </div>
+                    </div>
+                    <div class="card clickable-card" id="storefrontStoresCard" onclick="showStoreFrontStoresList()" style="cursor: pointer;">
+                        <div class="card-content">
+                            <h3>StoreFront Stores</h3>
+                            <p class="card-value" id="totalStoreFrontStores">-</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Servers Section -->
+            <section class="servers-section collapsible collapsed">
+                <div class="section-header">
+                    <h2>Server Details</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-secondary section-toggle-btn" onclick="toggleSection(this)" aria-label="Toggle section">▼</button>
+                        <button class="btn btn-primary" onclick="exportServersCSV()">Export CSV</button>
+                    </div>
+                </div>
+                <div class="section-body">
+                    <div class="search-filter">
+                        <input type="text" id="serverSearch" placeholder="Search servers..." class="search-input">
+                    </div>
+                    <div class="table-container">
+                        <table id="serversTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="0">Server Name</th>
+                                    <th class="sortable" data-column="1">Power State</th>
+                                    <th class="sortable" data-column="2">Registration State</th>
+                                    <th class="sortable" data-column="3">Total RAM (GB)</th>
+                                    <th class="sortable" data-column="4">CPU Cores</th>
+                                    <th class="sortable" data-column="5">CPU Logical</th>
+                                    <th class="sortable" data-column="6">Disk Total (GB)</th>
+                                    <th class="sortable" data-column="7">Disk Free (GB)</th>
+                                    <th class="sortable" data-column="8">OS Version</th>
+                                    <th class="sortable" data-column="9">Desktop Group</th>
+                                    <th class="sortable" data-column="10">Specs Source</th>
+                                </tr>
+                            </thead>
+                            <tbody id="serversTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Applications Section -->
+            <section class="applications-section collapsible collapsed">
+                <div class="section-header">
+                    <h2>Published Applications</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-secondary section-toggle-btn" onclick="toggleSection(this)" aria-label="Toggle section">▼</button>
+                        <button class="btn btn-primary" onclick="exportAppsCSV()">Export CSV</button>
+                    </div>
+                </div>
+                <div class="section-body">
+                    <div class="search-filter">
+                        <input type="text" id="appSearch" placeholder="Search applications..." class="search-input">
+                    </div>
+                    <div class="table-container">
+                        <table id="appsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="0">Application Name</th>
+                                    <th class="sortable" data-column="1">Published Name</th>
+                                    <th class="sortable" data-column="2">Desktop Group</th>
+                                    <th class="sortable" data-column="3">Enabled</th>
+                                    <th class="sortable" data-column="4">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody id="appsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Delivery Groups Section -->
+            <section class="delivery-groups-section collapsible collapsed">
+                <div class="section-header">
+                    <h2>Delivery Groups</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-secondary section-toggle-btn" onclick="toggleSection(this)" aria-label="Toggle section">▼</button>
+                        <button class="btn btn-primary" onclick="exportDeliveryGroupsCSV()">Export CSV</button>
+                    </div>
+                </div>
+                <div class="section-body">
+                    <div class="table-container">
+                        <table id="deliveryGroupsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="0">Name</th>
+                                    <th class="sortable" data-column="1">Desktop Kind</th>
+                                    <th class="sortable" data-column="2">Session Support</th>
+                                    <th class="sortable" data-column="3">Total Machines</th>
+                                    <th class="sortable" data-column="4">Available</th>
+                                    <th class="sortable" data-column="5">In Use</th>
+                                    <th class="sortable" data-column="6">Total Applications</th>
+                                    <th class="sortable" data-column="7">Restart Schedule</th>
+                                    <th class="sortable" data-column="8">Maintenance Mode</th>
+                                    <th class="sortable" data-column="9">Enabled</th>
+                                </tr>
+                            </thead>
+                            <tbody id="deliveryGroupsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Catalogs Section -->
+            <section class="catalogs-section collapsible collapsed">
+                <div class="section-header">
+                    <h2>Machine Catalogs</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-secondary section-toggle-btn" onclick="toggleSection(this)" aria-label="Toggle section">▼</button>
+                        <button class="btn btn-primary" onclick="exportCatalogsCSV()">Export CSV</button>
+                    </div>
+                </div>
+                <div class="section-body">
+                    <div class="table-container">
+                        <table id="catalogsTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="0">Name</th>
+                                    <th class="sortable" data-column="1">Allocation Type</th>
+                                    <th class="sortable" data-column="2">Provisioning Type</th>
+                                    <th class="sortable" data-column="3">Session Support</th>
+                                    <th class="sortable" data-column="4">Total Count</th>
+                                    <th class="sortable" data-column="5">Available</th>
+                                    <th class="sortable" data-column="6">In Use</th>
+                                    <th class="sortable" data-column="7">Persist User Changes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="catalogsTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Policies Section -->
+            <section class="policies-section collapsible collapsed">
+                <div class="section-header">
+                    <h2>Citrix Policies</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-secondary section-toggle-btn" onclick="toggleSection(this)" aria-label="Toggle section">▼</button>
+                        <button class="btn btn-primary" onclick="exportPoliciesCSV()">Export CSV</button>
+                    </div>
+                </div>
+                <div class="section-body">
+                    <div class="table-container">
+                        <table id="policiesTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="0">Name</th>
+                                    <th class="sortable" data-column="1">Enabled</th>
+                                    <th class="sortable" data-column="2">Priority</th>
+                                    <th class="sortable" data-column="3">Is Assigned</th>
+                                    <th class="sortable" data-column="4">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody id="policiesTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Roles Section -->
+            <section class="roles-section collapsible collapsed">
+                <div class="section-header">
+                    <h2>Management Roles & AD Groups</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-secondary section-toggle-btn" onclick="toggleSection(this)" aria-label="Toggle section">▼</button>
+                        <button class="btn btn-primary" onclick="exportRolesCSV()">Export CSV</button>
+                    </div>
+                </div>
+                <div class="section-body">
+                    <div class="table-container">
+                        <table id="rolesTable" class="data-table">
+                            <thead>
+                                <tr>
+                                    <th class="sortable" data-column="0">Role Name</th>
+                                    <th class="sortable" data-column="1">Description</th>
+                                    <th class="sortable" data-column="2">Is Built-In</th>
+                                    <th class="sortable" data-column="3">AD Groups</th>
+                                    <th class="sortable" data-column="4">Users</th>
+                                    <th class="sortable" data-column="5">Scopes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rolesTableBody">
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Modal for Catalog List -->
+    <div id="catalogModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeCatalogModal()">&times;</span>
+            <h2>All Catalog Names</h2>
+            <div id="catalogListContent"></div>
+        </div>
+    </div>
+
+    <!-- Modal for Desktop List -->
+    <div id="desktopsModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeDesktopsModal()">&times;</span>
+            <h2>Published Desktops</h2>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Desktop Kind</th>
+                            <th>Session Support</th>
+                            <th>Total Machines</th>
+                            <th>Available</th>
+                            <th>In Use</th>
+                            <th>Maintenance Mode</th>
+                            <th>Enabled</th>
+                        </tr>
+                    </thead>
+                    <tbody id="desktopsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Delivery Group List -->
+    <div id="deliveryGroupsModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 95%; width: 95%;">
+            <span class="modal-close" onclick="closeDeliveryGroupsModal()">&times;</span>
+            <h2>Delivery Groups</h2>
+            <div class="table-container">
+                <table id="deliveryGroupsModalTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-column="0">Name</th>
+                            <th class="sortable" data-column="1">Desktop Kind</th>
+                            <th class="sortable" data-column="2">Session Support</th>
+                            <th class="sortable" data-column="3">Total Machines</th>
+                            <th class="sortable" data-column="4">Available</th>
+                            <th class="sortable" data-column="5">In Use</th>
+                            <th class="sortable" data-column="6">Total Applications</th>
+                            <th class="sortable" data-column="7">Restart Schedule</th>
+                            <th class="sortable" data-column="8">Maintenance Mode</th>
+                            <th class="sortable" data-column="9">Enabled</th>
+                        </tr>
+                    </thead>
+                    <tbody id="deliveryGroupsModalTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for User List -->
+    <div id="usersModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <span class="modal-close" onclick="closeUsersModal()">&times;</span>
+            <h2>User Connections (30 days)</h2>
+            <div id="usersListContent"></div>
+        </div>
+    </div>
+
+    <!-- Modal for Master Images -->
+    <div id="masterImagesModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 95%;">
+            <span class="modal-close" onclick="closeMasterImagesModal()">&times;</span>
+            <h2>Master Images</h2>
+            <div class="table-container">
+                <table id="masterImagesTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-column="0">Image Machine Name</th>
+                            <th class="sortable" data-column="1">Latest Snapshot Name</th>
+                            <th class="sortable" data-column="2">Cluster Name</th>
+                            <th class="sortable" data-column="3">Catalogs Using This Image</th>
+                        </tr>
+                    </thead>
+                    <tbody id="masterImagesTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for StoreFront Stores -->
+    <div id="storeFrontStoresModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 90%;">
+            <span class="modal-close" onclick="closeStoreFrontStoresModal()">&times;</span>
+            <h2>StoreFront Stores</h2>
+            <div class="table-container">
+                <table id="storeFrontStoresTable" class="data-table">
+                    <thead>
+                        <tr>
+                            <th class="sortable" data-column="0">Store Name</th>
+                            <th class="sortable" data-column="1">Base URL</th>
+                            <th class="sortable" data-column="2">Farm Name</th>
+                            <th class="sortable" data-column="3">Virtual Path</th>
+                            <th>Details</th>
+                        </tr>
+                    </thead>
+                    <tbody id="storeFrontStoresTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for App Details -->
+    <div id="appModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 90%;">
+            <span class="modal-close" onclick="closeAppModal()">&times;</span>
+            <h2>Application Details</h2>
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Application Name</th>
+                            <th>Published Name</th>
+                            <th>Run Path</th>
+                            <th>Arguments</th>
+                            <th>Working Directory</th>
+                            <th>Assigned Users</th>
+                            <th>Assigned Groups</th>
+                            <th>Desktop Group</th>
+                            <th>Enabled</th>
+                        </tr>
+                    </thead>
+                    <tbody id="appDetailsBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="footer-content">
+            <img src="images/LAB007-LOGO-TRANS.png" alt="LAB007 Logo" class="footer-logo">
+            <p class="footer-text">
+                Copyright 2025 - LAB007.AI All rights reserved. See <a href="https://www.lab007.ai" target="_blank">www.lab007.ai</a> for Conditions of use.
+            </p>
+        </div>
+    </footer>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
+

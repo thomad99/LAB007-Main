@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAB007 - Citrix Audit Dashboard</title>
+    <link rel="icon" type="image/png" href="/images/lab007%20Icon.PNG">
+    <link rel="shortcut icon" type="image/png" href="/images/lab007%20Icon.PNG">
+    <link rel="apple-touch-icon" href="/images/lab007%20Icon.PNG">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .upload-container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 30px;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        .upload-section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 2px dashed #4a90e2;
+            border-radius: 8px;
+            text-align: center;
+            background: #f8f9fa;
+        }
+        .upload-section.drag-over {
+            border-color: #2ecc71;
+            background: #e8f5e9;
+        }
+        .file-input-wrapper {
+            position: relative;
+            display: inline-block;
+            margin: 20px 0;
+        }
+        .file-input-wrapper input[type="file"] {
+            position: absolute;
+            opacity: 0;
+            width: 100%;
+            height: 100%;
+            cursor: pointer;
+        }
+        .file-input-button {
+            display: inline-block;
+            padding: 12px 24px;
+            background: #4a90e2;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+        .file-input-button:hover {
+            background: #357abd;
+        }
+        .download-section {
+            margin-top: 40px;
+            padding: 20px;
+            background: #f0f7ff;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .file-list {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .file-item {
+            padding: 10px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .file-name {
+            font-weight: 500;
+            color: #333;
+        }
+        .file-size {
+            color: #666;
+            font-size: 0.9em;
+        }
+        .upload-status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .upload-status.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .upload-status.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .upload-status.info {
+            background: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <img src="/images/LAB007-LOGO-TRANS.png" alt="Lab007 Logo" class="logo">
+                <div class="header-title">
+                    <p class="header-subtitle" style="font-size: 1.5rem; margin: 0;">Citrix Environment Audit Dashboard</p>
+                </div>
+            </div>
+        </header>
+
+        <div class="upload-container">
+            <h2 style="text-align: center; margin-bottom: 30px;">Citrix Audit Dashboard</h2>
+            
+            <!-- Download Audit Tools Section (Primary Action) -->
+            <div class="download-section" style="background: #e8f5e9; border: 2px solid #4caf50; margin-bottom: 30px;">
+                <h3 style="color: #2e7d32; margin-bottom: 15px;">📥 Download Audit Tools</h3>
+                <p style="font-size: 1.1em; margin-bottom: 20px;">
+                    Download all PowerShell scripts, prerequisites, and web files needed to run the audit solution on your local machine.
+                </p>
+                <button id="downloadAuditFilesBtn" class="btn btn-primary" style="margin-top: 15px; font-size: 1.1em; padding: 15px 30px;">
+                    ⬇️ Download Audit Tools (ZIP)
+                </button>
+                <p style="margin-top: 20px; font-size: 0.95em; color: #555;">
+                    <strong>What's included:</strong> All PowerShell scripts, dependency installers, web dashboard files, and documentation.<br>
+                    After downloading, extract the ZIP, run the audit on your Citrix environment, then upload the results below.
+                </p>
+            </div>
+
+            <!-- Upload Section -->
+            <div class="upload-section" id="uploadSection">
+                <h3>📤 Upload Audit Results</h3>
+                <p>Upload your <code>citrix-audit-complete.json</code> file to view the dashboard</p>
+                <div class="file-input-wrapper">
+                    <input type="file" id="fileInput" accept=".json" />
+                    <label for="fileInput" class="file-input-button">Choose JSON File</label>
+                </div>
+                <p id="fileName" style="margin-top: 10px; color: #666;"></p>
+                <button id="uploadBtn" class="btn btn-primary" style="margin-top: 20px; display: none;">
+                    Upload File
+                </button>
+            </div>
+
+            <!-- Upload Status -->
+            <div id="uploadStatus" class="upload-status"></div>
+
+            <!-- Uploaded Files List -->
+            <div class="file-list" id="fileList" style="display: none;">
+                <h3 style="margin-bottom: 15px;">Previously Uploaded Files</h3>
+                <div id="filesListContent"></div>
+            </div>
+
+            <!-- Quick Links -->
+            <div style="margin-top: 40px; text-align: center; padding-top: 20px; border-top: 1px solid #ddd;">
+                <a href="/dashboard" class="btn btn-secondary" style="text-decoration: none; display: inline-block; margin: 5px;">
+                    View Dashboard
+                </a>
+                <a href="/todo" class="btn btn-secondary" style="text-decoration: none; display: inline-block; margin: 5px;">
+                    To-Do Checklist
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const uploadBtn = document.getElementById('uploadBtn');
+        const fileName = document.getElementById('fileName');
+        const uploadStatus = document.getElementById('uploadStatus');
+        const uploadSection = document.getElementById('uploadSection');
+        const downloadAuditFilesBtn = document.getElementById('downloadAuditFilesBtn');
+        const fileList = document.getElementById('fileList');
+        const filesListContent = document.getElementById('filesListContent');
+
+        let selectedFile = null;
+
+        // File input change
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                selectedFile = e.target.files[0];
+                fileName.textContent = `Selected: ${selectedFile.name} (${formatFileSize(selectedFile.size)})`;
+                uploadBtn.style.display = 'inline-block';
+            }
+        });
+
+        // Drag and drop
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('drag-over');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('drag-over');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('drag-over');
+            
+            if (e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                if (file.name.endsWith('.json')) {
+                    fileInput.files = e.dataTransfer.files;
+                    selectedFile = file;
+                    fileName.textContent = `Selected: ${file.name} (${formatFileSize(file.size)})`;
+                    uploadBtn.style.display = 'inline-block';
+                } else {
+                    showStatus('Please select a JSON file', 'error');
+                }
+            }
+        });
+
+        // Upload button
+        uploadBtn.addEventListener('click', () => {
+            if (!selectedFile) return;
+
+            const formData = new FormData();
+            formData.append('jsonFile', selectedFile);
+
+            showStatus('Uploading file...', 'info');
+
+            fetch('/api/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus('File uploaded successfully! Redirecting to dashboard...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/dashboard';
+                    }, 1500);
+                } else {
+                    showStatus('Upload failed: ' + (data.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                showStatus('Upload error: ' + error.message, 'error');
+            });
+        });
+
+        // Download audit files
+        downloadAuditFilesBtn.addEventListener('click', () => {
+            window.location.href = '/api/download-audit-files';
+        });
+
+        // Load file list
+        function loadFileList() {
+            fetch('/api/files')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.files && data.files.length > 0) {
+                        fileList.style.display = 'block';
+                        filesListContent.innerHTML = data.files.map(file => `
+                            <div class="file-item">
+                                <div>
+                                    <div class="file-name">${file.filename}</div>
+                                    <div class="file-size">${formatFileSize(file.size)} - ${new Date(file.uploadedAt).toLocaleString()}</div>
+                                </div>
+                                <div>
+                                    <a href="/api/download/${file.filename}" class="btn btn-secondary" style="text-decoration: none; padding: 5px 15px; font-size: 0.9em;">
+                                        Download
+                                    </a>
+                                    <a href="/dashboard?file=${file.filename}" class="btn btn-primary" style="text-decoration: none; padding: 5px 15px; font-size: 0.9em; margin-left: 5px;">
+                                        View
+                                    </a>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading file list:', error);
+                });
+        }
+
+        function showStatus(message, type) {
+            uploadStatus.textContent = message;
+            uploadStatus.className = `upload-status ${type}`;
+            uploadStatus.style.display = 'block';
+        }
+
+        function formatFileSize(bytes) {
+            if (bytes === 0) return '0 Bytes';
+            const k = 1024;
+            const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+            const i = Math.floor(Math.log(bytes) / Math.log(k));
+            return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
+        }
+
+        // Load file list on page load
+        loadFileList();
+    </script>
+</body>
+</html>
+

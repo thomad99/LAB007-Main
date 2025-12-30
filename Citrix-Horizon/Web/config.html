@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAB007 Discovery Tools - Configuration</title>
+    <link rel="icon" type="image/png" href="/images/lab007%20Icon.PNG">
+    <link rel="shortcut icon" type="image/png" href="/images/lab007%20Icon.PNG">
+    <link rel="apple-touch-icon" href="/images/lab007%20Icon.PNG">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            background: #999DA0;
+        }
+
+        .config-container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+        }
+
+        .config-container h1 {
+            color: var(--primary-color);
+            margin-bottom: 10px;
+            font-size: 2rem;
+        }
+
+        .config-container .subtitle {
+            color: #6c757d;
+            margin-bottom: 30px;
+            font-style: italic;
+        }
+
+        .form-group {
+            margin-bottom: 25px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--dark-text);
+        }
+
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary-color);
+        }
+
+        .form-group .help-text {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #2d3561 0%, #1a1f3a 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            margin-top: 20px;
+        }
+
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(45, 53, 97, 0.4);
+        }
+
+        .btn-submit:active {
+            transform: translateY(0);
+        }
+
+        .status-message {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            display: none;
+        }
+
+        .status-message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .status-message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: -10px;
+            right: -10px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            line-height: 1;
+            transition: transform 0.2s ease;
+            z-index: 10;
+        }
+
+        .close-btn:hover {
+            transform: scale(1.1);
+            background: #c82333;
+        }
+
+        .config-container {
+            position: relative;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="config-container">
+            <div style="position: relative;">
+                <button class="close-btn" onclick="window.close(); if(!window.closed) { window.location.href='index.html'; }" title="Close">&times;</button>
+            </div>
+            <div style="text-align: center; margin-bottom: 30px;">
+                <img src="/images/LAB007-LOGO-TRANS.png" alt="Lab007 Logo" style="max-height: 300px; margin-bottom: 15px;">
+                <p class="subtitle" style="font-size: 1.5rem; margin-top: 20px;">Configuration</p>
+            </div>
+
+            <form id="configForm">
+                <div class="form-group">
+                    <label for="citrixVersion">Citrix Version:</label>
+                    <select id="citrixVersion" name="citrixVersion" required>
+                        <option value="1912" selected>1912 / 7.x (Snap-ins)</option>
+                        <option value="2009">2009</option>
+                        <option value="2012">2012</option>
+                        <option value="2112">2112</option>
+                        <option value="2203">2203</option>
+                        <option value="2209">2209</option>
+                        <option value="2305">2305</option>
+                        <option value="2311">2311</option>
+                    </select>
+                    <div class="help-text">Select your Citrix environment version</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="ddcName">Delivery Controller (DDC) Name:</label>
+                    <input type="text" id="ddcName" name="ddcName" value="localhost" required placeholder="localhost or FQDN">
+                    <div class="help-text">Enter the DDC hostname or FQDN (e.g., ddc01.domain.com)</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="usageDays">Days of Usage Data:</label>
+                    <input type="number" id="usageDays" name="usageDays" value="30" min="1" max="365" required>
+                    <div class="help-text">Number of days to analyze for usage statistics (1-365)</div>
+                </div>
+
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="skipServerSpecs" name="skipServerSpecs" style="width: auto; margin-right: 8px;">
+                        Skip Server Specs Collection (faster execution)
+                    </label>
+                    <div class="help-text">Check this to skip detailed server hardware information collection</div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="startAuditBtn">Start Audit</button>
+            </form>
+
+            <div id="statusMessage" class="status-message"></div>
+
+            <div id="auditInstructions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center; display: none;">
+                <p style="color: #6c757d; font-size: 0.9rem; margin-bottom: 15px;">
+                    Configuration saved! Click the button below to start the audit:
+                </p>
+                <button id="runAuditBtn" class="btn-submit" style="width: auto; padding: 12px 30px; margin: 0;">
+                    Run PowerShell Audit Script
+                </button>
+                <p style="color: #6c757d; font-size: 0.85rem; margin-top: 15px;">
+                    Or manually run: <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">.\Scripts\Collect-CitrixAuditData.ps1</code>
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Load existing configuration if available
+        function loadExistingConfig() {
+            try {
+                const config = localStorage.getItem('lab007Config');
+                if (config) {
+                    const parsed = JSON.parse(config);
+                    document.getElementById('citrixVersion').value = parsed.citrixVersion || '1912';
+                    document.getElementById('ddcName').value = parsed.ddcName || 'localhost';
+                    document.getElementById('usageDays').value = parsed.usageDays || 30;
+                    document.getElementById('skipServerSpecs').checked = parsed.skipServerSpecs || false;
+                }
+            } catch (e) {
+                console.log('No existing config found');
+            }
+        }
+
+        // Save configuration and prepare audit
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const config = {
+                citrixVersion: document.getElementById('citrixVersion').value,
+                ddcName: document.getElementById('ddcName').value,
+                usageDays: parseInt(document.getElementById('usageDays').value),
+                skipServerSpecs: document.getElementById('skipServerSpecs').checked,
+                savedAt: new Date().toISOString()
+            };
+
+            // Save to localStorage
+            localStorage.setItem('lab007Config', JSON.stringify(config));
+
+            // Create downloadable JSON file
+            const configBlob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+            const configUrl = URL.createObjectURL(configBlob);
+            const configLink = document.createElement('a');
+            configLink.href = configUrl;
+            configLink.download = 'lab007-config.json';
+            document.body.appendChild(configLink);
+            configLink.click();
+            document.body.removeChild(configLink);
+            URL.revokeObjectURL(configUrl);
+
+            // Create batch file to run PowerShell script
+            const batchContent = `@echo off
+cd /d "%~dp0"
+echo Starting LAB007 Discovery Tools Audit...
+echo.
+echo Configuration:
+echo   Version: ${config.citrixVersion}
+echo   DDC: ${config.ddcName}
+echo   Days: ${config.usageDays}
+echo.
+powershell.exe -ExecutionPolicy Bypass -File "Scripts\\Collect-CitrixAuditData.ps1" -CitrixVersion "${config.citrixVersion}" -DDCName "${config.ddcName}" -UsageDaysBack ${config.usageDays}${config.skipServerSpecs ? ' -SkipServerSpecs' : ''} -NonInteractive
+echo.
+echo Audit complete! Check the Data folder for results.
+pause`;
+
+            const batchBlob = new Blob([batchContent], { type: 'text/plain' });
+            const batchUrl = URL.createObjectURL(batchBlob);
+            const batchLink = document.createElement('a');
+            batchLink.href = batchUrl;
+            batchLink.download = 'Start-Audit.bat';
+            document.body.appendChild(batchLink);
+            batchLink.click();
+            document.body.removeChild(batchLink);
+            URL.revokeObjectURL(batchUrl);
+
+            // Show success message and instructions
+            const statusMsg = document.getElementById('statusMessage');
+            statusMsg.className = 'status-message success';
+            statusMsg.style.display = 'block';
+            statusMsg.innerHTML = 'Configuration saved! <strong>Start-Audit.bat</strong> file downloaded. Double-click it to start the audit.';
+
+            // Show audit instructions
+            document.getElementById('auditInstructions').style.display = 'block';
+            document.getElementById('configForm').style.display = 'none';
+        });
+
+        // Run audit button handler
+        document.getElementById('runAuditBtn').addEventListener('click', function() {
+            // Try to open the batch file
+            const batchPath = 'Start-Audit.bat';
+            window.location.href = 'file:///' + window.location.pathname.replace(/\/[^/]*$/, '/') + batchPath;
+            
+            // Fallback: show instructions
+            const statusMsg = document.getElementById('statusMessage');
+            statusMsg.className = 'status-message success';
+            statusMsg.style.display = 'block';
+            statusMsg.innerHTML = 'Please double-click <strong>Start-Audit.bat</strong> in your project folder to start the audit.';
+        });
+
+        // Load config on page load
+        loadExistingConfig();
+    </script>
+</body>
+</html>
+
