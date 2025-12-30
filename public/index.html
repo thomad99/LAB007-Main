@@ -39,12 +39,35 @@
             width: 100%;
         }
 
+        /* Top Bar - Logo and Hamburger */
+        .top-bar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 1001;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 10px 20px;
+            background: white;
+        }
+
+        .top-bar-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+            width: 100%;
+            max-width: 1200px;
+        }
+
         /* Hamburger Menu */
         .menu-toggle {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 1001;
+            position: relative;
+            top: 0;
+            right: 0;
+            z-index: 1002;
             background: #333;
             color: white;
             border: none;
@@ -58,6 +81,7 @@
             align-items: center;
             gap: 5px;
             transition: all 0.3s ease;
+            margin-left: auto;
         }
 
         .menu-toggle:hover {
@@ -142,11 +166,17 @@
 
         /* Header */
         header {
-            padding: 10px 20px 10px;
-            text-align: left;
+            padding: 80px 20px 10px;
+            text-align: center;
             max-width: 1200px;
             margin: 0 auto;
             flex-shrink: 0;
+        }
+
+        .top-logo {
+            max-width: 198px;
+            height: auto;
+            display: block;
         }
 
         .main-logo {
@@ -154,6 +184,8 @@
             height: auto;
             margin-bottom: 10px;
             display: block;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         header h1 {
@@ -162,6 +194,7 @@
             margin-bottom: 0;
             font-weight: 700;
             line-height: 1.2;
+            text-align: center;
         }
 
         .container {
