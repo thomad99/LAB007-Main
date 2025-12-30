@@ -266,14 +266,20 @@
 
         // Create backdrop for clicking outside
         const backdrop = document.createElement('div');
-        backdrop.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none;';
+        backdrop.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none !important; visibility: hidden;';
         backdrop.id = 'menuBackdrop';
         document.body.appendChild(backdrop);
 
         menuToggle.addEventListener('click', function() {
             const isActive = menuToggle.classList.toggle('active');
             menuOverlay.classList.toggle('active');
-            backdrop.style.display = isActive ? 'block' : 'none';
+            if (isActive) {
+                backdrop.style.display = 'block';
+                backdrop.style.visibility = 'visible';
+            } else {
+                backdrop.style.display = 'none';
+                backdrop.style.visibility = 'hidden';
+            }
         });
 
         // Close menu when clicking on a link
@@ -283,6 +289,7 @@
                 menuToggle.classList.remove('active');
                 menuOverlay.classList.remove('active');
                 backdrop.style.display = 'none';
+                backdrop.style.visibility = 'hidden';
             });
         });
 
@@ -291,6 +298,7 @@
             menuToggle.classList.remove('active');
             menuOverlay.classList.remove('active');
             backdrop.style.display = 'none';
+            backdrop.style.visibility = 'hidden';
         });
 
         // Triangle Animation
