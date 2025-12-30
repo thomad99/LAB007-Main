@@ -21,23 +21,17 @@
             min-height: 100vh;
         }
 
-        .loader-container {
+        .canvas-container {
             text-align: center;
             padding: 60px 20px;
             margin-top: 40px;
         }
 
-        .loader-spinner {
-            width: 300px;
-            height: 300px;
+        .webglcanvas {
+            max-width: 100%;
+            height: auto;
             display: block;
             margin: 0 auto;
-            animation: spin 8s linear infinite;
-        }
-
-        @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
         }
 
         /* Hamburger Menu */
@@ -211,8 +205,8 @@
             <h1>While You Wait, Others Are Winning with AI</h1>
         </header>
 
-        <div class="loader-container">
-            <img src="/citrix/images/LAB007-Loader.png" alt="LAB007 Loader" class="loader-spinner">
+        <div class="canvas-container">
+            <canvas id="comp-m02dsi4zwebglcanvas" class="K_YxMd webglcanvas" aria-label="Decorative" role="presentation" data-testid="canvas" style="object-fit: contain; object-position: center center;" width="512" height="480"></canvas>
         </div>
 
         <footer>
