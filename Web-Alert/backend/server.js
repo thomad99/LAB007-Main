@@ -316,10 +316,12 @@ async function startUrlMonitoring(urlId, websiteUrl) {
     monitoringTasks.set(urlId, task);
 }
 
-// Test database connection
+// Test database connection (non-blocking - app will work even if DB is unavailable)
 db.connect(async (err) => {
     if (err) {
-        console.error('Database connection error:', err);
+        console.warn('Database connection error (non-fatal):', err.message);
+        console.warn('Web-Alert API endpoints will not work until database is available');
+        console.warn('Other services (3D Print, Citrix, VINValue) will continue to work normally');
     } else {
         console.log('Database connected successfully');
         try {
@@ -413,12 +415,12 @@ db.connect(async (err) => {
             console.log(`Resumed monitoring for ${activeUrls.rows.length} active URLs`);
 
         } catch (error) {
-            console.error('Error initializing database schema:', error);
-            console.error('Error details:', error.stack);
+            console.warn('Error initializing database schema (non-fatal):', error.message);
+            console.warn('Database will be retried when API endpoints are accessed');
             // Log additional diagnostic information
-            console.error('Current directory:', process.cwd());
-            console.error('Environment:', process.env.NODE_ENV);
-            console.error('Database config:', {
+            console.warn('Current directory:', process.cwd());
+            console.warn('Environment:', process.env.NODE_ENV);
+            console.warn('Database config:', {
                 host: process.env.DB_HOST,
                 database: process.env.DB_NAME,
                 port: process.env.DB_PORT

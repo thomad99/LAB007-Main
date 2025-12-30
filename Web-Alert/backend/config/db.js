@@ -24,10 +24,11 @@ const pool = new Pool({
     max: 20
 });
 
-// Handle pool errors
+// Handle pool errors (non-fatal - just log the error)
 pool.on('error', (err) => {
-    console.error('Unexpected error on idle client', err);
-    process.exit(-1);
+    console.error('Unexpected error on idle database client:', err);
+    console.warn('Database pool error - server will continue running');
+    // Don't exit - allow the server to continue and retry connections when needed
 });
 
 // Test the pool immediately
