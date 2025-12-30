@@ -2,7 +2,7 @@ services:
   - type: web
     name: lab007-unified-services
     env: node
-    buildCommand: npm install --no-optional
+    buildCommand: git submodule update --init --recursive && npm install --no-optional
     startCommand: npm start
     plan: free
     envVars:
