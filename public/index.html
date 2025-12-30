@@ -17,8 +17,110 @@
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
             line-height: 1.6;
             color: #333;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: white;
             min-height: 100vh;
+        }
+
+        /* Hamburger Menu */
+        .menu-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1001;
+            background: #333;
+            color: white;
+            border: none;
+            width: 50px;
+            height: 50px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle:hover {
+            background: #555;
+        }
+
+        .menu-toggle span {
+            display: block;
+            width: 25px;
+            height: 3px;
+            background: white;
+            border-radius: 2px;
+            transition: all 0.3s ease;
+        }
+
+        .menu-toggle.active span:nth-child(1) {
+            transform: rotate(45deg) translate(8px, 8px);
+        }
+
+        .menu-toggle.active span:nth-child(2) {
+            opacity: 0;
+        }
+
+        .menu-toggle.active span:nth-child(3) {
+            transform: rotate(-45deg) translate(7px, -7px);
+        }
+
+        /* Menu Overlay */
+        .menu-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .menu-overlay.active {
+            display: flex;
+        }
+
+        .menu-items {
+            list-style: none;
+            text-align: center;
+        }
+
+        .menu-items li {
+            margin: 20px 0;
+        }
+
+        .menu-items a {
+            color: white;
+            text-decoration: none;
+            font-size: 2em;
+            font-weight: bold;
+            transition: color 0.3s ease;
+            display: inline-block;
+            padding: 10px 20px;
+        }
+
+        .menu-items a:hover {
+            color: #667eea;
+        }
+
+        /* Header */
+        header {
+            padding: 60px 20px 40px;
+            text-align: left;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            color: #333;
+            margin-bottom: 20px;
+            font-weight: 700;
         }
 
         .container {
@@ -27,177 +129,78 @@
             padding: 20px;
         }
 
-        header {
-            text-align: center;
-            padding: 40px 20px;
-            color: white;
-        }
-
-        header img {
-            max-width: 200px;
-            height: auto;
-            margin-bottom: 20px;
-        }
-
-        header h1 {
-            font-size: 3em;
-            margin-bottom: 10px;
-            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
-        }
-
-        header p {
-            font-size: 1.2em;
-            opacity: 0.9;
-        }
-
-        .projects-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-            gap: 30px;
-            margin-top: 40px;
-        }
-
-        .project-card {
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
-            text-align: center;
-        }
-
-        .project-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 15px 40px rgba(0,0,0,0.3);
-        }
-
-        .project-card h2 {
-            color: #667eea;
-            margin-bottom: 15px;
-            font-size: 1.8em;
-        }
-
-        .project-card p {
-            color: #666;
-            margin-bottom: 20px;
-            line-height: 1.6;
-        }
-
-        .project-card .btn {
-            display: inline-block;
-            padding: 12px 30px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            text-decoration: none;
-            border-radius: 25px;
-            font-weight: bold;
-            transition: opacity 0.3s ease;
-        }
-
-        .project-card .btn:hover {
-            opacity: 0.9;
-        }
-
-        .external-links {
-            margin-top: 60px;
-            background: white;
-            border-radius: 15px;
-            padding: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-        }
-
-        .external-links h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            text-align: center;
-        }
-
-        .external-links ul {
-            list-style: none;
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            gap: 20px;
-        }
-
-        .external-links li a {
-            color: #667eea;
-            text-decoration: none;
-            padding: 10px 20px;
-            border: 2px solid #667eea;
-            border-radius: 25px;
-            transition: all 0.3s ease;
-        }
-
-        .external-links li a:hover {
-            background: #667eea;
-            color: white;
-        }
-
         footer {
             text-align: center;
             padding: 40px 20px;
-            color: white;
+            color: #666;
             margin-top: 60px;
         }
 
         @media (max-width: 768px) {
             header h1 {
-                font-size: 2em;
+                font-size: 1.8em;
             }
 
-            .projects-grid {
-                grid-template-columns: 1fr;
+            .menu-items a {
+                font-size: 1.5em;
             }
         }
     </style>
 </head>
 <body>
+    <!-- Hamburger Menu Toggle -->
+    <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+        <span></span>
+        <span></span>
+        <span></span>
+    </button>
+
+    <!-- Menu Overlay -->
+    <div class="menu-overlay" id="menuOverlay">
+        <ul class="menu-items">
+            <li><a href="/citrix">Citrix-2-HZ</a></li>
+            <li><a href="/3dprint">3D Print</a></li>
+            <li><a href="/webalert">Web-Alerts</a></li>
+            <li><a href="/vinvalue">VinValue</a></li>
+        </ul>
+    </div>
+
     <div class="container">
         <header>
-            <img src="/images/lab007 Icon.PNG" alt="LAB007 Logo" onerror="this.style.display='none'">
-            <h1>LAB007</h1>
-            <p>AI Technology Solutions</p>
+            <h1>While You Wait, Others Are Winning with AI</h1>
         </header>
-
-        <div class="projects-grid">
-            <div class="project-card">
-                <h2>3D Print Services</h2>
-                <p>Get instant online quotes for 3D printing services. Upload your CAD files and receive real-time pricing with detailed cost breakdown.</p>
-                <a href="/3dprint" class="btn">Get Quote</a>
-            </div>
-
-            <div class="project-card">
-                <h2>Citrix Audit</h2>
-                <p>Citrix to Horizon audit dashboard. Upload audit data and view comprehensive reports and analytics.</p>
-                <a href="/citrix" class="btn">View Dashboard</a>
-            </div>
-
-            <div class="project-card">
-                <h2>VIN Value</h2>
-                <p>Get instant vehicle valuations using VIN or Make/Model. Powered by WeBuyAnyCar integration.</p>
-                <a href="/vinvalue" class="btn">Get Valuation</a>
-            </div>
-
-            <div class="project-card">
-                <h2>Web Alert</h2>
-                <p>Monitor websites for changes and receive instant email/SMS alerts when content updates.</p>
-                <a href="/webalert" class="btn">Start Monitoring</a>
-            </div>
-        </div>
-
-        <div class="external-links">
-            <h2>Additional Resources</h2>
-            <ul>
-                <li><a href="https://thomad99.wixstudio.com/lab007" target="_blank">Main Website</a></li>
-                <!-- Add more external links here as needed -->
-            </ul>
-        </div>
 
         <footer>
             <p>&copy; 2025 LAB007. All rights reserved.</p>
         </footer>
     </div>
+
+    <script>
+        // Hamburger menu functionality
+        const menuToggle = document.getElementById('menuToggle');
+        const menuOverlay = document.getElementById('menuOverlay');
+
+        menuToggle.addEventListener('click', function() {
+            menuToggle.classList.toggle('active');
+            menuOverlay.classList.toggle('active');
+        });
+
+        // Close menu when clicking on a link
+        const menuLinks = document.querySelectorAll('.menu-items a');
+        menuLinks.forEach(link => {
+            link.addEventListener('click', function() {
+                menuToggle.classList.remove('active');
+                menuOverlay.classList.remove('active');
+            });
+        });
+
+        // Close menu when clicking outside
+        menuOverlay.addEventListener('click', function(e) {
+            if (e.target === menuOverlay) {
+                menuToggle.classList.remove('active');
+                menuOverlay.classList.remove('active');
+            }
+        });
+    </script>
 </body>
 </html>
-
