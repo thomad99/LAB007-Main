@@ -17,9 +17,10 @@ app.use(cors());
 // Middleware
 app.use(express.json());
 
-// Serve static files - images first (higher priority), then Web directory
-app.use('/images', express.static(path.join(__dirname, 'images')));
-app.use(express.static('Web'));
+// Serve static files - Web directory first (includes images subdirectory)
+app.use(express.static(path.join(__dirname, 'Web')));
+// Also serve images from Web/images for compatibility
+app.use('/images', express.static(path.join(__dirname, 'Web', 'images')));
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads');

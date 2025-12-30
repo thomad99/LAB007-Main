@@ -80,12 +80,9 @@ if (fs.existsSync(citrixServerPath)) {
 }
 
 function setupCitrixFallback() {
-    // Serve static files from Web directory
-    app.use('/citrix', express.static(path.join(__dirname, 'Citrix-Horizon', 'Web'), {
-        index: 'index.html',
-        fallthrough: false
-    }));
-    app.use('/citrix/images', express.static(path.join(__dirname, 'Citrix-Horizon', 'images')));
+    // Serve static files from Web directory (CSS, JS, etc.)
+    app.use('/citrix', express.static(path.join(__dirname, 'Citrix-Horizon', 'Web')));
+    // Images are in Web/images, so they'll be served by the above static middleware
     
     // Explicit route for /citrix to serve index.html
     app.get('/citrix', (req, res) => {
