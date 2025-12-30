@@ -1,19 +1,40 @@
 const { Pool } = require('pg');
 
+// Helper function to extract hostname from database URL if provided
+function getDbHost() {
+    const dbHost = process.env.DB_HOST;
+    if (!dbHost) return null;
+    
+    // If it's a full URL (starts with postgresql:// or postgres://), extract the hostname
+    if (dbHost.startsWith('postgresql://') || dbHost.startsWith('postgres://')) {
+        try {
+            const url = new URL(dbHost);
+            return url.hostname;
+        } catch (e) {
+            console.warn('Failed to parse DB_HOST as URL, using as-is:', e.message);
+            return dbHost;
+        }
+    }
+    
+    // Otherwise, use it as-is (should be just the hostname)
+    return dbHost;
+}
+
 // First, log the connection details we're using
+const dbHost = getDbHost();
 const dbConfig = {
-    host: process.env.DB_HOST,
+    host: dbHost,
     user: process.env.DB_USER,
     database: process.env.DB_NAME,
     port: process.env.DB_PORT,
     ssl: true
 };
 console.log('Initializing database connection with:', dbConfig);
-console.log('DB_HOST value:', process.env.DB_HOST);
-console.log('DB_HOST length:', process.env.DB_HOST?.length);
+console.log('DB_HOST value (raw):', process.env.DB_HOST);
+console.log('DB_HOST value (parsed hostname):', dbHost);
 
 const pool = new Pool({
-    host: process.env.DB_HOST,
+    host: dbHost,
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
     database: process.env.DB_NAME,
