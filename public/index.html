@@ -206,11 +206,11 @@
                 <div id="triAnimControls"
                      style="position:absolute;right:14px;bottom:14px;background:rgba(255,255,255,.85);
                             border:1px solid rgba(0,0,0,.08); border-radius:12px; padding:10px 12px;
-                            font:14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#333;">
+                            font:14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial; color:#333; display:none;">
                     <div style="display:flex;align-items:center;gap:10px;">
                         <span style="white-space:nowrap;">Speed</span>
-                        <input id="triSpeed" type="range" min="0" max="200" value="50" style="width:160px;">
-                        <span id="triSpeedVal" style="min-width:48px;text-align:right;">0.50×</span>
+                        <input id="triSpeed" type="range" min="0" max="200" value="12" style="width:160px;">
+                        <span id="triSpeedVal" style="min-width:48px;text-align:right;">0.12×</span>
                     </div>
                 </div>
             </div>
@@ -277,8 +277,8 @@
             function triangleBaseSize(h) { return h * 0.42; }
             function orbitOffset(h)      { return h * 0.10; }
 
-            // Speed multiplier (default: 0.50x -> 50% slower)
-            let speed = 0.50;
+            // Speed multiplier (default: 0.12x)
+            let speed = 0.12;
 
             function setSpeedFromSlider() {
                 // slider 0..200 maps to 0.00x .. 2.00x
@@ -381,9 +381,6 @@
             }
 
             requestAnimationFrame(frame);
-
-            // If you want to hide the controls, uncomment:
-            // document.getElementById('triAnimControls').style.display = 'none';
         })();
     </script>
 </body>
