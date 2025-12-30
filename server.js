@@ -26,7 +26,12 @@ if (fs.existsSync(print3dServerPath)) {
     try {
         const print3dApp = require('./3dPrint/server');
         // Mount the app at /3dprint - this handles both static files and API routes
-        app.use('/3dprint', print3dApp);
+        // Mount with trailing slash to ensure routes match correctly
+        app.use('/3dprint/', print3dApp);
+        // Also handle without trailing slash by redirecting
+        app.get('/3dprint', (req, res) => {
+            res.redirect(301, '/3dprint/');
+        });
         console.log('✓ 3D Print app mounted at /3dprint');
     } catch (error) {
         console.error('Failed to mount 3D Print app:', error.message);
