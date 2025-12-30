@@ -52,12 +52,20 @@ const testConnection = async () => {
     }
 };
 
-// Execute the test immediately
+// Execute the test immediately (non-blocking, non-fatal)
+// The server will start even if the database connection fails initially
+// Database will be used when API endpoints are called
 testConnection().then(success => {
     if (!success) {
-        console.error('Initial database connection test failed');
-        process.exit(1);
+        console.warn('Initial database connection test failed - server will continue to start');
+        console.warn('Database will be retried when API endpoints are accessed');
+        console.warn('Make sure DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, and DB_PORT are set correctly');
+    } else {
+        console.log('Database connection test successful');
     }
+}).catch(err => {
+    console.warn('Database connection test error (non-fatal):', err.message);
+    console.warn('Server will continue to start - database will be retried when needed');
 });
 
 const query = async (text, params) => {
