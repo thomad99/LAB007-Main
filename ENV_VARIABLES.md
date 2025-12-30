@@ -122,10 +122,12 @@ EMAIL_USER=your_email@gmail.com
 EMAIL_PASSWORD=your_gmail_app_password
 EMAIL_FROM=your_email@gmail.com
 
-# Web-Alert - SMS (Optional)
+# Web-Alert - SMS (Optional - Currently Disabled)
+# To enable Twilio SMS, uncomment and set these variables:
 # TWILIO_ACCOUNT_SID=your_twilio_sid
 # TWILIO_AUTH_TOKEN=your_twilio_token
 # TWILIO_PHONE_NUMBER=+1234567890
+# Note: If Twilio is disabled, the service will automatically fall back to email-to-SMS gateway if EMAIL_USER and EMAIL_PASSWORD are configured.
 
 # Environment
 NODE_ENV=production
