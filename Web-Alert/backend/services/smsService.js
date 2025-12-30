@@ -1,20 +1,48 @@
 // Real Twilio SMS service
-console.log('Initializing Twilio SMS service...');
+console.log('Initializing SMS service...');
 
 const twilio = require('twilio');
-const client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+let client = null;
+
+// Initialize Twilio client only if credentials are available (non-fatal)
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+    try {
+        client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+        console.log('Twilio SMS service initialized successfully');
+    } catch (error) {
+        console.warn('Twilio initialization failed (non-fatal):', error.message);
+        console.warn('SMS via Twilio will not be available, but email-to-SMS gateway may still work');
+    }
+} else {
+    console.warn('Twilio credentials not found (TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN missing)');
+    console.warn('SMS via Twilio will not be available, but email-to-SMS gateway may still work');
+}
 
 // Email transport for email-to-SMS gateways (fallback)
 const nodemailer = require('nodemailer');
-const emailTransporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-    },
-    debug: true,
-    logger: true
-});
+let emailTransporter = null;
+
+// Initialize email transporter only if credentials are available (non-fatal)
+if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+    try {
+        emailTransporter = nodemailer.createTransport({
+            service: 'gmail',
+            auth: {
+                user: process.env.EMAIL_USER,
+                pass: process.env.EMAIL_PASSWORD
+            },
+            debug: true,
+            logger: true
+        });
+        console.log('Email-to-SMS gateway transporter initialized successfully');
+    } catch (error) {
+        console.warn('Email transporter initialization failed (non-fatal):', error.message);
+        console.warn('Email-to-SMS gateway will not be available');
+    }
+} else {
+    console.warn('Email credentials not found (EMAIL_USER or EMAIL_PASSWORD missing)');
+    console.warn('Email-to-SMS gateway will not be available');
+}
 
 // Carrier gateway map (prefer MMS where available for better deliverability)
 // Note: Some MVNOs use their host network's gateways. We map common aliases.
@@ -110,6 +138,11 @@ function resolveGatewayAddress(phone, carrier, preferMms = true) {
 }
 
 async function sendViaEmailGateway(phone, carrier, message, subject, preferMms = true, fallback = true, tryAll = false, options = {}) {
+    // Check if email transporter is available
+    if (!emailTransporter) {
+        throw new Error('Email transporter not initialized. Please set EMAIL_USER and EMAIL_PASSWORD environment variables.');
+    }
+    
     try {
         const cleaned = String(phone).replace(/\D/g, '');
         if (cleaned.length < 10) throw new Error('Invalid phone number for gateway');
@@ -227,6 +260,11 @@ function formatPhoneNumber(phone) {
 }
 
 async function sendAlert(phone, websiteUrl) {
+    // Check if Twilio client is available
+    if (!client) {
+        throw new Error('Twilio client not initialized. Please set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.');
+    }
+    
     try {
         // Format the phone number
         const formattedPhone = formatPhoneNumber(phone);
@@ -266,6 +304,11 @@ async function sendAlert(phone, websiteUrl) {
 }
 
 async function sendWelcomeSMS(phone, websiteUrl, duration) {
+    // Check if Twilio client is available
+    if (!client) {
+        throw new Error('Twilio client not initialized. Please set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.');
+    }
+    
     try {
         const formattedPhone = formatPhoneNumber(phone);
         
@@ -286,6 +329,11 @@ async function sendWelcomeSMS(phone, websiteUrl, duration) {
 }
 
 async function sendSummarySMS(phone, websiteUrl, checkCount, changesDetected) {
+    // Check if Twilio client is available
+    if (!client) {
+        throw new Error('Twilio client not initialized. Please set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.');
+    }
+    
     try {
         const formattedPhone = formatPhoneNumber(phone);
         
@@ -311,6 +359,13 @@ async function sendSummarySMS(phone, websiteUrl, checkCount, changesDetected) {
 
 // Add a test function
 async function testConnection() {
+    if (!client) {
+        return {
+            status: 'error',
+            error: 'Twilio client not initialized. Please set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.'
+        };
+    }
+    
     try {
         console.log('Testing Twilio SMS connection...');
         const account = await client.api.accounts(process.env.TWILIO_ACCOUNT_SID).fetch();
