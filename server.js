@@ -220,9 +220,6 @@ function setupWebAlertFallback() {
     });
 }
 
-// Serve main landing page (AFTER project apps to avoid conflicts)
-app.use(express.static(path.join(__dirname, 'public')));
-
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({
