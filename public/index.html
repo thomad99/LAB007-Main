@@ -18,13 +18,22 @@
             line-height: 1.6;
             color: #333;
             background: white;
-            min-height: 100vh;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
         }
 
         .canvas-container {
             text-align: center;
-            padding: 40px 20px;
-            margin-top: 40px;
+            padding: 10px 20px;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 0;
         }
 
         /* Hamburger Menu */
@@ -130,37 +139,44 @@
 
         /* Header */
         header {
-            padding: 60px 20px 40px;
+            padding: 20px 20px 10px;
             text-align: left;
             max-width: 1200px;
             margin: 0 auto;
+            flex-shrink: 0;
         }
 
         .main-logo {
-            max-width: 250px;
+            max-width: 180px;
             height: auto;
-            margin-bottom: 30px;
+            margin-bottom: 10px;
             display: block;
         }
 
         header h1 {
-            font-size: 2.5em;
+            font-size: 1.8em;
             color: #333;
-            margin-bottom: 20px;
+            margin-bottom: 0;
             font-weight: 700;
+            line-height: 1.2;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 20px;
+            padding: 10px 20px;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
         }
 
         footer {
             text-align: center;
-            padding: 40px 20px;
+            padding: 10px 20px;
             color: #666;
-            margin-top: 60px;
+            flex-shrink: 0;
+            font-size: 0.9em;
         }
 
         footer a {
@@ -175,11 +191,19 @@
 
         @media (max-width: 768px) {
             header h1 {
-                font-size: 1.8em;
+                font-size: 1.4em;
+            }
+
+            .main-logo {
+                max-width: 150px;
             }
 
             .menu-items a {
                 font-size: 1.5em;
+            }
+
+            footer {
+                font-size: 0.8em;
             }
         }
     </style>
@@ -209,8 +233,8 @@
         </header>
 
         <div class="canvas-container">
-            <div id="triAnimWrap" style="position:relative;width:100%;max-width:100%;aspect-ratio: 16 / 9; margin:0 auto; min-height:400px;">
-                <canvas id="triAnim" style="width:100%;height:100%;display:block;"></canvas>
+            <div id="triAnimWrap" style="position:relative;width:100%;max-width:100%;height:100%; margin:0 auto;">
+                <canvas id="triAnim" style="width:100%;height:100%;display:block;object-fit:contain;"></canvas>
 
                 <!-- Optional speed control UI -->
                 <div id="triAnimControls"
