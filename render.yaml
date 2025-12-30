@@ -2,8 +2,9 @@ services:
   - type: web
     name: lab007-unified-services
     env: node
-    buildCommand: npm install
+    buildCommand: npm install --no-optional
     startCommand: npm start
+    plan: free
     envVars:
       - key: NODE_ENV
         value: production
@@ -12,4 +13,3 @@ services:
           type: web
           name: lab007-unified-services
           property: port
-
