@@ -798,11 +798,17 @@ app.get('/api/test-db', async (req, res) => {
     }
 });
 
-// Add route logging middleware at the top
+// Add route logging middleware (but skip static file requests to reduce noise)
 app.use((req, res, next) => {
-    console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-    console.log('Request body:', req.body);
-    console.log('Request query:', req.query);
+    // Skip logging for static assets (images, CSS, JS) to reduce log noise
+    const staticExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.css', '.js', '.ico', '.svg', '.woff', '.woff2', '.ttf', '.eot'];
+    const isStaticFile = staticExtensions.some(ext => req.path.toLowerCase().endsWith(ext));
+    
+    if (!isStaticFile) {
+        console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
+        console.log('Request body:', req.body);
+        console.log('Request query:', req.query);
+    }
     next();
 });
 
