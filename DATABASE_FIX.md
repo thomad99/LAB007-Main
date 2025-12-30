@@ -27,7 +27,7 @@ This will restart the service and recreate the database pool with the current en
 3. Go to the **"Info"** or **"Connections"** tab
 4. Look for **"Internal Database URL"** or **"Internal Hostname"**
 5. The hostname should look like: `dpg-xxxxx-xxxxx-xxxxx-a` (ends with `-a`)
-   - It may also include `.render.com` at the end - that's fine, use the full hostname
+   - It may also include `.render.com` at the end - that's fine
    - Example: `dpg-culanb8gph6c73d9j150-a.render.com` or `dpg-culanb8gph6c73d9j150-a`
 
 ## Update Environment Variable
@@ -35,11 +35,17 @@ This will restart the service and recreate the database pool with the current en
 1. Go to your **web service** (`lab007-main`) in Render dashboard
 2. Click on **"Environment"** tab
 3. Find `DB_HOST` in the list
-4. **Edit** it and paste the correct INTERNAL hostname from your database
-5. Click **"Save Changes"**
-6. **Restart the service** (see instructions above)
+4. **IMPORTANT:** `DB_HOST` should contain **ONLY the hostname**, NOT the full connection URL
+   - ✅ CORRECT: `dpg-culanb8gph6c73d9j150-a.render.com` or `dpg-culanb8gph6c73d9j150-a`
+   - ❌ WRONG: `postgresql://user:pass@dpg-xxxxx-a/dbname` (full URL)
+5. **Edit** it and paste **just the hostname** (extract from the Internal Database URL if needed)
+6. Click **"Save Changes"**
+7. **Restart the service** (see instructions above)
 
-**Note:** For services running on Render, always use the INTERNAL hostname (ending with `-a`). External hostnames are only needed if connecting from outside Render.
+**Note:** 
+- For services running on Render, always use the INTERNAL hostname (ending with `-a`)
+- The code now automatically extracts the hostname if you accidentally provide a full URL, but it's better to set just the hostname
+- External hostnames are only needed if connecting from outside Render
 
 ## After Restart
 
