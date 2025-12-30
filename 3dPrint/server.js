@@ -617,6 +617,7 @@ function calculateCost(volumeCm3, printTimeMinutes, settings, toZip = null, isCo
 }
 
 // Routes
+// Handle both with and without trailing slash when mounted
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });

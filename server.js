@@ -25,6 +25,10 @@ const print3dServerPath = path.join(__dirname, '3dPrint', 'server.js');
 if (fs.existsSync(print3dServerPath)) {
     try {
         const print3dApp = require('./3dPrint/server');
+        // Redirect /3dprint to /3dprint/ to ensure trailing slash matches mounted app routes
+        app.get('/3dprint', (req, res) => {
+            res.redirect(301, '/3dprint/');
+        });
         app.use('/3dprint', print3dApp);
         console.log('✓ 3D Print app mounted at /3dprint');
     } catch (error) {
