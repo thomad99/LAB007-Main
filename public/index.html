@@ -21,6 +21,25 @@
             min-height: 100vh;
         }
 
+        .loader-container {
+            text-align: center;
+            padding: 60px 20px;
+            margin-top: 40px;
+        }
+
+        .loader-spinner {
+            width: 300px;
+            height: 300px;
+            display: block;
+            margin: 0 auto;
+            animation: spin 8s linear infinite;
+        }
+
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
         /* Hamburger Menu */
         .menu-toggle {
             position: fixed;
@@ -169,6 +188,10 @@
         <header>
             <h1>While You Wait, Others Are Winning with AI</h1>
         </header>
+
+        <div class="loader-container">
+            <img src="/citrix/images/LAB007-Loader.png" alt="LAB007 Loader" class="loader-spinner">
+        </div>
 
         <footer>
             <p>&copy; 2025 LAB007. All rights reserved.</p>
