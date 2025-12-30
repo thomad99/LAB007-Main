@@ -4,6 +4,7 @@
 const express = require('express');
 const path = require('path');
 const cors = require('cors');
+const fs = require('fs');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -19,48 +20,160 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Serve LAB007 images
 app.use('/images', express.static(path.join(__dirname, 'LAB007', 'Images')));
 
-// ========== 3D Print Project ==========
-// Serve 3D Print static files
-app.use('/3dprint', express.static(path.join(__dirname, '3dPrint', 'public')));
-app.use('/3dprint/images', express.static(path.join(__dirname, '3dPrint', 'images')));
-app.get('/3dprint', (req, res) => {
-    res.sendFile(path.join(__dirname, '3dPrint', 'public', 'index.html'));
-});
-app.get('/3dprint/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, '3dPrint', 'public', 'admin.html'));
-});
+// ========== Mount Project Apps ==========
+// Mount each project's Express app to handle both static files and API routes
 
-// ========== Citrix-Horizon Project ==========
-// Serve Citrix static files
-app.use('/citrix', express.static(path.join(__dirname, 'Citrix-Horizon', 'Web')));
-app.use('/citrix/images', express.static(path.join(__dirname, 'Citrix-Horizon', 'images')));
-app.get('/citrix', (req, res) => {
-    res.sendFile(path.join(__dirname, 'Citrix-Horizon', 'Web', 'index.html'));
-});
-app.get('/citrix/dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, 'Citrix-Horizon', 'Web', 'index.html'));
-});
-app.get('/citrix/todo', (req, res) => {
-    res.sendFile(path.join(__dirname, 'Citrix-Horizon', 'Web', 'todo.html'));
-});
+// 3D Print Project
+const print3dServerPath = path.join(__dirname, '3dPrint', 'server.js');
+if (fs.existsSync(print3dServerPath)) {
+    try {
+        const print3dApp = require('./3dPrint/server');
+        app.use('/3dprint', print3dApp);
+        console.log('✓ 3D Print app mounted at /3dprint');
+    } catch (error) {
+        console.error('Failed to mount 3D Print app:', error.message);
+        console.error('Stack:', error.stack);
+        // Fallback to static file serving
+        setup3dPrintFallback();
+    }
+} else {
+    console.warn('3D Print server.js not found, using fallback static serving');
+    setup3dPrintFallback();
+}
 
-// ========== VINValue Project ==========
-// Serve VINValue static files
-app.use('/vinvalue', express.static(path.join(__dirname, 'VINValue', 'public')));
-app.get('/vinvalue', (req, res) => {
-    res.sendFile(path.join(__dirname, 'VINValue', 'public', 'index.html'));
-});
+function setup3dPrintFallback() {
+    app.use('/3dprint', express.static(path.join(__dirname, '3dPrint', 'public')));
+    app.use('/3dprint/images', express.static(path.join(__dirname, '3dPrint', 'images')));
+    app.get('/3dprint', (req, res) => {
+        const indexPath = path.join(__dirname, '3dPrint', 'public', 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            res.status(404).send('3D Print service not available');
+        }
+    });
+    app.get('/3dprint/admin', (req, res) => {
+        const adminPath = path.join(__dirname, '3dPrint', 'public', 'admin.html');
+        if (fs.existsSync(adminPath)) {
+            res.sendFile(adminPath);
+        } else {
+            res.status(404).send('Admin page not found');
+        }
+    });
+}
 
-// ========== Web-Alert Project ==========
-// Serve Web-Alert static files
-app.use('/webalert', express.static(path.join(__dirname, 'Web-Alert', 'frontend', 'public')));
-app.use('/webalert/src', express.static(path.join(__dirname, 'Web-Alert', 'frontend', 'src')));
-app.get('/webalert', (req, res) => {
-    res.sendFile(path.join(__dirname, 'Web-Alert', 'frontend', 'public', 'index.html'));
-});
-app.get('/webalert/status', (req, res) => {
-    res.sendFile(path.join(__dirname, 'Web-Alert', 'frontend', 'public', 'status.html'));
-});
+// Citrix-Horizon Project
+const citrixServerPath = path.join(__dirname, 'Citrix-Horizon', 'server.js');
+if (fs.existsSync(citrixServerPath)) {
+    try {
+        const citrixApp = require('./Citrix-Horizon/server');
+        app.use('/citrix', citrixApp);
+        console.log('✓ Citrix app mounted at /citrix');
+    } catch (error) {
+        console.error('Failed to mount Citrix app:', error.message);
+        console.error('Stack:', error.stack);
+        setupCitrixFallback();
+    }
+} else {
+    console.warn('Citrix server.js not found, using fallback static serving');
+    setupCitrixFallback();
+}
+
+function setupCitrixFallback() {
+    app.use('/citrix', express.static(path.join(__dirname, 'Citrix-Horizon', 'Web')));
+    app.use('/citrix/images', express.static(path.join(__dirname, 'Citrix-Horizon', 'images')));
+    app.get('/citrix', (req, res) => {
+        const indexPath = path.join(__dirname, 'Citrix-Horizon', 'Web', 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            res.status(404).send('Citrix service not available');
+        }
+    });
+    app.get('/citrix/dashboard', (req, res) => {
+        const indexPath = path.join(__dirname, 'Citrix-Horizon', 'Web', 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            res.status(404).send('Dashboard not found');
+        }
+    });
+    app.get('/citrix/todo', (req, res) => {
+        const todoPath = path.join(__dirname, 'Citrix-Horizon', 'Web', 'todo.html');
+        if (fs.existsSync(todoPath)) {
+            res.sendFile(todoPath);
+        } else {
+            res.status(404).send('Todo page not found');
+        }
+    });
+}
+
+// VINValue Project
+const vinValueServerPath = path.join(__dirname, 'VINValue', 'server.js');
+if (fs.existsSync(vinValueServerPath)) {
+    try {
+        const vinValueApp = require('./VINValue/server');
+        app.use('/vinvalue', vinValueApp);
+        console.log('✓ VINValue app mounted at /vinvalue');
+    } catch (error) {
+        console.error('Failed to mount VINValue app:', error.message);
+        console.error('Stack:', error.stack);
+        setupVINValueFallback();
+    }
+} else {
+    console.warn('VINValue server.js not found, using fallback static serving');
+    setupVINValueFallback();
+}
+
+function setupVINValueFallback() {
+    app.use('/vinvalue', express.static(path.join(__dirname, 'VINValue', 'public')));
+    app.get('/vinvalue', (req, res) => {
+        const indexPath = path.join(__dirname, 'VINValue', 'public', 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            res.status(404).send('VINValue service not available');
+        }
+    });
+}
+
+// Web-Alert Project
+const webAlertServerPath = path.join(__dirname, 'Web-Alert', 'backend', 'server.js');
+if (fs.existsSync(webAlertServerPath)) {
+    try {
+        const webAlertApp = require('./Web-Alert/backend/server');
+        app.use('/webalert', webAlertApp);
+        console.log('✓ Web-Alert app mounted at /webalert');
+    } catch (error) {
+        console.error('Failed to mount Web-Alert app:', error.message);
+        console.error('Stack:', error.stack);
+        setupWebAlertFallback();
+    }
+} else {
+    console.warn('Web-Alert server.js not found, using fallback static serving');
+    setupWebAlertFallback();
+}
+
+function setupWebAlertFallback() {
+    app.use('/webalert', express.static(path.join(__dirname, 'Web-Alert', 'frontend', 'public')));
+    app.use('/webalert/src', express.static(path.join(__dirname, 'Web-Alert', 'frontend', 'src')));
+    app.get('/webalert', (req, res) => {
+        const indexPath = path.join(__dirname, 'Web-Alert', 'frontend', 'public', 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            res.status(404).send('Web-Alert service not available');
+        }
+    });
+    app.get('/webalert/status', (req, res) => {
+        const statusPath = path.join(__dirname, 'Web-Alert', 'frontend', 'public', 'status.html');
+        if (fs.existsSync(statusPath)) {
+            res.sendFile(statusPath);
+        } else {
+            res.status(404).send('Status page not found');
+        }
+    });
+}
 
 // Health check
 app.get('/api/health', (req, res) => {
