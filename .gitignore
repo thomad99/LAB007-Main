@@ -1,0 +1,52 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Uploads and temporary files
+uploads/
+*.tmp
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Build outputs
+dist/
+build/
+*.map
+
+# Database
+*.db
+*.sqlite
+
+# Playwright
+.playwright/
+
+# Python (if any)
+__pycache__/
+*.pyc
+venv/
+
+# Screenshots and debug files
+shots/
+*.png
+*.jpg
+!**/images/**/*.png
+!**/images/**/*.jpg
+

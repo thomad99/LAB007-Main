@@ -1,0 +1,45 @@
+{
+  "name": "lab007-unified-services",
+  "version": "1.0.0",
+  "description": "LAB007 Unified Services - Combining 3D Print, Citrix Audit, VIN Value, and Web Alert",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "postinstall": "cd VINValue && npm install --no-save || true"
+  },
+  "keywords": [
+    "lab007",
+    "3d-printing",
+    "citrix",
+    "vin-value",
+    "web-monitoring"
+  ],
+  "author": "LAB007",
+  "license": "MIT",
+  "dependencies": {
+    "express": "^4.19.2",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1",
+    "node-stl": "^0.7.0",
+    "body-parser": "^1.20.2",
+    "nodemailer": "^6.9.7",
+    "@sendgrid/mail": "^8.1.0",
+    "yauzl": "^2.10.0",
+    "xml2js": "^0.6.2",
+    "archiver": "^6.0.1",
+    "playwright": "^1.47.0",
+    "pg": "^8.11.3",
+    "puppeteer": "^24.9.0",
+    "node-cron": "^3.0.3",
+    "dotenv": "^16.3.1",
+    "twilio": "^4.19.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
+
