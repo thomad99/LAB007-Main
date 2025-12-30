@@ -14,14 +14,11 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Serve main landing page
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Serve LAB007 images
+// Serve LAB007 images (before project apps to avoid conflicts)
 app.use('/images', express.static(path.join(__dirname, 'LAB007', 'Images')));
 
-// ========== Mount Project Apps ==========
-// Mount each project's Express app to handle both static files and API routes
+// ========== Mount Project Apps FIRST ==========
+// Mount each project's Express app BEFORE main static middleware to ensure routes are matched correctly
 
 // 3D Print Project
 const print3dServerPath = path.join(__dirname, '3dPrint', 'server.js');
@@ -42,9 +39,16 @@ if (fs.existsSync(print3dServerPath)) {
 }
 
 function setup3dPrintFallback() {
-    app.use('/3dprint', express.static(path.join(__dirname, '3dPrint', 'public')));
-    app.use('/3dprint/images', express.static(path.join(__dirname, '3dPrint', 'images')));
+    // Explicit route for /3dprint (with and without trailing slash) - must come before static middleware
     app.get('/3dprint', (req, res) => {
+        const indexPath = path.join(__dirname, '3dPrint', 'public', 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            res.status(404).send('3D Print service not available');
+        }
+    });
+    app.get('/3dprint/', (req, res) => {
         const indexPath = path.join(__dirname, '3dPrint', 'public', 'index.html');
         if (fs.existsSync(indexPath)) {
             res.sendFile(indexPath);
@@ -60,6 +64,9 @@ function setup3dPrintFallback() {
             res.status(404).send('Admin page not found');
         }
     });
+    // Serve static files from 3dPrint/public
+    app.use('/3dprint', express.static(path.join(__dirname, '3dPrint', 'public')));
+    app.use('/3dprint/images', express.static(path.join(__dirname, '3dPrint', 'images')));
 }
 
 // Citrix-Horizon Project
@@ -206,6 +213,9 @@ function setupWebAlertFallback() {
     });
 }
 
+// Serve main landing page (AFTER project apps to avoid conflicts)
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({
@@ -220,6 +230,11 @@ app.get('/api/health', (req, res) => {
         },
         note: 'API routes need to be integrated. See INTEGRATION_NOTES.md'
     });
+});
+
+// Catch-all route for main landing page (must be last)
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 // Start server
