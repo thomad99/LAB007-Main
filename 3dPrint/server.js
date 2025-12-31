@@ -765,7 +765,7 @@ app.post('/api/recalculate-shipping', (req, res) => {
 // Submit order
 app.post('/api/order', (req, res) => {
   console.log('=== Order Submission ===');
-  const { fileId, customerName, customerEmail, qualityMode, quoteData, customerZip, isCollection, colorChoice } = req.body;
+  const { fileId, customerName, customerEmail, qualityMode, quoteData, customerZip, isCollection, colorChoice, quantity } = req.body;
   
   console.log('Order details:', {
     fileId: fileId,
@@ -775,7 +775,7 @@ app.post('/api/order', (req, res) => {
     customerZip: customerZip,
     isCollection: isCollection,
     colorChoice: colorChoice,
-    quantity: quantity
+    quantity: quantity || 1
   });
   
   if (!fileId || !customerName || !customerEmail) {
@@ -791,6 +791,9 @@ app.post('/api/order', (req, res) => {
   
   console.log(`File found: ${fileData.originalName} at ${fileData.path}`);
   
+  // Parse quantity with default of 1
+  const orderQuantity = parseInt(quantity) || 1;
+  
   // Email content
   const emailContent = `
 New 3D Print Order Request
@@ -802,6 +805,7 @@ Customer Information:
 - Shipping: ${isCollection === true || isCollection === 'true' ? 'Collection' : 'Shipping'}
 - Quality Mode: ${qualityMode || 'draft'}
 - Color: ${colorChoice || 'Not specified'}
+- Quantity: ${orderQuantity}
 
 Quote Details:
 - Volume: ${quoteData.volume} cm³
