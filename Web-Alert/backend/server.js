@@ -40,6 +40,18 @@ process.on('unhandledRejection', (reason, promise) => {
 app.use(cors());
 app.use(express.json());
 
+// Add request logging middleware at the very top to catch ALL requests
+app.use((req, res, next) => {
+    console.log(`[Web-Alert] ===== INCOMING REQUEST =====`);
+    console.log(`[Web-Alert] Method: ${req.method}`);
+    console.log(`[Web-Alert] Path: ${req.path}`);
+    console.log(`[Web-Alert] Original URL: ${req.originalUrl}`);
+    console.log(`[Web-Alert] Base URL: ${req.baseUrl}`);
+    console.log(`[Web-Alert] URL: ${req.url}`);
+    console.log(`[Web-Alert] ===========================`);
+    next();
+});
+
 // Store active monitoring tasks
 const monitoringTasks = new Map();
 

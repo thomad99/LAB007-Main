@@ -226,13 +226,19 @@ if (fs.existsSync(webAlertServerPath)) {
         const webAlertApp = require('./Web-Alert/backend/server');
         console.log('Web-Alert app loaded successfully');
         
-        // Add debug middleware to log all requests to Web-Alert
+        // Add debug middleware to log all requests to Web-Alert BEFORE mounting
         app.use('/webalert', (req, res, next) => {
-            console.log(`[Web-Alert] ${req.method} ${req.path} - Original URL: ${req.originalUrl}`);
+            console.log(`[Main Server] ===== Web-Alert Request =====`);
+            console.log(`[Main Server] Method: ${req.method}`);
+            console.log(`[Main Server] Path: ${req.path}`);
+            console.log(`[Main Server] Original URL: ${req.originalUrl}`);
+            console.log(`[Main Server] Base URL: ${req.baseUrl}`);
+            console.log(`[Main Server] =============================`);
             next();
         });
         
         app.use('/webalert', webAlertApp);
+        console.log('  Web-Alert app mounted - routes should be accessible at /webalert/*');
         console.log('✓ Web-Alert app mounted at /webalert');
         console.log('  Available routes should include: /webalert/api/monitor, /webalert/api/status, etc.');
     } catch (error) {
