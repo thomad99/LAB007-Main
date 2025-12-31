@@ -437,7 +437,8 @@ setTimeout(() => {
             });
         }
     }
-});
+    });
+}, 2000); // Wait 2 seconds for pool initialization
 
 // Add specific routes for HTML files
 app.get('/', (req, res) => {
