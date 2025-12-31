@@ -288,6 +288,16 @@ function setupWebAlertFallback() {
             res.status(404).send('Status page not found');
         }
     });
+    
+    // Also serve status.html at root level for convenience
+    app.get('/status.html', (req, res) => {
+        const statusPath = path.join(__dirname, 'Web-Alert', 'frontend', 'public', 'status.html');
+        if (fs.existsSync(statusPath)) {
+            res.sendFile(statusPath);
+        } else {
+            res.status(404).send('Status page not found');
+        }
+    });
 }
 
 // Contact form route

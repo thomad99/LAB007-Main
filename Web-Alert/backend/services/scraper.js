@@ -23,16 +23,21 @@ const scraper = {
             console.log('Initializing browser...');
             const puppeteerLib = await loadPuppeteer();
             
-            // Try to find Chrome executable path
+            const fs = require('fs');
             let executablePath = null;
+            
+            // Try to use Puppeteer's bundled Chrome first
             try {
-                // Try to use Puppeteer's bundled Chrome first
                 executablePath = puppeteerLib.executablePath();
-                if (executablePath) {
+                // Verify the path actually exists
+                if (executablePath && fs.existsSync(executablePath)) {
                     console.log('Using Puppeteer bundled Chrome:', executablePath);
+                } else {
+                    console.warn('Puppeteer reported Chrome path but file does not exist:', executablePath);
+                    executablePath = null;
                 }
             } catch (err) {
-                console.warn('Could not find Puppeteer bundled Chrome, trying system Chrome...');
+                console.warn('Could not get Puppeteer bundled Chrome path:', err.message);
             }
             
             // If no bundled Chrome, try system Chrome
@@ -46,7 +51,6 @@ const scraper = {
                     'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
                 ];
                 
-                const fs = require('fs');
                 for (const path of possiblePaths) {
                     try {
                         if (fs.existsSync(path)) {
@@ -72,8 +76,12 @@ const scraper = {
                 headless: 'new'
             };
             
-            if (executablePath) {
+            // Only set executablePath if we found a valid one
+            if (executablePath && fs.existsSync(executablePath)) {
                 launchOptions.executablePath = executablePath;
+            } else {
+                // Don't set executablePath - let Puppeteer try to find it automatically
+                console.log('No valid Chrome path found, letting Puppeteer auto-detect...');
             }
             
             try {
@@ -81,17 +89,20 @@ const scraper = {
                 console.log('Browser initialized successfully');
             } catch (error) {
                 console.error('Failed to launch browser:', error.message);
-                if (error.message.includes('Could not find Chrome')) {
+                if (error.message.includes('Could not find Chrome') || error.message.includes('Browser was not found')) {
                     // Try to install Chrome automatically
                     console.log('Chrome not found, attempting to install...');
                     try {
                         const { execSync } = require('child_process');
+                        console.log('Running: npx puppeteer browsers install chrome');
                         execSync('npx puppeteer browsers install chrome', { 
                             stdio: 'inherit',
-                            timeout: 300000 // 5 minutes timeout
+                            timeout: 300000, // 5 minutes timeout
+                            cwd: process.cwd()
                         });
                         console.log('Chrome installed, retrying browser launch...');
-                        // Retry launch after installation
+                        // Retry launch without executablePath to use newly installed Chrome
+                        delete launchOptions.executablePath;
                         this.browser = await puppeteerLib.launch(launchOptions);
                         console.log('Browser initialized successfully after Chrome installation');
                     } catch (installError) {
