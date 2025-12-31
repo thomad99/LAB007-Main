@@ -176,13 +176,14 @@ const scraper = {
 
             while (retries > 0 && !content) {
                 try {
+                    // Use domcontentloaded instead of networkidle0 for faster, more reliable loading
                     await page.goto(url, {
-                        waitUntil: 'networkidle0',
-                        timeout: 60000
+                        waitUntil: 'domcontentloaded',
+                        timeout: 90000 // Increased to 90 seconds
                     });
 
-                    // Wait for any dynamic content to load
-                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    // Wait for any dynamic content to load (reduced from 2000ms to 1000ms)
+                    await new Promise(resolve => setTimeout(resolve, 1000));
 
                     content = await page.content();
                     break;
@@ -191,6 +192,7 @@ const scraper = {
                     console.log(`Attempt failed, ${retries - 1} retries left:`, err.message);
                     retries--;
                     if (retries > 0) {
+                        // Wait longer between retries
                         await new Promise(resolve => setTimeout(resolve, 5000));
                     }
                 }
