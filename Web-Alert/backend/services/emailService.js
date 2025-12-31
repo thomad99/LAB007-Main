@@ -1,49 +1,64 @@
 const nodemailer = require('nodemailer');
 
-const transporter = nodemailer.createTransport({
-    service: 'gmail',
+// SendGrid support (for free Render plans that block SMTP)
+let sendgrid = null;
+if (process.env.SENDGRID_API_KEY) {
+    try {
+        sendgrid = require('@sendgrid/mail');
+        sendgrid.setApiKey(process.env.SENDGRID_API_KEY);
+        console.log('[Web-Alert Email] SendGrid initialized (using API instead of SMTP)');
+    } catch (err) {
+        console.error('[Web-Alert Email] Failed to initialize SendGrid:', err.message);
+    }
+}
+
+// SMTP configuration (same as 3D Print)
+const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+const smtpSecure = process.env.SMTP_SECURE !== undefined 
+    ? process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === '1'
+    : smtpPort === 465; // Default: port 465 = secure, port 587 = STARTTLS
+
+const smtpConfig = {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: smtpPort,
+    secure: smtpSecure, // true = SSL/TLS, false = STARTTLS
     auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
+        user: process.env.SMTP_USER || '',
+        pass: process.env.SMTP_PASS || ''
     },
-    debug: true, // Enable debug logging
-    logger: true  // Enable logger
-});
+    requireTLS: !smtpSecure, // Require TLS upgrade for STARTTLS (port 587 with secure: false)
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
+    debug: false, // Disable verbose debug output
+    logger: false, // Disable verbose logging
+    tls: {
+        rejectUnauthorized: true,
+        minVersion: 'TLSv1.2'
+    }
+};
+
+// Create transporter (only if SMTP credentials are available)
+let transporter = null;
+if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    try {
+        transporter = nodemailer.createTransport(smtpConfig);
+        console.log('[Web-Alert Email] SMTP transporter initialized');
+    } catch (error) {
+        console.warn('[Web-Alert Email] Failed to initialize SMTP transporter:', error.message);
+    }
+} else {
+    console.warn('[Web-Alert Email] SMTP credentials not configured (SMTP_USER or SMTP_PASS missing)');
+}
 
 async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
-    console.log('========== EMAIL SEND DEBUG START ==========');
-    console.log('Function called with params:', { email, websiteUrl });
+    console.log('[Web-Alert Email] Sending alert email...');
+    console.log('[Web-Alert Email] To:', email);
+    console.log('[Web-Alert Email] Website:', websiteUrl);
     
     try {
-        // Check environment variables
-        console.log('Checking environment variables...');
-        console.log('EMAIL_USER:', process.env.EMAIL_USER ? `${process.env.EMAIL_USER.substring(0, 5)}...` : 'NOT SET');
-        console.log('EMAIL_PASSWORD:', process.env.EMAIL_PASSWORD ? '***SET***' : 'NOT SET');
-        
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-            throw new Error('Email credentials not configured. EMAIL_USER and EMAIL_PASSWORD must be set in environment.');
-        }
-        
-        // Check transporter configuration
-        console.log('Transporter configuration:', {
-            service: transporter.options.service,
-            host: transporter.options.host,
-            port: transporter.options.port,
-            secure: transporter.options.secure,
-            auth: {
-                user: transporter.options.auth?.user ? `${transporter.options.auth.user.substring(0, 5)}...` : 'NOT SET',
-                pass: transporter.options.auth?.pass ? '***SET***' : 'NOT SET'
-            }
-        });
-        
-        // Verify transporter configuration
-        console.log('Verifying email configuration...');
-        await transporter.verify();
-        console.log('Email configuration verified successfully');
-
-        console.log('Preparing email content...');
-        console.log('Sending email alert to:', email);
-        console.log('Website URL:', websiteUrl);
+        // Use ALERT_SUBJECT environment variable, fallback to default
+        const emailSubject = process.env.ALERT_SUBJECT || 'LOVESAILING PAGE UPDATE';
         
         // Create LAB007 logo HTML (base64 encoded or hosted URL)
         const lab007Logo = `
@@ -78,9 +93,9 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
         }
         
         const mailOptions = {
-            from: `"LAB007 Web Alert" <${process.env.EMAIL_USER}>`,
+            from: `"LAB007 Web Alert" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
             to: email,
-            subject: 'LOVESAILING PAGE UPDATE',
+            subject: emailSubject,
             text: `HI,\n\nChange Detected on webpage: ${websiteUrl}\nDate and time: ${new Date().toLocaleString()}`,
             html: `
                 <!DOCTYPE html>
@@ -103,7 +118,7 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
                         ${lab007Logo}
                         
                         <div class="header">
-                            <h1 style="color: #dc3545; margin: 0;">🚨 LOVESAILING PAGE UPDATE</h1>
+                            <h1 style="color: #dc3545; margin: 0;">🚨 ${emailSubject}</h1>
                         </div>
                         
                         <div class="alert-box">
@@ -135,59 +150,39 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
             `
         };
         
-        console.log('Mail options prepared:', {
-            from: mailOptions.from,
-            to: mailOptions.to,
-            subject: mailOptions.subject,
-            hasText: !!mailOptions.text,
-            hasHtml: !!mailOptions.html
-        });
-        
-        console.log('Attempting to send email...');
-        const info = await transporter.sendMail(mailOptions);
-        
-        console.log('Email sent successfully!');
-        console.log('Email send result:', {
-            messageId: info.messageId,
-            response: info.response,
-            accepted: info.accepted,
-            rejected: info.rejected
-        });
-        console.log('========== EMAIL SEND DEBUG END ==========');
-        
-        return info;
+        // Send via SendGrid if available, otherwise use SMTP
+        if (sendgrid) {
+            console.log('[Web-Alert Email] Using SendGrid API...');
+            const msg = {
+                to: email,
+                from: process.env.SMTP_USER || process.env.EMAIL_USER,
+                subject: emailSubject,
+                text: mailOptions.text,
+                html: mailOptions.html
+            };
+            await sendgrid.send(msg);
+            console.log('[Web-Alert Email] Email sent successfully via SendGrid');
+            return { messageId: 'sendgrid-' + Date.now() };
+        } else if (transporter) {
+            console.log('[Web-Alert Email] Using SMTP...');
+            const info = await transporter.sendMail(mailOptions);
+            console.log('[Web-Alert Email] Email sent successfully via SMTP:', info.messageId);
+            return info;
+        } else {
+            throw new Error('Email service not configured. Please set SMTP_USER/SMTP_PASS or SENDGRID_API_KEY');
+        }
     } catch (error) {
-        console.error('========== EMAIL SEND ERROR ==========');
-        console.error('Error type:', error.constructor.name);
-        console.error('Error message:', error.message);
-        console.error('Error code:', error.code);
-        console.error('Error response:', error.response);
-        console.error('Error responseCode:', error.responseCode);
-        console.error('Error command:', error.command);
-        console.error('Error stack:', error.stack);
-        console.error('Email credentials check:', {
-            emailUser: process.env.EMAIL_USER ? 'SET' : 'NOT SET',
-            hasPassword: !!process.env.EMAIL_PASSWORD
-        });
-        console.error('========== EMAIL SEND ERROR END ==========');
+        console.error('[Web-Alert Email] Error sending email:', error.message);
         throw error;
     }
 }
 
 async function sendWelcomeEmail(email, websiteUrl, duration) {
-    console.log('========== WELCOME EMAIL DEBUG START ==========');
-    console.log('Sending welcome email to:', email);
-    console.log('Website URL:', websiteUrl);
-    console.log('Duration:', duration);
+    console.log('[Web-Alert Email] Sending welcome email to:', email);
     
     try {
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-            throw new Error('Email credentials not configured');
-        }
-        
-        console.log('Preparing welcome email...');
-        const info = await transporter.sendMail({
-            from: `"Web Alert Service" <${process.env.EMAIL_USER}>`,
+        const mailOptions = {
+            from: `"Web Alert Service" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
             to: email,
             subject: 'Web Monitoring Started',
             text: `Welcome! We're now monitoring ${websiteUrl} for changes. Duration: ${duration} minutes.`,
@@ -201,40 +196,40 @@ async function sendWelcomeEmail(email, websiteUrl, duration) {
                 <p>You'll receive notifications if any changes are detected on the website.</p>
                 <p>Monitoring will automatically stop after ${duration} minutes.</p>
             `
-        });
+        };
         
-        console.log('Welcome email sent successfully:', info.messageId);
-        console.log('========== WELCOME EMAIL DEBUG END ==========');
-        return info;
+        if (sendgrid) {
+            const msg = {
+                to: email,
+                from: process.env.SMTP_USER || process.env.EMAIL_USER,
+                subject: mailOptions.subject,
+                text: mailOptions.text,
+                html: mailOptions.html
+            };
+            await sendgrid.send(msg);
+            return { messageId: 'sendgrid-' + Date.now() };
+        } else if (transporter) {
+            const info = await transporter.sendMail(mailOptions);
+            return info;
+        } else {
+            throw new Error('Email service not configured');
+        }
     } catch (error) {
-        console.error('========== WELCOME EMAIL ERROR ==========');
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-        console.error('========== WELCOME EMAIL ERROR END ==========');
+        console.error('[Web-Alert Email] Error sending welcome email:', error.message);
         throw error;
     }
 }
 
 async function sendSummaryEmail(email, websiteUrl, duration, checkCount, changesDetected, lastCheck) {
-    console.log('========== SUMMARY EMAIL DEBUG START ==========');
-    console.log('Sending summary email to:', email);
-    console.log('Website URL:', websiteUrl);
-    console.log('Duration:', duration);
-    console.log('Check count:', checkCount);
-    console.log('Changes detected:', changesDetected);
+    console.log('[Web-Alert Email] Sending summary email to:', email);
     
     try {
-        if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-            throw new Error('Email credentials not configured');
-        }
-        
         const summaryText = changesDetected > 0 
             ? `We detected ${changesDetected} change(s) during monitoring.`
             : 'No changes were detected during monitoring.';
         
-        console.log('Preparing summary email...');
-        const info = await transporter.sendMail({
-            from: `"Web Alert Service" <${process.env.EMAIL_USER}>`,
+        const mailOptions = {
+            from: `"Web Alert Service" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
             to: email,
             subject: 'Web Monitoring Complete - Summary',
             text: `Monitoring completed for ${websiteUrl}. ${summaryText} Total checks: ${checkCount}`,
@@ -251,16 +246,26 @@ async function sendSummaryEmail(email, websiteUrl, duration, checkCount, changes
                 <p>Monitoring has been completed and stopped automatically.</p>
                 <p>Thank you for using Web Alert!</p>
             `
-        });
+        };
         
-        console.log('Summary email sent successfully:', info.messageId);
-        console.log('========== SUMMARY EMAIL DEBUG END ==========');
-        return info;
+        if (sendgrid) {
+            const msg = {
+                to: email,
+                from: process.env.SMTP_USER || process.env.EMAIL_USER,
+                subject: mailOptions.subject,
+                text: mailOptions.text,
+                html: mailOptions.html
+            };
+            await sendgrid.send(msg);
+            return { messageId: 'sendgrid-' + Date.now() };
+        } else if (transporter) {
+            const info = await transporter.sendMail(mailOptions);
+            return info;
+        } else {
+            throw new Error('Email service not configured');
+        }
     } catch (error) {
-        console.error('========== SUMMARY EMAIL ERROR ==========');
-        console.error('Error message:', error.message);
-        console.error('Error stack:', error.stack);
-        console.error('========== SUMMARY EMAIL ERROR END ==========');
+        console.error('[Web-Alert Email] Error sending summary email:', error.message);
         throw error;
     }
 }
