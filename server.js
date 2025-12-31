@@ -62,7 +62,10 @@ if (fs.existsSync(print3dServerPath)) {
     try {
         const print3dApp = require('./3dPrint/server');
         // Mount the app at /3dprint - this handles both static files and API routes
+        // Mount with explicit handling to ensure it works
         app.use('/3dprint', print3dApp);
+        // Also ensure /3dprint/ works (with trailing slash)
+        app.use('/3dprint/', print3dApp);
         console.log('✓ 3D Print app mounted at /3dprint');
     } catch (error) {
         console.error('Failed to mount 3D Print app:', error.message);
@@ -329,9 +332,10 @@ app.get('/api/health', (req, res) => {
 
 // Serve main public directory (for landing page and other static files)
 // This must come AFTER all project apps to avoid conflicts
-app.use(express.static(path.join(__dirname, 'public')));
+// Use a specific path prefix to avoid conflicts with project routes
+app.use('/static', express.static(path.join(__dirname, 'public')));
 
-// Catch-all route for main landing page (must be last)
+// Catch-all route for main landing page (must be last, only matches exact /)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
