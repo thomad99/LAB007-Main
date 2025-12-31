@@ -330,15 +330,14 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Serve main public directory (for landing page and other static files)
-// This must come AFTER all project apps to avoid conflicts
-// Use a specific path prefix to avoid conflicts with project routes
-app.use('/static', express.static(path.join(__dirname, 'public')));
-
 // Catch-all route for main landing page (must be last, only matches exact /)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
+
+// Serve main public directory static files (for CSS, JS, images used by landing page)
+// This must come AFTER the catch-all route and AFTER all project apps
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Start server
 app.listen(PORT, () => {
