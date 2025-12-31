@@ -1389,10 +1389,6 @@ app.use((err, req, res, next) => {
     res.status(500).send('Something broke!');
 });
 
-// Static file serving - must come AFTER API routes to avoid conflicts
-app.use(express.static(path.join(__dirname, '../frontend/public')));
-app.use('/src', express.static(path.join(__dirname, '../frontend/src')));
-
 // Modify the server startup (only if running as standalone)
 if (require.main === module) {
   const PORT = process.env.PORT || 3000;
