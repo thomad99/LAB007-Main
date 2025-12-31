@@ -140,12 +140,18 @@
             max-width: 400px;
             padding: 0;
             margin: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100%;
         }
 
         .menu-items li {
-            margin: 15px 0;
+            margin: 8px 0;
             border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-            padding-bottom: 15px;
+            padding-bottom: 8px;
+            width: 100%;
         }
 
         .menu-items li:last-child {
@@ -155,11 +161,11 @@
         .menu-items a {
             color: white;
             text-decoration: none;
-            font-size: 1.2em;
+            font-size: 1.1em;
             font-weight: 600;
             transition: all 0.3s ease;
             display: block;
-            padding: 10px 15px;
+            padding: 8px 15px;
             border-radius: 5px;
         }
 
@@ -263,12 +269,28 @@
                 height: 4px;
             }
 
+            .menu-items {
+                max-width: 90%;
+            }
+
+            .menu-items li {
+                margin: 4px 0;
+                padding-bottom: 4px;
+            }
+
             .menu-items a {
-                font-size: 1.5em;
+                font-size: 0.9em;
+                padding: 6px 10px;
             }
 
             footer {
-                font-size: 0.8em;
+                padding: 10px 15px;
+                font-size: 0.75em;
+            }
+
+            footer p {
+                font-size: 0.85em;
+                line-height: 1.4;
             }
         }
     </style>
@@ -289,14 +311,15 @@
     <!-- Menu Overlay -->
     <div class="menu-overlay" id="menuOverlay">
         <ul class="menu-items">
+            <li><a href="/">HOME</a></li>
             <li><a href="/citrix">Citrix-2-HZ</a></li>
             <li><a href="/3dprint">3D Print</a></li>
             <li><a href="/webalert">Web-Alerts</a></li>
             <li><a href="/vinvalue">VinValue</a></li>
-            <li><a href="/contact">Contact</a></li>
             <li><a href="https://lovesailing.ai" target="_blank">LoveSailing</a></li>
             <li><a href="https://lovesailing-chatbot.onrender.com/chat" target="_blank">SailBOT</a></li>
             <li><a href="https://lab007-sail-scanner2.onrender.com/sail-live-scan.html" target="_blank">SailScan</a></li>
+            <li><a href="/contact">Contact</a></li>
         </ul>
     </div>
 
@@ -324,7 +347,7 @@
         </div>
 
         <footer>
-            <p>&copy; 2025 LAB007. All rights reserved. | Email: <a href="mailto:info@Lab007.ai">info@Lab007.ai</a></p>
+            <p>&copy; 2025 LAB007. All rights reserved. | <a href="mailto:info@Lab007.ai">Email: info@Lab007.ai</a></p>
         </footer>
     </div>
 

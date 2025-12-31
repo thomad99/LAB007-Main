@@ -3,18 +3,27 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>VIN Value</title>
+    <title>VIN Value - LAB007</title>
+    <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
     <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
       body { 
         font-family: system-ui, Arial, sans-serif; 
         margin: 0; 
-        padding: 24px; 
+        padding: 0;
         color: #e2e8f0; 
         min-height: 100vh;
         background: linear-gradient(120deg, #334155, #374151, #475569);
         background-size: 400% 400%;
         background-attachment: fixed;
         animation: gradientShift 45s ease infinite;
+        display: flex;
+        flex-direction: column;
       }
       body.working {
         background: linear-gradient(120deg, #3b82f6, #8b5cf6, #ef4444, #10b981);
@@ -39,7 +48,152 @@
       @media (prefers-reduced-motion: reduce) {
         body { animation: none; }
       }
-      .container { max-width: 680px; margin: 0 auto; }
+
+      /* Top Bar - Logo and Hamburger */
+      .top-bar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 1001;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.95);
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      }
+
+      .top-bar-content {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 20px;
+        width: 100%;
+        max-width: 1200px;
+        position: relative;
+      }
+
+      .top-logo {
+        max-width: 238px;
+        height: auto;
+        display: block;
+      }
+
+      /* Hamburger Menu */
+      .menu-toggle {
+        position: relative;
+        z-index: 1002;
+        background: white;
+        color: #0066cc;
+        border: 1px solid #0066cc;
+        width: 72px;
+        height: 72px;
+        border-radius: 5px;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 7px;
+        transition: all 0.3s ease;
+      }
+
+      .menu-toggle:hover {
+        background: #f0f0f0;
+      }
+
+      .menu-toggle span {
+        display: block;
+        width: 36px;
+        height: 5px;
+        background: #0066cc;
+        border-radius: 2px;
+        transition: all 0.3s ease;
+      }
+
+      .menu-toggle.active span:nth-child(1) {
+        transform: rotate(45deg) translate(8px, 8px);
+      }
+
+      .menu-toggle.active span:nth-child(2) {
+        opacity: 0;
+      }
+
+      .menu-toggle.active span:nth-child(3) {
+        transform: rotate(-45deg) translate(7px, -7px);
+      }
+
+      /* Menu Overlay */
+      .menu-overlay {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 50%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 1000;
+        display: none;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+        overflow-y: auto;
+        box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+      }
+
+      .menu-overlay.active {
+        display: flex;
+      }
+
+      .menu-items {
+        list-style: none;
+        text-align: center;
+        width: 100%;
+        max-width: 400px;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        height: 100%;
+      }
+
+      .menu-items li {
+        margin: 8px 0;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 8px;
+        width: 100%;
+      }
+
+      .menu-items li:last-child {
+        border-bottom: none;
+      }
+
+      .menu-items a {
+        color: white;
+        text-decoration: none;
+        font-size: 1.1em;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        display: block;
+        padding: 8px 15px;
+        border-radius: 5px;
+      }
+
+      .menu-items a:hover {
+        color: #d4af37;
+        background: rgba(212, 175, 55, 0.1);
+        padding-left: 20px;
+      }
+
+      .container { 
+        max-width: 680px; 
+        margin: 100px auto 20px;
+        padding: 24px;
+        flex: 1;
+      }
       h1 { margin: 0 0 16px; font-size: 28px; }
       form { display: grid; gap: 12px; background: #111827; padding: 16px; border-radius: 8px; border: 1px solid #1f2937; }
       label { display: block; font-size: 14px; color: #cbd5e1; margin-bottom: 4px; }
@@ -69,12 +223,85 @@
         50% { opacity: 0.8; }
       }
       a { color: #93c5fd; }
-      .logo { display: block; margin: 8px auto 8px; max-width: 100%; height: auto; object-fit: contain; filter: drop-shadow(0 2px 8px rgba(0,0,0,0.35)); }
+      .logo { display: none; }
+
+      @media (max-width: 768px) {
+        .top-bar {
+          padding: 8px 15px;
+        }
+
+        .top-logo {
+          max-width: 150px;
+        }
+
+        .menu-toggle {
+          width: 60px;
+          height: 60px;
+        }
+
+        .menu-toggle span {
+          width: 30px;
+          height: 4px;
+        }
+
+        .menu-overlay {
+          width: 100%;
+        }
+
+        .menu-items {
+          max-width: 90%;
+        }
+
+        .menu-items li {
+          margin: 4px 0;
+          padding-bottom: 4px;
+        }
+
+        .menu-items a {
+          font-size: 0.9em;
+          padding: 6px 10px;
+        }
+
+        .container {
+          margin-top: 80px;
+          padding: 16px;
+        }
+
+        .row {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
+    <!-- Top Bar with Logo and Hamburger -->
+    <div class="top-bar">
+      <div class="top-bar-content">
+        <img src="/images/lab007-trans.PNG" alt="LAB007 Logo" class="top-logo">
+        <button class="menu-toggle" id="menuToggle" aria-label="Toggle menu">
+          <span></span>
+          <span></span>
+          <span></span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Menu Overlay -->
+    <div class="menu-overlay" id="menuOverlay">
+      <ul class="menu-items">
+        <li><a href="/">HOME</a></li>
+        <li><a href="/citrix">Citrix-2-HZ</a></li>
+        <li><a href="/3dprint">3D Print</a></li>
+        <li><a href="/webalert">Web-Alerts</a></li>
+        <li><a href="/vinvalue">VinValue</a></li>
+        <li><a href="https://lovesailing.ai" target="_blank">LoveSailing</a></li>
+        <li><a href="https://lovesailing-chatbot.onrender.com/chat" target="_blank">SailBOT</a></li>
+        <li><a href="https://lab007-sail-scanner2.onrender.com/sail-live-scan.html" target="_blank">SailScan</a></li>
+        <li><a href="/contact">Contact</a></li>
+      </ul>
+    </div>
+
     <div class="container">
-      <img src="lab007-trans.PNG" alt="Lab007" class="logo" />
       <form id="valueForm">
         <div>
           <label for="vin">VIN</label>
@@ -104,7 +331,7 @@
         <div id="scanResultContent"></div>
       </div>
       <div id="result" class="result" hidden>
-        <div id="valuations" style="margin-bottom: 20px;">
+        
           <div id="webuyValue" style="text-align: center; padding: 20px; background: #1f2937; border-radius: 8px; border: 1px solid #374151;">
             <h3 style="margin: 0 0 8px; color: #3b82f6; font-size: 18px;">WeBuyAnyCar Valuation</h3>
             <div id="webuyPrice" style="font-size: 36px; font-weight: 800; color: #10b981;"></div>
@@ -141,372 +368,50 @@
       const toggleDetails = document.getElementById('toggleDetails');
       const detailsContent = document.getElementById('detailsContent');
 
+      // Hamburger menu functionality
+      const menuToggle = document.getElementById('menuToggle');
+      const menuOverlay = document.getElementById('menuOverlay');
+
+      // Create backdrop for clicking outside
+      const backdrop = document.createElement('div');
+      backdrop.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 999; display: none !important; visibility: hidden;';
+      backdrop.id = 'menuBackdrop';
+      document.body.appendChild(backdrop);
+
+      menuToggle.addEventListener('click', function() {
+        const isActive = menuToggle.classList.toggle('active');
+        menuOverlay.classList.toggle('active');
+        if (isActive) {
+          backdrop.style.display = 'block';
+          backdrop.style.visibility = 'visible';
+        } else {
+          backdrop.style.display = 'none';
+          backdrop.style.visibility = 'hidden';
+        }
+      });
+
+      backdrop.addEventListener('click', function() {
+        menuToggle.classList.remove('active');
+        menuOverlay.classList.remove('active');
+        backdrop.style.display = 'none';
+        backdrop.style.visibility = 'hidden';
+      });
+
+      // Close menu when clicking a link
+      const menuLinks = document.querySelectorAll('.menu-items a');
+      menuLinks.forEach(link => {
+        link.addEventListener('click', function() {
+          menuToggle.classList.remove('active');
+          menuOverlay.classList.remove('active');
+          backdrop.style.display = 'none';
+          backdrop.style.visibility = 'hidden';
+        });
+      });
+
       // Add click handler to submit button for debugging
       submit.addEventListener('click', (e) => {
         console.log('Submit button clicked!');
       });
 
       form.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        console.log('Form submitted!');
-        result.hidden = true;
-        webuyPrice.textContent = '';
-        error.textContent = '';
-        submit.disabled = true;
-        submit.textContent = 'Working…';
-        document.body.classList.add('working');
-        // Hide details and reset toggle button
-        detailsContent.style.display = 'none';
-        toggleDetails.textContent = 'Show Details';
         
-        // Reset progress bar
-        progressFill.style.width = '0%';
-        
-        // Hide scan result when starting valuation
-        const scanResult = document.getElementById('scanResult');
-        if (scanResult) scanResult.style.display = 'none';
-        try {
-          const payload = {
-            vin: document.getElementById('vin').value.trim(),
-            mileage: document.getElementById('mileage').value.trim(),
-            zip: document.getElementById('zip').value.trim(),
-            email: document.getElementById('email').value.trim(),
-          };
-          
-          console.log('Form payload:', payload);
-          
-          // Basic validation
-          if (!payload.vin && !window.detectedCarDetails) {
-            error.textContent = 'Please enter a VIN or scan an image';
-            result.hidden = false;
-            return;
-          }
-          
-          if (!payload.mileage) {
-            error.textContent = 'Please enter mileage';
-            result.hidden = false;
-            return;
-          }
-          
-          // Add detected car details if no VIN but we have make/model/year
-          if (!payload.vin && window.detectedCarDetails) {
-            payload.make = window.detectedCarDetails.make;
-            payload.model = window.detectedCarDetails.model;
-            payload.year = window.detectedCarDetails.year;
-          }
-          // Show progress updates - start with initial message
-          progress.textContent = 'Starting valuation process...';
-          
-          // Set up realistic progress steps that cycle through
-          const progressSteps = [
-            'Starting valuation process...',
-            'Navigating to WeBuyAnyCar website...',
-            payload.vin ? 'Entering VIN number...' : 'Using Make & Model lookup...',
-            payload.vin ? 'Waiting for vehicle details to load...' : 'Selecting vehicle year...',
-            payload.vin ? 'Processing vehicle information...' : 'Selecting vehicle make...',
-            payload.vin ? 'Selecting vehicle options...' : 'Selecting vehicle model...',
-            payload.vin ? 'Entering vehicle mileage...' : 'Selecting vehicle options...',
-            payload.vin ? 'Entering ZIP code...' : 'Entering vehicle mileage...',
-            payload.vin ? 'Entering email address...' : 'Entering ZIP code...',
-            payload.vin ? 'Clicking Get Valuation button...' : 'Entering email address...',
-            payload.vin ? 'Waiting for valuation calculation...' : 'Clicking Get Valuation button...',
-            payload.vin ? 'Processing valuation result...' : 'Waiting for valuation calculation...',
-            'Finalizing results...'
-          ];
-          
-          let stepIndex = 0;
-          const progressInterval = setInterval(() => {
-            if (stepIndex < progressSteps.length) {
-              const currentStep = stepIndex + 1;
-              const totalSteps = progressSteps.length;
-              const progressPercent = (currentStep / totalSteps) * 100;
-              
-              progress.textContent = `[${currentStep}/${totalSteps}] ${progressSteps[stepIndex]}`;
-              progressFill.style.width = `${progressPercent}%`;
-              stepIndex++;
-            } else {
-              // If we've gone through all steps, show a "working" message
-              progress.textContent = 'Processing... Please wait...';
-              progressFill.style.width = '100%';
-            }
-          }, 2000); // Update every 2 seconds for better visibility
-          
-          console.log('Sending request to /api/value with payload:', payload);
-          const res = await fetch('/api/value', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload),
-          });
-          console.log('Response status:', res.status);
-          
-          clearInterval(progressInterval);
-          progress.textContent = 'Processing valuation result...';
-          const data = await res.json();
-          result.hidden = false;
-          
-          if (!res.ok) {
-            // Server returned an error with debug info
-            error.textContent = data.error || 'Failed';
-            progress.textContent = 'Valuation failed - see details below';
-            progress.style.color = '#ef4444'; // Red color for error
-            
-            if (data.steps && data.steps.length > 0) {
-              // Create a detailed steps display for errors
-              const stepsDiv = document.createElement('div');
-              stepsDiv.style.cssText = 'margin-top: 8px; padding: 8px; background: #1f2937; border-radius: 4px; font-size: 14px; max-height: 200px; overflow-y: auto;';
-              stepsDiv.innerHTML = '<strong>Process Steps (Failed):</strong><br>' + data.steps.join('<br>');
-              progress.parentNode.insertBefore(stepsDiv, progress.nextSibling);
-            }
-            if (data.screenshots) {
-              shots.innerHTML = '';
-              const links = [];
-              if (data.screenshots.error) links.push(`<a href="${data.screenshots.error}" target="_blank">Error state</a>`);
-              if (data.screenshots.filled) links.push(`<a href="${data.screenshots.filled}" target="_blank">Filled form</a>`);
-              if (data.screenshots.result) links.push(`<a href="${data.screenshots.result}" target="_blank">Result page</a>`);
-              if (links.length) shots.innerHTML = 'Screenshots: ' + links.join(' · ');
-            }
-            
-            return;
-          }
-          
-          // Success case
-          webuyPrice.textContent = `$${data.valuation}`;
-          
-          // Display the actual steps from the server
-          if (data.steps && data.steps.length > 0) {
-            progress.textContent = 'Valuation completed successfully!';
-            progress.style.color = '#10b981'; // Green color for success
-            
-            // Create a detailed steps display
-            const stepsDiv = document.createElement('div');
-            stepsDiv.style.cssText = 'margin-top: 8px; padding: 8px; background: #1f2937; border-radius: 4px; font-size: 14px; max-height: 200px; overflow-y: auto;';
-            stepsDiv.innerHTML = '<strong>Process Steps:</strong><br>' + data.steps.join('<br>');
-            progress.parentNode.insertBefore(stepsDiv, progress.nextSibling);
-          } else {
-            progress.textContent = 'Valuation completed!';
-            progress.style.color = '#10b981';
-          }
-          
-          // Market value integration removed
-          
-          // Show dropdown selections if any
-          if (data.selections && data.selections.length > 0) {
-            const selectionsDiv = document.createElement('div');
-            selectionsDiv.style.cssText = 'margin-top: 8px; padding: 8px; background: #1f2937; border-radius: 4px; font-size: 14px;';
-            selectionsDiv.innerHTML = `<strong>Vehicle Options Selected:</strong><br>${data.selections.join('<br>')}`;
-            progress.parentNode.insertBefore(selectionsDiv, progress.nextSibling);
-          }
-          
-          // Show toggle button if there are details to show
-          if (data.steps && data.steps.length > 0) {
-            toggleDetails.style.display = 'inline-block';
-          }
-          
-          // Show screenshots
-          if (data.screenshots) {
-            shots.innerHTML = '';
-            const links = [];
-            if (data.screenshots.filled) links.push(`<a href="${data.screenshots.filled}" target="_blank">Filled form</a>`);
-            if (data.screenshots.result) links.push(`<a href="${data.screenshots.result}" target="_blank">Result page</a>`);
-            if (links.length) shots.innerHTML = 'Screenshots: ' + links.join(' · ');
-          }
-          
-          
-
-        } catch (err) {
-          result.hidden = false;
-          error.textContent = err.message || 'Network error - check console';
-          console.error('Request failed:', err);
-        } finally {
-          submit.disabled = false;
-          submit.textContent = 'Get Valuation';
-          document.body.classList.remove('working');
-        }
-      });
-
-      // VIN scan logic
-      const VIN_REGEX = /\b([A-HJ-NPR-Z\d]{17})\b/g; // excludes I, O, Q
-      const YEAR_REGEX = /\b(19|20)\d{2}\b/g;
-      const MILEAGE_REGEX = /\b(\d{1,3}(?:,\d{3})*)\s*(?:miles?|mi\.?)\b/gi;
-
-      scanVinBtn?.addEventListener('click', () => {
-        vinImage.click();
-      });
-
-      vinImage?.addEventListener('change', async () => {
-        if (!vinImage.files || vinImage.files.length === 0) return;
-        const file = vinImage.files[0];
-        
-        // Check file size (warn if over 5MB)
-        if (file.size > 5 * 1024 * 1024) {
-          alert('Large image detected. It will be compressed automatically.');
-        }
-        
-        try {
-          scanVinBtn.disabled = true;
-          scanVinBtn.textContent = 'Compressing image…';
-          const dataUrl = await compressImage(file);
-          scanVinBtn.textContent = 'Analyzing…';
-          
-          // Use OpenAI Vision API instead of Tesseract
-          const response = await fetch('/api/analyze-image', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ imageDataUrl: dataUrl })
-          });
-          
-          if (!response.ok) {
-            throw new Error('AI analysis failed');
-          }
-          
-          const result = await response.json();
-          
-          // Handle VIN found - use VIN path
-          if (result.vin) {
-            vinInput.value = result.vin;
-            showScanResult(`VIN detected: ${result.vin}`, 'vin');
-            return;
-          }
-          
-          // Handle car details found - use Make & Model path
-          const details = [];
-          if (result.make && result.model) details.push(`Make/Model: ${result.make} ${result.model}`);
-          if (result.year) details.push(`Year: ${result.year}`);
-          if (result.mileage) details.push(`Mileage: ${result.mileage}`);
-          
-          if (details.length > 0) {
-            // Auto-fill the form with detected details
-            vinInput.value = ''; // Clear VIN since we don't have one
-            if (result.mileage) {
-              document.getElementById('mileage').value = result.mileage.replace(/[^\d]/g, '');
-            }
-            
-            // Store detected details for Make & Model path
-            window.detectedCarDetails = {
-              make: result.make || '',
-              model: result.model || '',
-              year: result.year || ''
-            };
-            
-            showScanResult(`Car details detected:<br>${details.join('<br>')}<br><br>Proceeding with Make & Model lookup...`, 'details');
-            
-            // Automatically proceed with valuation after a short delay
-            setTimeout(() => {
-              document.getElementById('valueForm').dispatchEvent(new Event('submit'));
-            }, 2000);
-          } else {
-            showScanResult('No VIN or car details detected. Try a clearer photo of the VIN label or car listing.', 'error');
-          }
-        } catch (e) {
-          showScanResult('AI analysis failed: ' + (e && e.message ? e.message : 'unknown error'), 'error');
-        } finally {
-          scanVinBtn.disabled = false;
-          scanVinBtn.textContent = 'Scan Image';
-          vinImage.value = '';
-        }
-      });
-
-      function fileToDataUrl(file) {
-        return new Promise((resolve, reject) => {
-          const reader = new FileReader();
-          reader.onload = () => resolve(reader.result);
-          reader.onerror = reject;
-          reader.readAsDataURL(file);
-        });
-      }
-
-      function compressImage(file, maxWidth = 1024, quality = 0.8) {
-        return new Promise((resolve) => {
-          const canvas = document.createElement('canvas');
-          const ctx = canvas.getContext('2d');
-          const img = new Image();
-          
-          img.onload = () => {
-            // Calculate new dimensions
-            let { width, height } = img;
-            if (width > maxWidth) {
-              height = (height * maxWidth) / width;
-              width = maxWidth;
-            }
-            
-            canvas.width = width;
-            canvas.height = height;
-            
-            // Draw and compress
-            ctx.drawImage(img, 0, 0, width, height);
-            const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
-            resolve(compressedDataUrl);
-          };
-          
-          img.src = URL.createObjectURL(file);
-        });
-      }
-
-      function showScanResult(message, type = 'info') {
-        const scanResult = document.getElementById('scanResult');
-        const scanResultContent = document.getElementById('scanResultContent');
-        
-        // Set color based on type
-        let borderColor = '#374151';
-        if (type === 'vin') borderColor = '#10b981';
-        else if (type === 'details') borderColor = '#3b82f6';
-        else if (type === 'error') borderColor = '#ef4444';
-        
-        scanResult.style.borderColor = borderColor;
-        scanResultContent.innerHTML = message;
-        scanResult.style.display = 'block';
-        
-        // Hide after 5 seconds for non-error messages
-        if (type !== 'error') {
-          setTimeout(() => {
-            scanResult.style.display = 'none';
-          }, 5000);
-        }
-      }
-
-      // Toggle details visibility
-      toggleDetails?.addEventListener('click', () => {
-        if (detailsContent.style.display === 'none') {
-          detailsContent.style.display = 'block';
-          toggleDetails.textContent = 'Hide Details';
-        } else {
-          detailsContent.style.display = 'none';
-          toggleDetails.textContent = 'Show Details';
-        }
-      });
-
-      // Prefill defaults from server environment
-      (async () => {
-        try {
-          console.log('Fetching default values...');
-          const res = await fetch('/api/defaults');
-          if (!res.ok) {
-            console.log('Failed to fetch defaults:', res.status);
-            return;
-          }
-          const { zip, email } = await res.json();
-          console.log('Default values received:', { zip, email });
-          
-          // Always set the default values and update placeholders
-          if (zip) {
-            zipInput.value = String(zip);
-            zipInput.placeholder = `Default: ${zip}`;
-            console.log('Set ZIP default:', zip);
-          }
-          if (email) {
-            emailInput.value = email;
-            emailInput.placeholder = `Default: ${email}`;
-            console.log('Set email default:', email);
-          }
-        } catch (e) {
-          console.log('Could not fetch defaults:', e);
-          // Set fallback placeholders
-          zipInput.placeholder = 'Enter ZIP code';
-          emailInput.placeholder = 'Enter email address';
-        }
-      })();
-    </script>
-  </body>
-  </html>
-
-
