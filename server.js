@@ -371,6 +371,11 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Dummy test page for Web-Alert testing
+app.get('/dummypage', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'dummypage.html'));
+});
+
 // Catch-all route for main landing page (must be last, only matches exact /)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
