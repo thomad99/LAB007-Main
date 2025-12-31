@@ -179,26 +179,38 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
 
 async function sendWelcomeEmail(email, websiteUrl, duration) {
     console.log('[Web-Alert Email] Sending welcome email to:', email);
+    console.log('[Web-Alert Email] Website:', websiteUrl);
+    console.log('[Web-Alert Email] Duration:', duration);
     
     try {
         const mailOptions = {
             from: `"Web Alert Service" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
             to: email,
-            subject: 'Web Monitoring Started',
-            text: `Welcome! We're now monitoring ${websiteUrl} for changes. Duration: ${duration} minutes.`,
+            subject: 'Web Alerts Activated',
+            text: `Web Alerts Activated\n\nURL: ${websiteUrl}\nPoll Period: Every 3 minutes\nDuration: ${duration} minutes\n\nMonitoring has started successfully. You will receive notifications if any changes are detected.`,
             html: `
-                <h2>🎉 Welcome to Web Alert!</h2>
-                <p>We've successfully started monitoring: <a href="${websiteUrl}">${websiteUrl}</a></p>
-                <p><strong>Monitoring Duration:</strong> ${duration} minutes</p>
-                <p><strong>Start Time:</strong> ${new Date().toLocaleString()}</p>
-                <p><strong>Check Frequency:</strong> Every 3 minutes</p>
-                <hr>
-                <p>You'll receive notifications if any changes are detected on the website.</p>
-                <p>Monitoring will automatically stop after ${duration} minutes.</p>
+                <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #0066cc;">Web Alerts Activated</h2>
+                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                        <p><strong>URL:</strong> <a href="${websiteUrl}">${websiteUrl}</a></p>
+                        <p><strong>Poll Period:</strong> Every 3 minutes</p>
+                        <p><strong>Duration:</strong> ${duration} minutes</p>
+                        <p><strong>Start Time:</strong> ${new Date().toLocaleString()}</p>
+                    </div>
+                    <p>Monitoring has started successfully. You will receive notifications if any changes are detected on the website.</p>
+                    <p>Monitoring will automatically stop after ${duration} minutes.</p>
+                </div>
             `
         };
         
+        console.log('[Web-Alert Email] Mail options prepared:', {
+            from: mailOptions.from,
+            to: mailOptions.to,
+            subject: mailOptions.subject
+        });
+        
         if (sendgrid) {
+            console.log('[Web-Alert Email] Using SendGrid API...');
             const msg = {
                 to: email,
                 from: process.env.SMTP_USER || process.env.EMAIL_USER,
@@ -207,15 +219,20 @@ async function sendWelcomeEmail(email, websiteUrl, duration) {
                 html: mailOptions.html
             };
             await sendgrid.send(msg);
+            console.log('[Web-Alert Email] Welcome email sent successfully via SendGrid');
             return { messageId: 'sendgrid-' + Date.now() };
         } else if (transporter) {
+            console.log('[Web-Alert Email] Using SMTP...');
             const info = await transporter.sendMail(mailOptions);
+            console.log('[Web-Alert Email] Welcome email sent successfully via SMTP:', info.messageId);
             return info;
         } else {
-            throw new Error('Email service not configured');
+            console.error('[Web-Alert Email] Email service not configured - SMTP_USER/SMTP_PASS or SENDGRID_API_KEY required');
+            throw new Error('Email service not configured. Please set SMTP_USER/SMTP_PASS or SENDGRID_API_KEY');
         }
     } catch (error) {
         console.error('[Web-Alert Email] Error sending welcome email:', error.message);
+        console.error('[Web-Alert Email] Error stack:', error.stack);
         throw error;
     }
 }
