@@ -72,6 +72,13 @@ document.getElementById('alertForm').addEventListener('submit', async (e) => {
 
         statusBox.innerHTML += '<p>⌛ Processing response...</p>';
         
+        // Check if response is JSON before parsing
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            throw new Error(`Server returned ${response.status}: ${text.substring(0, 200)}`);
+        }
+        
         const data = await response.json();
         console.log('Server response:', data);
         
