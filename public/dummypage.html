@@ -34,6 +34,18 @@
             display: inline-block;
             min-width: 120px;
         }
+        .clock-display {
+            font-size: 48px;
+            font-weight: bold;
+            color: #333;
+            margin: 20px 0;
+            padding: 15px;
+            background-color: #e9ecef;
+            border-radius: 8px;
+            display: inline-block;
+            min-width: 150px;
+            font-family: 'Courier New', monospace;
+        }
         .info {
             color: #666;
             margin-top: 20px;
@@ -51,6 +63,7 @@
         <h1>LAB007 Web Alert Test Page</h1>
         <p>This page updates automatically every 55 seconds to test Web Alert monitoring.</p>
         <div class="number-display" id="numberDisplay">1</div>
+        <div class="clock-display" id="clockDisplay">00:00</div>
         <div class="info">
             <p>Current number: <strong id="currentNumber">1</strong></p>
             <p>Next update in: <strong id="countdown">55</strong> seconds</p>
@@ -69,6 +82,7 @@
         const currentNumberSpan = document.getElementById('currentNumber');
         const countdownSpan = document.getElementById('countdown');
         const lastUpdateSpan = document.getElementById('lastUpdate');
+        const clockDisplay = document.getElementById('clockDisplay');
 
         function updateNumber() {
             currentNumber++;
@@ -86,14 +100,25 @@
             }
         }
 
+        function updateClock() {
+            const now = new Date();
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            clockDisplay.textContent = `${hours}:${minutes}`;
+        }
+
         // Initial update
         lastUpdateSpan.textContent = new Date().toLocaleString();
+        updateClock();
 
         // Update number every 55 seconds
         setInterval(updateNumber, updateInterval);
 
         // Update countdown every second
         setInterval(updateCountdown, 1000);
+
+        // Update clock every second
+        setInterval(updateClock, 1000);
     </script>
 </body>
 </html>
