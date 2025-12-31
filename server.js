@@ -79,11 +79,7 @@ if (fs.existsSync(print3dServerPath)) {
 }
 
 function setup3dPrintFallback() {
-    // Serve static files first (CSS, JS, images)
-    app.use('/3dprint/images', express.static(path.join(__dirname, '3dPrint', 'images')));
-    app.use('/3dprint/public', express.static(path.join(__dirname, '3dPrint', 'public')));
-    
-    // Explicit routes for HTML pages (must come after static middleware to allow CSS/JS to load)
+    // Explicit routes for HTML pages FIRST (before static middleware)
     app.get('/3dprint', (req, res) => {
         const indexPath = path.join(__dirname, '3dPrint', 'public', 'index.html');
         if (fs.existsSync(indexPath)) {
@@ -109,8 +105,9 @@ function setup3dPrintFallback() {
         }
     });
     
-    // Serve static files from 3dPrint/public for API routes and other assets
-    app.use('/3dprint', express.static(path.join(__dirname, '3dPrint', 'public'), {
+    // Serve static files (CSS, JS, images) - after explicit routes
+    app.use('/3dprint/images', express.static(path.join(__dirname, '3dPrint', 'images')));
+    app.use('/3dprint/public', express.static(path.join(__dirname, '3dPrint', 'public'), {
         index: false // Don't serve index.html automatically, let the explicit route handle it
     }));
 }
