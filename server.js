@@ -5,6 +5,7 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
+const nodemailer = require('nodemailer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -219,6 +220,58 @@ function setupWebAlertFallback() {
         }
     });
 }
+
+// Contact form route
+app.get('/contact', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'contact.html'));
+});
+
+// Contact form submission endpoint
+app.post('/api/contact', async (req, res) => {
+    const { email, message } = req.body;
+
+    // Validate input
+    if (!email || !message) {
+        return res.status(400).json({ error: 'Email and message are required' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        return res.status(400).json({ error: 'Invalid email address' });
+    }
+
+    // Check if email transporter is configured
+    if (!emailTransporter) {
+        console.error('Contact form submission failed: Email transporter not configured');
+        return res.status(500).json({ error: 'Email service not configured. Please contact support directly.' });
+    }
+
+    // Prepare email
+    const mailOptions = {
+        from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@lab007.ai',
+        to: 'info@lab007.ai',
+        subject: 'LAB007 CONTACT FORM',
+        text: `Contact Form Submission\n\nEmail: ${email}\n\nMessage:\n${message}`,
+        html: `
+            <h2>LAB007 Contact Form Submission</h2>
+            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>Message:</strong></p>
+            <p>${message.replace(/\n/g, '<br>')}</p>
+        `
+    };
+
+    try {
+        const info = await emailTransporter.sendMail(mailOptions);
+        console.log('Contact form email sent successfully:', info.messageId);
+        res.json({ success: true, message: 'Message sent successfully' });
+    } catch (error) {
+        console.error('Failed to send contact form email:', error);
+        res.status(500).json({ 
+            error: 'Failed to send message. Please try again later or contact us directly at info@lab007.ai' 
+        });
+    }
+});
 
 // Health check
 app.get('/api/health', (req, res) => {
