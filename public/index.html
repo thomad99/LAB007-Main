@@ -22,6 +22,7 @@
             background: white;
             margin: 0;
             padding: 0;
+            padding-top: 100px; /* Account for fixed header on mobile */
             height: 100vh;
             overflow: hidden;
             display: flex;
@@ -127,6 +128,7 @@
             padding: 20px;
             overflow-y: auto;
             box-shadow: -4px 0 20px rgba(0, 0, 0, 0.3);
+            padding-top: 100px; /* Account for fixed header */
         }
 
         .menu-overlay.active {
@@ -142,9 +144,9 @@
             margin: 0;
             display: flex;
             flex-direction: column;
-            justify-content: center;
+            justify-content: flex-start;
             align-items: center;
-            height: 100%;
+            padding-top: 20px;
         }
 
         .menu-items li {
@@ -247,6 +249,10 @@
         }
 
         @media (max-width: 768px) {
+            body {
+                padding-top: 120px; /* Extra padding on mobile for fixed header */
+            }
+
             header h1 {
                 font-size: 1.4em;
             }
@@ -267,6 +273,10 @@
             .menu-toggle span {
                 width: 30px;
                 height: 4px;
+            }
+
+            .menu-overlay {
+                padding-top: 120px; /* Extra padding on mobile */
             }
 
             .menu-items {
