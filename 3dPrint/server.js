@@ -963,7 +963,7 @@ LAB007 3D Printing`;
     <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
       <tr>
         <td style="padding: 8px 0;">Quantity:</td>
-        <td style="text-align: right; padding: 8px 0;"><strong>${quantity || 1}</strong></td>
+        <td style="text-align: right; padding: 8px 0;"><strong>${orderQuantity}</strong></td>
       </tr>
       <tr>
         <td style="padding: 8px 0;">Quality:</td>
