@@ -40,10 +40,6 @@ process.on('unhandledRejection', (reason, promise) => {
 app.use(cors());
 app.use(express.json());
 
-// Update the static file serving
-app.use(express.static(path.join(__dirname, '../frontend/public')));
-app.use('/src', express.static(path.join(__dirname, '../frontend/src')));
-
 // Store active monitoring tasks
 const monitoringTasks = new Map();
 
@@ -1392,6 +1388,10 @@ app.use((err, req, res, next) => {
     console.error(err.stack);
     res.status(500).send('Something broke!');
 });
+
+// Static file serving - must come AFTER API routes to avoid conflicts
+app.use(express.static(path.join(__dirname, '../frontend/public')));
+app.use('/src', express.static(path.join(__dirname, '../frontend/src')));
 
 // Modify the server startup (only if running as standalone)
 if (require.main === module) {
