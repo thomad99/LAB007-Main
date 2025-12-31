@@ -57,25 +57,23 @@ app.use('/images', express.static(path.join(__dirname, 'LAB007', 'Images')));
 // Mount each project's Express app BEFORE main static middleware to ensure routes are matched correctly
 
 // 3D Print Project
+// Set up explicit routes FIRST (these take precedence over mounted apps)
+setup3dPrintFallback();
+
 const print3dServerPath = path.join(__dirname, '3dPrint', 'server.js');
 if (fs.existsSync(print3dServerPath)) {
     try {
         const print3dApp = require('./3dPrint/server');
-        // Mount the app at /3dprint - this handles both static files and API routes
-        // Mount with explicit handling to ensure it works
+        // Mount the app at /3dprint for API routes (static files are handled by fallback above)
         app.use('/3dprint', print3dApp);
-        // Also ensure /3dprint/ works (with trailing slash)
-        app.use('/3dprint/', print3dApp);
-        console.log('✓ 3D Print app mounted at /3dprint');
+        console.log('✓ 3D Print app mounted at /3dprint for API routes');
     } catch (error) {
         console.error('Failed to mount 3D Print app:', error.message);
         console.error('Stack:', error.stack);
-        // Fallback to static file serving
-        setup3dPrintFallback();
+        console.warn('Using fallback static serving only (API routes will not work)');
     }
 } else {
-    console.warn('3D Print server.js not found, using fallback static serving');
-    setup3dPrintFallback();
+    console.warn('3D Print server.js not found, using fallback static serving only');
 }
 
 function setup3dPrintFallback() {
