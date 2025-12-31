@@ -68,17 +68,7 @@ const smtpConfig = {
 };
 
 // Log email configuration
-if (emailServiceUrl) {
-  console.log('=== Email Configuration (External Service) ===');
-  console.log('  Provider: External HTTP Service (forwarding to paid Render service)');
-  console.log(`  Service URL: ${emailServiceUrl}`);
-  console.log(`  Order Notify Email: ${process.env.ORDER_NOTIFY_EMAIL || 'info@lab007.ai'}`);
-  console.log(`  Order Email Header: ${process.env.ORDER_EMAIL_HEADER || '(not set)'}`);
-  console.log('');
-  console.log('NOTE: Email requests will be forwarded to your paid Render service via HTTP.');
-  console.log('      That service will handle SMTP sending.');
-  console.log('');
-} else if (sendgrid) {
+if (sendgrid) {
   console.log('=== Email Configuration (SendGrid API) ===');
   console.log('  Provider: SendGrid (API-based, works on free Render plans)');
   console.log('  API Key: ***set***');
