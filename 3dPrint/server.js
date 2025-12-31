@@ -57,8 +57,8 @@ const smtpConfig = {
   connectionTimeout: 30000, // 30 seconds (increased for cloud platforms)
   greetingTimeout: 30000, // 30 seconds
   socketTimeout: 30000, // 30 seconds
-  debug: true, // Enable debug output
-  logger: true, // Enable logging
+  debug: false, // Disable verbose debug output (was causing log spam)
+  logger: false, // Disable verbose logging
   tls: {
     // Reject unauthorized certificates (set to false only for testing)
     rejectUnauthorized: true,
@@ -895,7 +895,7 @@ Please review the attached STL file and contact the customer to confirm the orde
 We typically will turn this around same day.
 
 Order Details:
-- Quantity: ${quantity || 1}
+- Quantity: ${orderQuantity}
 - Quality: ${qualityMode === 'high' ? 'High Quality (0.10mm)' : 'Draft (0.24mm)'}
 - Color: ${colorChoice || 'Not specified'}
 
