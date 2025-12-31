@@ -479,7 +479,7 @@ async function calculateShipping() {
     calculateShippingBtn.textContent = 'Calculating...';
     
     try {
-        const response = await fetch('/api/recalculate-shipping', {
+        const response = await fetch('api/recalculate-shipping', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'

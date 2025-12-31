@@ -528,7 +528,7 @@ function calculateFilamentRequired(volumeCm3, settings) {
 }
 
 // Calculate shipping cost based on zipcode distance and quantity
-// Using a simple distance-based calculation (can be replaced with shipping API)
+// Using 3 price bands based on distance from 34238
 function calculateShippingCost(fromZip, toZip, isCollection, quantity = 1) {
   if (isCollection) {
     return 0; // No shipping cost for collection
@@ -537,38 +537,39 @@ function calculateShippingCost(fromZip, toZip, isCollection, quantity = 1) {
   // Default shipping cost if no zipcode provided
   let baseShipping = 15.00; // Default to medium distance shipping
   
-  if (toZip && fromZip && typeof toZip === 'string' && typeof fromZip === 'string') {
+  if (toZip && fromZip && typeof toZip === 'string' && typeof fromZip === 'string' && toZip.length >= 3 && fromZip.length >= 3) {
     try {
       // Simple zipcode-based shipping calculation
       // Extract first 3 digits of zipcode for approximate distance calculation
-      const fromZip3 = fromZip.substring(0, 3);
-      const toZip3 = toZip.substring(0, 3);
+      const fromZip3 = parseInt(fromZip.substring(0, 3));
+      const toZip3 = parseInt(toZip.substring(0, 3));
       
-      // Calculate approximate distance based on zipcode difference
-      const zipDiff = Math.abs(parseInt(fromZip3) - parseInt(toZip3));
-      
-      // Shipping tiers based on distance
-      if (zipDiff === 0) {
-        // Same zipcode area - local delivery
-        baseShipping = 5.00;
-      } else if (zipDiff < 50) {
-        // Nearby (within ~50 zipcode units) - regional
-        baseShipping = 8.00;
-      } else if (zipDiff < 200) {
-        // Medium distance - state/regional
-        baseShipping = 12.00;
-      } else if (zipDiff < 500) {
-        // Long distance - cross-region
-        baseShipping = 18.00;
+      if (isNaN(fromZip3) || isNaN(toZip3)) {
+        console.warn('Invalid zipcode format for shipping calculation, using default base shipping.');
+        baseShipping = 15.00;
       } else {
-        // Very long distance - cross-country
-        baseShipping = 25.00;
+        // Calculate approximate distance based on zipcode difference
+        const zipDiff = Math.abs(fromZip3 - toZip3);
+        
+        // 3 price bands based on distance
+        if (zipDiff < 100) {
+          // Band 1: Local/Regional (within ~100 zipcode units)
+          baseShipping = 8.00;
+        } else if (zipDiff < 300) {
+          // Band 2: Medium distance (within ~300 zipcode units)
+          baseShipping = 15.00;
+        } else {
+          // Band 3: Long distance (beyond ~300 zipcode units)
+          baseShipping = 25.00;
+        }
       }
     } catch (error) {
-      console.warn('Error calculating shipping from zipcodes, using default:', error);
+      console.error('Error parsing zipcodes for shipping calculation:', error.message, 'Using default base shipping.');
       // Use default shipping if zipcode parsing fails
       baseShipping = 15.00;
     }
+  } else {
+    console.warn('Missing or invalid zipcodes for shipping calculation, using default base shipping.');
   }
   
   // Double shipping cost for quantities above 5
