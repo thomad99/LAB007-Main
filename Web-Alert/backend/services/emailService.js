@@ -51,19 +51,20 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
     console.warn('[Web-Alert Email] SMTP credentials not configured (SMTP_USER or SMTP_PASS missing)');
 }
 
-async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
+async function sendAlert(email, websiteUrl, contentBefore, contentAfter, subscriberId = null) {
     console.log('[Web-Alert Email] Sending alert email...');
     console.log('[Web-Alert Email] To:', email);
     console.log('[Web-Alert Email] Website:', websiteUrl);
+    console.log('[Web-Alert Email] Subscriber ID:', subscriberId);
     
     try {
         // Use ALERT_SUBJECT environment variable, fallback to default
         const emailSubject = process.env.ALERT_SUBJECT || 'Page Change Detected';
         
-        // Create LAB007 logo HTML (2x bigger - was 200px, now 400px)
+        // Create LAB007 logo HTML (2x bigger - was 200px, now 400px) with small spacing
         const lab007Logo = `
-            <div style="text-align: center; margin-bottom: 20px;">
-                <img src="https://raw.githubusercontent.com/thomad99/LAB007-WebAlert/main/frontend/public/lab007-trans.PNG" 
+            <div style="text-align: center; margin-bottom: 10px;">
+                <img src="https://raw.githubusercontent.com/thomad99/LAB007-Main/master/LAB007/Images/lab007-trans.PNG" 
                      alt="LAB007 Logo" 
                      style="max-width: 400px; height: auto; border-radius: 8px;">
             </div>
@@ -88,13 +89,15 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
             }
         }
         
-        // Small footer logo
+        // Footer logo with stop link (larger logo)
+        const stopUrl = subscriberId ? `https://lab007-main.onrender.com/webalert/stop/${subscriberId}` : 'https://lab007-main.onrender.com/webalert';
         const footerLogo = `
             <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
-                <img src="https://raw.githubusercontent.com/thomad99/LAB007-WebAlert/main/frontend/public/lab007-trans.PNG" 
+                <img src="https://raw.githubusercontent.com/thomad99/LAB007-Main/master/LAB007/Images/lab007-trans.PNG" 
                      alt="LAB007 Logo" 
-                     style="max-width: 100px; height: auto; margin-bottom: 10px;">
+                     style="max-width: 200px; height: auto; margin-bottom: 10px;">
                 <p style="margin: 5px 0;"><a href="https://lab007-main.onrender.com/webalert" style="color: #0066cc; text-decoration: none;">Web Alert Main Page</a></p>
+                ${subscriberId ? `<p style="margin: 5px 0;"><a href="${stopUrl}" style="color: #dc3545; text-decoration: none; font-weight: bold;">Stop Alerts</a></p>` : ''}
             </div>
         `;
         
@@ -137,8 +140,6 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
                         </div>
                         ` : ''}
                         
-                        <p class="timestamp" style="text-align: center; margin-top: 20px;"><strong>Date and time:</strong> ${new Date().toLocaleString()}</p>
-                        
                         ${footerLogo}
                     </div>
                 </body>
@@ -173,10 +174,11 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
     }
 }
 
-async function sendWelcomeEmail(email, websiteUrl, duration) {
+async function sendWelcomeEmail(email, websiteUrl, duration, subscriberId = null) {
     console.log('[Web-Alert Email] Sending welcome email to:', email);
     console.log('[Web-Alert Email] Website:', websiteUrl);
     console.log('[Web-Alert Email] Duration:', duration);
+    console.log('[Web-Alert Email] Subscriber ID:', subscriberId);
     
     try {
         const mailOptions = {
@@ -195,6 +197,15 @@ async function sendWelcomeEmail(email, websiteUrl, duration) {
                     </div>
                     <p>Monitoring has started successfully. You will receive notifications if any changes are detected on the website.</p>
                     <p>Monitoring will automatically stop after ${duration} minutes.</p>
+                    ${subscriberId ? `
+                    <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                        <img src="https://raw.githubusercontent.com/thomad99/LAB007-Main/master/LAB007/Images/lab007-trans.PNG" 
+                             alt="LAB007 Logo" 
+                             style="max-width: 200px; height: auto; margin-bottom: 10px;">
+                        <p style="margin: 5px 0;"><a href="https://lab007-main.onrender.com/webalert" style="color: #0066cc; text-decoration: none;">Web Alert Main Page</a></p>
+                        <p style="margin: 5px 0;"><a href="https://lab007-main.onrender.com/webalert/stop/${subscriberId}" style="color: #dc3545; text-decoration: none; font-weight: bold;">Stop Alerts</a></p>
+                    </div>
+                    ` : ''}
                 </div>
             `
         };
@@ -233,8 +244,9 @@ async function sendWelcomeEmail(email, websiteUrl, duration) {
     }
 }
 
-async function sendSummaryEmail(email, websiteUrl, duration, checkCount, changesDetected, lastCheck) {
+async function sendSummaryEmail(email, websiteUrl, duration, checkCount, changesDetected, lastCheck, subscriberId = null) {
     console.log('[Web-Alert Email] Sending summary email to:', email);
+    console.log('[Web-Alert Email] Subscriber ID:', subscriberId);
     
     try {
         const summaryText = changesDetected > 0 
@@ -250,13 +262,15 @@ async function sendSummaryEmail(email, websiteUrl, duration, checkCount, changes
             </div>
         `;
         
-        // Small footer logo with link
+        // Footer logo with stop link (larger logo)
+        const stopUrl = subscriberId ? `https://lab007-main.onrender.com/webalert/stop/${subscriberId}` : 'https://lab007-main.onrender.com/webalert';
         const footerLogo = `
             <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
-                <img src="https://raw.githubusercontent.com/thomad99/LAB007-WebAlert/main/frontend/public/lab007-trans.PNG" 
+                <img src="https://raw.githubusercontent.com/thomad99/LAB007-Main/master/LAB007/Images/lab007-trans.PNG" 
                      alt="LAB007 Logo" 
-                     style="max-width: 100px; height: auto; margin-bottom: 10px;">
+                     style="max-width: 200px; height: auto; margin-bottom: 10px;">
                 <p style="margin: 5px 0;"><a href="https://lab007-main.onrender.com/webalert" style="color: #0066cc; text-decoration: none;">Web Alert Main Page</a></p>
+                ${subscriberId ? `<p style="margin: 5px 0;"><a href="${stopUrl}" style="color: #dc3545; text-decoration: none; font-weight: bold;">Stop Alerts</a></p>` : ''}
             </div>
         `;
         

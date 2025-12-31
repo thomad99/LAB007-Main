@@ -131,7 +131,7 @@ async function startUrlMonitoring(urlId, websiteUrl) {
                     
                     // Get all subscribers for this URL to send summary
                     const allSubscribers = await db.query(`
-                        SELECT email, phone_number, polling_duration
+                        SELECT id as subscriber_id, email, phone_number, polling_duration
                         FROM alert_subscribers 
                         WHERE url_id = $1
                         ORDER BY created_at DESC
@@ -154,7 +154,8 @@ async function startUrlMonitoring(urlId, websiteUrl) {
                                     sub.polling_duration, 
                                     checkCount, 
                                     changesDetected,
-                                    new Date()
+                                    new Date(),
+                                    sub.subscriber_id
                                 ).then(() => {
                                     console.log(`Summary email sent successfully to ${sub.email}`);
                                     console.log('========== SUMMARY EMAIL SENT ==========');
@@ -260,7 +261,7 @@ async function startUrlMonitoring(urlId, websiteUrl) {
                                     console.log(`Website URL: ${websiteUrl}`);
                                     
                                     notifications.push(
-                                        emailService.sendAlert(subscriber.email, websiteUrl, previousContent, content)
+                                        emailService.sendAlert(subscriber.email, websiteUrl, previousContent, content, subscriber.subscriber_id)
                                             .then(result => {
                                                 console.log(`Email alert sent successfully to ${subscriber.email}`);
                                                 console.log(`Message ID: ${result.messageId}`);
@@ -449,6 +450,99 @@ app.get('/status.html', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/public/status.html'));
 });
 
+app.get('/stop/:id', (req, res) => {
+    res.sendFile(path.join(__dirname, '../frontend/public/stop.html'));
+});
+
+// API endpoint to get subscriber information
+app.get('/api/subscriber/:id', async (req, res) => {
+    try {
+        const subscriberId = parseInt(req.params.id);
+        if (isNaN(subscriberId)) {
+            return res.status(400).json({ success: false, error: 'Invalid subscriber ID' });
+        }
+        
+        const result = await db.query(`
+            SELECT 
+                s.id,
+                s.email,
+                s.phone_number,
+                s.polling_duration,
+                s.is_active,
+                s.created_at,
+                u.website_url
+            FROM alert_subscribers s
+            JOIN monitored_urls u ON s.url_id = u.id
+            WHERE s.id = $1
+        `, [subscriberId]);
+        
+        if (!result.rows || result.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Subscriber not found' });
+        }
+        
+        res.json({
+            success: true,
+            subscriber: result.rows[0]
+        });
+    } catch (error) {
+        console.error('Error fetching subscriber:', error);
+        res.status(500).json({ success: false, error: 'Failed to fetch subscriber information' });
+    }
+});
+
+// API endpoint to stop alerts for a specific subscriber
+app.post('/api/stop/:id', async (req, res) => {
+    try {
+        const subscriberId = parseInt(req.params.id);
+        if (isNaN(subscriberId)) {
+            return res.status(400).json({ success: false, error: 'Invalid subscriber ID' });
+        }
+        
+        // Get subscriber info to find url_id
+        const subscriberResult = await db.query(`
+            SELECT url_id FROM alert_subscribers WHERE id = $1
+        `, [subscriberId]);
+        
+        if (!subscriberResult.rows || subscriberResult.rows.length === 0) {
+            return res.status(404).json({ success: false, error: 'Subscriber not found' });
+        }
+        
+        const urlId = subscriberResult.rows[0].url_id;
+        
+        // Deactivate the subscriber
+        await db.query(`
+            UPDATE alert_subscribers 
+            SET is_active = false 
+            WHERE id = $1
+        `, [subscriberId]);
+        
+        // Check if there are any other active subscribers for this URL
+        const activeSubscribers = await db.query(`
+            SELECT COUNT(*) as count 
+            FROM alert_subscribers 
+            WHERE url_id = $1 AND is_active = true
+        `, [urlId]);
+        
+        // If no active subscribers, stop monitoring
+        if (parseInt(activeSubscribers.rows[0].count) === 0) {
+            const task = monitoringTasks.get(urlId);
+            if (task) {
+                console.log(`Stopping monitoring for URL ID ${urlId} - no active subscribers`);
+                task.stop();
+                monitoringTasks.delete(urlId);
+            }
+        }
+        
+        res.json({
+            success: true,
+            message: 'Alerts stopped successfully'
+        });
+    } catch (error) {
+        console.error('Error stopping alerts:', error);
+        res.status(500).json({ success: false, error: 'Failed to stop alerts' });
+    }
+});
+
 app.get('/MOVING.html', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/public/MOVING.html'));
 });
@@ -589,8 +683,9 @@ app.post('/api/monitor', async (req, res) => {
                     console.log(`Email config - USER: ${process.env.EMAIL_USER ? 'SET' : 'NOT SET'}, PASSWORD: ${process.env.EMAIL_PASSWORD ? 'SET' : 'NOT SET'}`);
                     console.log(`Email user value: ${process.env.EMAIL_USER ? process.env.EMAIL_USER.substring(0, 10) + '...' : 'NOT SET'}`);
                     
+                    const subscriberId = subscriber.rows[0].id;
                     notifications.push(
-                        emailService.sendWelcomeEmail(email, websiteUrl, duration)
+                        emailService.sendWelcomeEmail(email, websiteUrl, duration, subscriberId)
                             .then(result => {
                                 console.log('Welcome email sent successfully in server.js');
                                 return result;
