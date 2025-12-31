@@ -58,14 +58,14 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
     
     try {
         // Use ALERT_SUBJECT environment variable, fallback to default
-        const emailSubject = process.env.ALERT_SUBJECT || 'LOVESAILING PAGE UPDATE';
+        const emailSubject = process.env.ALERT_SUBJECT || 'Page Change Detected';
         
-        // Create LAB007 logo HTML (base64 encoded or hosted URL)
+        // Create LAB007 logo HTML (2x bigger - was 200px, now 400px)
         const lab007Logo = `
             <div style="text-align: center; margin-bottom: 20px;">
                 <img src="https://raw.githubusercontent.com/thomad99/LAB007-WebAlert/main/frontend/public/lab007-trans.PNG" 
                      alt="LAB007 Logo" 
-                     style="max-width: 200px; height: auto; border-radius: 8px;">
+                     style="max-width: 400px; height: auto; border-radius: 8px;">
             </div>
         `;
         
@@ -80,23 +80,29 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
             const added = afterWords.filter(word => !beforeWords.includes(word));
             const removed = beforeWords.filter(word => !afterWords.includes(word));
             
-            if (added.length > 0 || removed.length > 0) {
-                changesText = `
-                    <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 15px 0;">
-                        <h4 style="color: #495057; margin-top: 0;">📝 Text Changes Detected:</h4>
-                        ${added.length > 0 ? `<p><strong>Added:</strong> ${added.slice(0, 10).join(', ')}${added.length > 10 ? '...' : ''}</p>` : ''}
-                        ${removed.length > 0 ? `<p><strong>Removed:</strong> ${removed.slice(0, 10).join(', ')}${removed.length > 10 ? '...' : ''}</p>` : ''}
-                        <p style="font-size: 12px; color: #6c757d;">Showing first 10 changes. Full content comparison available in monitoring logs.</p>
-                    </div>
-                `;
+            // Get all changes (added and removed) for display
+            const allChanges = [...added, ...removed].slice(0, 50); // Show up to 50 changes
+            
+            if (allChanges.length > 0) {
+                changesText = allChanges.join(', ');
             }
         }
+        
+        // Small footer logo
+        const footerLogo = `
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                <img src="https://raw.githubusercontent.com/thomad99/LAB007-WebAlert/main/frontend/public/lab007-trans.PNG" 
+                     alt="LAB007 Logo" 
+                     style="max-width: 100px; height: auto; margin-bottom: 10px;">
+                <p style="margin: 5px 0;"><a href="https://lab007-main.onrender.com/webalert" style="color: #0066cc; text-decoration: none;">Web Alert Main Page</a></p>
+            </div>
+        `;
         
         const mailOptions = {
             from: `"LAB007 Web Alert" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
             to: email,
             subject: emailSubject,
-            text: `HI,\n\nChange Detected on webpage: ${websiteUrl}\nDate and time: ${new Date().toLocaleString()}`,
+            text: `Page Change Detected\n\nURL: ${websiteUrl}\n\nText changes detected:\n${changesText || 'Content has changed'}\n\nDate and time: ${new Date().toLocaleString()}`,
             html: `
                 <!DOCTYPE html>
                 <html>
@@ -106,11 +112,10 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
                         body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
                         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
                         .header { text-align: center; margin-bottom: 30px; }
-                        .alert-box { background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 8px; padding: 20px; margin: 20px 0; }
+                        .content-box { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 20px 0; }
                         .website-link { color: #007bff; text-decoration: none; }
                         .website-link:hover { text-decoration: underline; }
                         .timestamp { color: #6c757d; font-size: 14px; }
-                        .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6; text-align: center; color: #6c757d; font-size: 12px; }
                     </style>
                 </head>
                 <body>
@@ -118,32 +123,23 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter) {
                         ${lab007Logo}
                         
                         <div class="header">
-                            <h1 style="color: #dc3545; margin: 0;">🚨 ${emailSubject}</h1>
+                            <h1 style="color: #333; margin: 0;">Page Change Detected</h1>
                         </div>
                         
-                        <div class="alert-box">
-                            <h2 style="margin-top: 0; color: #856404;">HI,</h2>
-                            <p><strong>Change Detected on webpage:</strong> <a href="${websiteUrl}" class="website-link">${websiteUrl}</a></p>
-                            <p class="timestamp"><strong>Date and time:</strong> ${new Date().toLocaleString()}</p>
+                        <div class="content-box">
+                            <p><strong>URL:</strong> <a href="${websiteUrl}" class="website-link">${websiteUrl}</a></p>
                         </div>
                         
-                        ${changesText}
-                        
-                        <div style="background-color: #e9ecef; padding: 15px; border-radius: 8px; margin: 20px 0;">
-                            <h4 style="margin-top: 0; color: #495057;">🔍 What This Means:</h4>
-                            <p>The content of the monitored webpage has changed. This could be:</p>
-                            <ul style="margin: 10px 0; padding-left: 20px;">
-                                <li>New content added</li>
-                                <li>Existing content modified</li>
-                                <li>Content removed</li>
-                                <li>Page structure changes</li>
-                            </ul>
+                        ${changesText ? `
+                        <div class="content-box">
+                            <h3 style="margin-top: 0; color: #495057;">Text changes detected</h3>
+                            <p style="white-space: pre-wrap; word-wrap: break-word;">${changesText}</p>
                         </div>
+                        ` : ''}
                         
-                        <div class="footer">
-                            <p>This alert was sent by LAB007 Web Alert System</p>
-                            <p>Monitoring frequency: Every 3 minutes</p>
-                        </div>
+                        <p class="timestamp" style="text-align: center; margin-top: 20px;"><strong>Date and time:</strong> ${new Date().toLocaleString()}</p>
+                        
+                        ${footerLogo}
                     </div>
                 </body>
                 </html>
