@@ -15,6 +15,41 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Email configuration for contact form
+const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+const smtpSecure = process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === '1' || smtpPort === 465;
+
+const smtpConfig = {
+    host: process.env.SMTP_HOST || 'smtp.gmail.com',
+    port: smtpPort,
+    secure: smtpSecure,
+    auth: {
+        user: process.env.SMTP_USER || '',
+        pass: process.env.SMTP_PASS || ''
+    },
+    requireTLS: !smtpSecure,
+    connectionTimeout: 30000,
+    greetingTimeout: 30000,
+    socketTimeout: 30000,
+    tls: {
+        rejectUnauthorized: true,
+        minVersion: 'TLSv1.2'
+    }
+};
+
+// Create email transporter (only if SMTP_USER is configured)
+let emailTransporter = null;
+if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+    try {
+        emailTransporter = nodemailer.createTransport(smtpConfig);
+        console.log('Email transporter configured for contact form');
+    } catch (error) {
+        console.warn('Failed to configure email transporter:', error.message);
+    }
+} else {
+    console.warn('SMTP_USER or SMTP_PASS not configured - contact form emails will not be sent');
+}
+
 // Serve LAB007 images (before project apps to avoid conflicts)
 app.use('/images', express.static(path.join(__dirname, 'LAB007', 'Images')));
 
