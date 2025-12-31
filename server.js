@@ -15,6 +15,24 @@ app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
+// Add request logging middleware at the very top to catch ALL requests
+app.use((req, res, next) => {
+    // Skip logging for static assets to reduce noise
+    const staticExtensions = ['.png', '.jpg', '.jpeg', '.gif', '.css', '.js', '.ico', '.svg', '.woff', '.woff2', '.ttf', '.eot'];
+    const isStaticFile = staticExtensions.some(ext => req.path.toLowerCase().endsWith(ext));
+    
+    if (!isStaticFile) {
+        console.log(`[Main Server] ===== INCOMING REQUEST =====`);
+        console.log(`[Main Server] Method: ${req.method}`);
+        console.log(`[Main Server] Path: ${req.path}`);
+        console.log(`[Main Server] Original URL: ${req.originalUrl}`);
+        console.log(`[Main Server] Base URL: ${req.baseUrl}`);
+        console.log(`[Main Server] URL: ${req.url}`);
+        console.log(`[Main Server] ===========================`);
+    }
+    next();
+});
+
 // Email configuration for contact form
 const smtpPort = parseInt(process.env.SMTP_PORT || '587');
 const smtpSecure = process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === '1' || smtpPort === 465;
