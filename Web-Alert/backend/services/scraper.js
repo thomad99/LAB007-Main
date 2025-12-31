@@ -28,13 +28,26 @@ const scraper = {
             
             // Try to use Puppeteer's bundled Chrome first
             try {
-                executablePath = puppeteerLib.executablePath();
-                // Verify the path actually exists
-                if (executablePath && fs.existsSync(executablePath)) {
-                    console.log('Using Puppeteer bundled Chrome:', executablePath);
-                } else {
-                    console.warn('Puppeteer reported Chrome path but file does not exist:', executablePath);
-                    executablePath = null;
+                const reportedPath = puppeteerLib.executablePath();
+                // Verify the path actually exists - check both the reported path and common variations
+                const pathsToCheck = [
+                    reportedPath,
+                    reportedPath + '/chrome',
+                    reportedPath.replace('/chrome-linux64/chrome', '/chrome-linux64/chrome-linux64/chrome'),
+                    reportedPath.replace('/chrome', '/chrome-linux64/chrome')
+                ];
+                
+                for (const pathToCheck of pathsToCheck) {
+                    if (pathToCheck && fs.existsSync(pathToCheck)) {
+                        executablePath = pathToCheck;
+                        console.log('Using Puppeteer bundled Chrome:', executablePath);
+                        break;
+                    }
+                }
+                
+                if (!executablePath && reportedPath) {
+                    console.warn('Puppeteer reported Chrome path but file does not exist:', reportedPath);
+                    console.warn('Attempted to check variations:', pathsToCheck);
                 }
             } catch (err) {
                 console.warn('Could not get Puppeteer bundled Chrome path:', err.message);
@@ -71,17 +84,24 @@ const scraper = {
                     '--disable-dev-shm-usage',
                     '--disable-accelerated-2d-canvas',
                     '--disable-gpu',
-                    '--disable-extensions'
+                    '--disable-extensions',
+                    '--disable-background-networking',
+                    '--disable-background-timer-throttling',
+                    '--disable-renderer-backgrounding',
+                    '--disable-backgrounding-occluded-windows',
+                    '--disable-ipc-flooding-protection'
                 ],
-                headless: 'new'
+                headless: 'new',
+                timeout: 120000 // 2 minute timeout for launch
             };
             
-            // Only set executablePath if we found a valid one
+            // Only set executablePath if we found a valid one that exists
             if (executablePath && fs.existsSync(executablePath)) {
                 launchOptions.executablePath = executablePath;
+                console.log('Setting executablePath to:', executablePath);
             } else {
                 // Don't set executablePath - let Puppeteer try to find it automatically
-                console.log('No valid Chrome path found, letting Puppeteer auto-detect...');
+                console.log('No valid Chrome path found, letting Puppeteer auto-detect or install...');
             }
             
             try {
@@ -98,7 +118,8 @@ const scraper = {
                         execSync('npx puppeteer browsers install chrome', { 
                             stdio: 'inherit',
                             timeout: 300000, // 5 minutes timeout
-                            cwd: process.cwd()
+                            cwd: process.cwd(),
+                            env: { ...process.env, PUPPETEER_CACHE_DIR: '/opt/render/.cache/puppeteer' }
                         });
                         console.log('Chrome installed, retrying browser launch...');
                         // Retry launch without executablePath to use newly installed Chrome
@@ -107,7 +128,16 @@ const scraper = {
                         console.log('Browser initialized successfully after Chrome installation');
                     } catch (installError) {
                         console.error('Failed to install Chrome:', installError.message);
-                        throw new Error('Chrome browser not found and automatic installation failed. Please install Chrome manually or ensure Puppeteer is properly configured.');
+                        console.error('Install error stack:', installError.stack);
+                        // Try one more time without executablePath
+                        try {
+                            console.log('Attempting final launch without executablePath...');
+                            delete launchOptions.executablePath;
+                            this.browser = await puppeteerLib.launch(launchOptions);
+                            console.log('Browser initialized successfully on final attempt');
+                        } catch (finalError) {
+                            throw new Error('Chrome browser not found and automatic installation failed. Please install Chrome manually or ensure Puppeteer is properly configured.');
+                        }
                     }
                 } else {
                     throw error;
