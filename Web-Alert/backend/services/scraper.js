@@ -5,25 +5,11 @@ async function loadPuppeteer() {
     if (!puppeteer) {
         try {
             console.log('Loading Puppeteer on-demand...');
-            puppeteer = await import('puppeteer');
+            puppeteer = require('puppeteer');
             console.log('Puppeteer loaded successfully');
         } catch (error) {
             console.error('Failed to load Puppeteer:', error.message);
-            // Try to install Chrome if Puppeteer is available but Chrome is missing
-            if (error.message.includes('Could not find Chrome')) {
-                console.log('Attempting to install Chrome browser...');
-                try {
-                    const { execSync } = require('child_process');
-                    execSync('npx puppeteer browsers install chrome', { stdio: 'inherit' });
-                    console.log('Chrome installed successfully, retrying...');
-                    puppeteer = await import('puppeteer');
-                } catch (installError) {
-                    console.error('Failed to install Chrome:', installError.message);
-                    throw new Error('Chrome browser not found and installation failed. Please install Chrome manually or ensure Puppeteer is properly configured.');
-                }
-            } else {
-                throw new Error('Puppeteer is not installed. Please install it: npm install puppeteer');
-            }
+            throw new Error('Puppeteer is not installed. Please install it: npm install puppeteer');
         }
     }
     return puppeteer;
