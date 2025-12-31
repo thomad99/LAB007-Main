@@ -1668,6 +1668,18 @@ app.post('/api/test-sms', async (req, res) => {
     }
 });
 
+// 404 handler for API routes (before static file serving)
+app.use('/api/*', (req, res) => {
+    console.error(`[Web-Alert] 404 - API route not found: ${req.method} ${req.path}`);
+    console.error(`[Web-Alert] Original URL: ${req.originalUrl}`);
+    console.error(`[Web-Alert] Base URL: ${req.baseUrl}`);
+    res.status(404).json({ 
+        error: `API route not found: ${req.method} ${req.path}`,
+        originalUrl: req.originalUrl,
+        baseUrl: req.baseUrl
+    });
+});
+
 // Static file serving - must come AFTER all API routes to avoid conflicts
 app.use(express.static(path.join(__dirname, '../frontend/public')));
 app.use('/src', express.static(path.join(__dirname, '../frontend/src')));
