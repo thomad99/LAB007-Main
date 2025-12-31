@@ -235,11 +235,14 @@
         // Function to load status data
         async function loadStatus() {
             try {
+                console.log('Loading status data...');
                 const response = await fetch('api/status');
+                console.log('Status response:', response.status, response.statusText);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
                 const data = await response.json();
+                console.log('Status data received:', data);
                 
                 const statusTableBody = document.getElementById('statusTableBody');
                 statusTableBody.innerHTML = '';

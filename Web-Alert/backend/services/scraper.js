@@ -5,11 +5,25 @@ async function loadPuppeteer() {
     if (!puppeteer) {
         try {
             console.log('Loading Puppeteer on-demand...');
-            puppeteer = require('puppeteer');
+            puppeteer = await import('puppeteer');
             console.log('Puppeteer loaded successfully');
         } catch (error) {
             console.error('Failed to load Puppeteer:', error.message);
-            throw new Error('Puppeteer is not installed. Please install it: npm install puppeteer');
+            // Try to install Chrome if Puppeteer is available but Chrome is missing
+            if (error.message.includes('Could not find Chrome')) {
+                console.log('Attempting to install Chrome browser...');
+                try {
+                    const { execSync } = require('child_process');
+                    execSync('npx puppeteer browsers install chrome', { stdio: 'inherit' });
+                    console.log('Chrome installed successfully, retrying...');
+                    puppeteer = await import('puppeteer');
+                } catch (installError) {
+                    console.error('Failed to install Chrome:', installError.message);
+                    throw new Error('Chrome browser not found and installation failed. Please install Chrome manually or ensure Puppeteer is properly configured.');
+                }
+            } else {
+                throw new Error('Puppeteer is not installed. Please install it: npm install puppeteer');
+            }
         }
     }
     return puppeteer;
@@ -22,7 +36,46 @@ const scraper = {
         if (!this.browser) {
             console.log('Initializing browser...');
             const puppeteerLib = await loadPuppeteer();
-            this.browser = await puppeteerLib.launch({
+            
+            // Try to find Chrome executable path
+            let executablePath = null;
+            try {
+                // Try to use Puppeteer's bundled Chrome first
+                const { executablePath: bundledPath } = puppeteerLib;
+                if (bundledPath) {
+                    executablePath = bundledPath;
+                    console.log('Using Puppeteer bundled Chrome:', executablePath);
+                }
+            } catch (err) {
+                console.warn('Could not find Puppeteer bundled Chrome, trying system Chrome...');
+            }
+            
+            // If no bundled Chrome, try system Chrome
+            if (!executablePath) {
+                const possiblePaths = [
+                    '/usr/bin/google-chrome',
+                    '/usr/bin/chromium-browser',
+                    '/usr/bin/chromium',
+                    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
+                    'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
+                    'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe'
+                ];
+                
+                const fs = require('fs');
+                for (const path of possiblePaths) {
+                    try {
+                        if (fs.existsSync(path)) {
+                            executablePath = path;
+                            console.log('Using system Chrome:', executablePath);
+                            break;
+                        }
+                    } catch (e) {
+                        // Continue checking other paths
+                    }
+                }
+            }
+            
+            const launchOptions = {
                 args: [
                     '--no-sandbox',
                     '--disable-setuid-sandbox',
@@ -32,7 +85,38 @@ const scraper = {
                     '--disable-extensions'
                 ],
                 headless: 'new'
-            });
+            };
+            
+            if (executablePath) {
+                launchOptions.executablePath = executablePath;
+            }
+            
+            try {
+                this.browser = await puppeteerLib.launch(launchOptions);
+                console.log('Browser initialized successfully');
+            } catch (error) {
+                console.error('Failed to launch browser:', error.message);
+                if (error.message.includes('Could not find Chrome')) {
+                    // Try to install Chrome automatically
+                    console.log('Chrome not found, attempting to install...');
+                    try {
+                        const { execSync } = require('child_process');
+                        execSync('npx puppeteer browsers install chrome', { 
+                            stdio: 'inherit',
+                            timeout: 300000 // 5 minutes timeout
+                        });
+                        console.log('Chrome installed, retrying browser launch...');
+                        // Retry launch after installation
+                        this.browser = await puppeteerLib.launch(launchOptions);
+                        console.log('Browser initialized successfully after Chrome installation');
+                    } catch (installError) {
+                        console.error('Failed to install Chrome:', installError.message);
+                        throw new Error('Chrome browser not found and automatic installation failed. Please install Chrome manually or ensure Puppeteer is properly configured.');
+                    }
+                } else {
+                    throw error;
+                }
+            }
         }
         return this.browser;
     },
