@@ -30,9 +30,11 @@ const PORT = process.env.PORT || 3000;
 const uploadedFiles = new Map();
 
 // Email configuration
-// Check for external email service URL first (for forwarding to paid Render service)
-const emailServiceUrl = process.env.EMAIL_SERVICE_URL || null;
-const emailServiceApiKey = process.env.EMAIL_SERVICE_API_KEY || null;
+// Note: External email service URL removed - using direct SMTP instead (service is on paid tier)
+// const emailServiceUrl = process.env.EMAIL_SERVICE_URL || null;  // Disabled - using direct SMTP
+// const emailServiceApiKey = process.env.EMAIL_SERVICE_API_KEY || null;  // Disabled
+const emailServiceUrl = null; // Always use direct SMTP
+const emailServiceApiKey = null;
 
 // IONOS: Use port 587 with secure: true (SSL/TLS) or port 465 with secure: true
 // Gmail: Use port 587 with secure: false (STARTTLS) or port 465 with secure: true
@@ -872,11 +874,8 @@ Please review the attached STL file and contact the customer to confirm the orde
   res.json({ success: true, message: 'Order submitted successfully. We will review your quote and contact you shortly.' });
   
   // Send email in background (non-blocking)
-  // Priority: 1) External HTTP service (paid Render), 2) SendGrid API, 3) Direct SMTP
-  if (emailServiceUrl) {
-    console.log('Using external HTTP service for email sending...');
-    sendEmailViaExternalService(smtpFrom, smtpTo, emailSubject, emailContent, fileData, fileId);
-  } else if (sendgrid) {
+  // Priority: 1) SendGrid API (if available), 2) Direct SMTP (default)
+  if (sendgrid) {
     console.log('Using SendGrid API for email sending...');
     sendEmailViaSendGrid(smtpFrom, smtpTo, emailSubject, emailContent, fileData, fileId);
   } else {
@@ -1018,10 +1017,7 @@ function sendSimpleEmail(from, to, subject, text, html) {
   console.log(`Subject: ${subject}`);
   console.log(`Has HTML: ${!!html}`);
   
-  if (emailServiceUrl) {
-    // Use external HTTP service
-    sendSimpleEmailViaExternalService(from, to, subject, text, html);
-  } else if (sendgrid) {
+  if (sendgrid) {
     // Use SendGrid API
     sendSimpleEmailViaSendGrid(from, to, subject, text, html);
   } else {
