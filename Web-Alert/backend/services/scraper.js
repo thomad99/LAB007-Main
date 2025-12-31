@@ -155,8 +155,8 @@ const scraper = {
             page = await browser.newPage();
             
             // Set longer timeout and optimize page load
-            await page.setDefaultNavigationTimeout(60000);
-            await page.setDefaultTimeout(60000);
+            await page.setDefaultNavigationTimeout(90000); // 90 seconds
+            await page.setDefaultTimeout(90000); // 90 seconds
             
             // Block unnecessary resources
             await page.setRequestInterception(true);
