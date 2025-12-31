@@ -1,22 +1,5 @@
-// Real Twilio SMS service
-console.log('Initializing SMS service...');
-
-const twilio = require('twilio');
-let client = null;
-
-// Initialize Twilio client only if credentials are available (non-fatal)
-if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
-    try {
-        client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
-        console.log('Twilio SMS service initialized successfully');
-    } catch (error) {
-        console.warn('Twilio initialization failed (non-fatal):', error.message);
-        console.warn('SMS via Twilio will not be available, but email-to-SMS gateway may still work');
-    }
-} else {
-    console.warn('Twilio credentials not found (TWILIO_ACCOUNT_SID or TWILIO_AUTH_TOKEN missing)');
-    console.warn('SMS via Twilio will not be available, but email-to-SMS gateway may still work');
-}
+// Email-to-SMS gateway service (Twilio removed)
+console.log('Initializing SMS service (email-to-SMS gateway only)...');
 
 // Email transport for email-to-SMS gateways (fallback)
 const nodemailer = require('nodemailer');
@@ -233,8 +216,6 @@ async function sendViaEmailGateway(phone, carrier, message, subject, preferMms =
     }
 }
 
-// Twilio client is already initialized above
-
 // Helper function to format phone numbers
 function formatPhoneNumber(phone) {
     // Remove any non-digit characters
@@ -260,149 +241,61 @@ function formatPhoneNumber(phone) {
 }
 
 async function sendAlert(phone, websiteUrl) {
-    // Check if Twilio client is available
-    if (!client) {
-        console.warn('Twilio client not available. SMS via Twilio is disabled. Falling back to email-to-SMS gateway if available.');
-        // Try email-to-SMS gateway as fallback - it will auto-detect carrier
-        try {
-            return await sendViaEmailGateway(phone, null, `Change detected on ${websiteUrl}`, 'Web Alert: Change Detected');
-        } catch (error) {
-            console.warn('Email-to-SMS gateway also failed:', error.message);
-            // Return a mock success object to avoid breaking the calling code
-            return { status: 'skipped', reason: 'Twilio disabled and email-to-SMS gateway unavailable' };
-        }
-    }
-    
+    // Use email-to-SMS gateway only (Twilio removed)
     try {
-        // Format the phone number
-        const formattedPhone = formatPhoneNumber(phone);
-        
-        console.log('Attempting to send SMS via Twilio...', {
-            originalPhone: phone,
-            formattedPhone: formattedPhone,
-            from: process.env.TWILIO_PHONE_NUMBER,
-            websiteUrl
-        });
-        
-        const message = await client.messages.create({
-            body: `Change detected on ${websiteUrl}`,
-            to: formattedPhone,
-            from: process.env.TWILIO_PHONE_NUMBER
-        });
-
-        console.log('SMS sent successfully via Twilio:', {
-            messageId: message.sid,
-            status: message.status,
-            to: message.to,
-            from: message.from
-        });
-
-        return message;
+        return await sendViaEmailGateway(phone, null, `Change detected on ${websiteUrl}`, 'Web Alert: Change Detected');
     } catch (error) {
-        console.error('Error sending SMS via Twilio:', {
-            error: error.message,
-            code: error.code,
-            moreInfo: error.moreInfo,
-            status: error.status,
-            originalPhone: phone,
-            twilioNumber: process.env.TWILIO_PHONE_NUMBER
-        });
-        throw error;
+        console.warn('Email-to-SMS gateway failed:', error.message);
+        // Return a mock success object to avoid breaking the calling code
+        return { status: 'skipped', reason: 'Email-to-SMS gateway unavailable' };
     }
 }
 
 async function sendWelcomeSMS(phone, websiteUrl, duration) {
-    // Check if Twilio client is available
-    if (!client) {
-        console.warn('Twilio client not available. SMS via Twilio is disabled. Falling back to email-to-SMS gateway if available.');
-        const message = `🎉 Welcome to Web Alert! We're now monitoring ${websiteUrl} for ${duration} minutes. Checks every 3 min.`;
-        try {
-            return await sendViaEmailGateway(phone, null, message, 'Web Alert: Welcome');
-        } catch (error) {
-            console.warn('Email-to-SMS gateway also failed:', error.message);
-            return { status: 'skipped', reason: 'Twilio disabled and email-to-SMS gateway unavailable' };
-        }
-    }
-    
+    // Use email-to-SMS gateway only (Twilio removed)
+    const message = `🎉 Welcome to Web Alert! We're now monitoring ${websiteUrl} for ${duration} minutes. Checks every 3 min.`;
     try {
-        const formattedPhone = formatPhoneNumber(phone);
-        
-        console.log('Sending welcome SMS via Twilio to:', formattedPhone);
-        
-        const message = await client.messages.create({
-            body: `🎉 Welcome to Web Alert! We're now monitoring ${websiteUrl} for ${duration} minutes. Checks every 3 min.`,
-            to: formattedPhone,
-            from: process.env.TWILIO_PHONE_NUMBER
-        });
-
-        console.log('Welcome SMS sent successfully via Twilio:', message.sid);
-        return message;
+        return await sendViaEmailGateway(phone, null, message, 'Web Alert: Welcome');
     } catch (error) {
-        console.error('Error sending welcome SMS via Twilio:', error);
-        throw error;
+        console.warn('Email-to-SMS gateway failed:', error.message);
+        return { status: 'skipped', reason: 'Email-to-SMS gateway unavailable' };
     }
 }
 
 async function sendSummarySMS(phone, websiteUrl, checkCount, changesDetected) {
-    // Check if Twilio client is available
-    if (!client) {
-        console.warn('Twilio client not available. SMS via Twilio is disabled. Falling back to email-to-SMS gateway if available.');
-        const summaryText = changesDetected > 0 
-            ? `We detected ${changesDetected} change(s)`
-            : 'No changes were detected';
-        const message = `📊 Monitoring Complete: ${websiteUrl}. ${summaryText}. Total checks: ${checkCount}. Thank you for using Web Alert!`;
-        try {
-            return await sendViaEmailGateway(phone, null, message, 'Web Alert: Monitoring Complete');
-        } catch (error) {
-            console.warn('Email-to-SMS gateway also failed:', error.message);
-            return { status: 'skipped', reason: 'Twilio disabled and email-to-SMS gateway unavailable' };
-        }
-    }
-    
+    // Use email-to-SMS gateway only (Twilio removed)
+    const summaryText = changesDetected > 0 
+        ? `We detected ${changesDetected} change(s)`
+        : 'No changes were detected';
+    const message = `📊 Monitoring Complete: ${websiteUrl}. ${summaryText}. Total checks: ${checkCount}. Thank you for using Web Alert!`;
     try {
-        const formattedPhone = formatPhoneNumber(phone);
-        
-        console.log('Sending summary SMS via Twilio to:', formattedPhone);
-        
-        const summaryText = changesDetected > 0 
-            ? `We detected ${changesDetected} change(s)`
-            : 'No changes were detected';
-        
-        const message = await client.messages.create({
-            body: `📊 Monitoring Complete: ${websiteUrl}. ${summaryText}. Total checks: ${checkCount}. Thank you for using Web Alert!`,
-            to: formattedPhone,
-            from: process.env.TWILIO_PHONE_NUMBER
-        });
-
-        console.log('Summary SMS sent successfully via Twilio:', message.sid);
-        return message;
+        return await sendViaEmailGateway(phone, null, message, 'Web Alert: Monitoring Complete');
     } catch (error) {
-        console.error('Error sending summary SMS via Twilio:', error);
-        throw error;
+        console.warn('Email-to-SMS gateway failed:', error.message);
+        return { status: 'skipped', reason: 'Email-to-SMS gateway unavailable' };
     }
 }
 
 // Add a test function
 async function testConnection() {
-    if (!client) {
+    // Test email-to-SMS gateway connection (Twilio removed)
+    if (!emailTransporter) {
         return {
             status: 'error',
-            error: 'Twilio client not initialized. Please set TWILIO_ACCOUNT_SID and TWILIO_AUTH_TOKEN environment variables.'
+            error: 'Email transporter not initialized. Please set EMAIL_USER and EMAIL_PASSWORD environment variables.'
         };
     }
     
     try {
-        console.log('Testing Twilio SMS connection...');
-        const account = await client.api.accounts(process.env.TWILIO_ACCOUNT_SID).fetch();
+        console.log('Testing email-to-SMS gateway connection...');
+        await emailTransporter.verify();
         return {
             status: 'connected',
-            accountStatus: account.status,
-            accountType: account.type,
-            friendlyName: account.friendlyName,
-            phoneNumber: process.env.TWILIO_PHONE_NUMBER
+            method: 'email-to-SMS gateway',
+            message: 'Email transporter is ready'
         };
     } catch (error) {
-        console.error('Twilio SMS connection test failed:', error);
+        console.error('Email-to-SMS gateway connection test failed:', error);
         return {
             status: 'error',
             error: error.message,

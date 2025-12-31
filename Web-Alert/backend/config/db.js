@@ -245,7 +245,13 @@ const checkHealth = async () => {
 
 module.exports = {
     query,
-    connect: (callback) => pool.connect(callback),
+    connect: (callback) => {
+        if (!pool) {
+            console.warn('Database pool not yet initialized - connect() called too early');
+            return callback(new Error('Database pool not yet initialized'));
+        }
+        return pool.connect(callback);
+    },
     pool,
     checkHealth
 }; 

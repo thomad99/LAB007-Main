@@ -325,13 +325,15 @@ async function startUrlMonitoring(urlId, websiteUrl) {
 }
 
 // Test database connection (non-blocking - app will work even if DB is unavailable)
-db.connect(async (err) => {
-    if (err) {
-        console.warn('Database connection error (non-fatal):', err.message);
-        console.warn('Web-Alert API endpoints will not work until database is available');
-        console.warn('Other services (3D Print, Citrix, VINValue) will continue to work normally');
-    } else {
-        console.log('Database connected successfully');
+// Wait a bit for the pool to initialize, then test connection
+setTimeout(() => {
+    db.connect(async (err) => {
+        if (err) {
+            console.warn('Database connection error (non-fatal):', err.message);
+            console.warn('Web-Alert API endpoints will not work until database is available');
+            console.warn('Other services (3D Print, Citrix, VINValue) will continue to work normally');
+        } else {
+            console.log('Database connected successfully');
         try {
             // Initialize schema
             console.log('Initializing database schema...');
