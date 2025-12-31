@@ -1,63 +1,137 @@
-const { Pool } = require('pg');
+const { Pool, Client } = require('pg');
 
 // Helper function to extract hostname from database URL if provided
-function getDbHost() {
-    const dbHost = process.env.DB_HOST;
-    if (!dbHost) return null;
+function parseHostname(hostValue) {
+    if (!hostValue) return null;
     
     // If it's a full URL (starts with postgresql:// or postgres://), extract the hostname
-    if (dbHost.startsWith('postgresql://') || dbHost.startsWith('postgres://')) {
+    if (hostValue.startsWith('postgresql://') || hostValue.startsWith('postgres://')) {
         try {
-            const url = new URL(dbHost);
+            const url = new URL(hostValue);
             return url.hostname;
         } catch (e) {
-            console.warn('Failed to parse DB_HOST as URL, using as-is:', e.message);
-            return dbHost;
+            console.warn('Failed to parse hostname as URL, using as-is:', e.message);
+            return hostValue;
         }
     }
     
     // Otherwise, use it as-is (should be just the hostname)
-    return dbHost;
+    return hostValue;
 }
 
-// First, log the connection details we're using
-const dbHost = getDbHost();
-const dbConfig = {
-    host: dbHost,
-    user: process.env.DB_USER,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT,
-    ssl: true
-};
-console.log('Initializing database connection with:', dbConfig);
-console.log('DB_HOST value (raw):', process.env.DB_HOST);
-console.log('DB_HOST value (parsed hostname):', dbHost);
-
-const pool = new Pool({
-    host: dbHost,
-    user: process.env.DB_USER,
-    password: process.env.DB_PASSWORD,
-    database: process.env.DB_NAME,
-    port: process.env.DB_PORT,
-    ssl: {
-        rejectUnauthorized: false
-    },
-    // Add connection timeout and retry settings
-    connectionTimeoutMillis: 10000, // Increased from 5000 to 10000
-    idleTimeoutMillis: 30000,
-    max: 20,
-    // Add retry configuration
-    retry: {
-        max: 3,
-        match: [
-            /ETIMEDOUT/,
-            /EHOSTUNREACH/,
-            /ECONNRESET/,
-            /ECONNREFUSED/,
-            /ENOTFOUND/
-        ]
+// Get list of hostnames to try in order
+function getHostnameCandidates() {
+    const candidates = [];
+    
+    // Add DB_HOST if set
+    if (process.env.DB_HOST) {
+        candidates.push({ name: 'DB_HOST', value: parseHostname(process.env.DB_HOST) });
     }
-});
+    
+    // Add DB_INTERNAL if set
+    if (process.env.DB_INTERNAL) {
+        candidates.push({ name: 'DB_INTERNAL', value: parseHostname(process.env.DB_INTERNAL) });
+    }
+    
+    // Add DB_EXTERNAL if set
+    if (process.env.DB_EXTERNAL) {
+        candidates.push({ name: 'DB_EXTERNAL', value: parseHostname(process.env.DB_EXTERNAL) });
+    }
+    
+    return candidates;
+}
+
+// Test connection to a specific hostname
+async function testHostname(hostname, hostnameName) {
+    const testClient = new Client({
+        host: hostname,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        port: process.env.DB_PORT,
+        ssl: { rejectUnauthorized: false },
+        connectionTimeoutMillis: 5000
+    });
+    
+    try {
+        await testClient.connect();
+        const result = await testClient.query('SELECT NOW() as now');
+        await testClient.end();
+        console.log(`✓ Connection test successful with ${hostnameName}: ${hostname}`);
+        return { success: true, hostname, hostnameName };
+    } catch (err) {
+        await testClient.end().catch(() => {}); // Ignore errors when closing
+        console.warn(`✗ Connection test failed with ${hostnameName} (${hostname}): ${err.code || err.message}`);
+        return { success: false, hostname, hostnameName, error: err };
+    }
+}
+
+// Find the first working hostname
+async function findWorkingHostname() {
+    const candidates = getHostnameCandidates();
+    
+    if (candidates.length === 0) {
+        console.warn('No database hostname environment variables found (DB_HOST, DB_INTERNAL, DB_EXTERNAL)');
+        return null;
+    }
+    
+    console.log(`Testing ${candidates.length} database hostname(s) in order...`);
+    
+    for (const candidate of candidates) {
+        const result = await testHostname(candidate.value, candidate.name);
+        if (result.success) {
+            console.log(`Using ${result.hostnameName}: ${result.hostname}`);
+            return result.hostname;
+        }
+    }
+    
+    console.error('All database hostname connection tests failed');
+    // Return the first candidate anyway (DB_HOST), the pool will handle errors gracefully
+    return candidates[0].value;
+}
+
+// Initialize with a placeholder pool (will be replaced after testing)
+let dbHost = null;
+let pool = null;
+
+// Initialize database connection with hostname testing
+(async () => {
+    dbHost = await findWorkingHostname();
+    
+    if (!dbHost) {
+        console.error('No database hostname available - database queries will fail');
+        // Create a dummy pool that will fail gracefully
+        pool = new Pool({
+            host: 'invalid-host',
+            user: process.env.DB_USER,
+            password: process.env.DB_PASSWORD,
+            database: process.env.DB_NAME,
+            port: process.env.DB_PORT,
+            ssl: { rejectUnauthorized: false },
+            connectionTimeoutMillis: 10000,
+            idleTimeoutMillis: 30000,
+            max: 20
+        });
+        return;
+    }
+    
+    // Create the pool with the working hostname
+    pool = new Pool({
+        host: dbHost,
+        user: process.env.DB_USER,
+        password: process.env.DB_PASSWORD,
+        database: process.env.DB_NAME,
+        port: process.env.DB_PORT,
+        ssl: {
+            rejectUnauthorized: false
+        },
+        connectionTimeoutMillis: 10000,
+        idleTimeoutMillis: 30000,
+        max: 20
+    });
+    
+    console.log('Database pool initialized with hostname:', dbHost);
+})();
 
 // Handle pool errors (non-fatal - just log the error)
 pool.on('error', (err) => {
@@ -66,43 +140,24 @@ pool.on('error', (err) => {
     // Don't exit - allow the server to continue and retry connections when needed
 });
 
-// Test the pool immediately
-const testConnection = async () => {
-    let client;
-    try {
-        client = await pool.connect();
-        console.log('Database connection test - getting client successful');
-        
-        const result = await client.query('SELECT NOW() as now');
-        console.log('Database connection test - query successful:', result.rows[0]);
-        
-        return true;
-    } catch (err) {
-        console.error('Database connection test failed:', err);
-        return false;
-    } finally {
-        if (client) {
-            client.release();
-            console.log('Database connection test - client released');
-        }
-    }
-};
-
-// Execute the test immediately (non-blocking, non-fatal)
+// Test the pool after initialization (non-blocking, non-fatal)
 // The server will start even if the database connection fails initially
-// Database will be used when API endpoints are called
-testConnection().then(success => {
-    if (!success) {
-        console.warn('Initial database connection test failed - server will continue to start');
-        console.warn('Database will be retried when API endpoints are accessed');
-        console.warn('Make sure DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, and DB_PORT are set correctly');
-    } else {
-        console.log('Database connection test successful');
+setTimeout(async () => {
+    if (!pool) {
+        console.warn('Database pool not yet initialized - will retry later');
+        return;
     }
-}).catch(err => {
-    console.warn('Database connection test error (non-fatal):', err.message);
-    console.warn('Server will continue to start - database will be retried when needed');
-});
+    
+    try {
+        const client = await pool.connect();
+        const result = await client.query('SELECT NOW() as now');
+        client.release();
+        console.log('Database pool connection test successful:', result.rows[0]);
+    } catch (err) {
+        console.warn('Database pool connection test failed (non-fatal):', err.message);
+        console.warn('Database will be retried when API endpoints are accessed');
+    }
+}, 3000); // Wait 3 seconds for initialization to complete
 
 const query = async (text, params) => {
     const start = Date.now();
