@@ -222,9 +222,19 @@ function setupVINValueFallback() {
 const webAlertServerPath = path.join(__dirname, 'Web-Alert', 'backend', 'server.js');
 if (fs.existsSync(webAlertServerPath)) {
     try {
+        console.log('Loading Web-Alert backend server...');
         const webAlertApp = require('./Web-Alert/backend/server');
+        console.log('Web-Alert app loaded successfully');
+        
+        // Add debug middleware to log all requests to Web-Alert
+        app.use('/webalert', (req, res, next) => {
+            console.log(`[Web-Alert] ${req.method} ${req.path} - Original URL: ${req.originalUrl}`);
+            next();
+        });
+        
         app.use('/webalert', webAlertApp);
         console.log('✓ Web-Alert app mounted at /webalert');
+        console.log('  Available routes should include: /webalert/api/monitor, /webalert/api/status, etc.');
     } catch (error) {
         console.error('Failed to mount Web-Alert app:', error.message);
         console.error('Stack:', error.stack);

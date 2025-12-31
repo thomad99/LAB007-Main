@@ -460,11 +460,17 @@ app.get('/health', (req, res) => {
 
 // API endpoint to start monitoring
 app.post('/api/monitor', async (req, res) => {
+    console.log('[Web-Alert API] POST /api/monitor called');
+    console.log('[Web-Alert API] Request path:', req.path);
+    console.log('[Web-Alert API] Request originalUrl:', req.originalUrl);
+    console.log('[Web-Alert API] Request baseUrl:', req.baseUrl);
+    console.log('[Web-Alert API] Request body:', req.body);
+    
     let { websiteUrl, email, phone, duration } = req.body;
 
     try {
         // Log the incoming request
-        console.log('Received monitoring request:', { websiteUrl, email, phone, duration });
+        console.log('[Web-Alert API] Received monitoring request:', { websiteUrl, email, phone, duration });
 
         // Normalize the URL
         if (websiteUrl.toLowerCase().includes('moving.html')) {
