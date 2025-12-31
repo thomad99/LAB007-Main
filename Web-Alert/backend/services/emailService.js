@@ -186,7 +186,7 @@ async function sendWelcomeEmail(email, websiteUrl, duration) {
         const mailOptions = {
             from: `"Web Alert Service" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
             to: email,
-            subject: 'Web Alerts Activated',
+            subject: 'LAB007-ALERTS-STARTED',
             text: `Web Alerts Activated\n\nURL: ${websiteUrl}\nPoll Period: Every 3 minutes\nDuration: ${duration} minutes\n\nMonitoring has started successfully. You will receive notifications if any changes are detected.`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
@@ -248,7 +248,7 @@ async function sendSummaryEmail(email, websiteUrl, duration, checkCount, changes
         const mailOptions = {
             from: `"Web Alert Service" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
             to: email,
-            subject: 'Web Monitoring Complete - Summary',
+            subject: 'LAB007-ALERTS-ENDED',
             text: `Monitoring completed for ${websiteUrl}. ${summaryText} Total checks: ${checkCount}`,
             html: `
                 <h2>📊 Monitoring Summary</h2>
