@@ -283,14 +283,17 @@ app.post('/api/contact', async (req, res) => {
     }
 
     // Prepare email
+    // Use SMTP_USER as the from address (required by most SMTP servers)
+    // Set replyTo to the user's email so replies go to them
     const mailOptions = {
-        from: process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@lab007.ai',
+        from: process.env.SMTP_USER || 'noreply@lab007.ai',
+        replyTo: email, // Replies will go to the user who submitted the form
         to: 'info@lab007.ai',
         subject: 'LAB007 CONTACT FORM',
-        text: `Contact Form Submission\n\nEmail: ${email}\n\nMessage:\n${message}`,
+        text: `Contact Form Submission\n\nFrom: ${email}\n\nMessage:\n${message}`,
         html: `
             <h2>LAB007 Contact Form Submission</h2>
-            <p><strong>Email:</strong> ${email}</p>
+            <p><strong>From:</strong> ${email}</p>
             <p><strong>Message:</strong></p>
             <p>${message.replace(/\n/g, '<br>')}</p>
         `
@@ -323,6 +326,10 @@ app.get('/api/health', (req, res) => {
         note: 'API routes need to be integrated. See INTEGRATION_NOTES.md'
     });
 });
+
+// Serve main public directory (for landing page and other static files)
+// This must come AFTER all project apps to avoid conflicts
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Catch-all route for main landing page (must be last)
 app.get('/', (req, res) => {
