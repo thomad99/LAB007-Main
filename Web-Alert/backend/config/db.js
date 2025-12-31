@@ -43,9 +43,20 @@ const pool = new Pool({
         rejectUnauthorized: false
     },
     // Add connection timeout and retry settings
-    connectionTimeoutMillis: 5000,
+    connectionTimeoutMillis: 10000, // Increased from 5000 to 10000
     idleTimeoutMillis: 30000,
-    max: 20
+    max: 20,
+    // Add retry configuration
+    retry: {
+        max: 3,
+        match: [
+            /ETIMEDOUT/,
+            /EHOSTUNREACH/,
+            /ECONNRESET/,
+            /ECONNREFUSED/,
+            /ENOTFOUND/
+        ]
+    }
 });
 
 // Handle pool errors (non-fatal - just log the error)
@@ -96,10 +107,32 @@ testConnection().then(success => {
 const query = async (text, params) => {
     const start = Date.now();
     let client;
+    let retries = 3;
+    let lastError;
+
+    // Retry logic for connection issues
+    while (retries > 0) {
+        try {
+            client = await pool.connect();
+            console.log('Got client for query:', { text, params });
+            break; // Success, exit retry loop
+        } catch (err) {
+            lastError = err;
+            retries--;
+            if (retries > 0 && (err.code === 'ENOTFOUND' || err.code === 'ETIMEDOUT' || err.code === 'ECONNREFUSED')) {
+                console.warn(`Database connection attempt failed (${err.code}), retrying... (${retries} attempts left)`);
+                await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second before retry
+            } else {
+                throw err; // Re-throw if not a retryable error or out of retries
+            }
+        }
+    }
+
+    if (!client) {
+        throw lastError || new Error('Failed to get database client after retries');
+    }
 
     try {
-        client = await pool.connect();
-        console.log('Got client for query:', { text, params });
 
         const res = await client.query(text, params);
         const duration = Date.now() - start;
