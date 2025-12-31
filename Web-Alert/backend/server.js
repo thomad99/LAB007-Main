@@ -1633,3 +1633,7 @@ app.post('/api/test-sms', async (req, res) => {
         });
     }
 });
+
+// Static file serving - must come AFTER all API routes to avoid conflicts
+app.use(express.static(path.join(__dirname, '../frontend/public')));
+app.use('/src', express.static(path.join(__dirname, '../frontend/src')));
