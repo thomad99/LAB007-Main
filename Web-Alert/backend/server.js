@@ -1680,16 +1680,26 @@ app.post('/api/test-sms', async (req, res) => {
     }
 });
 
-// 404 handler for API routes (before static file serving)
-app.use('/api/*', (req, res) => {
-    console.error(`[Web-Alert] 404 - API route not found: ${req.method} ${req.path}`);
-    console.error(`[Web-Alert] Original URL: ${req.originalUrl}`);
-    console.error(`[Web-Alert] Base URL: ${req.baseUrl}`);
-    res.status(404).json({ 
-        error: `API route not found: ${req.method} ${req.path}`,
-        originalUrl: req.originalUrl,
-        baseUrl: req.baseUrl
-    });
+// Catch-all for unmatched API routes (before static file serving)
+app.use((req, res, next) => {
+    // Only handle if it's an API route and hasn't been handled
+    if (req.path.startsWith('/api/')) {
+        console.error(`[Web-Alert] ===== 404 - UNMATCHED API ROUTE =====`);
+        console.error(`[Web-Alert] Method: ${req.method}`);
+        console.error(`[Web-Alert] Path: ${req.path}`);
+        console.error(`[Web-Alert] Original URL: ${req.originalUrl}`);
+        console.error(`[Web-Alert] Base URL: ${req.baseUrl}`);
+        console.error(`[Web-Alert] URL: ${req.url}`);
+        console.error(`[Web-Alert] =====================================`);
+        return res.status(404).json({ 
+            error: `API route not found: ${req.method} ${req.path}`,
+            originalUrl: req.originalUrl,
+            baseUrl: req.baseUrl,
+            path: req.path,
+            url: req.url
+        });
+    }
+    next();
 });
 
 // Static file serving - must come AFTER all API routes to avoid conflicts
