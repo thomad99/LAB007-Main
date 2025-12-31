@@ -77,7 +77,15 @@ if (fs.existsSync(print3dServerPath)) {
 }
 
 function setup3dPrintFallback() {
-    // Explicit routes for HTML pages FIRST (before static middleware)
+    // Serve static files from public directory (CSS, JS, etc.) - these will be at /3dprint/styles.css, /3dprint/script.js, etc.
+    app.use('/3dprint', express.static(path.join(__dirname, '3dPrint', 'public'), {
+        index: false // Don't serve index.html automatically, let explicit routes handle it
+    }));
+    
+    // Serve images from the images directory - these will be at /3dprint/images/...
+    app.use('/3dprint/images', express.static(path.join(__dirname, '3dPrint', 'images')));
+    
+    // Explicit routes for HTML pages (after static middleware so they take precedence)
     app.get('/3dprint', (req, res) => {
         const indexPath = path.join(__dirname, '3dPrint', 'public', 'index.html');
         if (fs.existsSync(indexPath)) {
@@ -102,12 +110,6 @@ function setup3dPrintFallback() {
             res.status(404).send('Admin page not found');
         }
     });
-    
-    // Serve static files (CSS, JS, images) - after explicit routes
-    app.use('/3dprint/images', express.static(path.join(__dirname, '3dPrint', 'images')));
-    app.use('/3dprint/public', express.static(path.join(__dirname, '3dPrint', 'public'), {
-        index: false // Don't serve index.html automatically, let the explicit route handle it
-    }));
 }
 
 // Citrix-Horizon Project
