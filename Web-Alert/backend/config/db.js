@@ -130,15 +130,15 @@ let pool = null;
         max: 20
     });
     
+    // Handle pool errors (non-fatal - just log the error)
+    pool.on('error', (err) => {
+        console.error('Unexpected error on idle database client:', err);
+        console.warn('Database pool error - server will continue running');
+        // Don't exit - allow the server to continue and retry connections when needed
+    });
+    
     console.log('Database pool initialized with hostname:', dbHost);
 })();
-
-// Handle pool errors (non-fatal - just log the error)
-pool.on('error', (err) => {
-    console.error('Unexpected error on idle database client:', err);
-    console.warn('Database pool error - server will continue running');
-    // Don't exit - allow the server to continue and retry connections when needed
-});
 
 // Test the pool after initialization (non-blocking, non-fatal)
 // The server will start even if the database connection fails initially
