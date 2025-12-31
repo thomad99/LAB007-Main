@@ -241,23 +241,64 @@ async function sendSummaryEmail(email, websiteUrl, duration, checkCount, changes
             ? `We detected ${changesDetected} change(s) during monitoring.`
             : 'No changes were detected during monitoring.';
         
+        // LAB007 logo at top
+        const lab007Logo = `
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="https://raw.githubusercontent.com/thomad99/LAB007-WebAlert/main/frontend/public/lab007-trans.PNG" 
+                     alt="LAB007 Logo" 
+                     style="max-width: 200px; height: auto; border-radius: 8px;">
+            </div>
+        `;
+        
+        // Small footer logo with link
+        const footerLogo = `
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
+                <img src="https://raw.githubusercontent.com/thomad99/LAB007-WebAlert/main/frontend/public/lab007-trans.PNG" 
+                     alt="LAB007 Logo" 
+                     style="max-width: 100px; height: auto; margin-bottom: 10px;">
+                <p style="margin: 5px 0;"><a href="https://lab007-main.onrender.com/webalert" style="color: #0066cc; text-decoration: none;">Web Alert Main Page</a></p>
+            </div>
+        `;
+        
         const mailOptions = {
             from: `"Web Alert Service" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
             to: email,
             subject: 'LAB007-ALERTS-ENDED',
             text: `Monitoring completed for ${websiteUrl}. ${summaryText} Total checks: ${checkCount}`,
             html: `
-                <h2>📊 Monitoring Summary</h2>
-                <p><strong>Website:</strong> <a href="${websiteUrl}">${websiteUrl}</a></p>
-                <p><strong>Duration:</strong> ${duration} minutes</p>
-                <p><strong>Total Checks:</strong> ${checkCount}</p>
-                <p><strong>Changes Detected:</strong> ${changesDetected}</p>
-                <p><strong>Last Check:</strong> ${lastCheck ? new Date(lastCheck).toLocaleString() : 'N/A'}</p>
-                <p><strong>End Time:</strong> ${new Date().toLocaleString()}</p>
-                <hr>
-                <p>${summaryText}</p>
-                <p>Monitoring has been completed and stopped automatically.</p>
-                <p>Thank you for using Web Alert!</p>
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta charset="UTF-8">
+                    <style>
+                        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+                        .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+                        .content-box { background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 8px; padding: 20px; margin: 20px 0; }
+                        .website-link { color: #007bff; text-decoration: none; }
+                        .website-link:hover { text-decoration: underline; }
+                    </style>
+                </head>
+                <body>
+                    <div class="container">
+                        ${lab007Logo}
+                        
+                        <div class="content-box">
+                            <p><strong>Website:</strong> <a href="${websiteUrl}" class="website-link">${websiteUrl}</a></p>
+                            <p><strong>Duration:</strong> ${duration} minutes</p>
+                            <p><strong>Total Checks:</strong> ${checkCount}</p>
+                            <p><strong>Changes Detected:</strong> ${changesDetected}</p>
+                            <p><strong>Last Check:</strong> ${lastCheck ? new Date(lastCheck).toLocaleString() : 'N/A'}</p>
+                            <p><strong>End Time:</strong> ${new Date().toLocaleString()}</p>
+                        </div>
+                        
+                        <p>${summaryText}</p>
+                        <p>Monitoring has been completed and stopped automatically.</p>
+                        <p>Thank you for using Web Alert!</p>
+                        
+                        ${footerLogo}
+                    </div>
+                </body>
+                </html>
             `
         };
         
