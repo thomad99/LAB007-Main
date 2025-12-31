@@ -199,7 +199,8 @@ const upload = multer({
 const defaultSettings = {
   filamentCostPerMeter: 0.02, // $0.02 per meter
   electricityCostPerMinute: 0.001, // $0.001 per minute
-  laborCostFixed: 25.00, // Fixed labor cost per order
+  laborCostDraft: 25.00, // Fixed labor cost per order for draft quality
+  laborCostHigh: 35.00, // Fixed labor cost per order for high quality
   postageBaseCost: 5.00, // $5.00 base postage
   layerHeight: 0.2, // mm
   printSpeed: 60, // mm/s
@@ -589,8 +590,10 @@ function calculateCost(volumeCm3, printTimeMinutes, settings, toZip = null, isCo
   // Calculate costs per unit
   const filamentCostPerUnit = filamentMeters * settings.filamentCostPerMeter;
   const electricityCostPerUnit = printTimeMinutes * settings.electricityCostPerMinute;
-  // Labor cost: $25 for draft, $30 for high quality (per order, not per unit)
-  const laborCost = qualityMode === 'high' ? 30.00 : 25.00;
+  // Labor cost: use settings for draft/high quality (per order, not per unit)
+  const laborCostDraft = settings.laborCostDraft || 25.00;
+  const laborCostHigh = settings.laborCostHigh || 35.00;
+  const laborCost = qualityMode === 'high' ? laborCostHigh : laborCostDraft;
   
   // Multiply material and electricity costs by quantity
   const filamentCost = filamentCostPerUnit * quantity;

@@ -35,12 +35,21 @@
                         <input type="number" id="electricityCostPerMinute" step="0.0001" min="0" required>
                     </div>
 
-                    <div class="form-group">
-                        <label for="laborCostFixed">
-                            Labor Cost (Fixed) ($)
-                            <span class="tooltip" title="Fixed labor cost per order">ℹ️</span>
-                        </label>
-                        <input type="number" id="laborCostFixed" step="0.01" min="0" required>
+                    <div class="form-group two-column">
+                        <div>
+                            <label for="laborCostDraft">
+                                Labor Cost - Draft Quality ($)
+                                <span class="tooltip" title="Fixed labor cost per order for draft quality prints">ℹ️</span>
+                            </label>
+                            <input type="number" id="laborCostDraft" step="0.01" min="0" required>
+                        </div>
+                        <div>
+                            <label for="laborCostHigh">
+                                Labor Cost - High Quality ($)
+                                <span class="tooltip" title="Fixed labor cost per order for high quality prints">ℹ️</span>
+                            </label>
+                            <input type="number" id="laborCostHigh" step="0.01" min="0" required>
+                        </div>
                     </div>
 
                     <div class="form-group">

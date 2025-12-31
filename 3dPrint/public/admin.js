@@ -18,7 +18,8 @@ async function loadSettings() {
         // Populate form fields
         document.getElementById('filamentCostPerMeter').value = settings.filamentCostPerMeter;
         document.getElementById('electricityCostPerMinute').value = settings.electricityCostPerMinute;
-        document.getElementById('laborCostFixed').value = settings.laborCostFixed;
+        document.getElementById('laborCostDraft').value = settings.laborCostDraft || 25.00;
+        document.getElementById('laborCostHigh').value = settings.laborCostHigh || 35.00;
         document.getElementById('postageBaseCost').value = settings.postageBaseCost;
         document.getElementById('layerHeight').value = settings.layerHeight;
         document.getElementById('printSpeed').value = settings.printSpeed;
@@ -41,7 +42,8 @@ form.addEventListener('submit', async (e) => {
     const settings = {
         filamentCostPerMeter: parseFloat(document.getElementById('filamentCostPerMeter').value),
         electricityCostPerMinute: parseFloat(document.getElementById('electricityCostPerMinute').value),
-        laborCostFixed: parseFloat(document.getElementById('laborCostFixed').value),
+        laborCostDraft: parseFloat(document.getElementById('laborCostDraft').value),
+        laborCostHigh: parseFloat(document.getElementById('laborCostHigh').value),
         postageBaseCost: parseFloat(document.getElementById('postageBaseCost').value),
         layerHeight: parseFloat(document.getElementById('layerHeight').value),
         printSpeed: parseFloat(document.getElementById('printSpeed').value),
@@ -78,7 +80,8 @@ resetBtn.addEventListener('click', () => {
     if (confirm('Are you sure you want to reset all settings to defaults?')) {
         document.getElementById('filamentCostPerMeter').value = 0.02;
         document.getElementById('electricityCostPerMinute').value = 0.001;
-        document.getElementById('laborCostFixed').value = 25.00;
+        document.getElementById('laborCostDraft').value = 25.00;
+        document.getElementById('laborCostHigh').value = 35.00;
         document.getElementById('postageBaseCost').value = 5.00;
         document.getElementById('layerHeight').value = 0.2;
         document.getElementById('printSpeed').value = 60;
