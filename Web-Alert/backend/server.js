@@ -625,8 +625,9 @@ app.post('/api/monitor', async (req, res) => {
         res.json(response);
 
     } catch (error) {
-        console.error('Error in /api/monitor:', error);
-        console.error('Stack:', error.stack);
+        console.error('[Web-Alert API] Error in /api/monitor:', error);
+        console.error('[Web-Alert API] Error message:', error.message);
+        console.error('[Web-Alert API] Error stack:', error.stack);
         res.status(500).json({ 
             success: false,
             error: 'Failed to start monitoring',
@@ -807,9 +808,10 @@ app.use((req, res, next) => {
     const isStaticFile = staticExtensions.some(ext => req.path.toLowerCase().endsWith(ext));
     
     if (!isStaticFile) {
-        console.log(`${new Date().toISOString()} - ${req.method} ${req.path}`);
-        console.log('Request body:', req.body);
-        console.log('Request query:', req.query);
+        console.log(`[Web-Alert] ${new Date().toISOString()} - ${req.method} ${req.path}`);
+        console.log(`[Web-Alert] Original URL: ${req.originalUrl}, Base URL: ${req.baseUrl}`);
+        console.log(`[Web-Alert] Request body:`, req.body);
+        console.log(`[Web-Alert] Request query:`, req.query);
     }
     next();
 });
@@ -1420,6 +1422,32 @@ if (require.main === module) {
   });
 } else {
   // Being required as a module - export the app
+  console.log('[Web-Alert] App is being required as a module (not running standalone)');
+  console.log('[Web-Alert] Logging registered routes after initialization...');
+  
+  // Log all registered routes after a short delay to ensure all routes are registered
+  setTimeout(() => {
+    console.log('[Web-Alert] === Registered Routes ===');
+    if (app._router && app._router.stack) {
+      let routeCount = 0;
+      app._router.stack.forEach((middleware, index) => {
+        if (middleware.route) {
+          const methods = Object.keys(middleware.route.methods).join(', ').toUpperCase();
+          console.log(`  [${index}] ${methods} ${middleware.route.path}`);
+          routeCount++;
+        } else if (middleware.name === 'router') {
+          console.log(`  [${index}] Router middleware`);
+        } else if (middleware.name) {
+          console.log(`  [${index}] ${middleware.name} middleware`);
+        }
+      });
+      console.log(`[Web-Alert] Total routes found: ${routeCount}`);
+    } else {
+      console.log('  Router stack not available yet');
+    }
+    console.log('[Web-Alert] === End Routes ===');
+  }, 200);
+  
   module.exports = app;
 }
 
