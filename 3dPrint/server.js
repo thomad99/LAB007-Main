@@ -215,7 +215,22 @@ function loadSettings() {
   try {
     if (fs.existsSync('settings.json')) {
       const data = fs.readFileSync('settings.json', 'utf8');
-      return JSON.parse(data);
+      const settings = JSON.parse(data);
+      
+      // Backward compatibility: migrate old laborCostFixed to new fields
+      if (settings.laborCostFixed && !settings.laborCostDraft) {
+        settings.laborCostDraft = settings.laborCostFixed;
+        settings.laborCostHigh = settings.laborCostFixed + 10.00; // Add $10 for high quality
+        delete settings.laborCostFixed;
+        // Save migrated settings
+        saveSettings({ ...defaultSettings, ...settings });
+      }
+      
+      // Ensure new fields have defaults if missing
+      if (!settings.laborCostDraft) settings.laborCostDraft = defaultSettings.laborCostDraft;
+      if (!settings.laborCostHigh) settings.laborCostHigh = defaultSettings.laborCostHigh;
+      
+      return { ...defaultSettings, ...settings };
     }
   } catch (error) {
     console.error('Error loading settings:', error);
