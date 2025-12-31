@@ -27,9 +27,8 @@ const scraper = {
             let executablePath = null;
             try {
                 // Try to use Puppeteer's bundled Chrome first
-                const { executablePath: bundledPath } = puppeteerLib;
-                if (bundledPath) {
-                    executablePath = bundledPath;
+                executablePath = puppeteerLib.executablePath();
+                if (executablePath) {
                     console.log('Using Puppeteer bundled Chrome:', executablePath);
                 }
             } catch (err) {
