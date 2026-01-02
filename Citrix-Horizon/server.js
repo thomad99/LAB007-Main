@@ -28,6 +28,12 @@ if (!fs.existsSync(uploadsDir)) {
     fs.mkdirSync(uploadsDir, { recursive: true });
 }
 
+// Ensure debug directory exists for debug ZIP files
+const debugDir = path.join(__dirname, 'uploads', 'debug');
+if (!fs.existsSync(debugDir)) {
+    fs.mkdirSync(debugDir, { recursive: true });
+}
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -50,6 +56,37 @@ const upload = multer({
             cb(null, true);
         } else {
             cb(new Error('Only JSON files are allowed'));
+        }
+    }
+});
+
+// Configure multer for debug ZIP uploads
+const debugStorage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, debugDir);
+    },
+    filename: function (req, file, cb) {
+        // Add timestamp to filename to avoid overwrites
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5);
+        const originalName = path.parse(file.originalname).name;
+        const ext = path.parse(file.originalname).ext;
+        cb(null, `${originalName}_${timestamp}${ext}`);
+    }
+});
+
+const uploadDebug = multer({ 
+    storage: debugStorage,
+    limits: {
+        fileSize: 500 * 1024 * 1024 // 500MB limit for debug ZIPs
+    },
+    fileFilter: function (req, file, cb) {
+        // Only allow ZIP files
+        if (file.mimetype === 'application/zip' || 
+            file.mimetype === 'application/x-zip-compressed' ||
+            path.extname(file.originalname).toLowerCase() === '.zip') {
+            cb(null, true);
+        } else {
+            cb(new Error('Only ZIP files are allowed for debug uploads'));
         }
     }
 });
@@ -232,6 +269,57 @@ function downloadLocalFiles(req, res) {
     }
 }
 
+// Upload Debug ZIP file
+app.post('/api/upload-debug', uploadDebug.single('debugFile'), (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ error: 'No file uploaded' });
+        }
+
+        const fileInfo = {
+            filename: req.file.filename,
+            originalname: req.file.originalname,
+            size: req.file.size,
+            uploadedAt: new Date().toISOString(),
+            path: req.file.path
+        };
+
+        console.log(`Debug ZIP uploaded: ${fileInfo.filename} (${fileInfo.size} bytes)`);
+
+        res.json({
+            success: true,
+            message: 'Debug ZIP file uploaded successfully',
+            file: fileInfo
+        });
+    } catch (error) {
+        console.error('Debug upload error:', error);
+        res.status(500).json({ error: 'Failed to upload debug file: ' + error.message });
+    }
+});
+
+// Get list of debug files
+app.get('/api/debug-files', (req, res) => {
+    try {
+        const files = fs.readdirSync(debugDir)
+            .filter(file => file.endsWith('.zip'))
+            .map(file => {
+                const filePath = path.join(debugDir, file);
+                const stats = fs.statSync(filePath);
+                return {
+                    filename: file,
+                    size: stats.size,
+                    uploadedAt: stats.mtime.toISOString()
+                };
+            })
+            .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+
+        res.json({ files });
+    } catch (error) {
+        console.error('Error listing debug files:', error);
+        res.status(500).json({ error: 'Failed to list debug files' });
+    }
+});
+
 // Serve uploaded JSON files
 app.get('/uploads/:filename', (req, res) => {
     try {
@@ -246,6 +334,23 @@ app.get('/uploads/:filename', (req, res) => {
     } catch (error) {
         console.error('File serve error:', error);
         res.status(500).json({ error: 'Failed to serve file' });
+    }
+});
+
+// Serve debug ZIP files
+app.get('/uploads/debug/:filename', (req, res) => {
+    try {
+        const filename = req.params.filename;
+        const filePath = path.join(debugDir, filename);
+
+        if (!fs.existsSync(filePath)) {
+            return res.status(404).json({ error: 'Debug file not found' });
+        }
+
+        res.download(filePath, filename);
+    } catch (error) {
+        console.error('Debug file serve error:', error);
+        res.status(500).json({ error: 'Failed to serve debug file' });
     }
 });
 

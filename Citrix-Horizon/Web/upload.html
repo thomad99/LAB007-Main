@@ -148,6 +148,22 @@
                 </button>
             </div>
 
+            <!-- Debug Upload Section -->
+            <div class="upload-section" id="debugUploadSection" style="background: #fff3cd; border-color: #ffc107;">
+                <h3>🔧 Upload Debug ZIP File</h3>
+                <p>Upload your debug ZIP file (contains debug.txt and other diagnostic files) for troubleshooting</p>
+                <div class="file-input-wrapper">
+                    <input type="file" id="debugFileInput" accept=".zip" />
+                    <label for="debugFileInput" class="file-input-button" style="background: #ffc107; color: #000;">
+                        Choose Debug ZIP File
+                    </label>
+                </div>
+                <p id="debugFileName" style="margin-top: 10px; color: #666;"></p>
+                <button id="debugUploadBtn" class="btn btn-primary" style="margin-top: 20px; display: none; background: #ffc107; color: #000; border-color: #ffc107;">
+                    Upload Debug File
+                </button>
+            </div>
+
             <!-- Upload Status -->
             <div id="uploadStatus" class="upload-status"></div>
 
@@ -155,6 +171,12 @@
             <div class="file-list" id="fileList" style="display: none;">
                 <h3 style="margin-bottom: 15px;">Previously Uploaded Files</h3>
                 <div id="filesListContent"></div>
+            </div>
+
+            <!-- Debug Files List -->
+            <div class="file-list" id="debugFileList" style="display: none; margin-top: 20px;">
+                <h3 style="margin-bottom: 15px;">Uploaded Debug ZIP Files</h3>
+                <div id="debugFilesListContent"></div>
             </div>
 
             <!-- Quick Links -->
@@ -178,8 +200,15 @@
         const downloadAuditFilesBtn = document.getElementById('downloadAuditFilesBtn');
         const fileList = document.getElementById('fileList');
         const filesListContent = document.getElementById('filesListContent');
+        const debugFileInput = document.getElementById('debugFileInput');
+        const debugUploadBtn = document.getElementById('debugUploadBtn');
+        const debugFileName = document.getElementById('debugFileName');
+        const debugUploadSection = document.getElementById('debugUploadSection');
+        const debugFileList = document.getElementById('debugFileList');
+        const debugFilesListContent = document.getElementById('debugFilesListContent');
 
         let selectedFile = null;
+        let selectedDebugFile = null;
 
         // File input change
         fileInput.addEventListener('change', (e) => {
@@ -246,6 +275,75 @@
             });
         });
 
+        // Debug file input change
+        debugFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                selectedDebugFile = e.target.files[0];
+                debugFileName.textContent = `Selected: ${selectedDebugFile.name} (${formatFileSize(selectedDebugFile.size)})`;
+                debugUploadBtn.style.display = 'inline-block';
+            }
+        });
+
+        // Debug drag and drop
+        debugUploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            debugUploadSection.classList.add('drag-over');
+        });
+
+        debugUploadSection.addEventListener('dragleave', () => {
+            debugUploadSection.classList.remove('drag-over');
+        });
+
+        debugUploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            debugUploadSection.classList.remove('drag-over');
+            
+            if (e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                if (file.name.endsWith('.zip')) {
+                    debugFileInput.files = e.dataTransfer.files;
+                    selectedDebugFile = file;
+                    debugFileName.textContent = `Selected: ${file.name} (${formatFileSize(file.size)})`;
+                    debugUploadBtn.style.display = 'inline-block';
+                } else {
+                    showStatus('Please select a ZIP file', 'error');
+                }
+            }
+        });
+
+        // Debug upload button
+        debugUploadBtn.addEventListener('click', () => {
+            if (!selectedDebugFile) return;
+
+            const formData = new FormData();
+            formData.append('debugFile', selectedDebugFile);
+
+            showStatus('Uploading debug ZIP file...', 'info');
+
+            fetch('/citrix/api/upload-debug', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus(`Debug ZIP uploaded successfully! File: ${data.file.filename}`, 'success');
+                    // Reset form
+                    selectedDebugFile = null;
+                    debugFileInput.value = '';
+                    debugFileName.textContent = '';
+                    debugUploadBtn.style.display = 'none';
+                    // Reload debug files list
+                    loadDebugFileList();
+                } else {
+                    showStatus('Upload failed: ' + (data.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                showStatus('Upload error: ' + error.message, 'error');
+            });
+        });
+
         // Download audit files
         downloadAuditFilesBtn.addEventListener('click', () => {
             window.location.href = '/citrix/api/download-audit-files';
@@ -295,8 +393,36 @@
             return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
         }
 
+        // Load debug file list
+        function loadDebugFileList() {
+            fetch('/citrix/api/debug-files')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.files && data.files.length > 0) {
+                        debugFileList.style.display = 'block';
+                        debugFilesListContent.innerHTML = data.files.map(file => `
+                            <div class="file-item">
+                                <div>
+                                    <div class="file-name">${file.filename}</div>
+                                    <div class="file-size">${formatFileSize(file.size)} - ${new Date(file.uploadedAt).toLocaleString()}</div>
+                                </div>
+                                <div>
+                                    <a href="/citrix/uploads/debug/${file.filename}" class="btn btn-secondary" style="text-decoration: none; padding: 5px 15px; font-size: 0.9em; background: #ffc107; color: #000; border-color: #ffc107;">
+                                        Download
+                                    </a>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading debug file list:', error);
+                });
+        }
+
         // Load file list on page load
         loadFileList();
+        loadDebugFileList();
     </script>
 </body>
 </html>

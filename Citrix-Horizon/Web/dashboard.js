@@ -27,6 +27,22 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     document.getElementById('fileInput').addEventListener('change', handleFileLoad);
     
+    // Debug ZIP upload functionality
+    const uploadDebugBtn = document.getElementById('uploadDebugBtn');
+    const debugFileInput = document.getElementById('debugFileInput');
+    
+    if (uploadDebugBtn && debugFileInput) {
+        uploadDebugBtn.addEventListener('click', () => {
+            debugFileInput.click();
+        });
+        
+        debugFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                uploadDebugFile(e.target.files[0]);
+            }
+        });
+    }
+    
     // Search functionality
     document.getElementById('serverSearch').addEventListener('input', filterServers);
     document.getElementById('appSearch').addEventListener('input', filterApps);
@@ -136,6 +152,68 @@ function handleFileLoad(event) {
         hideDashboard();
     };
     reader.readAsText(file);
+}
+
+// Function to upload debug ZIP file
+function uploadDebugFile(file) {
+    if (!file || !file.name.endsWith('.zip')) {
+        alert('Please select a ZIP file');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('debugFile', file);
+    
+    // Show loading indicator
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    const loadingText = document.getElementById('loadingText');
+    if (loadingIndicator && loadingText) {
+        loadingIndicator.style.display = 'block';
+        loadingText.textContent = `Uploading debug ZIP: ${file.name}...`;
+    }
+    
+    fetch('/citrix/api/upload-debug', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (loadingText) {
+                loadingText.textContent = `Debug ZIP uploaded successfully! File: ${data.file.filename}`;
+            }
+            setTimeout(() => {
+                if (loadingIndicator) {
+                    loadingIndicator.style.display = 'none';
+                }
+                if (loadingText) {
+                    loadingText.textContent = 'Awaiting your command';
+                }
+            }, 2000);
+            // Reset file input
+            const debugFileInput = document.getElementById('debugFileInput');
+            if (debugFileInput) {
+                debugFileInput.value = '';
+            }
+        } else {
+            alert('Upload failed: ' + (data.error || 'Unknown error'));
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+            if (loadingText) {
+                loadingText.textContent = 'Awaiting your command';
+            }
+        }
+    })
+    .catch(error => {
+        alert('Upload error: ' + error.message);
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+        }
+        if (loadingText) {
+            loadingText.textContent = 'Awaiting your command';
+        }
+    });
 }
 
 // Display dashboard with data
