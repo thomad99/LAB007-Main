@@ -202,7 +202,7 @@ app.get('/api/download-audit-files', async (req, res) => {
 // Helper function to download local files as ZIP (fallback)
 function downloadLocalFiles(req, res) {
     try {
-        const zipFilename = 'Citrix-Audit-Tools.zip';
+        const zipFilename = 'Citrix-Audit-Scripts.zip';
         res.attachment(zipFilename);
 
         const archive = archiver('zip', {
@@ -216,58 +216,14 @@ function downloadLocalFiles(req, res) {
 
         archive.pipe(res);
 
-        // Add all PowerShell scripts
+        // Add all PowerShell scripts from Scripts directory only
         const scriptsDir = path.join(__dirname, 'Scripts');
         if (fs.existsSync(scriptsDir)) {
             archive.directory(scriptsDir, 'Scripts');
+        } else {
+            res.status(404).json({ error: 'Scripts directory not found' });
+            return;
         }
-
-        // Add Web files (for local dashboard)
-        const webDir = path.join(__dirname, 'Web');
-        if (fs.existsSync(webDir)) {
-            archive.directory(webDir, 'Web');
-        }
-
-        // Add root files
-        const rootFiles = [
-            'package.json',
-            'README.md',
-            'README.txt',
-            'Sync-ToGitHub.ps1',
-            'render.yaml',
-            '.gitignore'
-        ];
-
-        rootFiles.forEach(file => {
-            const filePath = path.join(__dirname, file);
-            if (fs.existsSync(filePath)) {
-                archive.file(filePath, { name: file });
-            }
-        });
-
-        // Add Dependencies folder (including all prerequisite files and installers)
-        const depsDir = path.join(__dirname, 'Dependencies');
-        if (fs.existsSync(depsDir)) {
-            archive.directory(depsDir, 'Dependencies');
-        }
-
-        // Add images folder
-        const imagesDir = path.join(__dirname, 'images');
-        if (fs.existsSync(imagesDir)) {
-            archive.directory(imagesDir, 'images');
-        }
-
-        // Add .gitkeep files
-        const gitkeepFiles = [
-            path.join(__dirname, 'Data', '.gitkeep'),
-            path.join(__dirname, 'Dependencies', 'Citrix', '.gitkeep')
-        ];
-
-        gitkeepFiles.forEach(file => {
-            if (fs.existsSync(file)) {
-                archive.file(file, { name: path.relative(__dirname, file) });
-            }
-        });
 
         archive.finalize();
     } catch (error) {

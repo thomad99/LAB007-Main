@@ -1,5 +1,7 @@
 # Sync-ToGitHub.ps1
 # Automates syncing local code to GitHub repository with enhanced security
+# Version: 1.0
+# Last Modified: 2025-01-27
 
 param(
     [string]$CommitMessage = "",

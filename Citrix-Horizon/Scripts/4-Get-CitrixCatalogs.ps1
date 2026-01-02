@@ -1,5 +1,7 @@
 # Get-CitrixCatalogs.ps1
 # Extracts machine catalogs information
+# Version: 1.0
+# Last Modified: 2025-01-27
 
 param(
     [string]$OutputPath = ".\Data\citrix-catalogs.json",

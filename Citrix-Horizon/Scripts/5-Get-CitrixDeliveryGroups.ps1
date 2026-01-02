@@ -1,5 +1,7 @@
 # Get-CitrixDeliveryGroups.ps1
 # Extracts delivery groups information
+# Version: 1.0
+# Last Modified: 2025-01-27
 
 param(
     [string]$OutputPath = ".\Data\citrix-delivery-groups.json",

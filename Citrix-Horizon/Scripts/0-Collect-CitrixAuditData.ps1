@@ -1,5 +1,7 @@
 # Collect-CitrixAuditData.ps1
 # Master script that orchestrates collection of all Citrix audit data
+# Version: 1.0
+# Last Modified: 2025-01-27
 
 param(
     [string]$OutputPath = ".\Data\citrix-audit-complete.json",
@@ -9,6 +11,7 @@ param(
     [string]$DDCName,
     [switch]$NonInteractive,
     [string]$StoreFrontServer,
+    [string]$DirectorServer = "",
     [string]$VMwareServer = "",
     [string]$VMwareUsername = "",
     [string]$VMwarePassword = ""
@@ -160,6 +163,9 @@ Write-Host "  Delivery Controller: $DDCName" -ForegroundColor White
 if ($StoreFrontServer) {
     Write-Host "  StoreFront Server: $StoreFrontServer" -ForegroundColor White
 }
+if ($DirectorServer) {
+    Write-Host "  Director Server: $DirectorServer" -ForegroundColor White
+}
 Write-Host ""
 
 # Ensure output directory exists
@@ -184,7 +190,7 @@ $auditData = @{
 }
 
 # 1. Collect Site Information
-Write-Host "[1/11] Collecting Site Information..." -ForegroundColor Yellow
+Write-Host "[1/12] Collecting Site Information..." -ForegroundColor Yellow
 try {
     $siteInfo = & "$scriptPath\1-Get-CitrixSiteInfo.ps1" -OutputPath (Join-Path $dataPath "citrix-site-info.json") -CitrixVersion $CitrixVersion
     if ($siteInfo) {
@@ -203,7 +209,7 @@ catch {
 }
 
 # 2. Collect Applications
-Write-Host "[2/11] Collecting Published Applications..." -ForegroundColor Yellow
+Write-Host "[2/12] Collecting Published Applications..." -ForegroundColor Yellow
 try {
     $apps = & "$scriptPath\2-Get-CitrixApplications.ps1" -OutputPath (Join-Path $dataPath "citrix-applications.json") -CitrixVersion $CitrixVersion
     if ($apps) {
@@ -216,7 +222,7 @@ catch {
 }
 
 # 3. Collect Desktops
-Write-Host "[3/11] Collecting Published Desktops..." -ForegroundColor Yellow
+Write-Host "[3/12] Collecting Published Desktops..." -ForegroundColor Yellow
 try {
     $desktops = & "$scriptPath\3-Get-CitrixDesktops.ps1" -OutputPath (Join-Path $dataPath "citrix-desktops.json") -CitrixVersion $CitrixVersion
     if ($desktops) {
@@ -229,7 +235,7 @@ catch {
 }
 
 # 4. Collect Catalogs (with provisioning information)
-Write-Host "[4/11] Collecting Machine Catalogs and Provisioning Information..." -ForegroundColor Yellow
+Write-Host "[4/12] Collecting Machine Catalogs and Provisioning Information..." -ForegroundColor Yellow
 try {
     $catalogs = & "$scriptPath\4-Get-CitrixCatalogs.ps1" -OutputPath (Join-Path $dataPath "citrix-catalogs.json") -CitrixVersion $CitrixVersion
     if ($catalogs) {
@@ -299,7 +305,7 @@ catch {
 }
 
 # 5. Collect Delivery Groups (pass applications to count apps per group)
-Write-Host "[5/11] Collecting Delivery Groups..." -ForegroundColor Yellow
+Write-Host "[5/12] Collecting Delivery Groups..." -ForegroundColor Yellow
 try {
     # Get applications array - handle both direct array and wrapped in result object
     $appsForDeliveryGroups = @()
@@ -321,7 +327,7 @@ catch {
 }
 
 # 6. Collect Usage Statistics
-Write-Host "[6/11] Collecting Usage Statistics (last $UsageDaysBack days)..." -ForegroundColor Yellow
+Write-Host "[6/12] Collecting Usage Statistics (last $UsageDaysBack days)..." -ForegroundColor Yellow
 try {
     $usageStats = & "$scriptPath\6-Get-CitrixUsageStats.ps1" -OutputPath (Join-Path $dataPath "citrix-usage-stats.json") -DaysBack $UsageDaysBack -CitrixVersion $CitrixVersion
     if ($usageStats) {
@@ -336,7 +342,7 @@ catch {
 }
 
 # 7. Collect Policies
-Write-Host "[7/11] Collecting Citrix Policies..." -ForegroundColor Yellow
+Write-Host "[7/12] Collecting Citrix Policies..." -ForegroundColor Yellow
 try {
     $policies = & "$scriptPath\7-Get-CitrixPolicies.ps1" -OutputPath (Join-Path $dataPath "citrix-policies.json") -CitrixVersion $CitrixVersion
     if ($policies) {
@@ -349,7 +355,7 @@ catch {
 }
 
 # 7b. Collect Roles and AD Groups
-Write-Host "[8/11] Collecting Citrix Management Roles and AD Groups..." -ForegroundColor Yellow
+Write-Host "[8/12] Collecting Citrix Management Roles and AD Groups..." -ForegroundColor Yellow
 try {
     $roles = & "$scriptPath\8-Get-CitrixRoles.ps1" -OutputPath (Join-Path $dataPath "citrix-roles.json") -CitrixVersion $CitrixVersion
     if ($roles) {
@@ -365,7 +371,7 @@ catch {
 # 9. Collect VMware Server Specs (if VMware server specified)
 $vmwareSpecs = $null
 if (-not $SkipServerSpecs -and $VMwareServer) {
-    Write-Host "[9/11] Collecting VMware Server Specs..." -ForegroundColor Yellow
+    Write-Host "[9/12] Collecting VMware Server Specs..." -ForegroundColor Yellow
     try {
         $vmwareSpecs = & "$scriptPath\9-Get-VMwareServerSpecs.ps1" -OutputPath (Join-Path $dataPath "vmware-server-specs.json") -VMwareServer $VMwareServer -VMwareUsername $VMwareUsername -VMwarePassword $VMwarePassword
         if ($vmwareSpecs -and $vmwareSpecs.VMSpecs) {
@@ -384,7 +390,7 @@ if (-not $SkipServerSpecs -and $VMwareServer) {
 # Always run server collection unless explicitly skipped
 Write-Host "[DEBUG] SkipServerSpecs value: $SkipServerSpecs" -ForegroundColor Gray
 if (-not $SkipServerSpecs) {
-    Write-Host "[10/11] Collecting Server Information and Specs..." -ForegroundColor Yellow
+    Write-Host "[10/12] Collecting Server Information and Specs..." -ForegroundColor Yellow
     Write-Host "[DEBUG] Starting server collection at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray
     Write-Host "[DEBUG] SkipServerSpecs: $SkipServerSpecs" -ForegroundColor Gray
     Write-Host "[DEBUG] VMwareServer: $VMwareServer" -ForegroundColor Gray
@@ -457,12 +463,12 @@ if (-not $SkipServerSpecs) {
     }
 }
 else {
-    Write-Host "[10/11] Skipping Server Specs collection (as requested)..." -ForegroundColor Yellow
+    Write-Host "[10/12] Skipping Server Specs collection (as requested)..." -ForegroundColor Yellow
 }
 
 # 11. Collect StoreFront Information (moved to end - optional, skip if blank)
 if (-not $NonInteractive) {
-    Write-Host "[11/11] Collecting StoreFront configuration (optional)..." -ForegroundColor Yellow
+    Write-Host "[11/12] Collecting StoreFront configuration (optional)..." -ForegroundColor Yellow
     try {
         $storefront = & "$scriptPath\11-Get-CitrixStoreFront.ps1" -OutputPath (Join-Path $dataPath "citrix-storefront.json") -StoreFrontServer $StoreFrontServer
         if ($storefront -and -not $storefront.Error) {
@@ -482,7 +488,7 @@ if (-not $NonInteractive) {
 }
 elseif ($StoreFrontServer) {
     # Non-interactive mode but server provided
-    Write-Host "[11/11] Collecting StoreFront configuration from $StoreFrontServer..." -ForegroundColor Yellow
+    Write-Host "[11/12] Collecting StoreFront configuration from $StoreFrontServer..." -ForegroundColor Yellow
     try {
         $storefront = & "$scriptPath\11-Get-CitrixStoreFront.ps1" -OutputPath (Join-Path $dataPath "citrix-storefront.json") -StoreFrontServer $StoreFrontServer
         if ($storefront -and -not $storefront.Error) {
@@ -501,7 +507,52 @@ elseif ($StoreFrontServer) {
     }
 }
 else {
-    Write-Host "[11/11] Skipping StoreFront collection (no server specified)..." -ForegroundColor Gray
+    Write-Host "[11/12] Skipping StoreFront collection (no server specified)..." -ForegroundColor Gray
+}
+
+# 12. Collect Director OData (optional - only if DirectorServer is provided)
+if ($DirectorServer) {
+    Write-Host "[12/12] Collecting Director OData from $DirectorServer..." -ForegroundColor Yellow
+    try {
+        $directorData = & "$scriptPath\12-Get-CitrixDirectorOData.ps1" -OutputPath (Join-Path $dataPath "citrix-director-odata.json") -DirectorServer $DirectorServer
+        if ($directorData -and -not $directorData.Error) {
+            $auditData.DirectorOData = $directorData
+            Write-Host "Director OData collected successfully" -ForegroundColor Green
+        }
+        else {
+            Write-Host "Director OData collection skipped or returned error" -ForegroundColor Gray
+        }
+    }
+    catch {
+        Write-Warning "Director OData collection failed, continuing: $_"
+    }
+}
+elseif (-not $NonInteractive) {
+    # In interactive mode, prompt for Director server
+    Write-Host "[12/12] Director OData collection (optional)..." -ForegroundColor Yellow
+    Write-Host "Enter Director Server name or FQDN to collect OData, or press Enter to skip:" -ForegroundColor Cyan
+    $promptedDirectorServer = Read-Host "Director Server"
+    if ($promptedDirectorServer -and $promptedDirectorServer.Trim() -ne "") {
+        try {
+            $directorData = & "$scriptPath\12-Get-CitrixDirectorOData.ps1" -OutputPath (Join-Path $dataPath "citrix-director-odata.json") -DirectorServer $promptedDirectorServer.Trim()
+            if ($directorData -and -not $directorData.Error) {
+                $auditData.DirectorOData = $directorData
+                Write-Host "Director OData collected successfully" -ForegroundColor Green
+            }
+            else {
+                Write-Host "Director OData collection skipped or returned error" -ForegroundColor Gray
+            }
+        }
+        catch {
+            Write-Warning "Director OData collection failed, continuing: $_"
+        }
+    }
+    else {
+        Write-Host "[12/12] Skipping Director OData collection (no server specified)..." -ForegroundColor Gray
+    }
+}
+else {
+    Write-Host "[12/12] Skipping Director OData collection (no server specified)..." -ForegroundColor Gray
 }
 
 # Calculate summary metrics

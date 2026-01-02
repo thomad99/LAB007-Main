@@ -1,6 +1,8 @@
 # Get-CitrixDirectorOData.ps1
 # Collects OData from Citrix Director monitoring endpoints
 # Director exposes monitoring data via OData v3 API
+# Version: 1.0
+# Last Modified: 2025-01-27
 
 param(
     [string]$OutputPath = ".\Data\citrix-director-odata.json",
@@ -254,31 +256,152 @@ try {
     Write-Host ""
     
     # Determine Director server
-    if (-not $DirectorServer) {
+    if (-not $DirectorServer -or $DirectorServer.Trim() -eq "") {
         # Try to get from DDC connection if available
         if ($global:CitrixAdminAddress) {
             $DirectorServer = $global:CitrixAdminAddress
             Write-Host "Using DDC address for Director: $DirectorServer" -ForegroundColor Yellow
         }
         else {
-            $DirectorServer = Read-Host "Enter Director Server name or FQDN"
+            # Prompt user for Director server (standalone mode)
+            $DirectorServer = Read-Host "Enter Director Server name or FQDN (or press Enter to skip)"
+            if (-not $DirectorServer -or $DirectorServer.Trim() -eq "") {
+                Write-Host "No Director server specified. Exiting." -ForegroundColor Yellow
+                return @{ Error = "No Director server specified" }
+            }
+            $DirectorServer = $DirectorServer.Trim()
         }
     }
     
-    # Build base URL
+    # Build base URL - try multiple OData versions for compatibility
     $protocol = if ($UseHTTPS) { "https" } else { "http" }
-    $baseUrl = "$protocol://$DirectorServer`:$Port/Citrix/Monitor/OData/v3/Data"
+    
+    # List of OData versions/paths to try (most common first)
+    $odataPaths = @(
+        "/Citrix/Monitor/OData/v3/Data",
+        "/Citrix/Monitor/OData/v2/Data",
+        "/Citrix/Monitor/OData/v1/Data",
+        "/Citrix/Monitor/OData/v4/Data",
+        "/Citrix/Monitor/OData/Data",
+        "/Director/OData/v3/Data",
+        "/Director/OData/v2/Data",
+        "/Director/OData/v1/Data",
+        "/OData/v3/Data",
+        "/OData/v2/Data",
+        "/OData/v1/Data"
+    )
+    
+    $baseUrl = $null
+    $workingPath = $null
+    
+    # Try each OData path to find one that works
+    Write-Host "Discovering OData endpoint (trying multiple versions)..." -ForegroundColor Yellow
+    foreach ($odataPath in $odataPaths) {
+        $testUrl = "$protocol://$DirectorServer`:$Port$odataPath"
+        Write-Host "  Trying: $testUrl" -ForegroundColor Gray | Out-File -FilePath $debugFile -Append
+        
+        try {
+            $testParams = @{
+                Uri = "$testUrl/`$metadata"
+                Method = 'Get'
+                ErrorAction = 'Stop'
+                TimeoutSec = 5
+            }
+            
+            if ($Credential) {
+                $testParams.Credential = $Credential
+            }
+            
+            if ($SkipSSLValidation) {
+                if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
+                    $certPolicy = @"
+                    using System.Net;
+                    using System.Security.Cryptography.X509Certificates;
+                    public class TrustAllCertsPolicy : ICertificatePolicy {
+                        public bool CheckValidationResult(
+                            ServicePoint srvPoint, X509Certificate certificate,
+                            WebRequest request, int certificateProblem) {
+                            return true;
+                        }
+                    }
+"@
+                    Add-Type $certPolicy
+                }
+                [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+                [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls
+            }
+            
+            $testResponse = Invoke-WebRequest @testParams
+            if ($testResponse.StatusCode -eq 200) {
+                $baseUrl = $testUrl
+                $workingPath = $odataPath
+                Write-Host "  ✓ Found working endpoint: $odataPath" -ForegroundColor Green
+                Write-Host "[DEBUG] Working OData path: $odataPath" | Out-File -FilePath $debugFile -Append
+                break
+            }
+        }
+        catch {
+            # Continue to next path
+            Write-Host "[DEBUG] Path $odataPath failed: $_" | Out-File -FilePath $debugFile -Append
+        }
+    }
+    
+    # If no path worked, default to v3 (most common)
+    if (-not $baseUrl) {
+        $workingPath = "/Citrix/Monitor/OData/v3/Data"
+        $baseUrl = "$protocol://$DirectorServer`:$Port$workingPath"
+        Write-Host "  ⚠ Could not verify endpoint, defaulting to: $workingPath" -ForegroundColor Yellow
+        Write-Host "[DEBUG] Using default OData path: $workingPath" | Out-File -FilePath $debugFile -Append
+    }
     
     Write-Host "Director OData Base URL: $baseUrl" -ForegroundColor Cyan
-    Write-Host "[DEBUG] Base URL: $baseUrl" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] Final Base URL: $baseUrl" | Out-File -FilePath $debugFile -Append
     
-    # Get credentials if not provided
+    # Get credentials if not provided (only prompt in standalone mode)
     if (-not $Credential) {
-        Write-Host ""
-        Write-Host "Director OData access may require authentication." -ForegroundColor Yellow
-        $useAuth = Read-Host "Do you want to provide credentials? (Y/N)"
-        if ($useAuth -eq 'Y' -or $useAuth -eq 'y') {
-            $Credential = Get-Credential -Message "Enter credentials for Director access"
+        # Only prompt for credentials if we're in interactive mode
+        # When called from master script, credentials are usually not needed (uses current context)
+        try {
+            # Try a test request without credentials first
+            $testParams = @{
+                Uri = "$baseUrl/`$metadata"
+                Method = 'Get'
+                ErrorAction = 'Stop'
+                TimeoutSec = 5
+            }
+            
+            if ($SkipSSLValidation) {
+                if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
+                    $certPolicy = @"
+                    using System.Net;
+                    using System.Security.Cryptography.X509Certificates;
+                    public class TrustAllCertsPolicy : ICertificatePolicy {
+                        public bool CheckValidationResult(
+                            ServicePoint srvPoint, X509Certificate certificate,
+                            WebRequest request, int certificateProblem) {
+                            return true;
+                        }
+                    }
+"@
+                    Add-Type $certPolicy
+                }
+                [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+                [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls
+            }
+            
+            $null = Invoke-WebRequest @testParams
+            Write-Host "Authentication not required (using current context)" -ForegroundColor Green
+        }
+        catch {
+            # If we get a 401/403, prompt for credentials
+            if ($_.Exception.Response.StatusCode.value__ -eq 401 -or $_.Exception.Response.StatusCode.value__ -eq 403) {
+                Write-Host ""
+                Write-Host "Director OData access requires authentication." -ForegroundColor Yellow
+                $useAuth = Read-Host "Do you want to provide credentials? (Y/N)"
+                if ($useAuth -eq 'Y' -or $useAuth -eq 'y') {
+                    $Credential = Get-Credential -Message "Enter credentials for Director access"
+                }
+            }
         }
     }
     
@@ -364,11 +487,14 @@ try {
     
     Write-Host "[DEBUG] Collection completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
     Write-Host "[DEBUG] Total duration: $((Get-Date) - $startTime)" | Out-File -FilePath $debugFile -Append
+    
+    # Return collection results
+    return $collectionResults
 }
 catch {
     Write-Error "Failed to collect Director OData: $_"
     Write-Host "[DEBUG] Fatal error: $_" | Out-File -FilePath $debugFile -Append
     Write-Host "[DEBUG] Stack trace: $($_.ScriptStackTrace)" | Out-File -FilePath $debugFile -Append
-    exit 1
+    return @{ Error = $_.Exception.Message }
 }
 

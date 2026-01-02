@@ -1,5 +1,7 @@
 # Check-CitrixModules.ps1
 # Quick script to check what Citrix modules/snap-ins are loaded
+# Version: 1.0
+# Last Modified: 2025-01-27
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Citrix Module/Snap-in Status" -ForegroundColor Cyan
