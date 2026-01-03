@@ -300,6 +300,11 @@ function setupWebAlertFallback() {
     });
 }
 
+// Redirect /status.html to /webalert/status.html (so API calls work correctly)
+app.get('/status.html', (req, res) => {
+    res.redirect('/webalert/status.html');
+});
+
 // Contact form route
 app.get('/contact', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'contact.html'));
