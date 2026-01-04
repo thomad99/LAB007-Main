@@ -831,43 +831,9 @@ app.get('/api/status', async (req, res) => {
         
         console.log('Executing status query...');
         
-        // Get ALL monitoring tasks (both active and completed)
+        // Simplified query to get ALL monitoring tasks (both active and completed)
+        // This ensures we show all monitored URLs, even if subscriber info is missing
         const result = await db.query(`
-            WITH active_subscribers AS (
-                SELECT 
-                    url_id,
-                    COUNT(*) as subscriber_count,
-                    MAX(created_at + COALESCE(polling_duration, 0) * interval '1 minute') as latest_end_time
-                FROM alert_subscribers
-                WHERE is_active = true
-                GROUP BY url_id
-            ),
-            change_counts AS (
-                SELECT 
-                    ah.monitored_url_id,
-                    COUNT(DISTINCT ah.detected_at) as changes_count
-                FROM alerts_history ah
-                WHERE EXISTS (
-                    SELECT 1 
-                    FROM alert_subscribers asub 
-                    WHERE asub.url_id = ah.monitored_url_id
-                      AND ah.detected_at >= asub.created_at
-                      AND ah.detected_at <= asub.created_at + COALESCE(asub.polling_duration, 0) * interval '1 minute'
-                )
-                GROUP BY ah.monitored_url_id
-            ),
-            latest_subscriber_info AS (
-                SELECT DISTINCT ON (url_id)
-                    id,
-                    url_id,
-                    email,
-                    phone_number,
-                    polling_duration,
-                    created_at,
-                    is_active
-                FROM alert_subscribers
-                ORDER BY url_id, created_at DESC
-            )
             SELECT 
                 mu.id,
                 mu.website_url,
@@ -875,27 +841,79 @@ app.get('/api/status', async (req, res) => {
                 mu.check_count,
                 mu.is_active,
                 mu.created_at,
-                lsi.email,
-                lsi.phone_number,
-                lsi.polling_duration,
+                (
+                    SELECT email 
+                    FROM alert_subscribers 
+                    WHERE url_id = mu.id 
+                    ORDER BY created_at DESC 
+                    LIMIT 1
+                ) as email,
+                (
+                    SELECT phone_number 
+                    FROM alert_subscribers 
+                    WHERE url_id = mu.id 
+                    ORDER BY created_at DESC 
+                    LIMIT 1
+                ) as phone_number,
+                (
+                    SELECT polling_duration 
+                    FROM alert_subscribers 
+                    WHERE url_id = mu.id 
+                    ORDER BY created_at DESC 
+                    LIMIT 1
+                ) as polling_duration,
+                (
+                    SELECT created_at 
+                    FROM alert_subscribers 
+                    WHERE url_id = mu.id 
+                    AND is_active = true 
+                    ORDER BY created_at DESC 
+                    LIMIT 1
+                ) as subscriber_created_at,
+                (
+                    SELECT COUNT(*) 
+                    FROM alert_subscribers 
+                    WHERE url_id = mu.id 
+                    AND is_active = true
+                    AND NOW() < created_at + COALESCE(polling_duration, 0) * interval '1 minute'
+                ) as active_subscriber_count,
+                (
+                    SELECT COUNT(DISTINCT detected_at) 
+                    FROM alerts_history 
+                    WHERE monitored_url_id = mu.id
+                ) as changes_count,
                 CASE 
-                    WHEN lsi.id IS NOT NULL AND lsi.is_active = true AND lsi.polling_duration IS NOT NULL AND lsi.created_at IS NOT NULL
-                         AND NOW() < lsi.created_at + COALESCE(lsi.polling_duration, 0) * interval '1 minute'
-                    THEN EXTRACT(EPOCH FROM (lsi.created_at + COALESCE(lsi.polling_duration, 0) * interval '1 minute' - NOW()))/60
-                    ELSE 0
-                END as minutes_left,
-                COALESCE(cc.changes_count, 0) as changes_count,
-                COALESCE(as_count.subscriber_count, 0) as subscriber_count,
-                CASE 
-                    WHEN lsi.url_id IS NOT NULL AND lsi.is_active = true AND lsi.polling_duration IS NOT NULL AND lsi.created_at IS NOT NULL
-                         AND NOW() < lsi.created_at + COALESCE(lsi.polling_duration, 0) * interval '1 minute'
+                    WHEN EXISTS (
+                        SELECT 1 
+                        FROM alert_subscribers 
+                        WHERE url_id = mu.id 
+                        AND is_active = true 
+                        AND NOW() < created_at + COALESCE(polling_duration, 0) * interval '1 minute'
+                    )
                     THEN 'Active'
                     ELSE 'Completed'
-                END as status_text
+                END as status_text,
+                CASE 
+                    WHEN EXISTS (
+                        SELECT 1 
+                        FROM alert_subscribers 
+                        WHERE url_id = mu.id 
+                        AND is_active = true 
+                        AND polling_duration IS NOT NULL
+                        AND created_at IS NOT NULL
+                        AND NOW() < created_at + COALESCE(polling_duration, 0) * interval '1 minute'
+                    )
+                    THEN EXTRACT(EPOCH FROM (
+                        (SELECT created_at + COALESCE(polling_duration, 0) * interval '1 minute' 
+                         FROM alert_subscribers 
+                         WHERE url_id = mu.id 
+                         AND is_active = true 
+                         ORDER BY created_at DESC 
+                         LIMIT 1) - NOW()
+                    ))/60
+                    ELSE 0
+                END as minutes_left
             FROM monitored_urls mu
-            LEFT JOIN latest_subscriber_info lsi ON mu.id = lsi.url_id
-            LEFT JOIN change_counts cc ON cc.monitored_url_id = mu.id
-            LEFT JOIN active_subscribers as_count ON as_count.url_id = mu.id
             ORDER BY mu.last_check DESC NULLS LAST, mu.created_at DESC
         `);
 
@@ -918,7 +936,7 @@ app.get('/api/status', async (req, res) => {
                     minutes_left: Math.max(0, Math.round(row.minutes_left || 0)),
                     changes_count: parseInt(row.changes_count || 0),
                     check_count: parseInt(row.check_count || 0),
-                    subscriber_count: parseInt(row.subscriber_count || 0),
+                    subscriber_count: parseInt(row.active_subscriber_count || 0),
                     status: row.status_text || 'Unknown'
                 };
             } catch (error) {
