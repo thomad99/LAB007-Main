@@ -55,8 +55,47 @@ app.use((req, res, next) => {
 // Store active monitoring tasks
 const monitoringTasks = new Map();
 
+// Function to clean/filter HTML content by removing ad-related content
+function cleanContentForComparison(html) {
+    if (!html) return '';
+    
+    let cleaned = html;
+    
+    // Remove ad-related patterns
+    // 1. Ad click tracking URLs (e.g., /api/ads/click?ad=)
+    cleaned = cleaned.replace(/href="[^"]*\/api\/ads\/click[^"]*"/gi, '');
+    cleaned = cleaned.replace(/href='[^']*\/api\/ads\/click[^']*'/gi, '');
+    
+    // 2. Common ad container patterns
+    cleaned = cleaned.replace(/<[^>]*class="[^"]*ad[s]?[^"]*"[^>]*>.*?<\/[^>]+>/gis, '');
+    cleaned = cleaned.replace(/<[^>]*id="[^"]*ad[s]?[^"]*"[^>]*>.*?<\/[^>]+>/gis, '');
+    
+    // 3. Ad script tags
+    cleaned = cleaned.replace(/<script[^>]*>.*?(ads?|advertisement|adserving).*?<\/script>/gis, '');
+    
+    // 4. Google AdSense patterns
+    cleaned = cleaned.replace(/<[^>]*data-ad-[^>]*>.*?<\/[^>]+>/gis, '');
+    cleaned = cleaned.replace(/<ins[^>]*class="[^"]*adsbygoogle[^"]*"[^>]*>.*?<\/ins>/gis, '');
+    
+    // 5. Ad iframes
+    cleaned = cleaned.replace(/<iframe[^>]*(ads?|advertisement|doubleclick|googleadservices)[^>]*>.*?<\/iframe>/gis, '');
+    
+    // 6. Ad-related attributes in any tag
+    cleaned = cleaned.replace(/\s+data-ad-[^=]*="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+data-ads-[^=]*="[^"]*"/gi, '');
+    
+    // 7. Empty ad href attributes that might be left over
+    cleaned = cleaned.replace(/href="[^"]*\/api\/ads[^"]*"/gi, '');
+    
+    // Normalize whitespace to avoid false positives from formatting changes
+    cleaned = cleaned.replace(/\s+/g, ' ');
+    cleaned = cleaned.trim();
+    
+    return cleaned;
+}
+
 // Function to start monitoring a URL
-async function startUrlMonitoring(urlId, websiteUrl) {
+async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
     if (!urlId || !websiteUrl) {
         console.error('Invalid parameters for startUrlMonitoring:', { urlId, websiteUrl });
         throw new Error('Invalid monitoring parameters');
@@ -67,7 +106,10 @@ async function startUrlMonitoring(urlId, websiteUrl) {
         return;
     }
 
-    console.log(`Starting monitoring for URL ID ${urlId}: ${websiteUrl}`);
+    // Ensure polling interval is valid (1-60 minutes)
+    pollingInterval = Math.max(1, Math.min(60, parseInt(pollingInterval) || 3));
+
+    console.log(`Starting monitoring for URL ID ${urlId}: ${websiteUrl} (polling every ${pollingInterval} minutes)`);
     let previousContent = null;
     let changesDetected = 0;
     let subscriberInfo = null;
@@ -82,9 +124,10 @@ async function startUrlMonitoring(urlId, websiteUrl) {
             SET last_check = NOW(), 
                 last_content = $1, 
                 last_debug = $2,
-                check_count = 0
+                check_count = 0,
+                polling_interval = $4
             WHERE id = $3
-        `, [initialScrape.content, JSON.stringify(initialScrape.debug), urlId]);
+        `, [initialScrape.content, JSON.stringify(initialScrape.debug), urlId, pollingInterval]);
 
         console.log(`Initial scrape completed for URL ID ${urlId} - baseline content established`);
         
@@ -105,8 +148,10 @@ async function startUrlMonitoring(urlId, websiteUrl) {
         console.error(`Error during initial scrape for URL ID ${urlId}:`, error);
     }
 
-    // Schedule monitoring every 3 minutes
-    const task = cron.schedule('*/3 * * * *', async () => {
+    // Schedule monitoring based on polling interval
+    const cronExpression = `*/${pollingInterval} * * * *`;
+    console.log(`Scheduling cron job with expression: ${cronExpression}`);
+    const task = cron.schedule(cronExpression, async () => {
         try {
             // Check if there are any active subscribers before proceeding
             const activeSubscribers = await db.query(`
@@ -217,7 +262,11 @@ async function startUrlMonitoring(urlId, websiteUrl) {
                     [urlId]
                 );
 
-                if (content !== previousContent) {
+                // Clean content before comparison to filter out ad-related changes
+                const cleanedContent = cleanContentForComparison(content);
+                const cleanedPreviousContent = cleanContentForComparison(previousContent);
+
+                if (cleanedContent !== cleanedPreviousContent) {
                     console.log(`Change detected for URL ID ${urlId}`);
                     console.log(`Previous content length: ${previousContent ? previousContent.length : 0}`);
                     console.log(`New content length: ${content.length}`);
@@ -311,9 +360,10 @@ async function startUrlMonitoring(urlId, websiteUrl) {
                     }
                     
                 } else {
-                    console.log(`No change detected for URL ID ${urlId} - content matches`);
+                    console.log(`No change detected for URL ID ${urlId} - content matches (after filtering ads)`);
                 }
 
+                // Store the original content (not cleaned) for display purposes
                 previousContent = content;
             }
 
@@ -350,9 +400,21 @@ setTimeout(() => {
                     last_debug JSONB,
                     check_count INTEGER DEFAULT 0,
                     is_active BOOLEAN DEFAULT true,
+                    polling_interval INTEGER DEFAULT 3,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
             `);
+            
+            // Add polling_interval column if it doesn't exist (for existing databases)
+            try {
+                await db.query(`
+                    ALTER TABLE monitored_urls 
+                    ADD COLUMN IF NOT EXISTS polling_interval INTEGER DEFAULT 3
+                `);
+            } catch (error) {
+                // Column might already exist, ignore error
+                console.log('polling_interval column already exists or error adding it:', error.message);
+            }
 
             // Create alert_subscribers table
             console.log('Creating alert_subscribers table...');
@@ -415,13 +477,14 @@ setTimeout(() => {
 
             // Start monitoring for any existing active URLs
             const activeUrls = await db.query(`
-                SELECT id, website_url 
+                SELECT id, website_url, polling_interval 
                 FROM monitored_urls 
                 WHERE is_active = true
             `);
 
             for (const url of activeUrls.rows) {
-                await startUrlMonitoring(url.id, url.website_url);
+                const pollingInterval = url.polling_interval || 3;
+                await startUrlMonitoring(url.id, url.website_url, pollingInterval);
             }
             console.log(`Resumed monitoring for ${activeUrls.rows.length} active URLs`);
 
@@ -575,11 +638,16 @@ app.post('/api/monitor', async (req, res) => {
     console.log('[Web-Alert API] Request baseUrl:', req.baseUrl);
     console.log('[Web-Alert API] Request body:', req.body);
     
-    let { websiteUrl, email, phone, duration } = req.body;
+    let { websiteUrl, email, phone, duration, pollingInterval } = req.body;
 
     try {
+        // Default polling interval to 3 minutes if not provided
+        pollingInterval = pollingInterval || 3;
+        // Ensure polling interval is between 1 and 60 minutes
+        pollingInterval = Math.max(1, Math.min(60, parseInt(pollingInterval) || 3));
+        
         // Log the incoming request
-        console.log('[Web-Alert API] Received monitoring request:', { websiteUrl, email, phone, duration });
+        console.log('[Web-Alert API] Received monitoring request:', { websiteUrl, email, phone, duration, pollingInterval });
 
         // Normalize the URL
         if (websiteUrl.toLowerCase().includes('moving.html')) {
@@ -607,8 +675,8 @@ app.post('/api/monitor', async (req, res) => {
         if (!urlRecord.rows || urlRecord.rows.length === 0) {
             console.log('Creating new URL record...');
             const newUrl = await db.query(
-                'INSERT INTO monitored_urls (website_url, is_active) VALUES ($1, true) RETURNING *',
-                [websiteUrl]
+                'INSERT INTO monitored_urls (website_url, is_active, polling_interval) VALUES ($1, true, $2) RETURNING *',
+                [websiteUrl, pollingInterval]
             );
             
             if (!newUrl.rows || newUrl.rows.length === 0) {
@@ -621,10 +689,10 @@ app.post('/api/monitor', async (req, res) => {
             urlId = urlRecord.rows[0].id;
             console.log('Found existing URL record with ID:', urlId);
 
-            // Reactivate the URL if it was inactive
+            // Reactivate the URL if it was inactive and update polling interval
             await db.query(
-                'UPDATE monitored_urls SET is_active = true WHERE id = $1',
-                [urlId]
+                'UPDATE monitored_urls SET is_active = true, polling_interval = $2 WHERE id = $1',
+                [urlId, pollingInterval]
             );
         }
 
@@ -714,7 +782,7 @@ app.post('/api/monitor', async (req, res) => {
                 // Continue with monitoring even if welcome notifications fail
             }
             
-            await startUrlMonitoring(urlId, websiteUrl);
+            await startUrlMonitoring(urlId, websiteUrl, pollingInterval);
         } else {
             console.log('Monitoring already active');
         }
@@ -754,7 +822,8 @@ app.get('/api/status', async (req, res) => {
         
         // Check database connection first
         if (!db.pool) {
-            throw new Error('Database connection not available');
+            console.error('Database pool not available, returning empty array');
+            return res.json([]);
         }
         
         // Note: We're NOT automatically stopping expired tasks anymore
@@ -768,7 +837,7 @@ app.get('/api/status', async (req, res) => {
                 SELECT 
                     url_id,
                     COUNT(*) as subscriber_count,
-                    MAX(created_at + (polling_duration || ' minutes')::interval) as latest_end_time
+                    MAX(created_at + COALESCE(polling_duration, 0) * interval '1 minute') as latest_end_time
                 FROM alert_subscribers
                 WHERE is_active = true
                 GROUP BY url_id
@@ -783,7 +852,7 @@ app.get('/api/status', async (req, res) => {
                     FROM alert_subscribers asub 
                     WHERE asub.url_id = ah.monitored_url_id
                       AND ah.detected_at >= asub.created_at
-                      AND ah.detected_at <= asub.created_at + (asub.polling_duration || ' minutes')::interval
+                      AND ah.detected_at <= asub.created_at + COALESCE(asub.polling_duration, 0) * interval '1 minute'
                 )
                 GROUP BY ah.monitored_url_id
             ),
@@ -810,14 +879,16 @@ app.get('/api/status', async (req, res) => {
                 lsi.phone_number,
                 lsi.polling_duration,
                 CASE 
-                    WHEN lsi.id IS NOT NULL AND lsi.is_active = true AND NOW() < lsi.created_at + (lsi.polling_duration || ' minutes')::interval
-                    THEN EXTRACT(EPOCH FROM (lsi.created_at + (lsi.polling_duration || ' minutes')::interval) - NOW())/60
+                    WHEN lsi.id IS NOT NULL AND lsi.is_active = true AND lsi.polling_duration IS NOT NULL AND lsi.created_at IS NOT NULL
+                         AND NOW() < lsi.created_at + COALESCE(lsi.polling_duration, 0) * interval '1 minute'
+                    THEN EXTRACT(EPOCH FROM (lsi.created_at + COALESCE(lsi.polling_duration, 0) * interval '1 minute' - NOW()))/60
                     ELSE 0
                 END as minutes_left,
                 COALESCE(cc.changes_count, 0) as changes_count,
                 COALESCE(as_count.subscriber_count, 0) as subscriber_count,
                 CASE 
-                    WHEN lsi.url_id IS NOT NULL AND lsi.is_active = true AND NOW() < lsi.created_at + (lsi.polling_duration || ' minutes')::interval
+                    WHEN lsi.url_id IS NOT NULL AND lsi.is_active = true AND lsi.polling_duration IS NOT NULL AND lsi.created_at IS NOT NULL
+                         AND NOW() < lsi.created_at + COALESCE(lsi.polling_duration, 0) * interval '1 minute'
                     THEN 'Active'
                     ELSE 'Completed'
                 END as status_text
@@ -859,11 +930,17 @@ app.get('/api/status', async (req, res) => {
         console.log('Sending formatted status response:', formattedResults);
         res.json(formattedResults);
     } catch (error) {
-        console.error('Error fetching status:', error);
-        console.error('Error details:', error.stack);
+        console.error('========== ERROR FETCHING STATUS ==========');
+        console.error('Error message:', error.message);
+        console.error('Error code:', error.code);
+        console.error('Error detail:', error.detail);
+        console.error('Error hint:', error.hint);
+        console.error('Error stack:', error.stack);
+        console.error('===========================================');
         res.status(500).json({ 
             error: 'Failed to fetch monitoring status',
             message: error.message,
+            detail: error.detail || error.hint || 'No additional details',
             timestamp: new Date().toISOString()
         });
     }

@@ -16,7 +16,7 @@
         font-family: system-ui, Arial, sans-serif; 
         margin: 0; 
         padding: 0;
-        padding-top: 100px; /* Account for fixed header */
+        padding-top: 120px; /* Account for fixed header */
         color: #e2e8f0; 
         min-height: 100vh;
         background: linear-gradient(120deg, #334155, #374151, #475569);
@@ -191,7 +191,7 @@
 
       .container { 
         max-width: 680px; 
-        margin: 100px auto 20px;
+        margin: 140px auto 20px;
         padding: 24px;
         flex: 1;
       }
@@ -267,7 +267,7 @@
         }
 
         .container {
-          margin-top: 80px;
+          margin-top: 120px;
           padding: 16px;
         }
 
@@ -512,6 +512,15 @@
           
           clearInterval(progressInterval);
           progress.textContent = 'Processing valuation result...';
+          
+          // Check content type before parsing JSON
+          const contentType = res.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await res.text();
+            console.error('Non-JSON response received:', text.substring(0, 200));
+            throw new Error('Server returned invalid response. Please try again.');
+          }
+          
           const data = await res.json();
           result.hidden = false;
           
@@ -627,6 +636,14 @@
           
           if (!response.ok) {
             throw new Error('AI analysis failed');
+          }
+          
+          // Check content type before parsing JSON
+          const contentType = response.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await response.text();
+            console.error('Non-JSON response from /api/analyze-image:', text.substring(0, 200));
+            throw new Error('Server returned invalid response. Please try again.');
           }
           
           const result = await response.json();
@@ -752,8 +769,27 @@
           const res = await fetch('/api/defaults');
           if (!res.ok) {
             console.log('Failed to fetch defaults:', res.status);
+            // Set fallback defaults directly
+            zipInput.value = '34238';
+            emailInput.value = 'thomad99@gmail.com';
+            zipInput.placeholder = 'Default: 34238';
+            emailInput.placeholder = 'Default: thomad99@gmail.com';
             return;
           }
+          
+          // Check content type before parsing JSON
+          const contentType = res.headers.get('content-type');
+          if (!contentType || !contentType.includes('application/json')) {
+            const text = await res.text();
+            console.error('Non-JSON response from /api/defaults:', text.substring(0, 200));
+            // Set fallback defaults directly
+            zipInput.value = '34238';
+            emailInput.value = 'thomad99@gmail.com';
+            zipInput.placeholder = 'Default: 34238';
+            emailInput.placeholder = 'Default: thomad99@gmail.com';
+            return;
+          }
+          
           const { zip, email } = await res.json();
           console.log('Default values received:', { zip, email });
           
@@ -762,17 +798,25 @@
             zipInput.value = String(zip);
             zipInput.placeholder = `Default: ${zip}`;
             console.log('Set ZIP default:', zip);
+          } else {
+            zipInput.value = '34238';
+            zipInput.placeholder = 'Default: 34238';
           }
           if (email) {
             emailInput.value = email;
             emailInput.placeholder = `Default: ${email}`;
             console.log('Set email default:', email);
+          } else {
+            emailInput.value = 'thomad99@gmail.com';
+            emailInput.placeholder = 'Default: thomad99@gmail.com';
           }
         } catch (e) {
           console.log('Could not fetch defaults:', e);
-          // Set fallback placeholders
-          zipInput.placeholder = 'Enter ZIP code';
-          emailInput.placeholder = 'Enter email address';
+          // Set fallback defaults directly
+          zipInput.value = '34238';
+          emailInput.value = 'thomad99@gmail.com';
+          zipInput.placeholder = 'Default: 34238';
+          emailInput.placeholder = 'Default: thomad99@gmail.com';
         }
       })();
     </script>

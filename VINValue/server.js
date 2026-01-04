@@ -28,7 +28,7 @@ async function loadPlaywright() {
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DEFAULT_EMAIL = process.env.WEBUYEMAIL || 'Thomad99@gmail.com';
+const DEFAULT_EMAIL = process.env.WEBUYEMAIL || 'thomad99@gmail.com';
 const DEFAULT_ZIP = process.env.WEBUYZIPCODE || '34238';
 const { execFile } = require('child_process');
 const fs = require('fs');

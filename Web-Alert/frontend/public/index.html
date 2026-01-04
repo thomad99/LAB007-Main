@@ -229,10 +229,16 @@
                     </div>
                 </div>
                 <div class="form-group">
-                    <label for="duration">Poll Period (minutes):</label>
+                    <label for="pollingInterval">Polling Interval (minutes):</label>
+                    <input type="number" id="pollingInterval" name="pollingInterval" class="form-control" min="1" max="60" value="3" required
+                           placeholder="How often to check for changes">
+                    <small class="text-muted">How often to check the website for changes (default: 3 minutes)</small>
+                </div>
+                <div class="form-group">
+                    <label for="duration">Monitoring Duration (minutes):</label>
                     <input type="number" id="duration" name="duration" class="form-control" min="1" value="10" required
                            placeholder="Total monitoring time in minutes">
-                    <small class="text-muted">How long to monitor the website (checks every 3 minutes)</small>
+                    <small class="text-muted">How long to monitor the website</small>
                 </div>
                 <button type="submit" class="btn btn-primary">Start Monitoring</button>
             </form>
