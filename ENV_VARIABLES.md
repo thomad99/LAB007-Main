@@ -73,6 +73,7 @@ No environment variables required (uses PORT only, which is set automatically by
 
 ### Optional
 - `PUPPETEER_EXECUTABLE_PATH` - Path to Chrome/Chromium executable (usually not needed on Render)
+- `WEBALERT_API_KEY` - API key for external API access to `/api/external/monitor` endpoint (optional, but recommended for security)
 
 ---
 
@@ -122,6 +123,9 @@ EMAIL_USER=your_email@gmail.com
 EMAIL_PASSWORD=your_gmail_app_password
 EMAIL_FROM=your_email@gmail.com
 
+# Web-Alert - External API (Optional)
+# WEBALERT_API_KEY=your_secret_api_key_here
+
 # Web-Alert - SMS (Optional - Currently Disabled)
 # To enable Twilio SMS, uncomment and set these variables:
 # TWILIO_ACCOUNT_SID=your_twilio_sid
@@ -144,6 +148,8 @@ NODE_ENV=production
 3. **SMS**: Web-Alert SMS is optional. If not configured, only email alerts will be sent.
 
 4. **OpenAI API**: VINValue's image analysis feature is optional. The service works without it, but won't be able to extract VIN from images.
+
+5. **Web-Alert External API**: The `/api/external/monitor` endpoint allows other services to trigger web alerts. If `WEBALERT_API_KEY` is set, API key authentication is required. If not set, the endpoint is accessible without authentication (not recommended for production).
 
 5. **Render Free Tier Limitations**: 
    - SMTP ports (25, 465, 587) are blocked on free plans

@@ -1031,6 +1031,164 @@ app.post('/api/monitor', async (req, res) => {
     }
 });
 
+// External API endpoint for other web services to trigger alerts
+// Requires API key authentication via WEBALERT_API_KEY environment variable
+app.post('/api/external/monitor', async (req, res) => {
+    console.log('[Web-Alert External API] POST /api/external/monitor called');
+    console.log('[Web-Alert External API] Request body:', req.body);
+    
+    try {
+        // Check for API key authentication
+        const apiKey = req.headers['x-api-key'] || req.headers['authorization']?.replace('Bearer ', '') || req.body.apiKey;
+        const expectedApiKey = process.env.WEBALERT_API_KEY;
+        
+        if (expectedApiKey && apiKey !== expectedApiKey) {
+            console.warn('[Web-Alert External API] Invalid or missing API key');
+            return res.status(401).json({
+                success: false,
+                error: 'Unauthorized',
+                message: 'Valid API key required. Provide API key in X-API-Key header, Authorization header, or apiKey field.'
+            });
+        }
+        
+        let { url, websiteUrl, email, duration, pollingInterval } = req.body;
+        
+        // Support both 'url' and 'websiteUrl' for flexibility
+        websiteUrl = websiteUrl || url;
+        
+        // Default polling interval to 3 minutes if not provided
+        pollingInterval = pollingInterval || 3;
+        pollingInterval = Math.max(1, Math.min(60, parseInt(pollingInterval) || 3));
+        
+        // Default duration to 60 minutes if not provided
+        duration = duration || 60;
+        duration = Math.max(1, Math.min(1440, parseInt(duration) || 60)); // Max 24 hours
+        
+        // Validate required fields
+        if (!websiteUrl) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required field',
+                message: 'url or websiteUrl is required'
+            });
+        }
+        
+        // If no email provided, use a default or require it
+        // For external API, we'll require email for now
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing required field',
+                message: 'email is required'
+            });
+        }
+        
+        // Normalize the URL
+        if (websiteUrl.toLowerCase().includes('moving.html')) {
+            websiteUrl = websiteUrl.replace(/moving\.html/i, 'MOVING.html');
+        }
+        
+        console.log('[Web-Alert External API] Processing request:', { websiteUrl, email, duration, pollingInterval });
+        
+        // Get or create the monitored URL
+        let urlRecord = await db.query(
+            'SELECT * FROM monitored_urls WHERE website_url = $1',
+            [websiteUrl]
+        );
+        
+        let urlId;
+        if (!urlRecord.rows || urlRecord.rows.length === 0) {
+            console.log('[Web-Alert External API] Creating new URL record...');
+            const newUrl = await db.query(
+                'INSERT INTO monitored_urls (website_url, is_active, polling_interval) VALUES ($1, true, $2) RETURNING *',
+                [websiteUrl, pollingInterval]
+            );
+            
+            if (!newUrl.rows || newUrl.rows.length === 0) {
+                throw new Error('Failed to create URL record');
+            }
+            
+            urlId = newUrl.rows[0].id;
+            console.log('[Web-Alert External API] Created new URL record with ID:', urlId);
+        } else {
+            urlId = urlRecord.rows[0].id;
+            console.log('[Web-Alert External API] Found existing URL record with ID:', urlId);
+            
+            // Reactivate the URL if it was inactive and update polling interval
+            await db.query(
+                'UPDATE monitored_urls SET is_active = true, polling_interval = $2 WHERE id = $1',
+                [urlId, pollingInterval]
+            );
+        }
+        
+        // Create subscriber record
+        console.log('[Web-Alert External API] Creating subscriber record...');
+        const subscriber = await db.query(`
+            INSERT INTO alert_subscribers (url_id, email, polling_duration, is_active)
+            VALUES ($1, $2, $3, true)
+            RETURNING *
+        `, [urlId, email, duration]);
+        
+        if (!subscriber.rows || subscriber.rows.length === 0) {
+            throw new Error('Failed to create subscriber record');
+        }
+        
+        console.log('[Web-Alert External API] Created subscriber record:', subscriber.rows[0].id);
+        
+        // Start monitoring if not already active
+        if (!monitoringTasks.has(urlId)) {
+            console.log('[Web-Alert External API] Starting monitoring...');
+            
+            // Send welcome email
+            try {
+                await emailService.sendWelcomeEmail(
+                    email,
+                    websiteUrl,
+                    duration,
+                    subscriber.rows[0].id,
+                    pollingInterval
+                );
+                console.log('[Web-Alert External API] Welcome email sent');
+            } catch (error) {
+                console.error('[Web-Alert External API] Error sending welcome email:', error);
+                // Continue with monitoring even if welcome email fails
+            }
+            
+            await startUrlMonitoring(urlId, websiteUrl, pollingInterval);
+        } else {
+            console.log('[Web-Alert External API] Monitoring already active for this URL');
+        }
+        
+        // Return success response
+        const response = {
+            success: true,
+            message: 'Monitoring started successfully',
+            data: {
+                urlId: urlId,
+                websiteUrl: websiteUrl,
+                subscriberId: subscriber.rows[0].id,
+                email: email,
+                duration: duration,
+                pollingInterval: pollingInterval,
+                status: 'active'
+            }
+        };
+        
+        console.log('[Web-Alert External API] Monitoring setup complete');
+        res.json(response);
+        
+    } catch (error) {
+        console.error('[Web-Alert External API] Error:', error);
+        console.error('[Web-Alert External API] Error message:', error.message);
+        console.error('[Web-Alert External API] Error stack:', error.stack);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to start monitoring',
+            message: error.message
+        });
+    }
+});
+
 // Modify the status endpoint
 app.get('/api/status', async (req, res) => {
     try {

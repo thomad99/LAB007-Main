@@ -256,10 +256,6 @@ async function sendSummaryEmail(email, websiteUrl, duration, checkCount, changes
     console.log('[Web-Alert Email] Subscriber ID:', subscriberId);
     
     try {
-        const summaryText = changesDetected > 0 
-            ? `We detected ${changesDetected} change(s) during monitoring.`
-            : 'No changes were detected during monitoring.';
-        
         // LAB007 logo at top
         const lab007Logo = `
             <div style="text-align: center; margin-bottom: 20px;">
@@ -285,7 +281,7 @@ async function sendSummaryEmail(email, websiteUrl, duration, checkCount, changes
             from: `"Web Alert Service" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
             to: email,
             subject: 'LAB007-ALERTS-ENDED',
-            text: `Monitoring completed for ${websiteUrl}. ${summaryText} Total checks: ${checkCount}`,
+            text: `Monitoring completed for ${websiteUrl}. Total checks: ${checkCount}. Changes detected: ${changesDetected}.`,
             html: `
                 <!DOCTYPE html>
                 <html>
@@ -311,10 +307,6 @@ async function sendSummaryEmail(email, websiteUrl, duration, checkCount, changes
                             <p><strong>Last Check:</strong> ${lastCheck ? new Date(lastCheck).toLocaleString() : 'N/A'}</p>
                             <p><strong>End Time:</strong> ${new Date().toLocaleString()}</p>
                         </div>
-                        
-                        <p>${summaryText}</p>
-                        <p>Monitoring has been completed and stopped automatically.</p>
-                        <p>Thank you for using Web Alert!</p>
                         
                         ${footerLogo}
                     </div>
