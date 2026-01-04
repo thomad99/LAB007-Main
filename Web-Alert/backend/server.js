@@ -820,12 +820,6 @@ app.get('/api/status', async (req, res) => {
     try {
         console.log('Fetching status from database...');
         
-        // Check database connection first
-        if (!db.pool) {
-            console.error('Database pool not available, returning empty array');
-            return res.json([]);
-        }
-        
         // Note: We're NOT automatically stopping expired tasks anymore
         // This allows users to see all their monitoring history until they manually clear it
         
