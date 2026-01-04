@@ -21,35 +21,6 @@ if (-not (Test-Path ".git")) {
     exit 1
 }
 
-# Check for .git directories in subdirectories (these would prevent syncing to main repo)
-$subdirectoriesWithGit = @("Web-Alert", "VINValue", "Citrix-Horizon", "3dPrint")
-$foundGitDirs = @()
-
-foreach ($subdir in $subdirectoriesWithGit) {
-    $gitPath = Join-Path (Join-Path $repoRoot $subdir) ".git"
-    if (Test-Path $gitPath) {
-        $foundGitDirs += $subdir
-    }
-}
-
-if ($foundGitDirs.Count -gt 0) {
-    Write-Host "Found .git directories in subdirectories (these will be removed):" -ForegroundColor Yellow
-    foreach ($dir in $foundGitDirs) {
-        Write-Host "  - $dir" -ForegroundColor Yellow
-    }
-    Write-Host ""
-    Write-Host "Removing .git directories to sync everything to the single LAB007-Main repository..." -ForegroundColor Yellow
-    Write-Host ""
-    
-    foreach ($dir in $foundGitDirs) {
-        $gitPath = Join-Path (Join-Path $repoRoot $dir) ".git"
-        Write-Host "Removing .git from $dir..." -ForegroundColor Yellow
-        Remove-Item -Path $gitPath -Recurse -Force
-        Write-Host "$dir converted to regular directory" -ForegroundColor Green
-    }
-    Write-Host ""
-}
-
 Write-Host "Checking git status..." -ForegroundColor Yellow
 $status = git status --porcelain
 
