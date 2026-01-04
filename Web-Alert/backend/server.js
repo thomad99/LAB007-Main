@@ -120,6 +120,60 @@ function cleanContentForComparison(html) {
     // 16. Remove elements that only contain loading states
     cleaned = cleaned.replace(/<[^>]+>[\s]*(?:Loading\.\.\.|Loading|Please wait|Processing|Please Wait)[\s]*<\/[^>]+>/gi, '');
     
+    // 17. Remove common HTML attributes that change dynamically but don't represent content changes
+    // These attributes are often added/removed by JavaScript and don't indicate real content changes
+    cleaned = cleaned.replace(/\s+crossorigin="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+crossorigin='[^']*'/gi, '');
+    cleaned = cleaned.replace(/\s+integrity="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+integrity='[^']*'/gi, '');
+    cleaned = cleaned.replace(/\s+nonce="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+nonce='[^']*'/gi, '');
+    cleaned = cleaned.replace(/\s+referrerpolicy="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+referrerpolicy='[^']*'/gi, '');
+    cleaned = cleaned.replace(/\s+as="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+as='[^']*'/gi, '');
+    cleaned = cleaned.replace(/\s+type="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+type='[^']*'/gi, '');
+    cleaned = cleaned.replace(/\s+media="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+media='[^']*'/gi, '');
+    cleaned = cleaned.replace(/\s+rel="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+rel='[^']*'/gi, '');
+    
+    // 18. Remove data-* attributes (except data-content which might be actual content)
+    cleaned = cleaned.replace(/\s+data-[^=]*="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+data-[^=]*='[^']*'/gi, '');
+    
+    // 19. Remove src attributes from script/link/img tags (they change but don't affect visible content)
+    // But keep the tag structure
+    cleaned = cleaned.replace(/\s+src="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+src='[^']*'/gi, '');
+    cleaned = cleaned.replace(/\s+href="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+href='[^']*'/gi, '');
+    
+    // 20. Remove style attributes (CSS changes don't indicate content changes)
+    cleaned = cleaned.replace(/\s+style="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+style='[^']*'/gi, '');
+    
+    // 21. Remove class attributes that are just for styling/behavior
+    // Keep only if they seem content-related (this is a heuristic)
+    cleaned = cleaned.replace(/\s+class="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+class='[^']*'/gi, '');
+    
+    // 22. Remove id attributes (they're often dynamic)
+    cleaned = cleaned.replace(/\s+id="[^"]*"/gi, '');
+    cleaned = cleaned.replace(/\s+id='[^']*'/gi, '');
+    
+    // 23. Remove script and style tags entirely (they're code, not content)
+    cleaned = cleaned.replace(/<script[^>]*>.*?<\/script>/gis, '');
+    cleaned = cleaned.replace(/<style[^>]*>.*?<\/style>/gis, '');
+    cleaned = cleaned.replace(/<noscript[^>]*>.*?<\/noscript>/gis, '');
+    
+    // 24. Remove link tags (they're metadata, not content)
+    cleaned = cleaned.replace(/<link[^>]*>/gi, '');
+    
+    // 25. Remove meta tags (they're metadata, not content)
+    cleaned = cleaned.replace(/<meta[^>]*>/gi, '');
+    
     // Normalize whitespace to avoid false positives from formatting changes
     cleaned = cleaned.replace(/\s+/g, ' ');
     cleaned = cleaned.trim();
@@ -127,8 +181,73 @@ function cleanContentForComparison(html) {
     return cleaned;
 }
 
+// Function to check if changes are significant using OpenAI (if available)
+async function analyzeChangesWithOpenAI(contentBefore, contentAfter) {
+    const openaiApiKey = process.env.OPENAI_API_KEY;
+    if (!openaiApiKey) {
+        // If no OpenAI key, fall back to basic analysis
+        return null;
+    }
+    
+    try {
+        // Extract text content from both versions
+        const beforeText = contentBefore.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 2000);
+        const afterText = contentAfter.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().substring(0, 2000);
+        
+        // Find the actual differences
+        const beforeWords = beforeText.split(/\s+/).filter(w => w.length > 0);
+        const afterWords = afterText.split(/\s+/).filter(w => w.length > 0);
+        const added = afterWords.filter(w => !beforeWords.includes(w)).slice(0, 20);
+        const removed = beforeWords.filter(w => !afterWords.includes(w)).slice(0, 20);
+        
+        const changesSummary = `Added: ${added.join(', ')}\nRemoved: ${removed.join(', ')}`;
+        
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${openaiApiKey}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                model: 'gpt-4o-mini', // Use cheaper model for this analysis
+                messages: [
+                    {
+                        role: 'system',
+                        content: 'You are a web content analyzer. Determine if the changes between two webpage versions represent actual content/data changes or just technical/structural changes (like HTML attributes, loading states, scripts, etc.). Respond with only "CONTENT" if it\'s a real content change, or "TECHNICAL" if it\'s just technical/structural changes.'
+                    },
+                    {
+                        role: 'user',
+                        content: `Analyze these webpage changes:\n\nChanges detected:\n${changesSummary}\n\nIs this a real content/data change or just technical/structural changes (HTML attributes, loading states, scripts, etc.)? Respond with only "CONTENT" or "TECHNICAL".`
+                    }
+                ],
+                max_tokens: 10,
+                temperature: 0
+            })
+        });
+        
+        if (!response.ok) {
+            console.warn('OpenAI API error:', response.status, response.statusText);
+            return null;
+        }
+        
+        const data = await response.json();
+        const result = data.choices?.[0]?.message?.content?.trim().toUpperCase();
+        
+        if (result === 'CONTENT') {
+            return true; // Significant content change
+        } else if (result === 'TECHNICAL') {
+            return false; // Not significant, just technical
+        }
+        
+        return null; // Unclear result, fall back to basic analysis
+    } catch (error) {
+        console.warn('Error calling OpenAI API:', error.message);
+        return null; // Fall back to basic analysis
+    }
+}
+
 // Function to check if changes are significant (not just loading/dynamic content)
-function areChangesSignificant(contentBefore, contentAfter) {
+async function areChangesSignificant(contentBefore, contentAfter) {
     if (!contentBefore || !contentAfter) return true; // If one is missing, consider it significant
     
     // Remove all the dynamic/loading patterns from both
@@ -140,7 +259,13 @@ function areChangesSignificant(contentBefore, contentAfter) {
         return false;
     }
     
-    // Additional check: if the only differences are loading states, ignore
+    // Try OpenAI analysis first (if available)
+    const openaiResult = await analyzeChangesWithOpenAI(contentBefore, contentAfter);
+    if (openaiResult !== null) {
+        return openaiResult;
+    }
+    
+    // Fall back to basic text analysis
     // Extract text content (simple extraction)
     const beforeText = cleanedBefore.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
     const afterText = cleanedAfter.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -356,7 +481,8 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
                 const cleanedPreviousContent = cleanContentForComparison(previousContent);
 
                 // Check if changes are significant (not just loading/dynamic content)
-                if (cleanedContent !== cleanedPreviousContent && areChangesSignificant(previousContent, content)) {
+                const isSignificant = await areChangesSignificant(previousContent, content);
+                if (cleanedContent !== cleanedPreviousContent && isSignificant) {
                     console.log(`Change detected for URL ID ${urlId}`);
                     console.log(`Previous content length: ${previousContent ? previousContent.length : 0}`);
                     console.log(`New content length: ${content.length}`);
