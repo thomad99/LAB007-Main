@@ -137,7 +137,9 @@
 <body>
     <div class="container">
         <div class="logo-container">
-            <img src="lab007-trans.PNG" alt="LAB007 Logo" class="logo">
+            <a href="/webalert" style="text-decoration: none;">
+                <img src="lab007-trans.PNG" alt="LAB007 Logo" class="logo" style="filter: brightness(0);">
+            </a>
         </div>
         <div class="header">
             <h1>Web Alert Status - All Monitoring Jobs</h1>
@@ -162,9 +164,12 @@
                 <tr>
                     <th>URL</th>
                     <th>Status</th>
+                    <th>Start Time</th>
+                    <th>End Time</th>
                     <th>Last Check</th>
-                    <th>Check Count</th>
+                    <th>Poll Interval</th>
                     <th>Changes</th>
+                    <th>Emails Sent</th>
                     <th>Time Left</th>
                     <th>Actions</th>
                 </tr>
@@ -180,7 +185,7 @@
         <div class="modal-content">
             <span class="close">&times;</span>
             <h2 id="modalTitle"></h2>
-            <p id="modalMessage"></p>
+            <div id="modalMessage" style="max-height: 600px; overflow-y: auto;"></div>
             <div style="text-align: right; margin-top: 20px;">
                 <button class="button button-primary" id="modalCancel">Cancel</button>
                 <button class="button button-danger" id="modalConfirm">Confirm</button>
@@ -213,7 +218,7 @@
             const closeBtn = document.querySelector('.close');
 
             modalTitle.textContent = title;
-            modalMessage.textContent = message;
+            modalMessage.innerHTML = typeof message === 'string' ? message.replace(/\n/g, '<br>') : message;
             modal.style.display = 'block';
 
             confirmBtn.onclick = () => {
@@ -250,7 +255,7 @@
                 if (!data || data.length === 0) {
                     statusTableBody.innerHTML = `
                         <tr>
-                            <td colspan="7" style="text-align: center;">No active monitoring tasks</td>
+                            <td colspan="10" style="text-align: center;">No active monitoring tasks</td>
                         </tr>`;
                     return;
                 }
@@ -266,6 +271,17 @@
                     // Calculate time left
                     const minutesLeft = Math.max(0, Math.round(item.minutes_left || 0));
                     
+                    // Format start time (subscriber created_at)
+                    const startTime = item.subscriber_created_at ? new Date(item.subscriber_created_at).toLocaleString() : 'N/A';
+                    
+                    // Calculate end time (start + duration)
+                    let endTime = 'N/A';
+                    if (item.subscriber_created_at && item.polling_duration) {
+                        const start = new Date(item.subscriber_created_at);
+                        const end = new Date(start.getTime() + item.polling_duration * 60 * 1000);
+                        endTime = end.toLocaleString();
+                    }
+                    
                     // Create status badge based on the status field
                     let statusBadge;
                     if (item.status === 'Active') {
@@ -276,17 +292,21 @@
                         statusBadge = '<span class="badge badge-secondary">Unknown</span>';
                     }
 
-                    // Create changes badge
-                    const changesBadge = parseInt(item.changes_count || 0) > 0
-                        ? `<span class="badge badge-warning">${item.changes_count}</span>`
+                    // Create changes badge (clickable)
+                    const changesCount = parseInt(item.changes_count || 0);
+                    const changesBadge = changesCount > 0
+                        ? `<a href="#" onclick="showChanges(${item.id}); return false;" style="text-decoration: underline; cursor: pointer; color: #856404;"><span class="badge badge-warning">${changesCount}</span></a>`
                         : '<span class="badge badge-secondary">0</span>';
 
                     row.innerHTML = `
                         <td>${item.website_url || 'N/A'}</td>
                         <td>${statusBadge}</td>
+                        <td>${startTime}</td>
+                        <td>${endTime}</td>
                         <td>${lastCheck}</td>
-                        <td>${item.check_count || 0}</td>
+                        <td>${item.polling_duration || 'N/A'} min</td>
                         <td>${changesBadge}</td>
+                        <td>${item.emails_sent_count || 0}</td>
                         <td>${item.status === 'Completed' ? 'Completed' : `${minutesLeft} minutes`}</td>
                         <td>
                             ${item.status === 'Active' 
@@ -303,7 +323,7 @@
                 const statusTableBody = document.getElementById('statusTableBody');
                 statusTableBody.innerHTML = `
                     <tr>
-                        <td colspan="7" style="text-align: center; color: #dc3545;">
+                        <td colspan="10" style="text-align: center; color: #dc3545;">
                             Error loading status data: ${error.message}
                         </td>
                     </tr>`;
@@ -322,6 +342,84 @@
             } catch (error) {
                 console.error('Error stopping monitoring:', error);
                 alert('Failed to stop monitoring');
+            }
+        }
+
+        // Function to show changes/diff
+        async function showChanges(urlId) {
+            try {
+                const response = await fetch(`api/changes/${urlId}`);
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const changes = await response.json();
+                
+                if (changes.length === 0) {
+                    alert('No changes recorded for this URL');
+                    return;
+                }
+                
+                // Create modal content
+                let modalContent = '<h2>Changes Detected</h2>';
+                changes.forEach((change, index) => {
+                    const detectedAt = new Date(change.detected_at).toLocaleString();
+                    modalContent += `
+                        <div style="margin-bottom: 20px; padding: 15px; background-color: #f8f9fa; border-radius: 8px;">
+                            <h3>Change #${changes.length - index} - ${detectedAt}</h3>
+                            <div style="margin-top: 10px;">
+                                <strong>Before:</strong>
+                                <div style="background-color: #fff; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; font-size: 12px;">
+                                    ${(change.content_before || '').substring(0, 1000)}${(change.content_before || '').length > 1000 ? '...' : ''}
+                                </div>
+                            </div>
+                            <div style="margin-top: 10px;">
+                                <strong>After:</strong>
+                                <div style="background-color: #fff; padding: 10px; margin-top: 5px; border: 1px solid #ddd; border-radius: 4px; max-height: 200px; overflow-y: auto; white-space: pre-wrap; word-wrap: break-word; font-family: monospace; font-size: 12px;">
+                                    ${(change.content_after || '').substring(0, 1000)}${(change.content_after || '').length > 1000 ? '...' : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                // Show modal with HTML content
+                const modal = document.getElementById('confirmModal');
+                const modalTitle = document.getElementById('modalTitle');
+                const modalMessage = document.getElementById('modalMessage');
+                const modalCancel = document.getElementById('modalCancel');
+                const modalConfirm = document.getElementById('modalConfirm');
+                
+                modalTitle.textContent = 'Changes Detected';
+                modalMessage.innerHTML = modalContent;
+                modalConfirm.style.display = 'none';
+                modalCancel.textContent = 'Close';
+                modal.style.display = 'block';
+                
+                // Update close handlers
+                const closeModal = () => {
+                    modal.style.display = 'none';
+                    modalConfirm.style.display = 'block';
+                    modalCancel.textContent = 'Cancel';
+                    modalMessage.innerHTML = '';
+                    // Restore original onclick handler
+                    window.onclick = originalOnClickHandler;
+                };
+                
+                // Store original onclick handler
+                const originalOnClickHandler = window.onclick;
+                
+                modalCancel.onclick = closeModal;
+                document.querySelector('.close').onclick = closeModal;
+                window.onclick = (event) => {
+                    if (event.target === modal) {
+                        closeModal();
+                    } else if (originalOnClickHandler) {
+                        originalOnClickHandler(event);
+                    }
+                };
+            } catch (error) {
+                console.error('Error fetching changes:', error);
+                alert('Failed to load changes: ' + error.message);
             }
         }
 

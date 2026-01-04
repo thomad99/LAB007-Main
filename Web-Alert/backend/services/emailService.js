@@ -136,9 +136,13 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter, subscri
                         ${changesText ? `
                         <div class="content-box">
                             <h3 style="margin-top: 0; color: #495057;">Text changes detected</h3>
-                            <p style="white-space: pre-wrap; word-wrap: break-word;">${changesText}</p>
+                            <p style="white-space: pre-wrap; word-wrap: break-word; margin: 0;">${changesText}</p>
                         </div>
-                        ` : ''}
+                        ` : `
+                        <div class="content-box">
+                            <p style="margin: 0;">Content has changed (details not available)</p>
+                        </div>
+                        `}
                         
                         ${footerLogo}
                     </div>
@@ -174,29 +178,32 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter, subscri
     }
 }
 
-async function sendWelcomeEmail(email, websiteUrl, duration, subscriberId = null) {
+async function sendWelcomeEmail(email, websiteUrl, duration, subscriberId = null, pollingInterval = 3) {
     console.log('[Web-Alert Email] Sending welcome email to:', email);
     console.log('[Web-Alert Email] Website:', websiteUrl);
     console.log('[Web-Alert Email] Duration:', duration);
+    console.log('[Web-Alert Email] Polling Interval:', pollingInterval);
     console.log('[Web-Alert Email] Subscriber ID:', subscriberId);
     
     try {
+        const startTime = new Date();
+        const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
+        
         const mailOptions = {
             from: `"Web Alert Service" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
             to: email,
             subject: 'LAB007-ALERTS-STARTED',
-            text: `Web Alerts Activated\n\nURL: ${websiteUrl}\nPoll Period: Every 3 minutes\nDuration: ${duration} minutes\n\nMonitoring has started successfully. You will receive notifications if any changes are detected.`,
+            text: `Web Alerts Activated\n\nURL: ${websiteUrl}\nPoll Period: Every ${pollingInterval} minutes\nDuration: ${duration} minutes\nStart Time: ${startTime.toLocaleString()}\nEnd Time: ${endTime.toLocaleString()}`,
             html: `
                 <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
                     <h2 style="color: #0066cc;">Web Alerts Activated</h2>
                     <div style="background-color: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
                         <p><strong>URL:</strong> <a href="${websiteUrl}">${websiteUrl}</a></p>
-                        <p><strong>Poll Period:</strong> Every 3 minutes</p>
+                        <p><strong>Poll Period:</strong> Every ${pollingInterval} minutes</p>
                         <p><strong>Duration:</strong> ${duration} minutes</p>
-                        <p><strong>Start Time:</strong> ${new Date().toLocaleString()}</p>
+                        <p><strong>Start Time:</strong> ${startTime.toLocaleString()}</p>
+                        <p><strong>End Time:</strong> ${endTime.toLocaleString()}</p>
                     </div>
-                    <p>Monitoring has started successfully. You will receive notifications if any changes are detected on the website.</p>
-                    <p>Monitoring will automatically stop after ${duration} minutes.</p>
                     ${subscriberId ? `
                     <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #dee2e6;">
                         <img src="https://raw.githubusercontent.com/thomad99/LAB007-Main/master/LAB007/Images/lab007-trans.PNG" 

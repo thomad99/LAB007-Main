@@ -55,7 +55,7 @@ app.use((req, res, next) => {
 // Store active monitoring tasks
 const monitoringTasks = new Map();
 
-// Function to clean/filter HTML content by removing ad-related content
+// Function to clean/filter HTML content by removing ad-related content and dynamic/loading states
 function cleanContentForComparison(html) {
     if (!html) return '';
     
@@ -87,11 +87,94 @@ function cleanContentForComparison(html) {
     // 7. Empty ad href attributes that might be left over
     cleaned = cleaned.replace(/href="[^"]*\/api\/ads[^"]*"/gi, '');
     
+    // Remove loading states and dynamic content patterns
+    // 8. Loading text patterns (case-insensitive)
+    cleaned = cleaned.replace(/>[^<]*Loading\.\.\.[^<]*</gi, '><');
+    cleaned = cleaned.replace(/>[^<]*Loading[^<]*</gi, '><');
+    cleaned = cleaned.replace(/>[^<]*Please wait[^<]*</gi, '><');
+    cleaned = cleaned.replace(/>[^<]*Processing[^<]*</gi, '><');
+    cleaned = cleaned.replace(/>[^<]*Please Wait[^<]*</gi, '><');
+    
+    // 9. Loading/spinner/progress indicators by ID or class
+    cleaned = cleaned.replace(/<[^>]*(?:id|class)="[^"]*(?:loading|spinner|progress|loader|waiting)[^"]*"[^>]*>.*?<\/[^>]+>/gis, '');
+    
+    // 10. Common dynamic sizing/measurement elements (totalSize, width, height indicators)
+    cleaned = cleaned.replace(/<[^>]*(?:id|class)="[^"]*(?:totalSize|size|width|height|dimension|measure)[^"]*"[^>]*>.*?<\/[^>]+>/gis, '');
+    
+    // 11. Clock/timer/counter elements that change frequently
+    cleaned = cleaned.replace(/<[^>]*(?:id|class)="[^"]*(?:clock|timer|counter|countdown|time)[^"]*"[^>]*>.*?<\/[^>]+>/gis, '');
+    
+    // 12. Dynamic content IDs that indicate resizing/loading behavior
+    cleaned = cleaned.replace(/<[^>]*id="[^"]*(?:resize|resizing|reload|refresh|update)[^"]*"[^>]*>.*?<\/[^>]+>/gis, '');
+    
+    // 13. Common loading state attributes and data attributes
+    cleaned = cleaned.replace(/\s+(?:data-loading|data-state|aria-busy|aria-live)="[^"]*"/gi, '');
+    
+    // 14. Progress bars and loading indicators
+    cleaned = cleaned.replace(/<[^>]*(?:class|role)="[^"]*(?:progress|progressbar)[^"]*"[^>]*>.*?<\/[^>]+>/gis, '');
+    
+    // 15. Remove specific patterns like "id='totalSize'>Loading..."
+    cleaned = cleaned.replace(/id="[^"]*(?:totalSize|size)[^"]*"[^>]*>[^<]*(?:Loading|loading)[^<]*</gi, '');
+    cleaned = cleaned.replace(/id='[^']*(?:totalSize|size)[^']*'[^>]*>[^<]*(?:Loading|loading)[^<]*</gi, '');
+    
+    // 16. Remove elements that only contain loading states
+    cleaned = cleaned.replace(/<[^>]+>[\s]*(?:Loading\.\.\.|Loading|Please wait|Processing|Please Wait)[\s]*<\/[^>]+>/gi, '');
+    
     // Normalize whitespace to avoid false positives from formatting changes
     cleaned = cleaned.replace(/\s+/g, ' ');
     cleaned = cleaned.trim();
     
     return cleaned;
+}
+
+// Function to check if changes are significant (not just loading/dynamic content)
+function areChangesSignificant(contentBefore, contentAfter) {
+    if (!contentBefore || !contentAfter) return true; // If one is missing, consider it significant
+    
+    // Remove all the dynamic/loading patterns from both
+    const cleanedBefore = cleanContentForComparison(contentBefore);
+    const cleanedAfter = cleanContentForComparison(contentAfter);
+    
+    // If they're the same after cleaning, changes are not significant
+    if (cleanedBefore === cleanedAfter) {
+        return false;
+    }
+    
+    // Additional check: if the only differences are loading states, ignore
+    // Extract text content (simple extraction)
+    const beforeText = cleanedBefore.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    const afterText = cleanedAfter.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+    
+    // Remove common loading/dynamic patterns from text
+    const loadingPatterns = [
+        /loading\.\.\./gi,
+        /loading/gi,
+        /please wait/gi,
+        /processing/gi,
+        /please wait/gi,
+        /\d{1,2}:\d{2}:\d{2}/g, // Time patterns like 02:21:01
+        /\d{1,2}:\d{2}/g, // Time patterns like 02:21
+    ];
+    
+    let beforeTextCleaned = beforeText;
+    let afterTextCleaned = afterText;
+    
+    for (const pattern of loadingPatterns) {
+        beforeTextCleaned = beforeTextCleaned.replace(pattern, '');
+        afterTextCleaned = afterTextCleaned.replace(pattern, '');
+    }
+    
+    // Normalize whitespace
+    beforeTextCleaned = beforeTextCleaned.replace(/\s+/g, ' ').trim();
+    afterTextCleaned = afterTextCleaned.replace(/\s+/g, ' ').trim();
+    
+    // If text content is the same after removing loading patterns, changes are not significant
+    if (beforeTextCleaned === afterTextCleaned && beforeTextCleaned.length > 10) {
+        return false;
+    }
+    
+    // If the cleaned HTML is different, it's likely significant
+    return true;
 }
 
 // Function to start monitoring a URL
@@ -175,18 +258,23 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
                     const checkCount = finalCheckCount.rows[0]?.check_count || 0;
                     
                     // Get all subscribers for this URL to send summary
+                    // Use DISTINCT ON to get only the most recent subscriber per email
                     const allSubscribers = await db.query(`
-                        SELECT id as subscriber_id, email, phone_number, polling_duration
+                        SELECT DISTINCT ON (email) 
+                            id as subscriber_id, email, phone_number, polling_duration
                         FROM alert_subscribers 
                         WHERE url_id = $1
-                        ORDER BY created_at DESC
+                        ORDER BY email, created_at DESC
                     `, [urlId]);
                     
                     const summaryNotifications = [];
+                    const sentEmails = new Set(); // Track emails we've already sent to
+                    const sentPhones = new Set(); // Track phone numbers we've already sent to
                     
-                    // Send summary to all subscribers
+                    // Send summary to each unique subscriber (one per email/phone)
                     for (const sub of allSubscribers.rows) {
-                        if (sub.email) {
+                        if (sub.email && !sentEmails.has(sub.email.toLowerCase())) {
+                            sentEmails.add(sub.email.toLowerCase());
                             console.log('========== SENDING SUMMARY EMAIL ==========');
                             console.log(`Preparing to send summary email to: ${sub.email}`);
                             console.log(`Check count: ${checkCount}`);
@@ -214,7 +302,8 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
                             );
                         }
                         
-                        if (sub.phone_number && sub.phone_number.trim() !== '') {
+                        if (sub.phone_number && sub.phone_number.trim() !== '' && !sentPhones.has(sub.phone_number)) {
+                            sentPhones.add(sub.phone_number);
                             console.log(`Preparing to send summary SMS to: ${sub.phone_number}`);
                             summaryNotifications.push(
                                 smsService.sendSummarySMS(
@@ -266,7 +355,8 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
                 const cleanedContent = cleanContentForComparison(content);
                 const cleanedPreviousContent = cleanContentForComparison(previousContent);
 
-                if (cleanedContent !== cleanedPreviousContent) {
+                // Check if changes are significant (not just loading/dynamic content)
+                if (cleanedContent !== cleanedPreviousContent && areChangesSignificant(previousContent, content)) {
                     console.log(`Change detected for URL ID ${urlId}`);
                     console.log(`Previous content length: ${previousContent ? previousContent.length : 0}`);
                     console.log(`New content length: ${content.length}`);
@@ -753,7 +843,7 @@ app.post('/api/monitor', async (req, res) => {
                     
                     const subscriberId = subscriber.rows[0].id;
                     notifications.push(
-                        emailService.sendWelcomeEmail(email, websiteUrl, duration, subscriberId)
+                        emailService.sendWelcomeEmail(email, websiteUrl, duration, subscriberId, pollingInterval)
                             .then(result => {
                                 console.log('Welcome email sent successfully in server.js');
                                 return result;
@@ -872,10 +962,16 @@ app.get('/api/status', async (req, res) => {
                     AND NOW() < created_at + COALESCE(polling_duration, 0) * interval '1 minute'
                 ) as active_subscriber_count,
                 (
-                    SELECT COUNT(DISTINCT detected_at) 
+                    SELECT COUNT(*) 
                     FROM alerts_history 
                     WHERE monitored_url_id = mu.id
                 ) as changes_count,
+                (
+                    SELECT COUNT(*) 
+                    FROM alerts_history 
+                    WHERE monitored_url_id = mu.id
+                    AND email_sent = true
+                ) as emails_sent_count,
                 CASE 
                     WHEN EXISTS (
                         SELECT 1 
@@ -927,8 +1023,10 @@ app.get('/api/status', async (req, res) => {
                     ...row,
                     last_check: row.last_check ? row.last_check.toISOString() : null,
                     created_at: row.created_at ? row.created_at.toISOString() : null,
+                    subscriber_created_at: row.subscriber_created_at ? row.subscriber_created_at.toISOString() : null,
                     minutes_left: Math.max(0, Math.round(row.minutes_left || 0)),
                     changes_count: parseInt(row.changes_count || 0),
+                    emails_sent_count: parseInt(row.emails_sent_count || 0),
                     check_count: parseInt(row.check_count || 0),
                     subscriber_count: parseInt(row.active_subscriber_count || 0),
                     status: row.status_text || 'Unknown'
@@ -943,20 +1041,36 @@ app.get('/api/status', async (req, res) => {
         res.json(formattedResults);
     } catch (error) {
         console.error('========== ERROR FETCHING STATUS ==========');
-        console.error('Error message:', error.message);
-        console.error('Error code:', error.code);
-        console.error('Error detail:', error.detail);
-        console.error('Error hint:', error.hint);
+        console.error('Error details:', error.message);
         console.error('Error stack:', error.stack);
-        console.error('===========================================');
-        res.status(500).json({ 
-            error: 'Failed to fetch monitoring status',
-            message: error.message,
-            detail: error.detail || error.hint || 'No additional details',
-            timestamp: new Date().toISOString()
-        });
+        res.status(500).json({ error: 'Failed to fetch status', details: error.message });
     }
 });
+
+// Endpoint to get changes/diff for a monitored URL
+app.get('/api/changes/:urlId', async (req, res) => {
+    try {
+        const { urlId } = req.params;
+        
+        const result = await db.query(`
+            SELECT 
+                id,
+                detected_at,
+                content_before,
+                content_after
+            FROM alerts_history 
+            WHERE monitored_url_id = $1
+            ORDER BY detected_at DESC
+        `, [urlId]);
+        
+        res.json(result.rows);
+    } catch (error) {
+        console.error('Error fetching changes:', error);
+        res.status(500).json({ error: 'Failed to fetch changes', details: error.message });
+    }
+});
+
+// Backup endpoint removed - using /api/status above
 
 // Add a test endpoint
 app.get('/api/test-db', async (req, res) => {
@@ -1335,7 +1449,7 @@ app.get('/api/test-welcome', async (req, res) => {
     try {
         console.log('Testing welcome notifications...');
         const results = await Promise.all([
-            emailService.sendWelcomeEmail(testEmail, testUrl, testDuration),
+            emailService.sendWelcomeEmail(testEmail, testUrl, testDuration, null, 3),
             smsService.sendWelcomeSMS(testPhone, testUrl, testDuration)
         ]);
         
