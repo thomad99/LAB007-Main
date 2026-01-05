@@ -74,7 +74,7 @@ $installScript = Join-Path $scriptPath "Install-RequiredModules.ps1"
 if (Test-Path $installScript) {
     Write-Host "Checking for required dependencies..." -ForegroundColor Yellow
     try {
-        & $installScript -Force -ErrorAction SilentlyContinue
+        & $installScript -ErrorAction SilentlyContinue
     }
     catch {
         Write-Warning "Dependency check failed, continuing anyway: $_"
@@ -510,49 +510,33 @@ else {
     Write-Host "[11/12] Skipping StoreFront collection (no server specified)..." -ForegroundColor Gray
 }
 
-# 12. Collect Director OData (optional - only if DirectorServer is provided)
-if ($DirectorServer) {
-    Write-Host "[12/12] Collecting Director OData from $DirectorServer..." -ForegroundColor Yellow
-    try {
-        $directorData = & "$scriptPath\12-Get-CitrixDirectorOData.ps1" -OutputPath (Join-Path $dataPath "citrix-director-odata.json") -DirectorServer $DirectorServer
-        if ($directorData -and -not $directorData.Error) {
-            $auditData.DirectorOData = $directorData
-            Write-Host "Director OData collected successfully" -ForegroundColor Green
-        }
-        else {
-            Write-Host "Director OData collection skipped or returned error" -ForegroundColor Gray
-        }
-    }
-    catch {
-        Write-Warning "Director OData collection failed, continuing: $_"
-    }
-}
-elseif (-not $NonInteractive) {
-    # In interactive mode, prompt for Director server
-    Write-Host "[12/12] Director OData collection (optional)..." -ForegroundColor Yellow
-    Write-Host "Enter Director Server name or FQDN to collect OData, or press Enter to skip:" -ForegroundColor Cyan
-    $promptedDirectorServer = Read-Host "Director Server"
-    if ($promptedDirectorServer -and $promptedDirectorServer.Trim() -ne "") {
-        try {
-            $directorData = & "$scriptPath\12-Get-CitrixDirectorOData.ps1" -OutputPath (Join-Path $dataPath "citrix-director-odata.json") -DirectorServer $promptedDirectorServer.Trim()
-            if ($directorData -and -not $directorData.Error) {
-                $auditData.DirectorOData = $directorData
-                Write-Host "Director OData collected successfully" -ForegroundColor Green
-            }
-            else {
-                Write-Host "Director OData collection skipped or returned error" -ForegroundColor Gray
-            }
-        }
-        catch {
-            Write-Warning "Director OData collection failed, continuing: $_"
-        }
+# 12. Collect Director OData (optional)
+# Use DirectorServer parameter if provided, otherwise use DDCName, or default to localhost
+$directorServerToUse = $DirectorServer
+if (-not $directorServerToUse -or $directorServerToUse.Trim() -eq "") {
+    if ($DDCName -and $DDCName.Trim() -ne "") {
+        $directorServerToUse = $DDCName
+        Write-Host "[12/12] Using DDC name as Director server: $directorServerToUse" -ForegroundColor Yellow
     }
     else {
-        Write-Host "[12/12] Skipping Director OData collection (no server specified)..." -ForegroundColor Gray
+        $directorServerToUse = "localhost"
+        Write-Host "[12/12] No Director server specified, using localhost" -ForegroundColor Yellow
     }
 }
-else {
-    Write-Host "[12/12] Skipping Director OData collection (no server specified)..." -ForegroundColor Gray
+
+Write-Host "[12/12] Collecting Director OData from $directorServerToUse..." -ForegroundColor Yellow
+try {
+    $directorData = & "$scriptPath\12-Get-CitrixDirectorOData.ps1" -OutputPath (Join-Path $dataPath "citrix-director-odata.json") -DirectorServer $directorServerToUse
+    if ($directorData -and -not $directorData.Error) {
+        $auditData.DirectorOData = $directorData
+        Write-Host "Director OData collected successfully" -ForegroundColor Green
+    }
+    else {
+        Write-Host "Director OData collection skipped or returned error" -ForegroundColor Gray
+    }
+}
+catch {
+    Write-Warning "Director OData collection failed, continuing: $_"
 }
 
 # Calculate summary metrics

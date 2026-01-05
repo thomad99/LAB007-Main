@@ -73,15 +73,15 @@ function Invoke-ODataRequest {
             # Disable SSL certificate validation
             if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
                 $certPolicy = @"
-                using System.Net;
-                using System.Security.Cryptography.X509Certificates;
-                public class TrustAllCertsPolicy : ICertificatePolicy {
-                    public bool CheckValidationResult(
-                        ServicePoint srvPoint, X509Certificate certificate,
-                        WebRequest request, int certificateProblem) {
-                        return true;
-                    }
-                }
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+public class TrustAllCertsPolicy : ICertificatePolicy {
+    public bool CheckValidationResult(
+        ServicePoint srvPoint, X509Certificate certificate,
+        WebRequest request, int certificateProblem) {
+        return true;
+    }
+}
 "@
                 Add-Type $certPolicy
             }
@@ -114,9 +114,10 @@ function Invoke-ODataRequest {
         Write-Host "[DEBUG] Successfully collected $($result.RecordCount) records from $EntitySet" | Out-File -FilePath $debugFile -Append
     }
     catch {
-        $result.Error = $_.Exception.Message
-        Write-Host "  ✗ Failed: $($_.Exception.Message)" -ForegroundColor Red
-        Write-Host "[DEBUG] Error collecting $EntitySet : $($_.Exception.Message)" | Out-File -FilePath $debugFile -Append
+        $errorMsg = $_.Exception.Message
+        $result.Error = $errorMsg
+        Write-Host "  ✗ Failed: $errorMsg" -ForegroundColor Red
+        Write-Host "[DEBUG] Error collecting $EntitySet : $errorMsg" | Out-File -FilePath $debugFile -Append
     }
     
     return $result
@@ -150,15 +151,15 @@ function Get-ODataEntitySets {
         if ($SkipSSLValidation) {
             if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
                 $certPolicy = @"
-                using System.Net;
-                using System.Security.Cryptography.X509Certificates;
-                public class TrustAllCertsPolicy : ICertificatePolicy {
-                    public bool CheckValidationResult(
-                        ServicePoint srvPoint, X509Certificate certificate,
-                        WebRequest request, int certificateProblem) {
-                        return true;
-                    }
-                }
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+public class TrustAllCertsPolicy : ICertificatePolicy {
+    public bool CheckValidationResult(
+        ServicePoint srvPoint, X509Certificate certificate,
+        WebRequest request, int certificateProblem) {
+        return true;
+    }
+}
 "@
                 Add-Type $certPolicy
             }
@@ -166,17 +167,44 @@ function Get-ODataEntitySets {
             [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls
         }
         
-        $metadata = Invoke-RestMethod @requestParams
+        $metadataResponse = Invoke-RestMethod @requestParams
         
         # Parse metadata XML to find entity sets
-        if ($metadata -is [xml]) {
+        # Convert to XML if needed
+        $metadata = $null
+        if ($metadataResponse -is [xml]) {
+            $metadata = $metadataResponse
+        }
+        elseif ($metadataResponse -is [string]) {
+            try {
+                $metadata = [xml]$metadataResponse
+            }
+            catch {
+                Write-Verbose "Could not parse metadata as XML: $_"
+            }
+        }
+        
+        if ($metadata) {
             $namespaces = @{
                 edmx = "http://schemas.microsoft.com/ado/2007/06/edmx"
                 edm = "http://schemas.microsoft.com/ado/2008/09/edm"
             }
             
-            $entitySets = $metadata.SelectNodes("//edm:EntitySet", $namespaces) | ForEach-Object {
-                $_.Name
+            try {
+                $entitySets = $metadata.SelectNodes("//edm:EntitySet", $namespaces) | ForEach-Object {
+                    $_.Name
+                }
+            }
+            catch {
+                # Fallback: try without namespace prefixes
+                try {
+                    $entitySets = $metadata.SelectNodes("//*[local-name()='EntitySet']") | ForEach-Object {
+                        $_.Name
+                    }
+                }
+                catch {
+                    Write-Verbose "Could not parse EntitySet nodes: $_"
+                }
             }
         }
     }
@@ -263,13 +291,9 @@ try {
             Write-Host "Using DDC address for Director: $DirectorServer" -ForegroundColor Yellow
         }
         else {
-            # Prompt user for Director server (standalone mode)
-            $DirectorServer = Read-Host "Enter Director Server name or FQDN (or press Enter to skip)"
-            if (-not $DirectorServer -or $DirectorServer.Trim() -eq "") {
-                Write-Host "No Director server specified. Exiting." -ForegroundColor Yellow
-                return @{ Error = "No Director server specified" }
-            }
-            $DirectorServer = $DirectorServer.Trim()
+            # Default to localhost if not specified (code is likely running on the server)
+            $DirectorServer = "localhost"
+            Write-Host "No Director server specified, using localhost" -ForegroundColor Yellow
         }
     }
     
@@ -297,7 +321,7 @@ try {
     # Try each OData path to find one that works
     Write-Host "Discovering OData endpoint (trying multiple versions)..." -ForegroundColor Yellow
     foreach ($odataPath in $odataPaths) {
-        $testUrl = "$protocol://$DirectorServer`:$Port$odataPath"
+        $testUrl = "$protocol://${DirectorServer}:${Port}$odataPath"
         Write-Host "  Trying: $testUrl" -ForegroundColor Gray | Out-File -FilePath $debugFile -Append
         
         try {
@@ -315,15 +339,15 @@ try {
             if ($SkipSSLValidation) {
                 if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
                     $certPolicy = @"
-                    using System.Net;
-                    using System.Security.Cryptography.X509Certificates;
-                    public class TrustAllCertsPolicy : ICertificatePolicy {
-                        public bool CheckValidationResult(
-                            ServicePoint srvPoint, X509Certificate certificate,
-                            WebRequest request, int certificateProblem) {
-                            return true;
-                        }
-                    }
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+public class TrustAllCertsPolicy : ICertificatePolicy {
+    public bool CheckValidationResult(
+        ServicePoint srvPoint, X509Certificate certificate,
+        WebRequest request, int certificateProblem) {
+        return true;
+    }
+}
 "@
                     Add-Type $certPolicy
                 }
@@ -349,7 +373,7 @@ try {
     # If no path worked, default to v3 (most common)
     if (-not $baseUrl) {
         $workingPath = "/Citrix/Monitor/OData/v3/Data"
-        $baseUrl = "$protocol://$DirectorServer`:$Port$workingPath"
+        $baseUrl = "$protocol://${DirectorServer}:${Port}$workingPath"
         Write-Host "  ⚠ Could not verify endpoint, defaulting to: $workingPath" -ForegroundColor Yellow
         Write-Host "[DEBUG] Using default OData path: $workingPath" | Out-File -FilePath $debugFile -Append
     }
@@ -373,15 +397,15 @@ try {
             if ($SkipSSLValidation) {
                 if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
                     $certPolicy = @"
-                    using System.Net;
-                    using System.Security.Cryptography.X509Certificates;
-                    public class TrustAllCertsPolicy : ICertificatePolicy {
-                        public bool CheckValidationResult(
-                            ServicePoint srvPoint, X509Certificate certificate,
-                            WebRequest request, int certificateProblem) {
-                            return true;
-                        }
-                    }
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
+public class TrustAllCertsPolicy : ICertificatePolicy {
+    public bool CheckValidationResult(
+        ServicePoint srvPoint, X509Certificate certificate,
+        WebRequest request, int certificateProblem) {
+        return true;
+    }
+}
 "@
                     Add-Type $certPolicy
                 }

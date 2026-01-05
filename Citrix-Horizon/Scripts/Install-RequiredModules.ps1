@@ -239,9 +239,22 @@ if (-not $SkipCitrix) {
                 foreach ($installer in $installers) {
                     Write-Host "[Citrix] Found installer: $($installer.Name)" -ForegroundColor Gray
                     
-                    # Check if this installer is already installed by checking if modules are available after this would install
-                    # For now, we'll install if Force is specified, otherwise skip if modules are already available
+                    # Check if modules are already available - only install if missing
+                    # If -Force is specified, reinstall even if modules exist
+                    $shouldInstall = $false
                     if ($Force) {
+                        $shouldInstall = $true
+                        Write-Host "[Citrix] Force flag set - will reinstall even if modules exist" -ForegroundColor Yellow
+                    }
+                    elseif ($missingModules.Count -gt 0) {
+                        # Only install if we have missing modules
+                        $shouldInstall = $true
+                    }
+                    else {
+                        Write-Host "[Citrix] All required modules are already available. Skipping $($installer.Name)" -ForegroundColor Gray
+                    }
+                    
+                    if ($shouldInstall) {
                         try {
                             Write-Host "[Citrix] Installing $($installer.Name)..." -ForegroundColor Yellow
                             
@@ -263,9 +276,6 @@ if (-not $SkipCitrix) {
                         catch {
                             Write-Warning "[Citrix] Failed to install $($installer.Name): $_"
                         }
-                    }
-                    else {
-                        Write-Host "[Citrix] Skipping $($installer.Name) - use -Force to reinstall" -ForegroundColor Gray
                     }
                 }
             }
