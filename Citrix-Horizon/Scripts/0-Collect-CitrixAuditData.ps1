@@ -1,7 +1,7 @@
 # Collect-CitrixAuditData.ps1
 # Master script that orchestrates collection of all Citrix audit data
-# Version: 1.1
-# Last Modified: 260105:1554
+# Version: 1.2
+# Last Modified: 260105:1838
 
 param(
     [string]$OutputPath = ".\Data\citrix-audit-complete.json",
@@ -104,15 +104,8 @@ if (-not $CitrixVersion -or -not $DDCName) {
     if (-not $PSBoundParameters.ContainsKey('UsageDaysBack')) {
         $UsageDaysBack = $config.UsageDays
     }
-    if (-not $PSBoundParameters.ContainsKey('SkipServerSpecs')) {
-        # Only use config value if it's explicitly set to $true, otherwise default to $false
-        if ($config.SkipServerSpecs -eq $true) {
-            $SkipServerSpecs = $true
-        }
-        else {
-            $SkipServerSpecs = $false
-        }
-    }
+    # SkipServerSpecs is always defaulted to $false - server collection should always run
+    # Config file value is ignored - use -SkipServerSpecs parameter if you need to skip
 }
 
 # Connect to Citrix environment (auto-discovers version if DDC provided but version not specified)
@@ -147,7 +140,7 @@ try {
         CitrixVersion = $CitrixVersion
         DDCName = $DDCName
         UsageDays = $UsageDaysBack
-        SkipServerSpecs = $SkipServerSpecs
+        # SkipServerSpecs is not saved - server collection should always run by default
     }
     $configToSave | ConvertTo-Json | Out-File -FilePath $configPath -Encoding UTF8 -Force
     Write-Host "Configuration saved to: $configPath" -ForegroundColor Gray

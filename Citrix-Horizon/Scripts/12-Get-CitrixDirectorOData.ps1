@@ -1,8 +1,8 @@
 # Get-CitrixDirectorOData.ps1
 # Collects OData from Citrix Director monitoring endpoints
 # Director exposes monitoring data via OData v3/v4 API (supports multiple versions)
-# Version: 1.3
-# Last Modified: 260105:1610
+# Version: 1.4
+# Last Modified: 260105:1625
 
 param(
     [string]$OutputPath = ".\Data\citrix-director-odata.json",
@@ -178,7 +178,7 @@ function Get-ODataEntitySets {
             catch {
                 # Fallback: try without namespace prefixes
                 try {
-                    $xpathExpr = "//*[local-name()='EntitySet']"
+                    $xpathExpr = '//*[local-name()="EntitySet"]'
                     $entitySets = $metadata.SelectNodes($xpathExpr) | ForEach-Object {
                         $_.Name
                     }
