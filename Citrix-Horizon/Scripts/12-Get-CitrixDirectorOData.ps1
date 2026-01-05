@@ -1,8 +1,8 @@
 # Get-CitrixDirectorOData.ps1
 # Collects OData from Citrix Director monitoring endpoints
 # Director exposes monitoring data via OData v3/v4 API (supports multiple versions)
-# Version: 1.1
-# Last Modified: 260105:1545
+# Version: 1.2
+# Last Modified: 260105:1600
 
 param(
     [string]$OutputPath = ".\Data\citrix-director-odata.json",
@@ -72,7 +72,7 @@ function Invoke-ODataRequest {
         if ($SkipSSLValidation) {
             # Disable SSL certificate validation
             if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
-                $certPolicy = @"
+                Add-Type @"
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 public class TrustAllCertsPolicy : ICertificatePolicy {
@@ -83,7 +83,6 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
     }
 }
 "@
-                Add-Type $certPolicy
             }
             [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
             [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls
@@ -150,7 +149,7 @@ function Get-ODataEntitySets {
         
         if ($SkipSSLValidation) {
             if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
-                $certPolicy = @"
+                Add-Type @"
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 public class TrustAllCertsPolicy : ICertificatePolicy {
@@ -161,7 +160,6 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
     }
 }
 "@
-                Add-Type $certPolicy
             }
             [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
             [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls
@@ -180,7 +178,8 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
                 $metadata = [xml]$metadataResponse
             }
             catch {
-                Write-Verbose "Could not parse metadata as XML: $_"
+                $xmlError = $_.Exception.Message
+                Write-Verbose "Could not parse metadata as XML: $xmlError"
             }
         }
         
@@ -342,7 +341,7 @@ try {
             
             if ($SkipSSLValidation) {
                 if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
-                    $certPolicy = @"
+                    Add-Type @"
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 public class TrustAllCertsPolicy : ICertificatePolicy {
@@ -353,7 +352,6 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
     }
 }
 "@
-                    Add-Type $certPolicy
                 }
                 [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
                 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls
@@ -415,7 +413,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             
             if ($SkipSSLValidation) {
                 if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
-                    $certPolicy = @"
+                    Add-Type @"
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
 public class TrustAllCertsPolicy : ICertificatePolicy {
@@ -426,7 +424,6 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
     }
 }
 "@
-                    Add-Type $certPolicy
                 }
                 [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
                 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls

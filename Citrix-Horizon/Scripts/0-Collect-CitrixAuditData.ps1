@@ -1,7 +1,7 @@
 # Collect-CitrixAuditData.ps1
 # Master script that orchestrates collection of all Citrix audit data
-# Version: 1.0
-# Last Modified: 250127
+# Version: 1.1
+# Last Modified: 260105:1554
 
 param(
     [string]$OutputPath = ".\Data\citrix-audit-complete.json",
@@ -160,9 +160,6 @@ Write-Host ""
 Write-Host "Configuration:" -ForegroundColor Cyan
 Write-Host "  Version: $CitrixVersion" -ForegroundColor White
 Write-Host "  Delivery Controller: $DDCName" -ForegroundColor White
-if ($StoreFrontServer) {
-    Write-Host "  StoreFront Server: $StoreFrontServer" -ForegroundColor White
-}
 if ($DirectorServer) {
     Write-Host "  Director Server: $DirectorServer" -ForegroundColor White
 }
@@ -466,65 +463,25 @@ else {
     Write-Host "[10/12] Skipping Server Specs collection (as requested)..." -ForegroundColor Yellow
 }
 
-# 11. Collect StoreFront Information (moved to end - optional, skip if blank)
-if (-not $NonInteractive) {
-    Write-Host "[11/12] Collecting StoreFront configuration (optional)..." -ForegroundColor Yellow
-    try {
-        $storefront = & "$scriptPath\11-Get-CitrixStoreFront.ps1" -OutputPath (Join-Path $dataPath "citrix-storefront.json") -StoreFrontServer $StoreFrontServer
-        if ($storefront -and -not $storefront.Error) {
-            $auditData.StoreFront = $storefront
-            if ($storefront.TotalStores) {
-                $auditData.TotalStoreFrontStores = $storefront.TotalStores
-            }
-            Write-Host "StoreFront information collected: $($storefront.TotalStores) stores" -ForegroundColor Green
-        }
-        else {
-            Write-Host "StoreFront collection skipped (no server specified or error occurred)" -ForegroundColor Gray
-        }
-    }
-    catch {
-        Write-Warning "StoreFront collection failed, continuing: $_"
-    }
-}
-elseif ($StoreFrontServer) {
-    # Non-interactive mode but server provided
-    Write-Host "[11/12] Collecting StoreFront configuration from $StoreFrontServer..." -ForegroundColor Yellow
-    try {
-        $storefront = & "$scriptPath\11-Get-CitrixStoreFront.ps1" -OutputPath (Join-Path $dataPath "citrix-storefront.json") -StoreFrontServer $StoreFrontServer
-        if ($storefront -and -not $storefront.Error) {
-            $auditData.StoreFront = $storefront
-            if ($storefront.TotalStores) {
-                $auditData.TotalStoreFrontStores = $storefront.TotalStores
-            }
-            Write-Host "StoreFront information collected: $($storefront.TotalStores) stores" -ForegroundColor Green
-        }
-        else {
-            Write-Host "StoreFront collection skipped (no server specified or error occurred)" -ForegroundColor Gray
-        }
-    }
-    catch {
-        Write-Warning "StoreFront collection failed, continuing: $_"
-    }
-}
-else {
-    Write-Host "[11/12] Skipping StoreFront collection (no server specified)..." -ForegroundColor Gray
-}
+# 11. StoreFront Information collection - DISABLED
+# StoreFront collection has been disabled. To re-enable, uncomment the section below.
+# Write-Host "[11/12] Skipping StoreFront collection (disabled)..." -ForegroundColor Gray
 
-# 12. Collect Director OData (optional)
+# 11. Collect Director OData (optional)
 # Use DirectorServer parameter if provided, otherwise use DDCName, or default to localhost
 $directorServerToUse = $DirectorServer
 if (-not $directorServerToUse -or $directorServerToUse.Trim() -eq "") {
     if ($DDCName -and $DDCName.Trim() -ne "") {
         $directorServerToUse = $DDCName
-        Write-Host "[12/12] Using DDC name as Director server: $directorServerToUse" -ForegroundColor Yellow
+        Write-Host "[11/11] Using DDC name as Director server: $directorServerToUse" -ForegroundColor Yellow
     }
     else {
         $directorServerToUse = "localhost"
-        Write-Host "[12/12] No Director server specified, using localhost" -ForegroundColor Yellow
+        Write-Host "[11/11] No Director server specified, using localhost" -ForegroundColor Yellow
     }
 }
 
-Write-Host "[12/12] Collecting Director OData from $directorServerToUse..." -ForegroundColor Yellow
+Write-Host "[11/11] Collecting Director OData from $directorServerToUse..." -ForegroundColor Yellow
 try {
     $directorData = & "$scriptPath\12-Get-CitrixDirectorOData.ps1" -OutputPath (Join-Path $dataPath "citrix-director-odata.json") -DirectorServer $directorServerToUse
     if ($directorData -and -not $directorData.Error) {

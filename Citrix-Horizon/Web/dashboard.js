@@ -458,12 +458,63 @@ function closeUsersModal() {
     document.getElementById('usersModal').style.display = 'none';
 }
 
+// Parse Citrix image path to extract components
+function parseImagePath(imagePath) {
+    if (!imagePath) {
+        return {
+            fullPath: 'N/A',
+            clusterName: 'N/A',
+            vmName: 'N/A',
+            snapshotName: 'N/A'
+        };
+    }
+    
+    // Remove XDHyp:\ prefix if present
+    let path = imagePath.replace(/^XDHyp:\\?/i, '');
+    
+    // Split by backslash
+    const parts = path.split('\\').filter(p => p.trim() !== '');
+    
+    let clusterName = 'N/A';
+    let vmName = 'N/A';
+    let snapshotName = 'N/A';
+    
+    // Find HostingUnits index
+    const hostingUnitsIndex = parts.findIndex(p => p.toLowerCase() === 'hostingunits');
+    
+    if (hostingUnitsIndex >= 0 && parts.length > hostingUnitsIndex + 1) {
+        // Cluster name is after HostingUnits
+        clusterName = parts[hostingUnitsIndex + 1];
+        
+        // Find .vm file
+        const vmIndex = parts.findIndex(p => p.toLowerCase().endsWith('.vm'));
+        if (vmIndex >= 0) {
+            // VM name is the part before .vm
+            vmName = parts[vmIndex].replace(/\.vm$/i, '');
+            
+            // Snapshot names are after the .vm, ending with .snapshot
+            // Get the last snapshot (most recent)
+            const snapshotParts = parts.slice(vmIndex + 1).filter(p => p.toLowerCase().endsWith('.snapshot'));
+            if (snapshotParts.length > 0) {
+                snapshotName = snapshotParts[snapshotParts.length - 1].replace(/\.snapshot$/i, '');
+            }
+        }
+    }
+    
+    return {
+        fullPath: imagePath,
+        clusterName: clusterName,
+        vmName: vmName,
+        snapshotName: snapshotName
+    };
+}
+
 function showMasterImagesList() {
     const modal = document.getElementById('masterImagesModal');
     const tbody = document.getElementById('masterImagesTableBody');
     
     if (!auditData || !auditData.UniqueMasterImages || auditData.UniqueMasterImages.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No master images data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No master images data available</td></tr>';
         modal.style.display = 'block';
         initializeTableSorting('masterImagesTable');
         return;
@@ -471,11 +522,23 @@ function showMasterImagesList() {
     
     tbody.innerHTML = '';
     auditData.UniqueMasterImages.forEach(image => {
+        // Get the full path - try Path first, then ImageMachineName, then Name
+        const imagePath = image.Path || image.ImageMachineName || image.Name || image.MasterImagePath || '';
+        
+        // Parse the path
+        const parsed = parseImagePath(imagePath);
+        
+        // Use parsed values, but fall back to existing fields if parsing didn't work
+        const clusterName = parsed.clusterName !== 'N/A' ? parsed.clusterName : (image.ClusterName || image.HostingUnitName || 'N/A');
+        const vmName = parsed.vmName !== 'N/A' ? parsed.vmName : (image.ImageMachineName || image.Name || 'N/A');
+        const snapshotName = parsed.snapshotName !== 'N/A' ? parsed.snapshotName : (image.LatestSnapshotName || 'N/A');
+        
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${escapeHtml(image.ImageMachineName || image.Name || 'N/A')}</td>
-            <td>${escapeHtml(image.LatestSnapshotName || 'N/A')}</td>
-            <td>${escapeHtml(image.ClusterName || image.HostingUnitName || 'N/A')}</td>
+            <td>${escapeHtml(parsed.fullPath)}</td>
+            <td>${escapeHtml(clusterName)}</td>
+            <td>${escapeHtml(vmName)}</td>
+            <td>${escapeHtml(snapshotName)}</td>
             <td>${image.Catalogs && image.Catalogs.length > 0 ? image.Catalogs.join(', ') : 'N/A'}</td>
         `;
         tbody.appendChild(row);
