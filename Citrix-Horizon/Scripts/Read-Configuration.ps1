@@ -1,7 +1,7 @@
 # Read-Configuration.ps1
 # Reads configuration from JSON file or returns defaults
 # Version: 1.0
-# Last Modified: 2025-01-27
+# Last Modified: 250127
 
 param(
     [string]$ConfigPath = ".\lab007-config.json"

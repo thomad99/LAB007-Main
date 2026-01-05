@@ -2,7 +2,7 @@
 # Extracts server information including specs (RAM, CPU, Disk)
 # Uses VMware SDK as fallback if Citrix data unavailable
 # Version: 1.0
-# Last Modified: 2025-01-27
+# Last Modified: 250127
 
 param(
     [string]$OutputPath = ".\Data\citrix-servers.json",

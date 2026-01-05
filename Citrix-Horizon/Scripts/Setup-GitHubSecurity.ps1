@@ -1,7 +1,7 @@
 # Setup-GitHubSecurity.ps1
 # Helper script to set up secure GitHub authentication
 # Version: 1.0
-# Last Modified: 2025-01-27
+# Last Modified: 250127
 
 param(
     [switch]$UseSSH = $false,

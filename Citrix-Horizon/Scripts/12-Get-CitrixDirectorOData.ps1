@@ -2,7 +2,7 @@
 # Collects OData from Citrix Director monitoring endpoints
 # Director exposes monitoring data via OData v3 API
 # Version: 1.0
-# Last Modified: 2025-01-27
+# Last Modified: 260501
 
 param(
     [string]$OutputPath = ".\Data\citrix-director-odata.json",

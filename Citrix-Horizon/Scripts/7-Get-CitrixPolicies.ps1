@@ -1,7 +1,7 @@
 # Get-CitrixPolicies.ps1
 # Extracts Citrix policy information
 # Version: 1.0
-# Last Modified: 2025-01-27
+# Last Modified: 250127
 
 param(
     [string]$OutputPath = ".\Data\citrix-policies.json",

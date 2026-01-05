@@ -1,7 +1,7 @@
 # Get-CitrixSiteInfo.ps1
 # Extracts high-level Citrix Site information
 # Version: 1.0
-# Last Modified: 2025-01-27
+# Last Modified: 250127
 
 param(
     [string]$OutputPath = ".\Data\citrix-site-info.json",

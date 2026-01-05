@@ -2,7 +2,7 @@
 # Automatically installs missing Citrix and VMware PowerShell modules/SDKs
 # This script checks for required dependencies and installs them if missing
 # Version: 1.0
-# Last Modified: 2025-01-27
+# Last Modified: 250127
 
 param(
     [switch]$SkipCitrix = $false,

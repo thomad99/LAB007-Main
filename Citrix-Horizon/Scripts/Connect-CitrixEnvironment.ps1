@@ -1,7 +1,7 @@
 # Connect-CitrixEnvironment.ps1
 # Configures connection to Citrix environment based on version
 # Version: 1.0
-# Last Modified: 2025-01-27
+# Last Modified: 250127
 
 param(
     [string]$CitrixVersion,

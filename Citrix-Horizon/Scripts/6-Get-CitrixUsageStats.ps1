@@ -1,7 +1,7 @@
 # Get-CitrixUsageStats.ps1
 # Extracts usage statistics (concurrent users, unique connections)
 # Version: 1.0
-# Last Modified: 2025-01-27
+# Last Modified: 250127
 
 param(
     [string]$OutputPath = ".\Data\citrix-usage-stats.json",
