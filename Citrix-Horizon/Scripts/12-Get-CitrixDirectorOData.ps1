@@ -198,12 +198,14 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             catch {
                 # Fallback: try without namespace prefixes
                 try {
-                    $entitySets = $metadata.SelectNodes("//*[local-name()='EntitySet']") | ForEach-Object {
+                    $xpathExpr = "//*[local-name()='EntitySet']"
+                    $entitySets = $metadata.SelectNodes($xpathExpr) | ForEach-Object {
                         $_.Name
                     }
                 }
                 catch {
-                    Write-Verbose "Could not parse EntitySet nodes: $_"
+                    $errorMsg = $_.Exception.Message
+                    Write-Verbose "Could not parse EntitySet nodes: $errorMsg"
                 }
             }
         }
@@ -302,10 +304,12 @@ try {
     
     # List of OData versions/paths to try (most common first)
     $odataPaths = @(
+        "/citrix/monitor/odata/v4/Data",
+        "/Citrix/Monitor/OData/v4/Data",
+        "/citrix/monitor/odata/v3/Data",
         "/Citrix/Monitor/OData/v3/Data",
         "/Citrix/Monitor/OData/v2/Data",
         "/Citrix/Monitor/OData/v1/Data",
-        "/Citrix/Monitor/OData/v4/Data",
         "/Citrix/Monitor/OData/Data",
         "/Director/OData/v3/Data",
         "/Director/OData/v2/Data",
@@ -321,7 +325,7 @@ try {
     # Try each OData path to find one that works
     Write-Host "Discovering OData endpoint (trying multiple versions)..." -ForegroundColor Yellow
     foreach ($odataPath in $odataPaths) {
-        $testUrl = "$protocol://${DirectorServer}:${Port}$odataPath"
+        $testUrl = "${protocol}://${DirectorServer}:${Port}${odataPath}"
         Write-Host "  Trying: $testUrl" -ForegroundColor Gray | Out-File -FilePath $debugFile -Append
         
         try {
@@ -359,21 +363,36 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             if ($testResponse.StatusCode -eq 200) {
                 $baseUrl = $testUrl
                 $workingPath = $odataPath
-                Write-Host "  ✓ Found working endpoint: $odataPath" -ForegroundColor Green
-                Write-Host "[DEBUG] Working OData path: $odataPath" | Out-File -FilePath $debugFile -Append
+                # Extract version from path for display
+                $version = "Unknown"
+                if ($odataPath -match '/v([0-9]+)/') {
+                    $version = "v$($matches[1])"
+                }
+                Write-Host "  ✓ Found working endpoint: $odataPath (OData $version)" -ForegroundColor Green
+                Write-Host "[DEBUG] Working OData path: $odataPath (OData $version)" | Out-File -FilePath $debugFile -Append
                 break
             }
         }
         catch {
-            # Continue to next path
-            Write-Host "[DEBUG] Path $odataPath failed: $_" | Out-File -FilePath $debugFile -Append
+            # Continue to next path - this is expected as we try multiple versions
+            $statusCode = $null
+            if ($_.Exception.Response) {
+                $statusCode = [int]$_.Exception.Response.StatusCode
+            }
+            if ($statusCode -eq 404) {
+                # 404 is expected for non-existent paths - don't log as error
+                Write-Host "[DEBUG] Path $odataPath not found (404) - trying next version..." | Out-File -FilePath $debugFile -Append
+            }
+            else {
+                Write-Host "[DEBUG] Path $odataPath failed (Status: $statusCode): $_" | Out-File -FilePath $debugFile -Append
+            }
         }
     }
     
-    # If no path worked, default to v3 (most common)
+    # If no path worked, default to v4 (most common in newer versions)
     if (-not $baseUrl) {
-        $workingPath = "/Citrix/Monitor/OData/v3/Data"
-        $baseUrl = "$protocol://${DirectorServer}:${Port}$workingPath"
+        $workingPath = "/citrix/monitor/odata/v4/Data"
+        $baseUrl = "${protocol}://${DirectorServer}:${Port}${workingPath}"
         Write-Host "  ⚠ Could not verify endpoint, defaulting to: $workingPath" -ForegroundColor Yellow
         Write-Host "[DEBUG] Using default OData path: $workingPath" | Out-File -FilePath $debugFile -Append
     }
