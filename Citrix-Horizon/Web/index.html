@@ -510,6 +510,32 @@
                         </div>
                     </div>
                 </div>
+                
+                <!-- Add Applications to HZ Task -->
+                <div id="addApplicationsTask" class="horizon-task-panel">
+                    <h3>Add Applications to HZ</h3>
+                    <p>Select applications from Citrix to generate Horizon commands for adding them to Horizon.</p>
+                    
+                    <div style="margin: 20px 0;">
+                        <h4 style="margin-bottom: 10px;">Applications:</h4>
+                        <div id="applicationsHZList" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
+                            <p>Loading applications...</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin: 20px 0; text-align: right;">
+                        <button id="createAppCommandsBtn" class="btn btn-primary" onclick="createHorizonAppCommands()">Create Commands</button>
+                    </div>
+                    
+                    <div id="appCommandsOutput" style="display: none; margin-top: 20px;">
+                        <h4>Generated Horizon Commands:</h4>
+                        <textarea id="appCommandsContent" readonly style="width: 100%; height: 400px; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
+                        <div style="margin-top: 10px; text-align: right;">
+                            <button class="btn btn-secondary" onclick="copyAppCommands()">Copy Commands</button>
+                            <button class="btn btn-secondary" onclick="downloadAppCommands()">Download Script</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
