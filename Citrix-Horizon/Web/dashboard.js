@@ -27,6 +27,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     document.getElementById('fileInput').addEventListener('change', handleFileLoad);
     
+    // Horizon Tasks button
+    document.getElementById('horizonTasksBtn').addEventListener('click', () => {
+        if (auditData) {
+            showHorizonTasksModal();
+        }
+    });
+    
     // Debug ZIP upload functionality
     const uploadDebugBtn = document.getElementById('uploadDebugBtn');
     const debugFileInput = document.getElementById('debugFileInput');
@@ -218,9 +225,18 @@ function uploadDebugFile(file) {
 
 // Display dashboard with data
 function displayDashboard(data) {
+    auditData = data;
     hideLoading();
     showDashboard();
     hideError();
+    
+    // Enable Horizon Tasks button
+    const horizonTasksBtn = document.getElementById('horizonTasksBtn');
+    if (horizonTasksBtn) {
+        horizonTasksBtn.disabled = false;
+        horizonTasksBtn.style.opacity = '1';
+        horizonTasksBtn.style.cursor = 'pointer';
+    }
     
     // Populate summary cards
     document.getElementById('siteName').textContent = data.SiteName || data.summary?.SiteName || 'N/A';
@@ -514,7 +530,7 @@ function showMasterImagesList() {
     const tbody = document.getElementById('masterImagesTableBody');
     
     if (!auditData || !auditData.UniqueMasterImages || auditData.UniqueMasterImages.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="empty-state">No master images data available</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="4" class="empty-state">No master images data available</td></tr>';
         modal.style.display = 'block';
         initializeTableSorting('masterImagesTable');
         return;
@@ -535,11 +551,10 @@ function showMasterImagesList() {
         
         const row = document.createElement('tr');
         row.innerHTML = `
-            <td>${escapeHtml(parsed.fullPath)}</td>
             <td>${escapeHtml(clusterName)}</td>
             <td>${escapeHtml(vmName)}</td>
             <td>${escapeHtml(snapshotName)}</td>
-            <td>${image.Catalogs && image.Catalogs.length > 0 ? image.Catalogs.join(', ') : 'N/A'}</td>
+            <td>${image.Catalogs && image.Catalogs.length > 0 ? escapeHtml(image.Catalogs.join(', ')) : 'N/A'}</td>
         `;
         tbody.appendChild(row);
     });
@@ -550,6 +565,251 @@ function showMasterImagesList() {
 
 function closeMasterImagesModal() {
     document.getElementById('masterImagesModal').style.display = 'none';
+}
+
+// Horizon Environment Tasks Functions
+function showHorizonTasksModal() {
+    const modal = document.getElementById('horizonTasksModal');
+    modal.style.display = 'block';
+    showHorizonTask('cloneMasterImage');
+    populateMasterImagesCloneList();
+}
+
+function closeHorizonTasksModal() {
+    document.getElementById('horizonTasksModal').style.display = 'none';
+}
+
+function showHorizonTask(taskName) {
+    // Hide all task panels
+    const panels = document.querySelectorAll('.horizon-task-panel');
+    panels.forEach(panel => panel.classList.remove('active'));
+    
+    // Remove active class from all tabs
+    const tabs = document.querySelectorAll('.task-tab');
+    tabs.forEach(tab => tab.classList.remove('active'));
+    
+    // Show selected task panel
+    const selectedPanel = document.getElementById(taskName + 'Task');
+    if (selectedPanel) {
+        selectedPanel.classList.add('active');
+    }
+    
+    // Activate selected tab
+    event.target.classList.add('active');
+    
+    // Task-specific initialization
+    if (taskName === 'cloneMasterImage') {
+        populateMasterImagesCloneList();
+    } else if (taskName === 'addApplications') {
+        populateApplicationsHZList();
+    }
+}
+
+function populateMasterImagesCloneList() {
+    const container = document.getElementById('masterImagesCloneList');
+    
+    if (!auditData || !auditData.UniqueMasterImages || auditData.UniqueMasterImages.length === 0) {
+        container.innerHTML = '<p style="color: #666;">No master images data available. Please load audit data first.</p>';
+        return;
+    }
+    
+    container.innerHTML = '';
+    
+    auditData.UniqueMasterImages.forEach((image, index) => {
+        const imagePath = image.Path || image.ImageMachineName || image.Name || image.MasterImagePath || '';
+        const parsed = parseImagePath(imagePath);
+        const clusterName = parsed.clusterName !== 'N/A' ? parsed.clusterName : (image.ClusterName || image.HostingUnitName || 'N/A');
+        const vmName = parsed.vmName !== 'N/A' ? parsed.vmName : (image.ImageMachineName || image.Name || 'N/A');
+        const snapshotName = parsed.snapshotName !== 'N/A' ? parsed.snapshotName : (image.LatestSnapshotName || 'N/A');
+        
+        const item = document.createElement('div');
+        item.className = 'master-image-clone-item';
+        item.innerHTML = `
+            <input type="checkbox" id="cloneCheckbox${index}" data-vmname="${escapeHtml(vmName)}" data-path="${escapeHtml(imagePath)}" data-cluster="${escapeHtml(clusterName)}">
+            <label for="cloneCheckbox${index}">
+                <strong>${escapeHtml(vmName)}</strong>
+                <span class="image-info">(Cluster: ${escapeHtml(clusterName)}, Snapshot: ${escapeHtml(snapshotName)})</span>
+            </label>
+        `;
+        container.appendChild(item);
+    });
+}
+
+function createCloneScript() {
+    const namingConvention = document.getElementById('cloneNamingConvention').value || 'HZ-M-xxxxxxx';
+    const checkboxes = document.querySelectorAll('#masterImagesCloneList input[type="checkbox"]:checked');
+    
+    if (checkboxes.length === 0) {
+        alert('Please select at least one master image to clone.');
+        return;
+    }
+    
+    const selectedImages = Array.from(checkboxes).map(cb => ({
+        vmName: cb.getAttribute('data-vmname'),
+        path: cb.getAttribute('data-path'),
+        cluster: cb.getAttribute('data-cluster')
+    }));
+    
+    // Generate PowerShell script
+    const script = generateCloneScript(selectedImages, namingConvention);
+    
+    // Display script
+    document.getElementById('cloneScriptContent').value = script;
+    document.getElementById('cloneScriptOutput').style.display = 'block';
+    
+    // Scroll to script output
+    document.getElementById('cloneScriptOutput').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+function generateCloneScript(selectedImages, namingConvention) {
+    const scriptLines = [
+        '# Clone Master Images Script',
+        '# Generated by LAB007 Horizon Environment Tasks',
+        '# ' + new Date().toISOString(),
+        '#',
+        '# This script clones selected master images with the specified naming convention',
+        '#',
+        '',
+        '# Requires VMware PowerCLI',
+        '# Install-Module -Name VMware.PowerCLI -Scope CurrentUser',
+        '',
+        '# Connect to vCenter',
+        '# Connect-VIServer -Server <vCenterServer> -User <Username> -Password <Password>',
+        '',
+        '# Configuration',
+        '$NamingConvention = "' + namingConvention + '"',
+        '',
+        '# Selected images to clone',
+        '$ImagesToClone = @('
+    ];
+    
+    selectedImages.forEach((img, index) => {
+        scriptLines.push('    @{');
+        scriptLines.push('        OriginalVMName = "' + img.vmName + '"');
+        scriptLines.push('        OriginalPath = "' + img.path + '"');
+        scriptLines.push('        ClusterName = "' + img.cluster + '"');
+        scriptLines.push('    }' + (index < selectedImages.length - 1 ? ',' : ''));
+    });
+    
+    scriptLines.push(')');
+    scriptLines.push('');
+    scriptLines.push('Write-Host "========================================" -ForegroundColor Cyan');
+    scriptLines.push('Write-Host "Master Image Clone Script" -ForegroundColor Cyan');
+    scriptLines.push('Write-Host "========================================" -ForegroundColor Cyan');
+    scriptLines.push('Write-Host "Number of machines to clone: $($ImagesToClone.Count)" -ForegroundColor Yellow');
+    scriptLines.push('Write-Host ""');
+    scriptLines.push('');
+    scriptLines.push('# Clone each selected image');
+    scriptLines.push('$cloneCount = 0');
+    scriptLines.push('foreach ($image in $ImagesToClone) {');
+    scriptLines.push('    $cloneCount++');
+    scriptLines.push('    $originalVMName = $image.OriginalVMName');
+    scriptLines.push('    $clusterName = $image.ClusterName');
+    scriptLines.push('    ');
+    scriptLines.push('    Write-Host "[$cloneCount/$($ImagesToClone.Count)] Processing: $originalVMName" -ForegroundColor Cyan');
+    scriptLines.push('    Write-Host "  Cluster: $clusterName" -ForegroundColor Gray');
+    scriptLines.push('    ');
+    scriptLines.push('    try {');
+    scriptLines.push('        # Get the original VM');
+    scriptLines.push('        Write-Host "  [DEBUG] Searching for VM: $originalVMName" -ForegroundColor DarkGray');
+    scriptLines.push('        $sourceVM = Get-VM -Name $originalVMName -ErrorAction Stop');
+    scriptLines.push('        ');
+    scriptLines.push('        if (-not $sourceVM) {');
+    scriptLines.push('            Write-Host "  [ERROR] VM not found: $originalVMName" -ForegroundColor Red');
+    scriptLines.push('            continue');
+    scriptLines.push('        }');
+    scriptLines.push('        ');
+    scriptLines.push('        # Get VM host and datastore information');
+    scriptLines.push('        Write-Host "  [DEBUG] Getting VM host information..." -ForegroundColor DarkGray');
+    scriptLines.push('        $vmHost = $sourceVM.VMHost');
+    scriptLines.push('        $vmDatastore = $sourceVM.DatastoreIdList | ForEach-Object { Get-Datastore -Id $_ } | Select-Object -First 1');
+    scriptLines.push('        $vmResourcePool = $sourceVM.ResourcePool');
+    scriptLines.push('        ');
+    scriptLines.push('        Write-Host "  [DEBUG] Source VM Details:" -ForegroundColor DarkGray');
+    scriptLines.push('        Write-Host "    Host: $($vmHost.Name)" -ForegroundColor DarkGray');
+    scriptLines.push('        Write-Host "    Datastore: $($vmDatastore.Name)" -ForegroundColor DarkGray');
+    scriptLines.push('        Write-Host "    Resource Pool: $($vmResourcePool.Name)" -ForegroundColor DarkGray');
+    scriptLines.push('        ');
+    scriptLines.push('        # Generate new VM name based on naming convention');
+    scriptLines.push('        $newVMName = $NamingConvention -replace "xxxxxxx", $originalVMName');
+    scriptLines.push('        Write-Host "  [DEBUG] New VM name will be: $newVMName" -ForegroundColor DarkGray');
+    scriptLines.push('        ');
+    scriptLines.push('        # Check if target VM already exists');
+    scriptLines.push('        Write-Host "  [DEBUG] Checking if target VM already exists..." -ForegroundColor DarkGray');
+    scriptLines.push('        $existingVM = Get-VM -Name $newVMName -ErrorAction SilentlyContinue');
+    scriptLines.push('        if ($existingVM) {');
+    scriptLines.push('            Write-Host "  [WARNING] Target VM already exists: $newVMName" -ForegroundColor Yellow');
+    scriptLines.push('            Write-Host "  [WARNING] Skipping clone operation for this VM" -ForegroundColor Yellow');
+    scriptLines.push('            continue');
+    scriptLines.push('        }');
+    scriptLines.push('        ');
+    scriptLines.push('        # Prepare clone specification');
+    scriptLines.push('        Write-Host "  [DEBUG] Preparing clone specification..." -ForegroundColor DarkGray');
+    scriptLines.push('        ');
+    scriptLines.push('        Write-Host "  Preparing to clone machine $originalVMName" -ForegroundColor Yellow');
+    scriptLines.push('        Write-Host "    from Host $($vmHost.Name) on Storage $($vmDatastore.Name)" -ForegroundColor Yellow');
+    scriptLines.push('        Write-Host "    To Clone machine $newVMName" -ForegroundColor Yellow');
+    scriptLines.push('        ');
+    scriptLines.push('        # Perform the clone');
+    scriptLines.push('        Write-Host "  [DEBUG] Starting clone operation..." -ForegroundColor DarkGray');
+    scriptLines.push('        Write-Host "  Clone in progress..." -ForegroundColor Yellow');
+    scriptLines.push('        ');
+    scriptLines.push('        $newVM = New-VM -VM $sourceVM -Name $newVMName -VMHost $vmHost -Datastore $vmDatastore -ResourcePool $vmResourcePool -ErrorAction Stop');
+    scriptLines.push('        ');
+    scriptLines.push('        if ($newVM) {');
+    scriptLines.push('            Write-Host "  [SUCCESS] Clone complete: $newVMName" -ForegroundColor Green');
+    scriptLines.push('            Write-Host "    New VM ID: $($newVM.Id)" -ForegroundColor DarkGray');
+    scriptLines.push('            Write-Host "    New VM Power State: $($newVM.PowerState)" -ForegroundColor DarkGray');
+    scriptLines.push('        } else {');
+    scriptLines.push('            Write-Host "  [ERROR] Clone operation completed but no VM was returned" -ForegroundColor Red');
+    scriptLines.push('        }');
+    scriptLines.push('        ');
+    scriptLines.push('        Write-Host ""');
+    scriptLines.push('    }');
+    scriptLines.push('    catch {');
+    scriptLines.push('        Write-Host "  [ERROR] Failed to clone $originalVMName : $($_.Exception.Message)" -ForegroundColor Red');
+    scriptLines.push('        Write-Host "  [ERROR] Error details: $($_.Exception.GetType().FullName)" -ForegroundColor Red');
+    scriptLines.push('        if ($_.Exception.InnerException) {');
+    scriptLines.push('            Write-Host "  [ERROR] Inner exception: $($_.Exception.InnerException.Message)" -ForegroundColor Red');
+    scriptLines.push('        }');
+    scriptLines.push('        Write-Host ""');
+    scriptLines.push('    }');
+    scriptLines.push('}');
+    scriptLines.push('');
+    scriptLines.push('Write-Host "========================================" -ForegroundColor Cyan');
+    scriptLines.push('Write-Host "Clone operation completed" -ForegroundColor Cyan');
+    scriptLines.push('Write-Host "========================================" -ForegroundColor Cyan');
+    
+    return scriptLines.join('\n');
+}
+
+function copyCloneScript() {
+    const scriptTextArea = document.getElementById('cloneScriptContent');
+    scriptTextArea.select();
+    document.execCommand('copy');
+    
+    // Show feedback
+    const btn = event.target;
+    const originalText = btn.textContent;
+    btn.textContent = 'Copied!';
+    btn.style.backgroundColor = '#28a745';
+    setTimeout(() => {
+        btn.textContent = originalText;
+        btn.style.backgroundColor = '';
+    }, 2000);
+}
+
+function downloadCloneScript() {
+    const scriptContent = document.getElementById('cloneScriptContent').value;
+    const blob = new Blob([scriptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Clone-MasterImages-' + new Date().toISOString().slice(0, 10) + '.ps1';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
 }
 
 function showStoreFrontStoresList() {
@@ -657,6 +917,7 @@ window.onclick = function(event) {
     const desktopsModal = document.getElementById('desktopsModal');
     const deliveryGroupsModal = document.getElementById('deliveryGroupsModal');
     const usersModal = document.getElementById('usersModal');
+    const horizonTasksModal = document.getElementById('horizonTasksModal');
     if (event.target == catalogModal) {
         catalogModal.style.display = 'none';
     }
@@ -671,6 +932,9 @@ window.onclick = function(event) {
     }
     if (event.target == usersModal) {
         usersModal.style.display = 'none';
+    }
+    if (event.target == horizonTasksModal) {
+        horizonTasksModal.style.display = 'none';
     }
 }
 

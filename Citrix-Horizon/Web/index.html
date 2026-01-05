@@ -31,6 +31,7 @@
                 <input type="file" id="debugFileInput" accept=".zip" style="display: none;">
                 <button id="loadFileBtn" class="btn btn-primary">Load Audit Data</button>
                 <input type="file" id="fileInput" accept=".json" style="display: none;">
+                <button id="horizonTasksBtn" class="btn btn-primary" disabled style="opacity: 0.5; cursor: not-allowed;">Horizon Environment Tasks</button>
             </div>
         </header>
 
@@ -402,11 +403,10 @@
                 <table id="masterImagesTable" class="data-table">
                     <thead>
                         <tr>
-                            <th class="sortable" data-column="0">Image Name (Full Path)</th>
-                            <th class="sortable" data-column="1">Cluster Name</th>
-                            <th class="sortable" data-column="2">VM Name</th>
-                            <th class="sortable" data-column="3">Snapshot Name</th>
-                            <th class="sortable" data-column="4">Catalogs Using This Image</th>
+                            <th class="sortable" data-column="0">Cluster Name</th>
+                            <th class="sortable" data-column="1">VM Name</th>
+                            <th class="sortable" data-column="2">Snapshot Name</th>
+                            <th class="sortable" data-column="3">Catalogs Using This Image</th>
                         </tr>
                     </thead>
                     <tbody id="masterImagesTableBody">
@@ -462,6 +462,54 @@
                     <tbody id="appDetailsBody">
                     </tbody>
                 </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for Horizon Environment Tasks -->
+    <div id="horizonTasksModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 95%; width: 95%;">
+            <span class="modal-close" onclick="closeHorizonTasksModal()">&times;</span>
+            <h2>HZ Builds</h2>
+            <div id="horizonTasksContent">
+                <!-- Task navigation tabs will be added here -->
+                <div id="horizonTasksTabs" style="border-bottom: 2px solid #ddd; margin-bottom: 20px;">
+                    <button class="task-tab active" onclick="showHorizonTask('cloneMasterImage')">Clone Master Image</button>
+                    <button class="task-tab" onclick="showHorizonTask('addApplications')">Add Applications to HZ</button>
+                    <!-- More tasks can be added here -->
+                </div>
+                
+                <!-- Clone Master Image Task -->
+                <div id="cloneMasterImageTask" class="horizon-task-panel active">
+                    <h3>Clone Master Image</h3>
+                    <p>Select master images to clone and specify the naming convention.</p>
+                    
+                    <div style="margin: 20px 0;">
+                        <label for="cloneNamingConvention" style="display: block; margin-bottom: 8px; font-weight: bold;">Naming Convention:</label>
+                        <input type="text" id="cloneNamingConvention" value="HZ-M-xxxxxxx" style="width: 300px; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+                        <p style="margin-top: 5px; color: #666; font-size: 12px;">Use 'xxxxxxx' as placeholder for the original VM name</p>
+                    </div>
+                    
+                    <div style="margin: 20px 0;">
+                        <h4 style="margin-bottom: 10px;">Master Images:</h4>
+                        <div id="masterImagesCloneList" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
+                            <p>Loading master images...</p>
+                        </div>
+                    </div>
+                    
+                    <div style="margin: 20px 0; text-align: right;">
+                        <button id="createCloneScriptBtn" class="btn btn-primary" onclick="createCloneScript()">Create Script</button>
+                    </div>
+                    
+                    <div id="cloneScriptOutput" style="display: none; margin-top: 20px;">
+                        <h4>Generated Script:</h4>
+                        <textarea id="cloneScriptContent" readonly style="width: 100%; height: 400px; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
+                        <div style="margin-top: 10px; text-align: right;">
+                            <button class="btn btn-secondary" onclick="copyCloneScript()">Copy Script</button>
+                            <button class="btn btn-secondary" onclick="downloadCloneScript()">Download Script</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

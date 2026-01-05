@@ -1,8 +1,8 @@
 # Get-CitrixDirectorOData.ps1
 # Collects OData from Citrix Director monitoring endpoints
 # Director exposes monitoring data via OData v3/v4 API (supports multiple versions)
-# Version: 1.2
-# Last Modified: 260105:1600
+# Version: 1.3
+# Last Modified: 260105:1610
 
 param(
     [string]$OutputPath = ".\Data\citrix-director-odata.json",
@@ -25,6 +25,16 @@ if (-not (Test-Path -Path $outputDir)) {
 $debugFile = Join-Path $outputDir "debug-director-odata.txt"
 $startTime = Get-Date
 Write-Host "[DEBUG] Starting Director OData collection at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
+
+# Helper function to setup SSL certificate bypass (avoids here-string parsing issues)
+function Initialize-SSLBypass {
+    if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
+        $csharpCode = 'using System.Net; using System.Security.Cryptography.X509Certificates; public class TrustAllCertsPolicy : ICertificatePolicy { public bool CheckValidationResult(ServicePoint srvPoint, X509Certificate certificate, WebRequest request, int certificateProblem) { return true; } }'
+        Add-Type -TypeDefinition $csharpCode
+    }
+    [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
+    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls
+}
 
 # Function to make OData requests
 function Invoke-ODataRequest {
@@ -70,22 +80,7 @@ function Invoke-ODataRequest {
         
         # Handle SSL validation
         if ($SkipSSLValidation) {
-            # Disable SSL certificate validation
-            if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
-                Add-Type @"
-using System.Net;
-using System.Security.Cryptography.X509Certificates;
-public class TrustAllCertsPolicy : ICertificatePolicy {
-    public bool CheckValidationResult(
-        ServicePoint srvPoint, X509Certificate certificate,
-        WebRequest request, int certificateProblem) {
-        return true;
-    }
-}
-"@
-            }
-            [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls
+            Initialize-SSLBypass
         }
         
         # Make the request
@@ -148,21 +143,7 @@ function Get-ODataEntitySets {
         }
         
         if ($SkipSSLValidation) {
-            if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
-                Add-Type @"
-using System.Net;
-using System.Security.Cryptography.X509Certificates;
-public class TrustAllCertsPolicy : ICertificatePolicy {
-    public bool CheckValidationResult(
-        ServicePoint srvPoint, X509Certificate certificate,
-        WebRequest request, int certificateProblem) {
-        return true;
-    }
-}
-"@
-            }
-            [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-            [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls
+            Initialize-SSLBypass
         }
         
         $metadataResponse = Invoke-RestMethod @requestParams
@@ -340,21 +321,7 @@ try {
             }
             
             if ($SkipSSLValidation) {
-                if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
-                    Add-Type @"
-using System.Net;
-using System.Security.Cryptography.X509Certificates;
-public class TrustAllCertsPolicy : ICertificatePolicy {
-    public bool CheckValidationResult(
-        ServicePoint srvPoint, X509Certificate certificate,
-        WebRequest request, int certificateProblem) {
-        return true;
-    }
-}
-"@
-                }
-                [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-                [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls
+                Initialize-SSLBypass
             }
             
             $testResponse = Invoke-WebRequest @testParams
@@ -412,21 +379,7 @@ public class TrustAllCertsPolicy : ICertificatePolicy {
             }
             
             if ($SkipSSLValidation) {
-                if (-not ([System.Management.Automation.PSTypeName]'TrustAllCertsPolicy').Type) {
-                    Add-Type @"
-using System.Net;
-using System.Security.Cryptography.X509Certificates;
-public class TrustAllCertsPolicy : ICertificatePolicy {
-    public bool CheckValidationResult(
-        ServicePoint srvPoint, X509Certificate certificate,
-        WebRequest request, int certificateProblem) {
-        return true;
-    }
-}
-"@
-                }
-                [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy
-                [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12 -bor [System.Net.SecurityProtocolType]::Tls11 -bor [System.Net.SecurityProtocolType]::Tls
+                Initialize-SSLBypass
             }
             
             $null = Invoke-WebRequest @testParams
