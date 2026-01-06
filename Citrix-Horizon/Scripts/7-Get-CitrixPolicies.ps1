@@ -1,8 +1,8 @@
 # Get-CitrixPolicies.ps1
 # Extracts Citrix policy information
 # Author : LAB007.AI
-# Version: 1.0
-# Last Modified: 250127
+# Version: 1.1
+# Last Modified: 260105:2134
 
 param(
     [string]$OutputPath = ".\Data\citrix-policies.json",
@@ -473,28 +473,29 @@ try {
                         Priority = if ($policy.Priority) { $policy.Priority } else { "N/A" }
                         IsAssigned = if ($null -ne $policy.IsAssigned) { $policy.IsAssigned } else { "Unknown" }
                     }
-                
-                # Try to get policy settings if available
-                try {
-                    if ($policy.PolicySettings) {
-                        $policyInfo.PolicySettings = $policy.PolicySettings
+                    
+                    # Try to get policy settings if available
+                    try {
+                        if ($policy.PolicySettings) {
+                            $policyInfo.PolicySettings = $policy.PolicySettings
+                        }
                     }
-                }
-                catch {
-                    # Policy settings may not be available in all versions
-                }
-                
-                # Try to get additional properties
-                try {
-                    if ($policy.PSObject.Properties.Name -contains "Filter") {
-                        $policyInfo.Filter = $policy.Filter
+                    catch {
+                        # Policy settings may not be available in all versions
                     }
-                    if ($policy.PSObject.Properties.Name -contains "Settings") {
-                        $policyInfo.Settings = $policy.Settings
+                    
+                    # Try to get additional properties
+                    try {
+                        if ($policy.PSObject.Properties.Name -contains "Filter") {
+                            $policyInfo.Filter = $policy.Filter
+                        }
+                        if ($policy.PSObject.Properties.Name -contains "Settings") {
+                            $policyInfo.Settings = $policy.Settings
+                        }
                     }
-                }
-                catch {
-                    # Additional properties may not be available
+                    catch {
+                        # Additional properties may not be available
+                    }
                 }
                 
                 $policyList += $policyInfo

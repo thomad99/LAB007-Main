@@ -2,8 +2,8 @@
 # Automatically installs missing Citrix and VMware PowerShell modules/SDKs
 # This script checks for required dependencies and installs them if missing
 # Author : LAB007.AI
-# Version: 1.1
-# Last Modified: 260105:1835
+# Version: 1.2
+# Last Modified: 260105:2134
 
 param(
     [switch]$SkipCitrix = $false,
@@ -335,7 +335,7 @@ if (-not $SkipCitrix) {
     else {
         Write-Host "[Citrix] Missing modules: $($finalMissingModules -join ', ')" -ForegroundColor Red
         Write-Host "[Citrix] Please install Citrix PowerShell SDK manually" -ForegroundColor Yellow
-        Write-Host "[Citrix] Installation: Place Citrix SDK MSI installer files in .\Dependencies\Citrix\" -ForegroundColor Gray
+        Write-Host "[Citrix] Installation: Place Citrix SDK MSI installer files in .\Dependencies\Citrix" -ForegroundColor Gray
     }
 }
 
