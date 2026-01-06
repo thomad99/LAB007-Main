@@ -6,23 +6,14 @@
 # Last Modified: 260106:1024
 
 param(
-    [string]$OutputPath = ".\Data\goldensun-master-images.json"
+    [string]$OutputPath = ".\Data\goldensun-master-images.json",
+    [string]$vCenterServer = "shcvcsacx01.ccr.cchcs.org"
 )
 
-# Ensure output directory exists
+# Align output handling with other scripts (e.g., Get-CitrixCatalogs)
 $outputDir = Split-Path -Path $OutputPath -Parent
-if (-not $outputDir) {
-    $outputDir = ".\Data"
-    $OutputPath = Join-Path $outputDir "goldensun-master-images.json"
-}
-
-# Resolve full path
-$OutputPath = [System.IO.Path]::GetFullPath($OutputPath)
-$outputDir = [System.IO.Path]::GetFullPath($outputDir)
-
 if (-not (Test-Path -Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-    Write-Host "Created output directory: $outputDir" -ForegroundColor Green
 }
 
 try {
@@ -40,18 +31,24 @@ try {
     # Suppress certificate warnings
     Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -Confirm:$false -Scope Session | Out-Null
     
-    # Prompt for vCenter server
-    $vCenterServer = Read-Host "Enter vCenter Server name or IP"
+    # Prompt for vCenter server (default provided)
+    $inputServer = Read-Host "Enter vCenter Server name or IP [$vCenterServer]"
+    if (-not [string]::IsNullOrWhiteSpace($inputServer)) {
+        $vCenterServer = $inputServer
+    }
     if ([string]::IsNullOrWhiteSpace($vCenterServer)) {
         Write-Error "vCenter Server name is required"
         exit 1
     }
     
+    # Prompt for credentials
+    $credential = Get-Credential -Message "Enter vCenter credentials for $vCenterServer"
+    
     Write-Host "Connecting to vCenter Server: $vCenterServer..." -ForegroundColor Yellow
     
     # Connect to vCenter (will prompt for credentials)
     try {
-        $connection = Connect-VIServer -Server $vCenterServer -ErrorAction Stop
+        $connection = Connect-VIServer -Server $vCenterServer -Credential $credential -ErrorAction Stop
         Write-Host "Successfully connected to $vCenterServer" -ForegroundColor Green
     }
     catch {
