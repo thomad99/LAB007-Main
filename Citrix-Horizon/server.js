@@ -7,6 +7,8 @@ const archiver = require('archiver');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const https = require('https');
+const http = require('http');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -187,9 +189,6 @@ app.get('/api/download-audit-files', async (req, res) => {
         const zipFilename = 'Citrix-Audit-Tools.zip';
         
         // Fetch from GitHub
-        const https = require('https');
-        const http = require('http');
-        
         return new Promise((resolve, reject) => {
             const protocol = githubZipUrl.startsWith('https') ? https : http;
             
@@ -269,8 +268,148 @@ function downloadLocalFiles(req, res) {
     }
 }
 
+// GitHub API helper function to upload file to GitHub
+function uploadFileToGitHub(filePath, fileName, fileContent) {
+    return new Promise((resolve) => {
+        const githubToken = process.env.GITHUB_TOKEN;
+        const githubRepo = process.env.GITHUB_REPO || 'thomad99/CitrixtoHZ';
+        const githubBranch = process.env.GITHUB_BRANCH || 'master';
+        
+        if (!githubToken) {
+            console.warn('GITHUB_TOKEN not set. Skipping GitHub sync.');
+            resolve({ success: false, error: 'GITHUB_TOKEN not configured' });
+            return;
+        }
+        
+        // GitHub API endpoint for creating/updating a file
+        const apiPath = `/repos/${githubRepo}/contents/Citrix-Horizon/Debug/${fileName}`;
+        
+        // Read file content and encode to base64
+        let content;
+        if (fileContent) {
+            content = Buffer.from(fileContent).toString('base64');
+        } else {
+            content = fs.readFileSync(filePath).toString('base64');
+        }
+        
+        // First, check if file exists to get SHA (required for updates)
+        const checkOptions = {
+            hostname: 'api.github.com',
+            path: `${apiPath}?ref=${githubBranch}`,
+            method: 'GET',
+            headers: {
+                'Authorization': `token ${githubToken}`,
+                'Accept': 'application/vnd.github.v3+json',
+                'User-Agent': 'LAB007-Citrix-Dashboard'
+            }
+        };
+        
+        https.get(checkOptions, (checkRes) => {
+            let checkData = '';
+            
+            checkRes.on('data', (chunk) => {
+                checkData += chunk;
+            });
+            
+            checkRes.on('end', () => {
+                let sha = null;
+                
+                if (checkRes.statusCode === 200) {
+                    try {
+                        const existingFile = JSON.parse(checkData);
+                        sha = existingFile.sha;
+                        console.log(`File exists on GitHub, will update (SHA: ${sha.substring(0, 7)}...)`);
+                    } catch (e) {
+                        console.warn('Failed to parse existing file info:', e.message);
+                    }
+                } else if (checkRes.statusCode !== 404) {
+                    console.warn(`GitHub API check returned status ${checkRes.statusCode}: ${checkData}`);
+                }
+                
+                // Prepare request body
+                const body = {
+                    message: `Upload debug file: ${fileName}`,
+                    content: content,
+                    branch: githubBranch
+                };
+                
+                if (sha) {
+                    body.sha = sha; // Required for updates
+                }
+                
+                const bodyString = JSON.stringify(body);
+                
+                // Upload/update file
+                const uploadOptions = {
+                    hostname: 'api.github.com',
+                    path: apiPath,
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${githubToken}`,
+                        'Accept': 'application/vnd.github.v3+json',
+                        'Content-Type': 'application/json',
+                        'Content-Length': Buffer.byteLength(bodyString),
+                        'User-Agent': 'LAB007-Citrix-Dashboard'
+                    }
+                };
+                
+                const uploadReq = https.request(uploadOptions, (uploadRes) => {
+                    let uploadData = '';
+                    
+                    uploadRes.on('data', (chunk) => {
+                        uploadData += chunk;
+                    });
+                    
+                    uploadRes.on('end', () => {
+                        if (uploadRes.statusCode === 200 || uploadRes.statusCode === 201) {
+                            try {
+                                const result = JSON.parse(uploadData);
+                                console.log(`Successfully synced ${fileName} to GitHub`);
+                                resolve({
+                                    success: true,
+                                    url: result.content.html_url,
+                                    sha: result.content.sha
+                                });
+                            } catch (e) {
+                                console.error('Failed to parse GitHub response:', e.message);
+                                resolve({
+                                    success: false,
+                                    error: 'Failed to parse GitHub response'
+                                });
+                            }
+                        } else {
+                            console.error(`GitHub API upload failed: ${uploadRes.statusCode} - ${uploadData}`);
+                            resolve({
+                                success: false,
+                                error: `GitHub API returned status ${uploadRes.statusCode}`
+                            });
+                        }
+                    });
+                });
+                
+                uploadReq.on('error', (error) => {
+                    console.error('GitHub upload request error:', error);
+                    resolve({
+                        success: false,
+                        error: error.message
+                    });
+                });
+                
+                uploadReq.write(bodyString);
+                uploadReq.end();
+            });
+        }).on('error', (error) => {
+            console.error('GitHub check request error:', error);
+            resolve({
+                success: false,
+                error: error.message
+            });
+        });
+    });
+}
+
 // Upload Debug ZIP file
-app.post('/api/upload-debug', uploadDebug.single('debugFile'), (req, res) => {
+app.post('/api/upload-debug', uploadDebug.single('debugFile'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded' });
@@ -286,10 +425,24 @@ app.post('/api/upload-debug', uploadDebug.single('debugFile'), (req, res) => {
 
         console.log(`Debug ZIP uploaded: ${fileInfo.filename} (${fileInfo.size} bytes)`);
 
+        // Sync to GitHub asynchronously
+        uploadFileToGitHub(req.file.path, req.file.filename, null)
+            .then((githubResult) => {
+                if (githubResult.success) {
+                    console.log(`Debug file synced to GitHub: ${githubResult.url}`);
+                } else {
+                    console.warn(`Failed to sync to GitHub: ${githubResult.error}`);
+                }
+            })
+            .catch((error) => {
+                console.error('GitHub sync error:', error);
+            });
+
         res.json({
             success: true,
-            message: 'Debug ZIP file uploaded successfully',
-            file: fileInfo
+            message: 'Debug ZIP file uploaded successfully. Syncing to GitHub...',
+            file: fileInfo,
+            githubSync: 'In progress'
         });
     } catch (error) {
         console.error('Debug upload error:', error);
@@ -297,23 +450,34 @@ app.post('/api/upload-debug', uploadDebug.single('debugFile'), (req, res) => {
     }
 });
 
-// Get list of debug files
+// Get list of debug files (from local uploads directory)
 app.get('/api/debug-files', (req, res) => {
     try {
-        const files = fs.readdirSync(debugDir)
-            .filter(file => file.endsWith('.zip'))
-            .map(file => {
-                const filePath = path.join(debugDir, file);
-                const stats = fs.statSync(filePath);
-                return {
-                    filename: file,
-                    size: stats.size,
-                    uploadedAt: stats.mtime.toISOString()
-                };
-            })
-            .sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
+        const files = [];
+        
+        // Check local directory
+        if (fs.existsSync(debugDir)) {
+            const localFiles = fs.readdirSync(debugDir)
+                .filter(file => file.endsWith('.zip'))
+                .map(file => {
+                    const filePath = path.join(debugDir, file);
+                    const stats = fs.statSync(filePath);
+                    return {
+                        filename: file,
+                        size: stats.size,
+                        uploadedAt: stats.mtime.toISOString(),
+                        source: 'local'
+                    };
+                });
+            files.push(...localFiles);
+        }
+        
+        files.sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt));
 
-        res.json({ files });
+        res.json({ 
+            files,
+            note: 'Files are automatically synced to GitHub at: https://github.com/thomad99/CitrixtoHZ/tree/master/Citrix-Horizon/Debug'
+        });
     } catch (error) {
         console.error('Error listing debug files:', error);
         res.status(500).json({ error: 'Failed to list debug files' });

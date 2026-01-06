@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoldenSun Project - LAB007</title>
+    <link rel="icon" type="image/png" href="images/lab007%20Icon.PNG">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <img src="images/LAB007-LOGO-GOLD.png" alt="LAB007 Logo" class="logo">
+                <div class="header-title">
+                    <p class="header-subtitle" style="margin: 0;">
+                        <span class="header-title-main">GoldenSun Project</span><br>
+                        <span class="header-title-sub">Master Image Management</span>
+                    </p>
+                </div>
+            </div>
+            <div class="refresh-controls">
+                <a href="/citrix" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">← Back to Dashboard</a>
+                <button id="refreshDataBtn" class="btn btn-primary" onclick="loadMasterImages()">Refresh Data</button>
+            </div>
+        </header>
+
+        <div id="loadingIndicator" class="loading">
+            <img src="images/LAB007-Loader.png" alt="Loading..." class="loader-spinner">
+            <p id="loadingText" class="loading-text">Loading master images...</p>
+        </div>
+
+        <div id="errorMessage" class="error-message" style="display: none;"></div>
+
+        <div id="content" style="display: none;">
+            <!-- Summary Section -->
+            <section class="summary-section">
+                <h2>Master Images Overview</h2>
+                <div class="cards-grid">
+                    <div class="card">
+                        <div class="card-content">
+                            <h3>vCenter Server</h3>
+                            <p class="card-value" id="vCenterServer">-</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-content">
+                            <h3>Total Master Images</h3>
+                            <p class="card-value" id="totalImages">-</p>
+                        </div>
+                    </div>
+                    <div class="card">
+                        <div class="card-content">
+                            <h3>Last Updated</h3>
+                            <p class="card-value" id="lastUpdated">-</p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Clone Master Images Section -->
+            <section class="clone-section">
+                <div class="section-header">
+                    <h2>Clone Master Images</h2>
+                    <div class="section-actions">
+                        <button class="btn btn-secondary" onclick="selectAllImages()">Select All</button>
+                        <button class="btn btn-secondary" onclick="deselectAllImages()">Deselect All</button>
+                    </div>
+                </div>
+                
+                <div class="section-body">
+                    <div id="masterImagesList" class="master-images-list">
+                        <!-- Master images will be loaded here -->
+                    </div>
+                    
+                    <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                        <h3 style="margin-top: 0;">Clone Settings</h3>
+                        <div style="margin: 15px 0;">
+                            <label style="display: block; margin-bottom: 5px; font-weight: 500;">Selected Images: <span id="selectedCount">0</span></label>
+                        </div>
+                        <div style="margin-top: 20px; text-align: right;">
+                            <button id="createCloneScriptBtn" class="btn btn-primary" onclick="createCloneScript()" disabled>Create Clone Script</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Script Output -->
+                    <div id="scriptOutput" style="display: none; margin-top: 30px;">
+                        <h3>Generated Clone Script</h3>
+                        <p style="color: #666; margin-bottom: 15px;">This script will clone the selected master images with incremented version numbers.</p>
+                        <textarea id="scriptContent" readonly style="width: 100%; height: 400px; font-family: 'Courier New', monospace; font-size: 12px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
+                        <div style="margin-top: 15px; text-align: right;">
+                            <button class="btn btn-secondary" onclick="copyScript()">Copy to Clipboard</button>
+                            <button class="btn btn-primary" onclick="downloadScript()">Download Script</button>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="main-footer">
+        <div class="footer-content">
+            <img src="images/LAB007-LOGO-TRANS.png" alt="LAB007 Logo" class="footer-logo">
+            <p class="footer-text">
+                Copyright 2025 - LAB007.AI All rights reserved. See <a href="https://www.lab007.ai" target="_blank">www.lab007.ai</a> for Conditions of use.
+            </p>
+        </div>
+    </footer>
+
+    <script src="goldensun.js"></script>
+</body>
+</html>
+
