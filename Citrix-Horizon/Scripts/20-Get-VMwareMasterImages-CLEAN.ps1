@@ -7,7 +7,7 @@
 
 param(
     [string]$OutputPath = '.\Data\goldensun-master-images.json',
-    [string]$vCenterServer = 'shcvcsacx01.ccr.cchcs.org'
+    [string]$vCenterServer = 'shcvcsacx01v.ccr.cchcs.org'
 )
 
 # Align output handling with other scripts (e.g., Get-CitrixCatalogs)
@@ -120,7 +120,7 @@ try {
             }
 
             $masterImages += $imageInfo
-            Write-Host "  OK: $vmName - Cluster: $clusterName, Version: $version" -ForegroundColor Green
+            Write-Host "  ✓ $vmName - Cluster: $clusterName, Version: $version" -ForegroundColor Green
         }
     }
 
