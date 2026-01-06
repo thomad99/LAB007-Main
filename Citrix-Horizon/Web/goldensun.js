@@ -17,8 +17,12 @@ async function loadMasterImages(options = {}) {
     hideError();
     
     try {
-        const response = await fetch('/data/goldensun-master-images.json', { cache: 'no-cache' });
-        
+        // Try primary path
+        let response = await fetch('/data/goldensun-master-images.json', { cache: 'no-cache' });
+        // Fallback for proxied /citrix
+        if (!response.ok) {
+            response = await fetch('/citrix/data/goldensun-master-images.json', { cache: 'no-cache' });
+        }
         if (!response.ok) {
             throw new Error(`Failed to load data: ${response.statusText}`);
         }
