@@ -1,5 +1,6 @@
 # Read-Configuration.ps1
 # Reads configuration from JSON file or returns defaults
+# Author : LAB007.AI
 # Version: 1.0
 # Last Modified: 250127
 

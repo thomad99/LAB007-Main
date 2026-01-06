@@ -1,6 +1,7 @@
 # Load-CitrixModules.ps1
 # Helper function to load Citrix PowerShell snap-ins/modules
 # Supports multiple Citrix versions: 1912/7.x (snap-ins) and 2009+ (modules)
+# Author : LAB007.AI
 # Version: 1.0
 # Last Modified: 250127
 

@@ -1,6 +1,7 @@
 # Install-RequiredModules.ps1
 # Automatically installs missing Citrix and VMware PowerShell modules/SDKs
 # This script checks for required dependencies and installs them if missing
+# Author : LAB007.AI
 # Version: 1.1
 # Last Modified: 260105:1835
 

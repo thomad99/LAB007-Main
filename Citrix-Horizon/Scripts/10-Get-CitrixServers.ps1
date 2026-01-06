@@ -1,6 +1,7 @@
 # Get-CitrixServers.ps1
 # Extracts server information including specs (RAM, CPU, Disk)
 # Uses VMware SDK as fallback if Citrix data unavailable
+# Author : LAB007.AI
 # Version: 1.0
 # Last Modified: 250127
 

@@ -1,5 +1,6 @@
 # Collect-CitrixAuditData.ps1
 # Master script that orchestrates collection of all Citrix audit data
+# Author : LAB007.AI
 # Version: 1.2
 # Last Modified: 260105:1838
 

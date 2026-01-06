@@ -1,5 +1,6 @@
 # Get-CitrixCatalogs.ps1
 # Extracts machine catalogs information
+# Author : LAB007.AI
 # Version: 1.0
 # Last Modified: 250127
 

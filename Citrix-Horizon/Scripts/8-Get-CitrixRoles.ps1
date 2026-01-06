@@ -1,5 +1,6 @@
 # Get-CitrixRoles.ps1
 # Extracts Citrix management roles and their assigned AD groups
+# Author : LAB007.AI
 # Version: 1.1
 # Last Modified: 260105:1827
 

@@ -1,6 +1,7 @@
 # Test-ODataConnection.ps1
 # Quick test script to verify Director OData connectivity
 # Usage: .\Test-ODataConnection.ps1 -DirectorServer localhost
+# Author : LAB007.AI
 
 param(
     [string]$DirectorServer = "localhost",

@@ -1,6 +1,7 @@
 # Get-CitrixDirectorOData.ps1
 # Collects OData from Citrix Director monitoring endpoints
 # Director exposes monitoring data via OData v3/v4 API (supports multiple versions)
+# Author : LAB007.AI
 # Version: 1.4
 # Last Modified: 260105:1625
 

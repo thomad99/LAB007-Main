@@ -1,5 +1,6 @@
 # Get-CitrixUsageStats.ps1
 # Extracts usage statistics (concurrent users, unique connections)
+# Author : LAB007.AI
 # Version: 1.0
 # Last Modified: 250127
 

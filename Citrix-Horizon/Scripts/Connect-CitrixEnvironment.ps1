@@ -1,5 +1,6 @@
 # Connect-CitrixEnvironment.ps1
 # Configures connection to Citrix environment based on version
+# Author : LAB007.AI
 # Version: 1.0
 # Last Modified: 250127
 

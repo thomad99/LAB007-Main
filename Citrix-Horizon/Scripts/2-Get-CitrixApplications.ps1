@@ -1,5 +1,6 @@
 # Get-CitrixApplications.ps1
 # Extracts published applications information
+# Author : LAB007.AI
 # Version: 1.0
 # Last Modified: 250127
 

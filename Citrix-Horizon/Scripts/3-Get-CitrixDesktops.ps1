@@ -1,5 +1,6 @@
 # Get-CitrixDesktops.ps1
 # Extracts published desktops information
+# Author : LAB007.AI
 # Version: 1.0
 # Last Modified: 250127
 

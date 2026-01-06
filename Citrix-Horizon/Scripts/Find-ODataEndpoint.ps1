@@ -1,6 +1,7 @@
 # Find-ODataEndpoint.ps1
 # Discovers the correct Director OData endpoint URL
 # Usage: .\Find-ODataEndpoint.ps1 -DirectorServer localhost -SkipSSLValidation
+# Author : LAB007.AI
 
 param(
     [string]$DirectorServer = "localhost",

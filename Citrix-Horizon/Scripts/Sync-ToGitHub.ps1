@@ -1,5 +1,6 @@
 # Sync-ToGitHub.ps1
 # Automates syncing local code to GitHub repository with enhanced security
+# Author : LAB007.AI
 # Version: 1.0
 # Last Modified: 250127
 

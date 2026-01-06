@@ -1,5 +1,6 @@
 # Setup-GitHubSecurity.ps1
 # Helper script to set up secure GitHub authentication
+# Author : LAB007.AI
 # Version: 1.0
 # Last Modified: 250127
 
