@@ -2,8 +2,8 @@
 # Collects OData from Citrix Director monitoring endpoints
 # Director exposes monitoring data via OData v3/v4 API (supports multiple versions)
 # Author : LAB007.AI
-# Version: 1.4
-# Last Modified: 260105:1625
+# Version: 1.5
+# Last Modified: 260105:2010
 
 param(
     [string]$OutputPath = ".\Data\citrix-director-odata.json",
@@ -309,6 +309,7 @@ try {
         $testUrl = "${protocol}://${DirectorServer}:${Port}${odataPath}"
         Write-Host "  Trying: $testUrl" -ForegroundColor Gray | Out-File -FilePath $debugFile -Append
         
+        $endpointFound = $false
         try {
             $testParams = @{
                 Uri = "$testUrl/`$metadata"
@@ -336,7 +337,7 @@ try {
                 }
                 Write-Host "  ✓ Found working endpoint: $odataPath (OData $version)" -ForegroundColor Green
                 Write-Host "[DEBUG] Working OData path: $odataPath (OData $version)" | Out-File -FilePath $debugFile -Append
-                break
+                $endpointFound = $true
             }
         }
         catch {
@@ -352,6 +353,10 @@ try {
             else {
                 Write-Host "[DEBUG] Path $odataPath failed (Status: $statusCode): $_" | Out-File -FilePath $debugFile -Append
             }
+        }
+        
+        if ($endpointFound) {
+            break
         }
     }
     
