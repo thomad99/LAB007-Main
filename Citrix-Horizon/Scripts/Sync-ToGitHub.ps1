@@ -27,7 +27,10 @@ $SensitivePatterns = @(
     "lab007-config.json",
     "Data\*.json",
     "Data\*.zip",
-    "Data\debug.txt"
+    "Data\debug.txt",
+    # Ignore uploaded/debug artifacts so they don't block pushes
+    "Debug\*",
+    "Citrix-Horizon\Debug\*"
 )
 
 Write-Host "========================================" -ForegroundColor Cyan
