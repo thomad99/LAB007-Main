@@ -1,0 +1,12 @@
+﻿{
+    "ControllerCount":  3,
+    "SiteName":  "SHCXA01",
+    "Controllers":  [
+                        "SHCAXDDCP01V.ccr.cchcs.org",
+                        "SHCAXDDCP02v.ccr.cchcs.org",
+                        "SHCAXDDCP03V.ccr.cchcs.org"
+                    ],
+    "LicenseServer":  "shcxdlicp02v.ccr.cchcs.org",
+    "LicenseServerPort":  27000,
+    "CollectedAt":  "2026-01-06 14:34:51"
+}

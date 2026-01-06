@@ -64,8 +64,9 @@
             <!-- Clone Master Images Section -->
             <section class="clone-section">
                 <div class="section-header">
-                    <h2>Clone Master Images</h2>
+                    <h2>Master Images</h2>
                     <div class="section-actions">
+                        <button class="btn btn-primary" id="collectImagesBtn" onclick="collectMasterImages()">Collect Master Images</button>
                         <button class="btn btn-secondary" onclick="selectAllImages()">Select All</button>
                         <button class="btn btn-secondary" onclick="deselectAllImages()">Deselect All</button>
                     </div>
@@ -82,7 +83,7 @@
                             <label style="display: block; margin-bottom: 5px; font-weight: 500;">Selected Images: <span id="selectedCount">0</span></label>
                         </div>
                         <div style="margin-top: 20px; text-align: right;">
-                            <button id="createCloneScriptBtn" class="btn btn-primary" onclick="createCloneScript()" disabled>Create Clone Script</button>
+                            <button id="createCloneScriptBtn" class="btn btn-primary" onclick="createCloneScript()" disabled>Clone Images</button>
                         </div>
                     </div>
                     

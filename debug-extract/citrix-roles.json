@@ -1,0 +1,10 @@
+﻿{
+    "CollectedAt":  "2026-01-06 14:35:04",
+    "Errors":  [
+                   "Failed to collect Citrix roles: The process cannot access the file \u0027C:\\CTXAdmin\\8.0-Citrix-Horizon\\Data\\debug.txt\u0027 because it is being used by another process."
+               ],
+    "Roles":  [
+
+              ],
+    "TotalRoles":  0
+}

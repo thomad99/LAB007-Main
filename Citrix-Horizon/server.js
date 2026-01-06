@@ -9,6 +9,7 @@ const path = require('path');
 const cors = require('cors');
 const https = require('https');
 const http = require('http');
+const { spawn } = require('child_process');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -115,6 +116,66 @@ app.get('/goldensun', (req, res) => {
 // Compatibility route if proxy keeps /citrix prefix
 app.get('/citrix/goldensun', (req, res) => {
     res.sendFile(path.join(__dirname, 'Web', 'goldensun.html'));
+});
+
+// Trigger master image collection (runs PowerShell discovery script)
+app.post('/api/collect-master-images', (req, res) => {
+    try {
+        const scriptPath = path.join(__dirname, 'Scripts', '20-Get-VMwareMasterImages.ps1');
+        const outputPath = path.join(__dirname, 'Data', 'goldensun-master-images.json');
+
+        if (!fs.existsSync(scriptPath)) {
+            return res.status(404).json({ error: 'Discovery script not found on server.' });
+        }
+
+        // Prefer pwsh if available, fallback to powershell
+        const pwshExecutable = process.env.PWSH_PATH || 'pwsh';
+        const fallbackExecutable = 'powershell';
+        let psExe = pwshExecutable;
+
+        // Quick availability check for pwsh
+        try {
+            spawn(psExe, ['-v']);
+        } catch {
+            psExe = fallbackExecutable;
+        }
+
+        const args = [
+            '-NoProfile',
+            '-ExecutionPolicy', 'Bypass',
+            '-File', scriptPath,
+            '-OutputPath', outputPath
+        ];
+
+        const ps = spawn(psExe, args, { cwd: __dirname });
+
+        let stdout = '';
+        let stderr = '';
+
+        ps.stdout.on('data', (data) => { stdout += data.toString(); });
+        ps.stderr.on('data', (data) => { stderr += data.toString(); });
+
+        ps.on('close', (code) => {
+            if (code === 0) {
+                return res.json({
+                    success: true,
+                    message: 'Master image collection completed.',
+                    outputPath: '/data/goldensun-master-images.json',
+                    logs: stdout.trim()
+                });
+            } else {
+                return res.status(500).json({
+                    error: 'Master image collection failed.',
+                    exitCode: code,
+                    stderr: stderr.trim(),
+                    stdout: stdout.trim()
+                });
+            }
+        });
+    } catch (error) {
+        console.error('collect-master-images error:', error);
+        return res.status(500).json({ error: 'Unexpected server error during collection.' });
+    }
 });
 
 // To-do page

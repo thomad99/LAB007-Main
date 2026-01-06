@@ -7,16 +7,17 @@ let selectedImages = new Set();
 
 // Load master images data on page load
 document.addEventListener('DOMContentLoaded', function() {
-    loadMasterImages();
+    loadMasterImages({ initial: true });
 });
 
 // Load master images from JSON file
-async function loadMasterImages() {
-    showLoading('Loading master images...');
+async function loadMasterImages(options = {}) {
+    const { initial = false } = options;
+    showLoading(initial ? 'Loading master images...' : 'Refreshing master images...');
     hideError();
     
     try {
-        const response = await fetch('/citrix/data/goldensun-master-images.json');
+        const response = await fetch('/data/goldensun-master-images.json', { cache: 'no-cache' });
         
         if (!response.ok) {
             throw new Error(`Failed to load data: ${response.statusText}`);
@@ -33,10 +34,37 @@ async function loadMasterImages() {
         displayMasterImages();
         hideLoading();
         document.getElementById('content').style.display = 'block';
+        document.getElementById('createCloneScriptBtn').style.display = 'inline-block';
         
     } catch (error) {
         console.error('Error loading master images:', error);
         showError(`Failed to load master images data. Please ensure the data file exists and is accessible. Error: ${error.message}`);
+        hideLoading();
+    }
+}
+
+// Trigger server-side collection of master images
+async function collectMasterImages() {
+    showLoading('Collecting master images (SHC-M-*)...');
+    hideError();
+    document.getElementById('content').style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/collect-master-images', {
+            method: 'POST'
+        });
+        
+        if (!response.ok) {
+            const err = await response.json().catch(() => ({}));
+            throw new Error(err.error || `HTTP ${response.status}`);
+        }
+        
+        const result = await response.json();
+        console.log('Collect result:', result);
+        await loadMasterImages({ initial: false });
+    } catch (error) {
+        console.error('Collect error:', error);
+        showError(`Failed to collect master images. ${error.message || error}`);
         hideLoading();
     }
 }
@@ -52,7 +80,7 @@ function displayMasterImages() {
     const listContainer = document.getElementById('masterImagesList');
     
     if (!masterImagesData.MasterImages || masterImagesData.MasterImages.length === 0) {
-        listContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No master images found. Please run the discovery script first.</p>';
+        listContainer.innerHTML = '<p style="text-align: center; color: #666; padding: 40px;">No master images found. Click "Collect Master Images" to run discovery.</p>';
         return;
     }
     

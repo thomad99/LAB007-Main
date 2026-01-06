@@ -1,0 +1,224 @@
+﻿**********************
+Windows PowerShell transcript start
+Start time: 20260106143449
+Username: CCHCS\dmt24_admin
+RunAs User: CCHCS\dmt24_admin
+Machine: SHCAXDDCP01V (Microsoft Windows NT 10.0.14393.0)
+Host Application: powershell
+Process ID: 8464
+PSVersion: 5.1.14393.8688
+PSEdition: Desktop
+PSCompatibleVersions: 1.0, 2.0, 3.0, 4.0, 5.0, 5.1.14393.8688
+BuildVersion: 10.0.14393.8688
+CLRVersion: 4.0.30319.42000
+WSManStackVersion: 3.0
+PSRemotingProtocolVersion: 2.3
+SerializationVersion: 1.1.0.1
+**********************
+PS>TerminatingError(Out-File): "The process cannot access the file 'C:\CTXAdmin\8.0-Citrix-Horizon\Data\debug.txt' because it is being used by another process."
+WARNING: Could not start transcript to C:\CTXAdmin\8.0-Citrix-Horizon\Data\debug.txt : The process cannot access the file 'C:\CTXAdmin\8.0-Citrix-Horizon\Data\debug.txt' because it is being used by another process.
+Unblocking PowerShell files...
+Files unblocked successfully.
+
+Checking for required dependencies...
+WARNING: Dependency check failed, continuing anyway: At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\Install-RequiredModules.ps1:337 char:22
++         Write-Host "[Citrix] Please install Citrix PowerShell SDK man ...
++                      ~
+Array index expression is missing or not valid.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\Install-RequiredModules.ps1:343 char:83
++ ... itrix SDK, you may need to restart PowerShell." -ForegroundColor Gray
++                                                   ~~~~~~~~~~~~~~~~~~~~~~~
+The string is missing the terminator: ".
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\Install-RequiredModules.ps1:322 char:25
++         if ($available) {
++                         ~
+Missing closing '}' in statement block or type definition.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\Install-RequiredModules.ps1:320 char:53
++     foreach ($moduleName in $requiredCitrixModules) {
++                                                     ~
+Missing closing '}' in statement block or type definition.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\Install-RequiredModules.ps1:317 char:23
++ if (-not $SkipCitrix) {
++                       ~
+Missing closing '}' in statement block or type definition.
+
+NOTE: Ensure Citrix PowerShell modules/snap-ins are loaded before running!
+For Citrix 1912/7.x: Add-PSSnapin Citrix.Broker.Admin.V2 (use snap-ins)
+For Citrix 2009+: Import-Module Citrix.Broker.Admin.V2 (use modules)
+Run .\Scripts\Install-RequiredModules.ps1 to automatically install missing dependencies
+
+Configuration loaded from: C:\CTXAdmin\8.0-Citrix-Horizon\lab007-config.json
+
+========================================
+Citrix Environment Configuration
+========================================
+
+Connected to Citrix Delivery Controller: shcaxddcp01v.ccr.cchcs.org
+Site Name: SHCXA01
+Attempting to auto-discover Citrix version from DDC...
+Trying to determine version by testing module/snap-in availability...
+Snap-ins work - assuming version 1912 or 7.x
+Auto-discovered Citrix version: 1912
+Configuration saved to: C:\CTXAdmin\8.0-Citrix-Horizon\lab007-config.json
+
+Configuration:
+  Version: 1912
+  Delivery Controller: shcaxddcp01v.ccr.cchcs.org
+
+[1/12] Collecting Site Information...
+Site information collected successfully
+[2/12] Collecting Published Applications...
+Applications information collected successfully. Total: 344
+[3/12] Collecting Published Desktops...
+Desktops information collected successfully. Total: 38
+[4/12] Collecting Machine Catalogs and Provisioning Information...
+Catalogs information collected successfully. Total: 33
+Found 18 unique master images
+[5/12] Collecting Delivery Groups...
+Passing 344 applications to delivery groups script
+Processing 39 delivery groups...
+Applications available for matching: 344
+  Delivery Group 'App Validation': 0 applications
+  Delivery Group 'Authello - OneSign PROD': 0 applications
+  Delivery Group 'Authello - OneSign TEST': 0 applications
+Delivery groups information collected successfully. Total: 39
+[6/12] Collecting Usage Statistics (last 30 days)...
+Note: Max concurrent users and historical unique connections require Monitoring database access
+Note: License type may need to be verified manually from License Server
+Usage statistics collected successfully
+[7/12] Collecting Citrix Policies...
+Attempting to collect Citrix policies...
+PS>TerminatingError(Out-File): "The process cannot access the file 'C:\CTXAdmin\8.0-Citrix-Horizon\Data\debug.txt' because it is being used by another process."
+WARNING: Failed to collect policies information: The process cannot access the file 'C:\CTXAdmin\8.0-Citrix-Horizon\Data\debug.txt' because it is being used by another process.
+[8/12] Collecting Citrix Management Roles and AD Groups...
+Attempting to collect Citrix management roles...
+PS>TerminatingError(Out-File): "The process cannot access the file 'C:\CTXAdmin\8.0-Citrix-Horizon\Data\debug.txt' because it is being used by another process."
+C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\8-Get-CitrixRoles.ps1 : Failed to collect Citrix roles: The process cannot 
+access the file 'C:\CTXAdmin\8.0-Citrix-Horizon\Data\debug.txt' because it is being used by another process.
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\0-Collect-CitrixAuditData.ps1:351 char:14
++ ...    $roles = & "$scriptPath\8-Get-CitrixRoles.ps1" -OutputPath (Join-P ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,8-Get-CitrixRoles.ps1
+C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\8-Get-CitrixRoles.ps1 : Failed to collect Citrix roles: The
+process cannot access the file 'C:\CTXAdmin\8.0-Citrix-Horizon\Data\debug.txt' because it is being
+used by another process.
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\0-Collect-CitrixAuditData.ps1:351 char:14
++ ...    $roles = & "$scriptPath\8-Get-CitrixRoles.ps1" -OutputPath (Join-P ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (:) [Write-Error], WriteErrorException
+    + FullyQualifiedErrorId : Microsoft.PowerShell.Commands.WriteErrorException,8-Get-CitrixRoles.ps1
+
+Roles information collected: 0 roles found
+[DEBUG] SkipServerSpecs value: False
+[10/12] Collecting Server Information and Specs...
+[DEBUG] Starting server collection at 2026-01-06 14:35:04
+[DEBUG] SkipServerSpecs: False
+[DEBUG] VMwareServer:
+[DEBUG] Calling 10-Get-CitrixServers.ps1...
+WARNING: Server information collection failed: At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\10-Get-CitrixServers.ps1:244 char:18
++                 }
++                  ~
+The Try statement is missing its Catch or Finally block.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\10-Get-CitrixServers.ps1:249 char:6
++     }
++      ~
+The Try statement is missing its Catch or Finally block.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\10-Get-CitrixServers.ps1:351 char:1
++ }
++ ~
+Unexpected token '}' in expression or statement.
+WARNING: Error details: At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\10-Get-CitrixServers.ps1:244 char:18
++                 }
++                  ~
+The Try statement is missing its Catch or Finally block.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\10-Get-CitrixServers.ps1:249 char:6
++     }
++      ~
+The Try statement is missing its Catch or Finally block.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\10-Get-CitrixServers.ps1:351 char:1
++ }
++ ~
+Unexpected token '}' in expression or statement.
+WARNING: Stack trace: at <ScriptBlock>, C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\0-Collect-CitrixAuditData.ps1: line 391
+at <ScriptBlock>, <No file>: line 1
+[DEBUG] ERROR in server collection: Server information collection failed: At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\10-Get-CitrixServers.ps1:244 char:18
++                 }
++                  ~
+The Try statement is missing its Catch or Finally block.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\10-Get-CitrixServers.ps1:249 char:6
++     }
++      ~
+The Try statement is missing its Catch or Finally block.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\10-Get-CitrixServers.ps1:351 char:1
++ }
++ ~
+Unexpected token '}' in expression or statement.
+[DEBUG] Exception: At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\10-Get-CitrixServers.ps1:244 char:18
++                 }
++                  ~
+The Try statement is missing its Catch or Finally block.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\10-Get-CitrixServers.ps1:249 char:6
++     }
++      ~
+The Try statement is missing its Catch or Finally block.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\10-Get-CitrixServers.ps1:351 char:1
++ }
++ ~
+Unexpected token '}' in expression or statement.
+[DEBUG] Stack trace: at <ScriptBlock>, C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\0-Collect-CitrixAuditData.ps1: line 391
+at <ScriptBlock>, <No file>: line 1
+[11/11] Using DDC name as Director server: shcaxddcp01v.ccr.cchcs.org
+[11/11] Collecting Director OData from shcaxddcp01v.ccr.cchcs.org...
+WARNING: Director OData collection failed, continuing: At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\12-Get-CitrixDirectorOData.ps1:341 char:14
++             }
++              ~
+The Try statement is missing its Catch or Finally block.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\12-Get-CitrixDirectorOData.ps1:361 char:5
++     }
++     ~
+Unexpected token '}' in expression or statement.
+
+At C:\CTXAdmin\8.0-Citrix-Horizon\Scripts\12-Get-CitrixDirectorOData.ps1:492 char:1
++ }
++ ~
+Unexpected token '}' in expression or statement.
+
+Calculating summary metrics...
+
+========================================
+Data Collection Complete!
+========================================
+
+Summary:
+  Site Name: SHCXA01
+  Published Applications: 344
+  Published Desktops: 38
+  Catalogs: 33
+  Delivery Groups: 39
+  Total Servers: 0
+  Controllers: 3
+  License Type: User/Device - Check License Server
+
+Complete audit data saved to: C:\CTXAdmin\8.0-Citrix-Horizon\Data\citrix-audit-complete.json
+Individual data files saved to: C:\CTXAdmin\8.0-Citrix-Horizon\Data
+
+You can now open the web dashboard to view the data!
+Stopping transcript...
+**********************
+Windows PowerShell transcript end
+End time: 20260106143505
+**********************

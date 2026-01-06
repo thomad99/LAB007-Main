@@ -1,0 +1,14 @@
+﻿{
+    "Farm":  null,
+    "ServerName":  "SHCAXDDCP01V",
+    "Errors":  [
+                   "Get-STFStoreService is not available. StoreFront PowerShell snap-in may be missing."
+               ],
+    "Stores":  [
+
+               ],
+    "CollectedAt":  "2026-01-05 11:48:42",
+    "PSComputerName":  "localhost",
+    "RunspaceId":  "b0796186-9f27-4b2e-8635-209095e202f1",
+    "PSShowComputerName":  true
+}
