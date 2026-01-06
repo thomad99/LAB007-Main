@@ -23,6 +23,8 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, 'Web')));
 // Also serve images from Web/images for compatibility
 app.use('/images', express.static(path.join(__dirname, 'Web', 'images')));
+// Serve data directory (read-only) for JSON outputs like goldensun-master-images.json
+app.use('/data', express.static(path.join(__dirname, 'Data')));
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads');
@@ -103,6 +105,16 @@ app.get('/', (req, res) => {
 // Dashboard page
 app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'Web', 'index.html'));
+});
+
+// GoldenSun page
+app.get('/goldensun', (req, res) => {
+    res.sendFile(path.join(__dirname, 'Web', 'goldensun.html'));
+});
+
+// Compatibility route if proxy keeps /citrix prefix
+app.get('/citrix/goldensun', (req, res) => {
+    res.sendFile(path.join(__dirname, 'Web', 'goldensun.html'));
 });
 
 // To-do page
@@ -272,7 +284,7 @@ function downloadLocalFiles(req, res) {
 function uploadFileToGitHub(filePath, fileName, fileContent) {
     return new Promise((resolve) => {
         const githubToken = process.env.GITHUB_TOKEN;
-        const githubRepo = process.env.GITHUB_REPO || 'thomad99/CitrixtoHZ';
+        const githubRepo = process.env.GITHUB_REPO || 'thomad99/LAB007-Main';
         const githubBranch = process.env.GITHUB_BRANCH || 'master';
         
         if (!githubToken) {
