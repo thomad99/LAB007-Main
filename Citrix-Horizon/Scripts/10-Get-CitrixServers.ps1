@@ -3,7 +3,7 @@
 # Uses VMware SDK as fallback if Citrix data unavailable
 # Author : LAB007.AI
 # Version: 1.3
-# Last Modified: 260105:2141
+# Last Modified: 260106:1024
 
 param(
     [string]$OutputPath = ".\Data\citrix-servers.json",
@@ -105,151 +105,146 @@ try {
         }
         
         if (-not $uniqueServers.ContainsKey($hostName)) {
+            # Get server specs via WMI/CIM (if accessible)
+            $serverInfo = @{
+                Name = $machine.DNSName
+                Uid = $machine.Uid
+                PowerState = $machine.PowerState
+                RegistrationState = $machine.RegistrationState
+                InMaintenanceMode = $machine.InMaintenanceMode
+                DesktopGroup = $machine.DesktopGroupName
+                Catalog = $machine.CatalogName
+            }
+            
+            # Try to get server specs via CIM (requires proper permissions/access)
+            $specsCollected = $false
             try {
-                # Get server specs via WMI/CIM (if accessible)
-                $serverInfo = @{
-                    Name = $machine.DNSName
-                    Uid = $machine.Uid
-                    PowerState = $machine.PowerState
-                    RegistrationState = $machine.RegistrationState
-                    InMaintenanceMode = $machine.InMaintenanceMode
-                    DesktopGroup = $machine.DesktopGroupName
-                    Catalog = $machine.CatalogName
-                }
-                
-                # Try to get server specs via CIM (requires proper permissions/access)
-                $specsCollected = $false
-                try {
-                    $cimSession = New-CimSession -ComputerName $hostName -ErrorAction SilentlyContinue
-                    if ($cimSession) {
-                        $os = Get-CimInstance -CimSession $cimSession -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
-                        $processor = Get-CimInstance -CimSession $cimSession -ClassName Win32_Processor -ErrorAction SilentlyContinue
-                        $disk = Get-CimInstance -CimSession $cimSession -ClassName Win32_LogicalDisk -Filter "DeviceID='C:'" -ErrorAction SilentlyContinue
-                        $totalMemory = Get-CimInstance -CimSession $cimSession -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
-                        
-                        if ($os) {
-                            $serverInfo.TotalRAM_GB = [math]::Round(($totalMemory.TotalPhysicalMemory / 1GB), 2)
-                            $serverInfo.AvailableRAM_GB = [math]::Round(($os.FreePhysicalMemory * 1KB / 1GB), 2)
-                            $serverInfo.OSVersion = $os.Caption
-                            $specsCollected = $true
-                        }
-                        
-                        if ($processor) {
-                            $serverInfo.CPUCount = ($processor | Measure-Object).Count
-                            $serverInfo.CPUCores = ($processor | Measure-Object -Property NumberOfCores -Sum).Sum
-                            $serverInfo.CPULogicalProcessors = ($processor | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum
-                            $serverInfo.CPUName = ($processor | Select-Object -First 1).Name
-                            $specsCollected = $true
-                        }
-                        
-                        if ($disk) {
-                            $serverInfo.DiskTotalSize_GB = [math]::Round(($disk.Size / 1GB), 2)
-                            $serverInfo.DiskFreeSpace_GB = [math]::Round(($disk.FreeSpace / 1GB), 2)
-                            $serverInfo.DiskUsedSpace_GB = [math]::Round((($disk.Size - $disk.FreeSpace) / 1GB), 2)
-                            $specsCollected = $true
-                        }
-                        
-                        if ($specsCollected) {
-                            $serverInfo.SpecsSource = "CIM"
-                            Write-Host "  ✓ Collected specs via CIM for $hostName" -ForegroundColor Green
-                        }
-                        
-                        Remove-CimSession -CimSession $cimSession
+                $cimSession = New-CimSession -ComputerName $hostName -ErrorAction SilentlyContinue
+                if ($cimSession) {
+                    $os = Get-CimInstance -CimSession $cimSession -ClassName Win32_OperatingSystem -ErrorAction SilentlyContinue
+                    $processor = Get-CimInstance -CimSession $cimSession -ClassName Win32_Processor -ErrorAction SilentlyContinue
+                    $disk = Get-CimInstance -CimSession $cimSession -ClassName Win32_LogicalDisk -Filter "DeviceID='C:'" -ErrorAction SilentlyContinue
+                    $totalMemory = Get-CimInstance -CimSession $cimSession -ClassName Win32_ComputerSystem -ErrorAction SilentlyContinue
+                    
+                    if ($os) {
+                        $serverInfo.TotalRAM_GB = [math]::Round(($totalMemory.TotalPhysicalMemory / 1GB), 2)
+                        $serverInfo.AvailableRAM_GB = [math]::Round(($os.FreePhysicalMemory * 1KB / 1GB), 2)
+                        $serverInfo.OSVersion = $os.Caption
+                        $specsCollected = $true
                     }
-                    else {
-                        Write-Host "  - CIM session failed for $hostName, will try VMware if configured" -ForegroundColor Gray
+                    
+                    if ($processor) {
+                        $serverInfo.CPUCount = ($processor | Measure-Object).Count
+                        $serverInfo.CPUCores = ($processor | Measure-Object -Property NumberOfCores -Sum).Sum
+                        $serverInfo.CPULogicalProcessors = ($processor | Measure-Object -Property NumberOfLogicalProcessors -Sum).Sum
+                        $serverInfo.CPUName = ($processor | Select-Object -First 1).Name
+                        $specsCollected = $true
                     }
+                    
+                    if ($disk) {
+                        $serverInfo.DiskTotalSize_GB = [math]::Round(($disk.Size / 1GB), 2)
+                        $serverInfo.DiskFreeSpace_GB = [math]::Round(($disk.FreeSpace / 1GB), 2)
+                        $serverInfo.DiskUsedSpace_GB = [math]::Round((($disk.Size - $disk.FreeSpace) / 1GB), 2)
+                        $specsCollected = $true
+                    }
+                    
+                    if ($specsCollected) {
+                        $serverInfo.SpecsSource = "CIM"
+                        Write-Host "  ✓ Collected specs via CIM for $hostName" -ForegroundColor Green
+                    }
+                    
+                    Remove-CimSession -CimSession $cimSession
                 }
-                catch {
-                    Write-Warning "Could not retrieve detailed specs via CIM for $hostName : $_"
+                else {
+                    Write-Host "  - CIM session failed for $hostName, will try VMware if configured" -ForegroundColor Gray
                 }
-                
-                # If CIM failed and VMware SDK is available, try VMware
-                if (-not $specsCollected -and $VMwareServer) {
+            }
+            catch {
+                Write-Warning "Could not retrieve detailed specs via CIM for $hostName : $_"
+            }
+            
+            # If CIM failed and VMware SDK is available, try VMware
+            if (-not $specsCollected -and $VMwareServer) {
+                # Check if VMware PowerCLI is available
+                $vmwareModule = Get-Module -ListAvailable -Name VMware.PowerCLI
+                if (-not $vmwareModule) {
+                    Write-Warning "  ✗ VMware PowerCLI module not available for $hostName. Place VMware PowerCLI files in .\Dependencies\VMware\ and run Install-RequiredModules.ps1"
+                }
+                else {
                     try {
-                        # Check if VMware PowerCLI is available
-                        $vmwareModule = Get-Module -ListAvailable -Name VMware.PowerCLI
-                        if ($vmwareModule) {
-                            Write-Host "Attempting to get server specs from VMware for $hostName..." -ForegroundColor Yellow
-                            
-                            # Connect to VMware if not already connected
-                            if (-not $global:VMwareConnection) {
-                                if ($VMwareUsername -and $VMwarePassword) {
-                                    $securePassword = ConvertTo-SecureString $VMwarePassword -AsPlainText -Force
-                                    $credential = New-Object System.Management.Automation.PSCredential($VMwareUsername, $securePassword)
-                                    Connect-VIServer -Server $VMwareServer -Credential $credential -ErrorAction SilentlyContinue | Out-Null
-                                }
-                                else {
-                                    Connect-VIServer -Server $VMwareServer -ErrorAction SilentlyContinue | Out-Null
-                                }
-                                $global:VMwareConnection = $true
-                            }
-                            
-                            # Find VM by hostname (try different name formats)
-                            $vm = $null
-                            $searchNames = @($hostName, $hostName.Split('.')[0], "*$($hostName.Split('.')[0])*")
-                            
-                            foreach ($searchName in $searchNames) {
-                                $vm = Get-VM -Name $searchName -ErrorAction SilentlyContinue
-                                if ($vm) { break }
-                            }
-                            
-                            if ($vm) {
-                                # Get VM specs from VMware
-                                $vmConfig = $vm | Get-View
-                                
-                                # RAM (in MB, convert to GB)
-                                if ($vmConfig.Config.Hardware.MemoryMB) {
-                                    $serverInfo.TotalRAM_GB = [math]::Round(($vmConfig.Config.Hardware.MemoryMB / 1024), 2)
-                                    $serverInfo.AvailableRAM_GB = $serverInfo.TotalRAM_GB  # VMware doesn't provide available RAM
-                                }
-                                
-                                # CPU
-                                if ($vmConfig.Config.Hardware.NumCPU) {
-                                    $serverInfo.CPUCount = $vmConfig.Config.Hardware.NumCPU
-                                    $serverInfo.CPUCores = $vmConfig.Config.Hardware.NumCoresPerSocket * $vmConfig.Config.Hardware.NumCPU
-                                    $serverInfo.CPULogicalProcessors = $serverInfo.CPUCores
-                                }
-                                
-                                # Disk (sum all virtual disks)
-                                $totalDiskGB = 0
-                                foreach ($disk in $vmConfig.Config.Hardware.Device) {
-                                    if ($disk -is [VMware.Vim.VirtualDisk]) {
-                                        $totalDiskGB += [math]::Round(($disk.CapacityInKB / 1MB), 2)
-                                    }
-                                }
-                                if ($totalDiskGB -gt 0) {
-                                    $serverInfo.DiskTotalSize_GB = [math]::Round(($totalDiskGB / 1024), 2)
-                                    $serverInfo.DiskFreeSpace_GB = "N/A"  # VMware doesn't provide free space
-                                    $serverInfo.DiskUsedSpace_GB = "N/A"
-                                }
-                                
-                                # OS Version (from guest info if available)
-                                if ($vm.Guest.OSFullName) {
-                                    $serverInfo.OSVersion = $vm.Guest.OSFullName
-                                }
-                                
-                                $serverInfo.SpecsSource = "VMware"
-                                Write-Host "  ✓ Successfully retrieved specs from VMware for $hostName (RAM: $($serverInfo.TotalRAM_GB)GB, CPU: $($serverInfo.CPUCount) vCPU, Disk: $($serverInfo.DiskTotalSize_GB)GB)" -ForegroundColor Green
+                        Write-Host "Attempting to get server specs from VMware for $hostName..." -ForegroundColor Yellow
+                        
+                        # Connect to VMware if not already connected
+                        if (-not $global:VMwareConnection) {
+                            if ($VMwareUsername -and $VMwarePassword) {
+                                $securePassword = ConvertTo-SecureString $VMwarePassword -AsPlainText -Force
+                                $credential = New-Object System.Management.Automation.PSCredential($VMwareUsername, $securePassword)
+                                Connect-VIServer -Server $VMwareServer -Credential $credential -ErrorAction SilentlyContinue | Out-Null
                             }
                             else {
-                                Write-Warning "  ✗ VM not found in VMware for server $hostName (searched: $($searchNames -join ', '))"
+                                Connect-VIServer -Server $VMwareServer -ErrorAction SilentlyContinue | Out-Null
                             }
+                            $global:VMwareConnection = $true
+                        }
+                        
+                        # Find VM by hostname (try different name formats)
+                        $vm = $null
+                        $searchNames = @($hostName, $hostName.Split('.')[0], "*$($hostName.Split('.')[0])*")
+                        
+                        foreach ($searchName in $searchNames) {
+                            $vm = Get-VM -Name $searchName -ErrorAction SilentlyContinue
+                            if ($vm) { break }
+                        }
+                        
+                        if ($vm) {
+                            # Get VM specs from VMware
+                            $vmConfig = $vm | Get-View
+                            
+                            # RAM (in MB, convert to GB)
+                            if ($vmConfig.Config.Hardware.MemoryMB) {
+                                $serverInfo.TotalRAM_GB = [math]::Round(($vmConfig.Config.Hardware.MemoryMB / 1024), 2)
+                                $serverInfo.AvailableRAM_GB = $serverInfo.TotalRAM_GB  # VMware doesn't provide available RAM
+                            }
+                            
+                            # CPU
+                            if ($vmConfig.Config.Hardware.NumCPU) {
+                                $serverInfo.CPUCount = $vmConfig.Config.Hardware.NumCPU
+                                $serverInfo.CPUCores = $vmConfig.Config.Hardware.NumCoresPerSocket * $vmConfig.Config.Hardware.NumCPU
+                                $serverInfo.CPULogicalProcessors = $serverInfo.CPUCores
+                            }
+                            
+                            # Disk (sum all virtual disks)
+                            $totalDiskGB = 0
+                            foreach ($disk in $vmConfig.Config.Hardware.Device) {
+                                if ($disk.GetType().Name -eq 'VirtualDisk') {
+                                    $totalDiskGB += [math]::Round(($disk.CapacityInKB / 1MB), 2)
+                                }
+                            }
+                            if ($totalDiskGB -gt 0) {
+                                $serverInfo.DiskTotalSize_GB = [math]::Round(($totalDiskGB / 1024), 2)
+                                $serverInfo.DiskFreeSpace_GB = "N/A"  # VMware doesn't provide free space
+                                $serverInfo.DiskUsedSpace_GB = "N/A"
+                            }
+                            
+                            # OS Version (from guest info if available)
+                            if ($vm.Guest.OSFullName) {
+                                $serverInfo.OSVersion = $vm.Guest.OSFullName
+                            }
+                            
+                            $serverInfo.SpecsSource = "VMware"
+                            Write-Host "  ✓ Successfully retrieved specs from VMware for $hostName (RAM: $($serverInfo.TotalRAM_GB)GB, CPU: $($serverInfo.CPUCount) vCPU, Disk: $($serverInfo.DiskTotalSize_GB)GB)" -ForegroundColor Green
                         }
                         else {
-                            Write-Warning "  ✗ VMware PowerCLI module not available for $hostName. Place VMware PowerCLI files in .\Dependencies\VMware\ and run Install-RequiredModules.ps1"
+                            Write-Warning "  ✗ VM not found in VMware for server $hostName (searched: $($searchNames -join ', '))"
                         }
                     }
                     catch {
                         Write-Warning "  ✗ Could not retrieve specs from VMware for $hostName : $_"
                     }
                 }
-                
-                $uniqueServers[$hostName] = $serverInfo
             }
-            catch {
-                Write-Warning "Error processing server $hostName : $_"
-            }
+            
+            $uniqueServers[$hostName] = $serverInfo
         }
     }
     
