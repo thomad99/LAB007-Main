@@ -1,50 +1,254 @@
 // GoldenSun Project - Master Image Management
 // Author: LAB007.AI
-// Version: 1.0
+// Version: 2.0
 
-let masterImagesData = null;
+let loadedMasterImages = null;
 let selectedImages = new Set();
 
-// Load master images data on page load
+// Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
-    loadMasterImages({ initial: true });
+    setupFileInputHandlers();
+    showGoldenSunTask('loadMasterImages');
 });
 
-// Load master images from JSON file
-async function loadMasterImages(options = {}) {
-    const { initial = false } = options;
-    showLoading(initial ? 'Loading master images...' : 'Refreshing master images...');
-    hideError();
-    
-    try {
-        // Try primary path
-        let response = await fetch('/data/goldensun-master-images.json', { cache: 'no-cache' });
-        // Fallback for proxied /citrix
-        if (!response.ok) {
-            response = await fetch('/citrix/data/goldensun-master-images.json', { cache: 'no-cache' });
-        }
-        if (!response.ok) {
-            throw new Error(`Failed to load data: ${response.statusText}`);
-        }
-        
-        masterImagesData = await response.json();
-        
-        if (masterImagesData.Error) {
-            showError(`Error in data: ${masterImagesData.Error}`);
-            hideLoading();
-            return;
-        }
-        
-        displayMasterImages();
-        hideLoading();
-        document.getElementById('content').style.display = 'block';
-        document.getElementById('createCloneScriptBtn').style.display = 'inline-block';
-        
-    } catch (error) {
-        console.error('Error loading master images:', error);
-        showError(`Failed to load master images data. Please ensure the data file exists and is accessible. Error: ${error.message}`);
-        hideLoading();
+// Tab switching functionality
+function showGoldenSunTask(taskName) {
+    // Hide all task panels
+    const panels = document.querySelectorAll('.goldensun-task-panel');
+    panels.forEach(panel => panel.classList.remove('active'));
+
+    // Remove active class from all tabs
+    const tabs = document.querySelectorAll('#goldensunTasksTabs .task-tab');
+    tabs.forEach(tab => tab.classList.remove('active'));
+
+    // Show selected task panel
+    const selectedPanel = document.getElementById(taskName + 'Task');
+    if (selectedPanel) {
+        selectedPanel.classList.add('active');
     }
+
+    // Activate selected tab
+    event.target.classList.add('active');
+
+    // Task-specific initialization
+    if (taskName === 'cloneVirtualMachines') {
+        updateCloneMasterImagesList();
+    }
+}
+
+// File input handling
+function setupFileInputHandlers() {
+    const loadBtn = document.getElementById('loadMasterImagesBtn');
+    const fileInput = document.getElementById('masterImagesFileInput');
+
+    if (loadBtn && fileInput) {
+        loadBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener('change', handleMasterImagesFile);
+    }
+}
+
+// Handle master images file selection
+function handleMasterImagesFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            loadedMasterImages = JSON.parse(e.target.result);
+            document.getElementById('loadedFileName').textContent = `Loaded: ${file.name}`;
+            displayLoadedMasterImages();
+            document.getElementById('loadedMasterImagesSection').style.display = 'block';
+        } catch (error) {
+            showError(`Error parsing JSON file: ${error.message}`);
+        }
+    };
+    reader.readAsText(file);
+}
+
+// Load master images from file button
+function loadMasterImagesFile() {
+    const fileInput = document.getElementById('masterImagesFileInput');
+    fileInput.click();
+}
+
+// Clone image selection functions
+function toggleImageSelection(imageName) {
+    if (selectedImages.has(imageName)) {
+        selectedImages.delete(imageName);
+    } else {
+        selectedImages.add(imageName);
+    }
+    updateCloneSelectedCount();
+}
+
+function selectAllCloneImages() {
+    if (!loadedMasterImages || !loadedMasterImages.MasterImages) return;
+
+    loadedMasterImages.MasterImages.forEach(image => {
+        selectedImages.add(image.Name);
+    });
+    updateCloneMasterImagesList();
+}
+
+function deselectAllCloneImages() {
+    selectedImages.clear();
+    updateCloneMasterImagesList();
+}
+
+function updateCloneSelectedCount() {
+    // Update any selected count display if needed
+}
+
+// Generate clone script
+function generateCloneScript() {
+    const namingConvention = document.getElementById('cloneNamingConvention').value || 'HZ-M-xxxxxxx';
+    const selectedImagesArray = Array.from(selectedImages);
+
+    if (selectedImagesArray.length === 0) {
+        alert('Please select at least one master image to clone.');
+        return;
+    }
+
+    // Get selected image details
+    const selectedImageDetails = loadedMasterImages.MasterImages.filter(img =>
+        selectedImages.has(img.Name)
+    );
+
+    // Generate PowerShell script
+    const script = generateCloneScriptContent(selectedImageDetails, namingConvention);
+
+    // Display script
+    document.getElementById('cloneScriptContent').value = script;
+    document.getElementById('cloneScriptOutput').style.display = 'block';
+}
+
+// Generate clone script content
+function generateCloneScriptContent(selectedImages, namingConvention) {
+    let script = `# Clone-MasterImages.ps1
+# Clones selected VMware master images with custom naming
+# Author : LAB007.AI
+# Version: 1.0
+# Last Modified: 260106:2200
+
+param(
+    [switch]$WhatIf
+)
+
+# Selected images to clone
+$ImagesToClone = @(
+`;
+
+    selectedImages.forEach((image, index) => {
+        script += `    @{
+        OriginalVMName = "${image.Name}"
+        ClusterName = "${image.Cluster || 'Unknown'}"
+        HostName = "${image.Host || 'Unknown'}"
+        DatastoreName = "${image.Datastore || 'Unknown'}"
+    }${index < selectedImages.length - 1 ? ',' : ''}
+
+`;
+    });
+
+    script += `)
+
+# Configuration
+$NamingConvention = "${namingConvention}"
+
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Master Image Clone Script" -ForegroundColor Cyan
+Write-Host "========================================" -ForegroundColor Cyan
+Write-Host "Number of machines to clone: $($ImagesToClone.Count)" -ForegroundColor Yellow
+Write-Host ""
+
+# Clone each selected image
+$cloneCount = 0
+foreach ($image in $ImagesToClone) {
+    $cloneCount++
+    $originalVMName = $image.OriginalVMName
+    $clusterName = $image.ClusterName
+
+    # Generate new VM name
+    $newVMName = $NamingConvention -replace 'xxxxxxx', $originalVMName
+
+    Write-Host "[$cloneCount/$($ImagesToClone.Count)] Cloning: $originalVMName -> $newVMName" -ForegroundColor Yellow
+
+    if ($WhatIf) {
+        Write-Host "  WHATIF: Would clone $originalVMName to $newVMName on cluster $clusterName" -ForegroundColor Cyan
+    } else {
+        try {
+            # Find the original VM
+            $sourceVM = Get-VM -Name $originalVMName -ErrorAction Stop
+
+            # Get cluster and datastore info
+            $cluster = Get-Cluster -Name $clusterName -ErrorAction SilentlyContinue
+            $datastore = Get-Datastore -VM $sourceVM -ErrorAction SilentlyContinue | Select-Object -First 1
+
+            # Clone the VM
+            $cloneParams = @{
+                VM = $sourceVM
+                Name = $newVMName
+                Datastore = $datastore
+            }
+
+            if ($cluster) {
+                $cloneParams.Cluster = $cluster
+            }
+
+            $newVM = New-VM @cloneParams -ErrorAction Stop
+
+            Write-Host "  SUCCESS: Cloned to $newVMName" -ForegroundColor Green
+            Write-Host "    Power State: $($newVM.PowerState)" -ForegroundColor Gray
+            Write-Host "    CPUs: $($newVM.NumCpu)" -ForegroundColor Gray
+            Write-Host "    Memory: $($newVM.MemoryGB) GB" -ForegroundColor Gray
+        }
+        catch {
+            Write-Host "  ERROR: Failed to clone $originalVMName : $_" -ForegroundColor Red
+        }
+    }
+
+    Write-Host ""
+}
+
+if ($WhatIf) {
+    Write-Host "WHATIF MODE: No actual cloning performed" -ForegroundColor Cyan
+} else {
+    Write-Host "Cloning operation completed!" -ForegroundColor Green
+}
+`;
+
+    return script;
+}
+
+// Copy clone script to clipboard
+function copyCloneScript() {
+    const scriptContent = document.getElementById('cloneScriptContent');
+    scriptContent.select();
+    document.execCommand('copy');
+
+    // Show brief feedback
+    const originalText = scriptContent.value;
+    scriptContent.value = 'Script copied to clipboard!';
+    setTimeout(() => {
+        scriptContent.value = originalText;
+    }, 2000);
+}
+
+// Download clone script
+function downloadCloneScript() {
+    const scriptContent = document.getElementById('cloneScriptContent').value;
+    const blob = new Blob([scriptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Clone-MasterImages.ps1';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
 }
 
 // Trigger server-side collection of master images

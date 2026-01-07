@@ -1188,3 +1188,47 @@ button:disabled {
     }
 }
 
+/* GoldenSun Task Panels */
+.goldensun-task-panel {
+    display: none;
+}
+
+.goldensun-task-panel.active {
+    display: block;
+}
+
+.goldensun-task-panel h3 {
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.goldensun-task-panel p {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+/* Button styling */
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+    border-radius: 3px;
+    margin-right: 5px;
+}
+
+/* File input styling */
+#masterImagesFileInput {
+    display: none;
+}
+
+/* Clone checkboxes styling */
+#cloneMasterImagesList input[type="checkbox"] {
+    margin-right: 8px;
+}
+
+#cloneMasterImagesList label {
+    cursor: pointer;
+    display: block;
+    padding: 5px 0;
+}
+

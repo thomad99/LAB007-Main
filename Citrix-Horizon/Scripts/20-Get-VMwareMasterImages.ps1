@@ -3,12 +3,20 @@
 # Connects to vCenter and extracts master image information
 # Author : LAB007.AI
 # Version: 1.1
-# Last Modified: 260106:2150
+# Last Modified: 260106:2200
 
 param(
-    [string]$OutputPath = '.\Data\goldensun-master-images.json',
-    [string]$vCenterServer = 'shcvcsacx01.ccr.cchcs.org'
+    [string]$OutputPath,
+    [string]$vCenterServer = 'shcvcsacx01v.ccr.cchcs.org'
 )
+
+# Set default output path to parent Data directory (like other scripts)
+if (-not $OutputPath) {
+    $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+    $dataPath = Join-Path $scriptPath "..\Data"
+    $dataPath = [System.IO.Path]::GetFullPath($dataPath)
+    $OutputPath = Join-Path $dataPath "goldensun-master-images.json"
+}
 
 # Align output handling with other scripts (e.g., Get-CitrixCatalogs)
 $outputDir = Split-Path -Path $OutputPath -Parent
@@ -122,7 +130,14 @@ try {
                 $snapshots = Get-Snapshot -VM $vm -ErrorAction SilentlyContinue
                 $hasSnapshot = ($snapshots -and $snapshots.Count -gt 0)
                 $latestSnapshot = if ($hasSnapshot) {
-                    $snapshots | Sort-Object -Property Created -Descending | Select-Object -First 1
+                    $latest = $snapshots | Sort-Object -Property Created -Descending | Select-Object -First 1
+                    # Convert to simple hashtable for JSON serialization
+                    @{
+                        Name = $latest.Name
+                        Description = $latest.Description
+                        Created = $latest.Created.ToString('yyyy-MM-dd HH:mm:ss')
+                        SizeGB = [math]::Round($latest.SizeGB, 2)
+                    }
                 } else {
                     $null
                 }
@@ -153,27 +168,7 @@ try {
                 Write-Warning "Failed to process VM $($vm.Name): $_"
                 Write-Host "[DEBUG] Error processing VM $($vm.Name): $_" | Out-File -FilePath $debugFile -Append
 
-                # Create error entry for failed VM
-                $errorImageInfo = @{
-                    Name = $vm.Name
-                    ShortName = $vm.Name
-                    Version = 'ERROR'
-                    Cluster = 'Error'
-                    Host = 'Error'
-                    Datastore = 'Error'
-                    PowerState = 'Error'
-                    NumCPU = 0
-                    MemoryGB = 0
-                    ProvisionedSpaceGB = 0
-                    UsedSpaceGB = 0
-                    GuestOS = 'Error'
-                    HasSnapshot = $false
-                    SnapshotCount = 0
-                    LatestSnapshot = $null
-                    Notes = "Error: $_"
-                }
-
-                $masterImages += $errorImageInfo
+                # Log error but don't add to results to avoid JSON issues
                 Write-Host "  ERROR: $($vm.Name) - Failed to retrieve details" -ForegroundColor Red
             }
         }
@@ -188,8 +183,16 @@ try {
     }
 
     # Convert to JSON and save
-    $jsonContent = $result | ConvertTo-Json -Depth 10
-    $jsonContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
+    try {
+        $jsonContent = $result | ConvertTo-Json -Depth 10 -ErrorAction Stop
+        $jsonContent | Out-File -FilePath $OutputPath -Encoding UTF8 -Force -ErrorAction Stop
+        Write-Host "[DEBUG] JSON saved successfully to $OutputPath" | Out-File -FilePath $debugFile -Append
+    }
+    catch {
+        Write-Error "Failed to save JSON results: $_"
+        Write-Host "[DEBUG] JSON save error: $_" | Out-File -FilePath $debugFile -Append
+        throw
+    }
 
     Write-Host ''
     Write-Host 'Master images information collected successfully!' -ForegroundColor Green
@@ -200,8 +203,13 @@ try {
     Write-Host "[DEBUG] Total images found: $($masterImages.Count)" | Out-File -FilePath $debugFile -Append
 
     # Disconnect from vCenter
-    Disconnect-VIServer -Server $vCenterServer -Confirm:$false -ErrorAction SilentlyContinue
-    Write-Host 'Disconnected from vCenter' -ForegroundColor Gray
+    try {
+        Disconnect-VIServer -Server $vCenterServer -Confirm:$false -ErrorAction Stop
+        Write-Host 'Disconnected from vCenter' -ForegroundColor Gray
+    }
+    catch {
+        Write-Host 'Warning: Could not disconnect from vCenter cleanly' -ForegroundColor Yellow
+    }
 
     return $result
 }
