@@ -105,13 +105,13 @@ function Invoke-ODataRequest {
         }
         
         $result.Success = $true
-        Write-Host "  ✓ Collected $($result.RecordCount) records" -ForegroundColor Green
+        Write-Host "  SUCCESS: Collected $($result.RecordCount) records" -ForegroundColor Green
         Write-Host "[DEBUG] Successfully collected $($result.RecordCount) records from $EntitySet" | Out-File -FilePath $debugFile -Append
     }
     catch {
         $errorMsg = $_.Exception.Message
         $result.Error = $errorMsg
-        Write-Host "  ✗ Failed: $errorMsg" -ForegroundColor Red
+        Write-Host "  ERROR: Failed: $errorMsg" -ForegroundColor Red
         Write-Host "[DEBUG] Error collecting $EntitySet : $errorMsg" | Out-File -FilePath $debugFile -Append
     }
     
@@ -334,8 +334,10 @@ try {
                 $version = "Unknown"
                 if ($odataPath -match '/v([0-9]+)/') {
                     $version = "v$($matches[1])"
+                } else {
+                    $version = "Unknown"
                 }
-                Write-Host "  ✓ Found working endpoint: $odataPath (OData $version)" -ForegroundColor Green
+                Write-Host "  OK: Found working endpoint: $odataPath (OData $version)" -ForegroundColor Green
                 Write-Host "[DEBUG] Working OData path: $odataPath (OData $version)" | Out-File -FilePath $debugFile -Append
                 $endpointFound = $true
             }
@@ -364,7 +366,7 @@ try {
     if (-not $baseUrl) {
         $workingPath = "/citrix/monitor/odata/v4/Data"
         $baseUrl = "${protocol}://${DirectorServer}:${Port}${workingPath}"
-        Write-Host "  ⚠ Could not verify endpoint, defaulting to: $workingPath" -ForegroundColor Yellow
+        Write-Host "  WARNING: Could not verify endpoint, defaulting to: $workingPath" -ForegroundColor Yellow
         Write-Host "[DEBUG] Using default OData path: $workingPath" | Out-File -FilePath $debugFile -Append
     }
     

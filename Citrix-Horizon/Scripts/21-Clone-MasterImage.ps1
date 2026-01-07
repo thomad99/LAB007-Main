@@ -133,7 +133,7 @@ try {
     $newVM = New-VM @cloneParams -ErrorAction Stop
     
     Write-Host ""
-    Write-Host "✓ Clone operation completed successfully!" -ForegroundColor Green
+    Write-Host "SUCCESS: Clone operation completed successfully!" -ForegroundColor Green
     Write-Host "  New VM: $($newVM.Name)" -ForegroundColor White
     Write-Host "  Power State: $($newVM.PowerState)" -ForegroundColor White
     Write-Host "  CPUs: $($newVM.NumCpu)" -ForegroundColor White
