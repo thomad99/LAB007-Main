@@ -1,9 +1,9 @@
 # Sync-ToGitHub.ps1
 # Automates syncing local code to GitHub repository with enhanced security
-# Uses force push to ignore remote-only files
+# Uses force push to ignore remote-only files (can be disabled with -NoForcePush)
 # Author : LAB007.AI
-# Version: 1.1
-# Last Modified: 260106:2125
+# Version: 1.2
+# Last Modified: 260106:2130
 
 param(
     [string]$CommitMessage = "",
@@ -11,7 +11,8 @@ param(
     [switch]$DryRun = $false,
     [switch]$UseSSH = $false,
     [string]$GitHubPAT = "",
-    [string]$Branch = ""
+    [string]$Branch = "",
+    [switch]$NoForcePush = $false
 )
 
 $ErrorActionPreference = "Continue"
@@ -152,9 +153,9 @@ if (-not $remoteUrl) {
     Write-Host "GitHub remote not configured. Adding remote..." -ForegroundColor Yellow
     
     if ($UseSSH) {
-        $repoUrl = "git@github.com:thomad99/CitrixtoHZ.git"
+        $repoUrl = "git@github.com:thomad99/LAB007-Main.git"
     } else {
-        $repoUrl = "https://github.com/thomad99/CitrixtoHZ.git"
+        $repoUrl = "https://github.com/thomad99/LAB007-Main.git"
     }
     
     git remote add origin $repoUrl
@@ -311,20 +312,56 @@ if ($Branch) {
     }
 }
 
-# Sync strategy: Force push local state, ignore remote files that don't exist locally
-# This resolves issues where debug files exist on remote but not locally
-Write-Host "Pushing to GitHub (force mode - ignores remote-only files)..." -ForegroundColor Yellow
-Write-Host "Branch: $currentBranch" -ForegroundColor Gray
-Write-Host "Strategy: Force push local changes (remote-only files ignored)" -ForegroundColor Gray
+# Push strategy based on parameters
+if ($NoForcePush) {
+    Write-Host "Pushing to GitHub (normal mode - may fail if remote has extra files)..." -ForegroundColor Yellow
+    Write-Host "Branch: $currentBranch" -ForegroundColor Gray
+    Write-Host "Strategy: Normal push (use -NoForcePush:$false for force mode)" -ForegroundColor Gray
 
-# Force push to overwrite remote with local state
-git push --force origin $currentBranch
+    # Normal push - may fail if remote has diverged
+    git push origin $currentBranch
+}
+else {
+    # Sync strategy: Force push local state, ignore remote files that don't exist locally
+    # This resolves issues where debug files exist on remote but not locally
+    Write-Host "Pushing to GitHub (force mode - ignores remote-only files)..." -ForegroundColor Yellow
+    Write-Host "Branch: $currentBranch" -ForegroundColor Gray
+    Write-Host "Strategy: Force push local changes (remote-only files ignored)" -ForegroundColor Gray
+
+    # First try force push
+    Write-Host "Attempting force push..." -ForegroundColor Gray
+    git push --force origin $currentBranch
+
+    # If force push fails, try alternative approaches
+    if ($LASTEXITCODE -ne 0) {
+        Write-Host "Force push failed. Trying alternative sync methods..." -ForegroundColor Yellow
+
+        # Try force push with lease (safer)
+        Write-Host "Trying force push with lease..." -ForegroundColor Gray
+        git push --force-with-lease origin $currentBranch
+
+        # If that also fails, suggest manual resolution
+        if ($LASTEXITCODE -ne 0) {
+            Write-Host "Force push with lease also failed." -ForegroundColor Red
+            Write-Host "This might be due to branch protection or permission issues." -ForegroundColor Red
+            Write-Host ""
+            Write-Host "Manual resolution options:" -ForegroundColor Yellow
+            Write-Host "  1. Use -NoForcePush to disable force push: .\Sync-ToGitHub.ps1 -NoForcePush" -ForegroundColor White
+            Write-Host "  2. Check if branch protection prevents force pushes" -ForegroundColor White
+            Write-Host "  3. Verify you have push permissions to this repository" -ForegroundColor White
+            Write-Host "  4. Pull remote changes first: git pull origin $currentBranch --allow-unrelated-histories" -ForegroundColor White
+            Write-Host "  5. Reset local branch to remote: git reset --hard origin/$currentBranch" -ForegroundColor White
+            Write-Host "  6. Then push normally: git push origin $currentBranch" -ForegroundColor White
+            exit 1
+        }
+    }
+}
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Green
     Write-Host "Successfully synced to GitHub!" -ForegroundColor Green
-    Write-Host "Repository: https://github.com/thomad99/CitrixtoHZ" -ForegroundColor Cyan
+    Write-Host "Repository: https://github.com/thomad99/LAB007-Main" -ForegroundColor Cyan
     Write-Host "Branch: $currentBranch" -ForegroundColor Cyan
     Write-Host "Strategy: Force push (remote-only files ignored)" -ForegroundColor Gray
     Write-Host "========================================" -ForegroundColor Green
@@ -338,7 +375,8 @@ else {
     Write-Host "  3. Use SSH authentication: .\Sync-ToGitHub.ps1 -UseSSH" -ForegroundColor White
     Write-Host "  4. Use Personal Access Token: .\Sync-ToGitHub.ps1 -GitHubPAT 'your-token'" -ForegroundColor White
     Write-Host "  5. Set GITHUB_TOKEN environment variable for automatic PAT usage" -ForegroundColor White
-    Write-Host "  6. The script uses force push mode - remote-only files are ignored" -ForegroundColor White
+    Write-Host "  6. Disable force push if needed: .\Sync-ToGitHub.ps1 -NoForcePush" -ForegroundColor White
+    Write-Host "  7. The script uses force push mode by default - remote-only files are ignored" -ForegroundColor White
     exit 1
 }
 
