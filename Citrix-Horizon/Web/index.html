@@ -24,12 +24,16 @@
                     </p>
                 </div>
             </div>
-            <div class="refresh-controls">
+            <div class="refresh-controls" style="z-index: 9999; position: relative;">
                 <a href="/citrix/api/download-audit-files" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Download Tools</a>
-                <button id="loadFileBtn" class="btn btn-primary">Load Audit Data</button>
-                <input type="file" id="fileInput" accept=".json" style="display: none;">
-                <button id="uploadDebugBtn" class="btn btn-secondary" style="background: #ffc107; color: #000; border-color: #ffc107;">Upload Debug ZIP</button>
-                <input type="file" id="debugFileInput" accept=".zip" style="display: none;">
+                <div class="file-input-wrapper" style="display: inline-block; position: relative;">
+                    <button id="loadFileBtn" class="btn btn-primary" style="z-index: 10000;">Load Audit Data</button>
+                    <input type="file" id="fileInput" accept=".json" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+                </div>
+                <div class="file-input-wrapper" style="display: inline-block; position: relative;">
+                    <button id="uploadDebugBtn" class="btn btn-secondary" style="background: #ffc107; color: #000; border-color: #ffc107; z-index: 10000;">Upload Debug ZIP</button>
+                    <input type="file" id="debugFileInput" accept=".zip" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+                </div>
                 <a href="/citrix/goldensun" class="btn btn-secondary" style="text-decoration: none; display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%); color: #000; border: none; font-weight: 600;">☀️ GoldenSun</a>
                 <button id="horizonTasksBtn" class="btn btn-primary">HZ Tasks</button>
             </div>

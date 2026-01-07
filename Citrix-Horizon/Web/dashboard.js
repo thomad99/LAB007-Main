@@ -19,43 +19,79 @@ let currentPolicies = [];
 let currentRoles = [];
 
 // Initialize on page load
-document.addEventListener('DOMContentLoaded', function() {
-    loadDefaultData();
+document.addEventListener('DOMContentLoaded', async function() {
+    console.log('=== DOMContentLoaded fired ===');
 
-    // Load Audit Data button
+    try {
+        console.log('Starting loadDefaultData...');
+        await loadDefaultData();
+        console.log('loadDefaultData completed');
+    } catch (error) {
+        console.error('Error loading default data:', error);
+        // Continue with initialization even if loadDefaultData fails
+    }
+
+    // Load Audit Data button and file input
     const loadFileBtn = document.getElementById('loadFileBtn');
     const fileInput = document.getElementById('fileInput');
 
+    console.log('loadFileBtn element:', loadFileBtn);
+    console.log('fileInput element:', fileInput);
+    console.log('loadFileBtn exists:', !!loadFileBtn);
+    console.log('fileInput exists:', !!fileInput);
+
     if (loadFileBtn && fileInput) {
-        loadFileBtn.addEventListener('click', () => {
+        console.log('Attaching Load Audit Data event listeners');
+
+        loadFileBtn.addEventListener('click', (e) => {
+            console.log('Load Audit Data button clicked!');
             fileInput.click();
         });
         fileInput.addEventListener('change', handleFileLoad);
+        console.log('Load Audit Data event listeners attached successfully');
+    } else {
+        console.error('Load Audit Data elements not found!');
     }
 
     // Horizon Tasks button
     const horizonTasksBtn = document.getElementById('horizonTasksBtn');
+    console.log('horizonTasksBtn element:', horizonTasksBtn);
     if (horizonTasksBtn) {
         horizonTasksBtn.addEventListener('click', () => {
             showHorizonTasksModal();
         });
+        console.log('Horizon Tasks event listener attached');
     }
 
     // Debug ZIP upload functionality
     const uploadDebugBtn = document.getElementById('uploadDebugBtn');
     const debugFileInput = document.getElementById('debugFileInput');
 
+    console.log('uploadDebugBtn element:', uploadDebugBtn);
+    console.log('debugFileInput element:', debugFileInput);
+    console.log('uploadDebugBtn exists:', !!uploadDebugBtn);
+    console.log('debugFileInput exists:', !!debugFileInput);
+
     if (uploadDebugBtn && debugFileInput) {
-        uploadDebugBtn.addEventListener('click', () => {
+        console.log('Attaching Upload Debug ZIP event listeners');
+
+        uploadDebugBtn.addEventListener('click', (e) => {
+            console.log('Upload Debug ZIP button clicked!');
             debugFileInput.click();
         });
 
         debugFileInput.addEventListener('change', (e) => {
+            console.log('Debug file input changed, files:', e.target.files.length);
             if (e.target.files.length > 0) {
                 uploadDebugFile(e.target.files[0]);
             }
         });
+        console.log('Upload Debug ZIP event listeners attached successfully');
+    } else {
+        console.error('Upload Debug ZIP elements not found!');
     }
+
+    console.log('=== Initialization complete ===');
 
     // Clone master images file input
     const cloneMasterImagesFileInput = document.getElementById('cloneMasterImagesFileInput');
@@ -132,21 +168,16 @@ async function loadDefaultData() {
         auditData = await response.json();
         displayDashboard(auditData);
     } catch (error) {
-        console.error('Error loading data:', error);
-        
+        console.log('Error in loadDefaultData (non-critical):', error.message);
+
         // If fetch fails, prompt user to select file or upload
         showError('You can download our tools or upload an Audit', false);
-        
-        // Auto-trigger file picker for convenience (if button exists)
-        setTimeout(() => {
-            const loadBtn = document.getElementById('loadFileBtn');
-            if (loadBtn) {
-                loadBtn.click();
-            }
-        }, 500);
-        
+
         hideDashboard();
     }
+
+    // Always resolve successfully to not break initialization
+    return Promise.resolve();
 }
 
 // Handle file upload
@@ -162,13 +193,9 @@ function handleFileLoad(event) {
         try {
             auditData = JSON.parse(e.target.result);
             displayDashboard(auditData);
-            // Clear the file input to allow re-uploading the same file
-            event.target.value = '';
         } catch (error) {
             showError('Error parsing JSON file: ' + error.message);
             hideDashboard();
-            // Clear the file input even on error
-            event.target.value = '';
         }
     };
     reader.onerror = function() {
@@ -679,7 +706,7 @@ function createCloneScript() {
     // Display script
     document.getElementById('cloneScriptContent').value = script;
     document.getElementById('cloneScriptOutput').style.display = 'block';
-}
+
     // Scroll to script output
     document.getElementById('cloneScriptOutput').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
