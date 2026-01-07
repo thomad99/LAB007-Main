@@ -1,8 +1,9 @@
 # Sync-ToGitHub.ps1
 # Automates syncing local code to GitHub repository with enhanced security
+# Uses force push to ignore remote-only files
 # Author : LAB007.AI
-# Version: 1.0
-# Last Modified: 250127
+# Version: 1.1
+# Last Modified: 260106:2125
 
 param(
     [string]$CommitMessage = "",
@@ -310,19 +311,14 @@ if ($Branch) {
     }
 }
 
-# Push to GitHub
-Write-Host "Pushing to GitHub..." -ForegroundColor Yellow
+# Sync strategy: Force push local state, ignore remote files that don't exist locally
+# This resolves issues where debug files exist on remote but not locally
+Write-Host "Pushing to GitHub (force mode - ignores remote-only files)..." -ForegroundColor Yellow
 Write-Host "Branch: $currentBranch" -ForegroundColor Gray
+Write-Host "Strategy: Force push local changes (remote-only files ignored)" -ForegroundColor Gray
 
-# Check if upstream is set
-$upstream = git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>$null
-if (-not $upstream) {
-    Write-Host "Setting upstream branch..." -ForegroundColor Gray
-    git push -u origin $currentBranch
-}
-else {
-    git push
-}
+# Force push to overwrite remote with local state
+git push --force origin $currentBranch
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
@@ -330,6 +326,7 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Successfully synced to GitHub!" -ForegroundColor Green
     Write-Host "Repository: https://github.com/thomad99/CitrixtoHZ" -ForegroundColor Cyan
     Write-Host "Branch: $currentBranch" -ForegroundColor Cyan
+    Write-Host "Strategy: Force push (remote-only files ignored)" -ForegroundColor Gray
     Write-Host "========================================" -ForegroundColor Green
 }
 else {
@@ -341,8 +338,7 @@ else {
     Write-Host "  3. Use SSH authentication: .\Sync-ToGitHub.ps1 -UseSSH" -ForegroundColor White
     Write-Host "  4. Use Personal Access Token: .\Sync-ToGitHub.ps1 -GitHubPAT 'your-token'" -ForegroundColor White
     Write-Host "  5. Set GITHUB_TOKEN environment variable for automatic PAT usage" -ForegroundColor White
-    Write-Host "  6. If the repository has existing commits, you may need to pull first:" -ForegroundColor White
-    Write-Host "     git pull origin $currentBranch --allow-unrelated-histories" -ForegroundColor Gray
+    Write-Host "  6. The script uses force push mode - remote-only files are ignored" -ForegroundColor White
     exit 1
 }
 

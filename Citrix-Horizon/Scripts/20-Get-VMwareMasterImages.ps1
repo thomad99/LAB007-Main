@@ -3,7 +3,7 @@
 # Connects to vCenter and extracts master image information
 # Author : LAB007.AI
 # Version: 1.1
-# Last Modified: 260106:2058
+# Last Modified: 260106:2120
 
 param(
     [string]$OutputPath = '.\Data\goldensun-master-images.json',
