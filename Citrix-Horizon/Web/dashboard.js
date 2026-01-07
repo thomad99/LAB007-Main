@@ -53,10 +53,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.error('Load Audit Data elements not found!');
     }
 
-    // Horizon Tasks button
+    // Horizon Tasks button - always available
     const horizonTasksBtn = document.getElementById('horizonTasksBtn');
     console.log('horizonTasksBtn element:', horizonTasksBtn);
     if (horizonTasksBtn) {
+        // Ensure button is always enabled
+        horizonTasksBtn.disabled = false;
+        horizonTasksBtn.style.opacity = '1';
+        horizonTasksBtn.style.cursor = 'pointer';
+
         horizonTasksBtn.addEventListener('click', () => {
             showHorizonTasksModal();
         });
@@ -273,15 +278,7 @@ function displayDashboard(data) {
     hideLoading();
     showDashboard();
     hideError();
-    
-    // Enable Horizon Tasks button
-    const horizonTasksBtn = document.getElementById('horizonTasksBtn');
-    if (horizonTasksBtn) {
-        horizonTasksBtn.disabled = false;
-        horizonTasksBtn.style.opacity = '1';
-        horizonTasksBtn.style.cursor = 'pointer';
-    }
-    
+
     // Populate summary cards
     document.getElementById('siteName').textContent = data.SiteName || data.summary?.SiteName || 'N/A';
     document.getElementById('totalApps').textContent = data.TotalPublishedApplications || data.summary?.TotalPublishedApplications || 0;
@@ -612,11 +609,38 @@ function closeMasterImagesModal() {
 }
 
 // Horizon Environment Tasks Functions
+function loadConfigIntoModal() {
+    try {
+        const config = localStorage.getItem('lab007Config');
+        if (config) {
+            const parsed = JSON.parse(config);
+
+            // Populate vCenter server field
+            const vCenterField = document.getElementById('searchVCenterServer');
+            if (vCenterField) {
+                vCenterField.value = parsed.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
+            }
+
+            // Populate master image prefix field
+            const prefixField = document.getElementById('searchMasterPrefix');
+            if (prefixField) {
+                prefixField.value = parsed.masterImagePrefix || 'SHC-M-';
+            }
+        }
+    } catch (error) {
+        console.log('No config found for modal, using defaults');
+    }
+}
+
 function showHorizonTasksModal() {
     const modal = document.getElementById('horizonTasksModal');
     modal.style.display = 'block';
+
+    // Load configuration values into the modal
+    loadConfigIntoModal();
+
+    // Default to Master Image Search tab
     showHorizonTask('masterImageSearch');
-    // No special initialization needed for master image search
 }
 
 function closeHorizonTasksModal() {
@@ -642,10 +666,7 @@ function showHorizonTask(taskName) {
     event.target.classList.add('active');
     
     // Task-specific initialization
-    if (taskName === 'auditConfiguration') {
-        // Auto-load current configuration
-        loadAuditConfiguration();
-    } else if (taskName === 'cloneMasterImage') {
+    if (taskName === 'cloneMasterImage') {
         // Load master images if available
         loadCloneMasterImages();
     } else if (taskName === 'masterImageSearch') {
@@ -1925,105 +1946,6 @@ function toggleSection(button) {
     }
 }
 
-// Audit Configuration Functions
-async function loadAuditConfiguration() {
-    try {
-        let response = await fetch('/api/audit-config');
-        if (!response.ok) {
-            // Try with /citrix prefix
-            response = await fetch('/citrix/api/audit-config');
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
-            }
-        }
-
-        const config = await response.json();
-
-        // Set pre-req check
-        document.getElementById('runPreReqCheck').checked = config.runPreReqCheck || false;
-
-        // Set audit components
-        const componentMappings = {
-            'auditSiteInfo': 'SiteInfo',
-            'auditApplications': 'Applications',
-            'auditDesktops': 'Desktops',
-            'auditCatalogs': 'Catalogs',
-            'auditDeliveryGroups': 'DeliveryGroups',
-            'auditUsageStats': 'UsageStats',
-            'auditPolicies': 'Policies',
-            'auditRoles': 'Roles',
-            'auditVMwareSpecs': 'VMwareSpecs',
-            'auditServers': 'Servers',
-            'auditDirectorOData': 'DirectorOData'
-        };
-
-        Object.entries(componentMappings).forEach(([elementId, configKey]) => {
-            const checkbox = document.getElementById(elementId);
-            if (checkbox) {
-                checkbox.checked = config.auditComponents && config.auditComponents[configKey] !== undefined
-                    ? config.auditComponents[configKey]
-                    : true; // Default to enabled
-            }
-        });
-
-        alert('Audit configuration loaded successfully!');
-    } catch (error) {
-        console.error('Error loading audit configuration:', error);
-        alert('Failed to load audit configuration: ' + error.message);
-    }
-}
-
-async function saveAuditConfiguration() {
-    try {
-        // Collect form data
-        const config = {
-            runPreReqCheck: document.getElementById('runPreReqCheck').checked,
-            auditComponents: {
-                SiteInfo: document.getElementById('auditSiteInfo').checked,
-                Applications: document.getElementById('auditApplications').checked,
-                Desktops: document.getElementById('auditDesktops').checked,
-                Catalogs: document.getElementById('auditCatalogs').checked,
-                DeliveryGroups: document.getElementById('auditDeliveryGroups').checked,
-                UsageStats: document.getElementById('auditUsageStats').checked,
-                Policies: document.getElementById('auditPolicies').checked,
-                Roles: document.getElementById('auditRoles').checked,
-                VMwareSpecs: document.getElementById('auditVMwareSpecs').checked,
-                Servers: document.getElementById('auditServers').checked,
-                DirectorOData: document.getElementById('auditDirectorOData').checked
-            }
-        };
-
-        let response = await fetch('/api/audit-config', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(config)
-        });
-
-        if (!response.ok) {
-            // Try with /citrix prefix
-            response = await fetch('/citrix/api/audit-config', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(config)
-            });
-        }
-
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-
-        const result = await response.json();
-        alert('Audit configuration saved successfully!');
-
-    } catch (error) {
-        console.error('Error saving audit configuration:', error);
-        alert('Failed to save audit configuration: ' + error.message);
-    }
-}
 
 // Clone Master Images Functions
 let cloneMasterImagesData = [];
@@ -2063,6 +1985,12 @@ function handleCloneMasterImagesFile(event) {
         try {
             cloneMasterImagesData = JSON.parse(e.target.result);
             document.getElementById('cloneMasterImagesFileName').textContent = `Loaded: ${file.name}`;
+
+            // Show the hidden sections after successful file load
+            document.getElementById('cloneNamingSection').style.display = 'block';
+            document.getElementById('cloneImagesSection').style.display = 'block';
+            document.getElementById('cloneScriptSection').style.display = 'block';
+
             displayCloneMasterImages();
         } catch (error) {
             alert(`Error parsing JSON file: ${error.message}`);

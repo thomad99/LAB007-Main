@@ -188,6 +188,18 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="vCenterServer">vCenter Server:</label>
+                    <input type="text" id="vCenterServer" name="vCenterServer" value="shcvcsacx01v.ccr.cchcs.org" placeholder="vCenter FQDN">
+                    <div class="help-text">Enter your vCenter server FQDN for VMware operations</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="masterImagePrefix">Master Image Prefix:</label>
+                    <input type="text" id="masterImagePrefix" name="masterImagePrefix" value="SHC-M-" placeholder="e.g., SHC-M-">
+                    <div class="help-text">Prefix used to identify master images (images will be searched using: [Prefix]* pattern)</div>
+                </div>
+
+                <div class="form-group">
                     <label for="auditComponents">Audit Components to Run:</label>
                     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
                         <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
@@ -300,6 +312,8 @@
                     document.getElementById('citrixVersion').value = parsed.citrixVersion || '1912';
                     document.getElementById('ddcName').value = parsed.ddcName || 'localhost';
                     document.getElementById('usageDays').value = parsed.usageDays || 30;
+                    document.getElementById('vCenterServer').value = parsed.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
+                    document.getElementById('masterImagePrefix').value = parsed.masterImagePrefix || 'SHC-M-';
                     document.getElementById('runPreReqCheck').checked = parsed.runPreReqCheck !== false;
                     document.getElementById('auditSiteInfo').checked = parsed.auditComponents?.SiteInfo !== false;
                     document.getElementById('auditApplications').checked = parsed.auditComponents?.Applications !== false;
@@ -326,6 +340,8 @@
                 citrixVersion: document.getElementById('citrixVersion').value,
                 ddcName: document.getElementById('ddcName').value,
                 usageDays: parseInt(document.getElementById('usageDays').value),
+                vCenterServer: document.getElementById('vCenterServer').value,
+                masterImagePrefix: document.getElementById('masterImagePrefix').value,
                 runPreReqCheck: document.getElementById('runPreReqCheck').checked,
                 auditComponents: {
                     SiteInfo: document.getElementById('auditSiteInfo').checked,
