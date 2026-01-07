@@ -957,7 +957,23 @@ if (-not (Test-Path -Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 }
 
+# Setup debug logging
+$debugFile = Join-Path $outputDir "debug20.txt"
+
+# Force delete existing debug file to ensure clean start
+if (Test-Path $debugFile) {
+    try {
+        Remove-Item $debugFile -Force -ErrorAction Stop
+    } catch {
+        Write-Warning "Could not delete existing debug file $debugFile : $_"
+    }
+}
+
 try {
+    Write-Host "[DEBUG] Script started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] OutputPath: $OutputPath" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] vCenterServer: $vCenterServer" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] MasterImagePrefix: $MasterImagePrefix" | Out-File -FilePath $debugFile -Append
     # Check if VMware PowerCLI is available
     $vmwareModule = Get-Module -ListAvailable -Name VMware.PowerCLI
     if (-not $vmwareModule) {
@@ -980,8 +996,8 @@ try {
 
     # Validate master image prefix
     if ([string]::IsNullOrWhiteSpace($MasterImagePrefix)) {
-        Write-Warning 'MasterImagePrefix not specified, using default: ${masterPrefix}'
-        $MasterImagePrefix = '${masterPrefix}'
+        Write-Warning "MasterImagePrefix not specified, using default: $masterPrefix"
+        $MasterImagePrefix = '$masterPrefix'
     }
 
     # Prompt for credentials
@@ -993,19 +1009,23 @@ try {
     try {
         $connection = Connect-VIServer -Server $vCenterServer -Credential $credential -ErrorAction Stop
         Write-Host "Successfully connected to $vCenterServer" -ForegroundColor Green
+        Write-Host "[DEBUG] Successfully connected to $vCenterServer" | Out-File -FilePath $debugFile -Append
     }
     catch {
         Write-Error "Failed to connect to vCenter: $_"
+        Write-Host "[DEBUG] Failed to connect to vCenter: $_" | Out-File -FilePath $debugFile -Append
         exit 1
     }
 
     # Search for VMs matching the specified prefix pattern
     Write-Host "Searching for VMs matching pattern $MasterImagePrefix*..." -ForegroundColor Yellow
+    Write-Host "[DEBUG] Searching for VMs matching pattern $MasterImagePrefix*" | Out-File -FilePath $debugFile -Append
 
     $vms = Get-VM -Name "$MasterImagePrefix*" -ErrorAction SilentlyContinue
 
     if (-not $vms -or $vms.Count -eq 0) {
         Write-Warning "No VMs found matching pattern $MasterImagePrefix*"
+        Write-Host "[DEBUG] No VMs found matching pattern $MasterImagePrefix*" | Out-File -FilePath $debugFile -Append
         $masterImages = @()
     } else {
         Write-Host "Found $($vms.Count) master image(s)" -ForegroundColor Green
@@ -1014,6 +1034,7 @@ try {
 
         foreach ($vm in $vms) {
             Write-Host "Processing: $($vm.Name)..." -ForegroundColor Cyan
+            Write-Host "[DEBUG] Processing: $($vm.Name)" | Out-File -FilePath $debugFile -Append
 
             # Get VM details
             $cluster = Get-Cluster -VM $vm -ErrorAction SilentlyContinue
@@ -1028,7 +1049,7 @@ try {
             $version = 'V1'
 
             # Extract version if present (look for V followed by number at the end)
-            if ($vmName -match '(.+?)(V\\d+)$') {
+            if ($vmName -match '(.+?)(V\d+)$') {
                 $shortName = $matches[1]
                 $version = $matches[2]
             }
@@ -1072,6 +1093,7 @@ try {
 
             $masterImages += $imageInfo
             Write-Host "  OK: $vmName - Cluster: $clusterName, Version: $version" -ForegroundColor Green
+            Write-Host "[DEBUG] Processed VM: $vmName" | Out-File -FilePath $debugFile -Append
         }
     }
 
@@ -1092,18 +1114,19 @@ try {
     Write-Host 'Master images information collected successfully!' -ForegroundColor Green
     Write-Host "Total images found: $($masterImages.Count)" -ForegroundColor White
     Write-Host "Data saved to: $OutputPath" -ForegroundColor Gray
-
     Write-Host "[DEBUG] Collection completed successfully at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
     Write-Host "[DEBUG] Total images found: $($masterImages.Count)" | Out-File -FilePath $debugFile -Append
 
     # Disconnect from vCenter
     Disconnect-VIServer -Server $vCenterServer -Confirm:$false -ErrorAction SilentlyContinue
     Write-Host 'Disconnected from vCenter' -ForegroundColor Gray
+    Write-Host "[DEBUG] Disconnected from vCenter" | Out-File -FilePath $debugFile -Append
 
     return $result
 }
 catch {
     Write-Error 'Failed to collect master images information: $_'
+    Write-Host "[DEBUG] Script failed: $_" | Out-File -FilePath $debugFile -Append
 
     # Try to disconnect if connected
     try {
