@@ -598,7 +598,13 @@ function showHorizonTask(taskName) {
     event.target.classList.add('active');
     
     // Task-specific initialization
-    if (taskName === 'masterImageSearch') {
+    if (taskName === 'auditConfiguration') {
+        // Auto-load current configuration
+        loadAuditConfiguration();
+    } else if (taskName === 'cloneMasterImage') {
+        // Load master images if available
+        loadCloneMasterImages();
+    } else if (taskName === 'masterImageSearch') {
         // No special initialization needed for master image search
     } else if (taskName === 'cloneMasterImage') {
         populateMasterImagesCloneList();
@@ -639,26 +645,24 @@ function populateMasterImagesCloneList() {
 
 function createCloneScript() {
     const namingConvention = document.getElementById('cloneNamingConvention').value || 'HZ-M-xxxxxxx';
-    const checkboxes = document.querySelectorAll('#masterImagesCloneList input[type="checkbox"]:checked');
-    
-    if (checkboxes.length === 0) {
+
+    if (selectedCloneImages.size === 0) {
         alert('Please select at least one master image to clone.');
         return;
     }
-    
-    const selectedImages = Array.from(checkboxes).map(cb => ({
-        vmName: cb.getAttribute('data-vmname'),
-        path: cb.getAttribute('data-path'),
-        cluster: cb.getAttribute('data-cluster')
-    }));
-    
+
+    // Get selected image details
+    const selectedImages = cloneMasterImagesData.MasterImages.filter(img =>
+        selectedCloneImages.has(img.Name)
+    );
+
     // Generate PowerShell script
     const script = generateCloneScript(selectedImages, namingConvention);
-    
+
     // Display script
     document.getElementById('cloneScriptContent').value = script;
     document.getElementById('cloneScriptOutput').style.display = 'block';
-    
+}
     // Scroll to script output
     document.getElementById('cloneScriptOutput').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
 }
@@ -687,9 +691,10 @@ function generateCloneScript(selectedImages, namingConvention) {
     
     selectedImages.forEach((img, index) => {
         scriptLines.push('    @{');
-        scriptLines.push('        OriginalVMName = "' + img.vmName + '"');
-        scriptLines.push('        OriginalPath = "' + img.path + '"');
-        scriptLines.push('        ClusterName = "' + img.cluster + '"');
+        scriptLines.push('        OriginalVMName = "' + img.Name + '"');
+        scriptLines.push('        ClusterName = "' + (img.Cluster || 'Unknown') + '"');
+        scriptLines.push('        HostName = "' + (img.Host || 'Unknown') + '"');
+        scriptLines.push('        DatastoreName = "' + (img.Datastore || 'Unknown') + '"');
         scriptLines.push('    }' + (index < selectedImages.length - 1 ? ',' : ''));
     });
     
@@ -709,7 +714,9 @@ function generateCloneScript(selectedImages, namingConvention) {
     scriptLines.push('    $clusterName = $image.ClusterName');
     scriptLines.push('    ');
     scriptLines.push('    Write-Host "[$cloneCount/$($ImagesToClone.Count)] Processing: $originalVMName" -ForegroundColor Cyan');
-    scriptLines.push('    Write-Host "  Cluster: $clusterName" -ForegroundColor Gray');
+    scriptLines.push('    Write-Host "  Cluster: $($image.ClusterName)" -ForegroundColor Gray');
+    scriptLines.push('    Write-Host "  Host: $($image.HostName)" -ForegroundColor Gray');
+    scriptLines.push('    Write-Host "  Datastore: $($image.DatastoreName)" -ForegroundColor Gray');
     scriptLines.push('    ');
     scriptLines.push('    try {');
     scriptLines.push('        # Get the original VM');
@@ -1877,9 +1884,13 @@ function toggleSection(button) {
 // Audit Configuration Functions
 async function loadAuditConfiguration() {
     try {
-        const response = await fetch('/api/audit-config');
+        let response = await fetch('/api/audit-config');
         if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
+            // Try with /citrix prefix
+            response = await fetch('/citrix/api/audit-config');
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
         }
 
         const config = await response.json();
@@ -1938,13 +1949,24 @@ async function saveAuditConfiguration() {
             }
         };
 
-        const response = await fetch('/api/audit-config', {
+        let response = await fetch('/api/audit-config', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify(config)
         });
+
+        if (!response.ok) {
+            // Try with /citrix prefix
+            response = await fetch('/citrix/api/audit-config', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            });
+        }
 
         if (!response.ok) {
             throw new Error(`HTTP ${response.status}`);
@@ -1957,5 +1979,116 @@ async function saveAuditConfiguration() {
         console.error('Error saving audit configuration:', error);
         alert('Failed to save audit configuration: ' + error.message);
     }
+}
+
+// Clone Master Images Functions
+let cloneMasterImagesData = [];
+
+async function loadCloneMasterImages() {
+    // Try to load from default location
+    try {
+        let response = await fetch('/citrix/data/goldensun-master-images.json', { cache: 'no-cache' });
+        if (!response.ok) {
+            response = await fetch('/data/goldensun-master-images.json', { cache: 'no-cache' });
+        }
+
+        if (response.ok) {
+            cloneMasterImagesData = await response.json();
+            document.getElementById('cloneMasterImagesFileName').textContent = 'Loaded: goldensun-master-images.json';
+            displayCloneMasterImages();
+        } else {
+            document.getElementById('masterImagesCloneList').innerHTML = '<p style="color: #666;">No master images loaded. Click "Load Master Images JSON" to select a file.</p>';
+        }
+    } catch (error) {
+        console.error('Error loading clone master images:', error);
+        document.getElementById('masterImagesCloneList').innerHTML = '<p style="color: #666;">No master images loaded. Click "Load Master Images JSON" to select a file.</p>';
+    }
+}
+
+function loadCloneMasterImagesFile() {
+    const fileInput = document.getElementById('cloneMasterImagesFileInput');
+    fileInput.click();
+}
+
+document.getElementById('cloneMasterImagesFileInput').addEventListener('change', handleCloneMasterImagesFile);
+
+function handleCloneMasterImagesFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            cloneMasterImagesData = JSON.parse(e.target.result);
+            document.getElementById('cloneMasterImagesFileName').textContent = `Loaded: ${file.name}`;
+            displayCloneMasterImages();
+        } catch (error) {
+            alert(`Error parsing JSON file: ${error.message}`);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function displayCloneMasterImages() {
+    const container = document.getElementById('masterImagesCloneList');
+
+    if (!cloneMasterImagesData || !cloneMasterImagesData.MasterImages || cloneMasterImagesData.MasterImages.length === 0) {
+        container.innerHTML = '<p style="color: #666;">No master images found in the loaded file.</p>';
+        return;
+    }
+
+    let html = `<p style="margin-bottom: 15px; color: #666;">Found ${cloneMasterImagesData.MasterImages.length} master image(s) from ${cloneMasterImagesData.vCenterServer || 'Unknown Server'}</p>`;
+
+    html += `<button type="button" class="btn btn-sm" onclick="selectAllCloneImages()">Select All</button> `;
+    html += `<button type="button" class="btn btn-sm" onclick="deselectAllCloneImages()">Deselect All</button>`;
+    html += `<hr style="margin: 10px 0;">`;
+
+    cloneMasterImagesData.MasterImages.forEach((image, index) => {
+        const isChecked = selectedCloneImages.has(image.Name) ? 'checked' : '';
+
+        html += `
+            <div style="border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 10px;">
+                <label style="display: flex; align-items: flex-start; cursor: pointer;">
+                    <input type="checkbox" style="margin-right: 10px; margin-top: 2px;" ${isChecked}
+                           onchange="toggleCloneImageSelection('${image.Name.replace(/'/g, "\\'")}')">
+                    <div style="flex: 1;">
+                        <strong>${image.Name}</strong>
+                        <div style="font-size: 12px; color: #666; margin-top: 2px;">
+                            Version: ${image.Version || 'Unknown'} | Cluster: ${image.Cluster || 'Unknown'} | Host: ${image.Host || 'Unknown'}
+                        </div>
+                        <div style="font-size: 11px; color: #888; margin-top: 2px;">
+                            CPU: ${image.NumCPU || 0} | RAM: ${image.MemoryGB || 0}GB | Disk: ${image.ProvisionedSpaceGB || 0}GB
+                        </div>
+                    </div>
+                </label>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+let selectedCloneImages = new Set();
+
+function toggleCloneImageSelection(imageName) {
+    if (selectedCloneImages.has(imageName)) {
+        selectedCloneImages.delete(imageName);
+    } else {
+        selectedCloneImages.add(imageName);
+    }
+}
+
+function selectAllCloneImages() {
+    if (!cloneMasterImagesData || !cloneMasterImagesData.MasterImages) return;
+
+    cloneMasterImagesData.MasterImages.forEach(image => {
+        selectedCloneImages.add(image.Name);
+    });
+    displayCloneMasterImages();
+}
+
+function deselectAllCloneImages() {
+    selectedCloneImages.clear();
+    displayCloneMasterImages();
 }
 

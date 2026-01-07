@@ -587,7 +587,15 @@
                 <div id="cloneMasterImageTask" class="horizon-task-panel active">
                     <h3>Clone Master Image</h3>
                     <p>Select master images to clone and specify the naming convention.</p>
-                    
+
+                    <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
+                        <h4 style="margin-bottom: 10px;">Load Master Images List</h4>
+                        <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Load master images from a JSON file created by the discovery script to select which ones to clone.</p>
+                        <button id="loadCloneMasterImagesBtn" class="btn btn-secondary" onclick="loadCloneMasterImagesFile()">Load Master Images JSON</button>
+                        <input type="file" id="cloneMasterImagesFileInput" accept=".json" style="display: none;">
+                        <span id="cloneMasterImagesFileName" style="margin-left: 15px; color: #666;"></span>
+                    </div>
+
                     <div style="margin: 20px 0;">
                         <label for="cloneNamingConvention" style="display: block; margin-bottom: 8px; font-weight: bold;">Naming Convention:</label>
                         <input type="text" id="cloneNamingConvention" value="HZ-M-xxxxxxx" style="width: 300px; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
