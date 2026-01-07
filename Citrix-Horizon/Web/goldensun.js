@@ -541,7 +541,7 @@ function downloadScript() {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `Clone-MasterImages-${new Date().toISOString().split('T')[0]}.ps1`;
+    a.download = 'Clone-Images.ps1';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

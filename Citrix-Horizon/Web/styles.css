@@ -141,7 +141,7 @@ header h1 {
 }
 
 .header-subtitle {
-    font-size: 1rem;
+    font-size: 12pt;
     font-weight: 500;
     color: #ffffff;
     margin: 0;
@@ -154,7 +154,7 @@ header h1 {
 }
 
 .header-title-main {
-    font-size: 1.55rem;
+    font-size: 12pt;
     font-weight: 700;
     display: block;
     line-height: 1.1;
@@ -162,7 +162,7 @@ header h1 {
 }
 
 .header-title-sub {
-    font-size: 1.3rem;
+    font-size: 12pt;
     font-weight: 500;
     display: block;
     line-height: 1.1;
