@@ -3,7 +3,7 @@
 # Uses VMware SDK as fallback if Citrix data unavailable
 # Author : LAB007.AI
 # Version: 1.4
-# Last Modified: 260106:1500
+# Last Modified: 260106:1948
 
 param(
     [string]$OutputPath = ".\Data\citrix-servers.json",

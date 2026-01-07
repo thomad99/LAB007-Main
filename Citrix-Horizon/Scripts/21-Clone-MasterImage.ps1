@@ -2,7 +2,7 @@
 # Clones VMware master images with version increment for GoldenSun project
 # Author : LAB007.AI
 # Version: 1.1
-# Last Modified: 260106:1500
+# Last Modified: 260106:1948
 
 param(
     [Parameter(Mandatory=$true)]

@@ -2,7 +2,7 @@
 # Extracts Citrix policy information
 # Author : LAB007.AI
 # Version: 1.2
-# Last Modified: 260106:1545
+# Last Modified: 260106:1948
 
 param(
     [string]$OutputPath = ".\Data\citrix-policies.json",

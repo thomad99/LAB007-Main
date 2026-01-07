@@ -3,7 +3,7 @@
 # Director exposes monitoring data via OData v3/v4 API (supports multiple versions)
 # Author : LAB007.AI
 # Version: 1.8
-# Last Modified: 260106:1530
+# Last Modified: 260106:1948
 
 param(
     [string]$OutputPath = ".\Data\citrix-director-odata.json",

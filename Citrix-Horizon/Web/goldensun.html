@@ -36,6 +36,43 @@
         <div id="errorMessage" class="error-message" style="display: none;"></div>
 
         <div id="content" style="display: none;">
+            <!-- Find Master Portion Section -->
+            <section class="summary-section">
+                <h2>Find Master Images</h2>
+                <p style="color: #666; margin-bottom: 20px;">Generate a customized script to discover VMware master images with your specific settings.</p>
+
+                <div class="find-master-form">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="vCenterServerInput">vCenter Server:</label>
+                            <input type="text" id="vCenterServerInput" value="shcvcsacx01.ccr.cchcs.org" placeholder="Enter vCenter server name or IP">
+                            <small class="form-help">Default: shcvcsacx01.ccr.cchcs.org</small>
+                        </div>
+                        <div class="form-group">
+                            <label for="masterPrefixInput">Master Image Prefix:</label>
+                            <input type="text" id="masterPrefixInput" value="SHC-M-" placeholder="Enter master image prefix">
+                            <small class="form-help">Default: SHC-M- (will search for SHC-M-*)</small>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button id="createFindScriptBtn" class="btn btn-primary" onclick="createFindScript()">Create Script</button>
+                        <button class="btn btn-secondary" onclick="resetFindForm()">Reset to Defaults</button>
+                    </div>
+                </div>
+
+                <!-- Generated Script Output -->
+                <div id="findScriptOutput" style="display: none; margin-top: 30px;">
+                    <h3>Generated Discovery Script</h3>
+                    <p style="color: #666; margin-bottom: 15px;">This script will discover master images matching your specified criteria.</p>
+                    <textarea id="findScriptContent" readonly style="width: 100%; height: 400px; font-family: 'Courier New', monospace; font-size: 12px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
+                    <div style="margin-top: 15px; text-align: right;">
+                        <button class="btn btn-secondary" onclick="copyFindScript()">Copy to Clipboard</button>
+                        <button class="btn btn-primary" onclick="downloadFindScript()">Download Script</button>
+                    </div>
+                </div>
+            </section>
+
             <!-- Summary Section -->
             <section class="summary-section">
                 <h2>Master Images Overview</h2>
