@@ -661,21 +661,7 @@ function showHorizonTasksModal() {
     // Load configuration values into the modal
     loadConfigIntoModal();
 
-    // Attach event listener to the Generate Search Script button
-    setTimeout(function() {
-        const searchScriptBtn = document.getElementById('createSearchScriptBtn');
-        console.log('Looking for Generate Search Script button, found:', !!searchScriptBtn);
-        if (searchScriptBtn) {
-            searchScriptBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                console.log('Generate Search Script button clicked via event listener');
-                createMasterImageSearchScript();
-            });
-            console.log('Event listener attached to Generate Search Script button');
-        } else {
-            console.error('Generate Search Script button not found');
-        }
-    }, 100);
+    // Note: Button uses onclick attribute instead of event listener
 
     // Default to Master Image Search tab
     showHorizonTask('masterImageSearch');
@@ -1014,12 +1000,12 @@ try {
     }
 
     # Search for VMs matching the specified prefix pattern
-    Write-Host "Searching for VMs matching pattern ${MasterImagePrefix}*..." -ForegroundColor Yellow
+    Write-Host "Searching for VMs matching pattern $MasterImagePrefix*..." -ForegroundColor Yellow
 
-    $vms = Get-VM -Name "${MasterImagePrefix}*" -ErrorAction SilentlyContinue
+    $vms = Get-VM -Name "$MasterImagePrefix*" -ErrorAction SilentlyContinue
 
     if (-not $vms -or $vms.Count -eq 0) {
-        Write-Warning "No VMs found matching pattern ${MasterImagePrefix}*"
+        Write-Warning "No VMs found matching pattern $MasterImagePrefix*"
         $masterImages = @()
     } else {
         Write-Host "Found $($vms.Count) master image(s)" -ForegroundColor Green
