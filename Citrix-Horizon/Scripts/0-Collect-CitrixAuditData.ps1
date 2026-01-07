@@ -1,8 +1,8 @@
 # Collect-CitrixAuditData.ps1
 # Master script that orchestrates collection of all Citrix audit data
 # Author : LAB007.AI
-# Version: 1.2
-# Last Modified: 260105:1838
+# Version: 1.3
+# Last Modified: 260106:1545
 
 param(
     [string]$OutputPath = ".\Data\citrix-audit-complete.json",
@@ -334,6 +334,10 @@ catch {
 
 # 7. Collect Policies
 Write-Host "[7/12] Collecting Citrix Policies..." -ForegroundColor Yellow
+
+# Stop transcript to avoid file locking issues with individual scripts
+Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
+
 try {
     $policies = & "$scriptPath\7-Get-CitrixPolicies.ps1" -OutputPath (Join-Path $dataPath "citrix-policies.json") -CitrixVersion $CitrixVersion
     if ($policies) {
@@ -344,9 +348,22 @@ try {
 catch {
     Write-Warning "Policies collection failed, continuing: $_"
 }
+finally {
+    # Restart transcript
+    try {
+        Start-Transcript -Path $debugFile -Append -ErrorAction SilentlyContinue | Out-Null
+    }
+    catch {
+        Write-Warning "Could not restart transcript: $_"
+    }
+}
 
 # 7b. Collect Roles and AD Groups
 Write-Host "[8/12] Collecting Citrix Management Roles and AD Groups..." -ForegroundColor Yellow
+
+# Stop transcript to avoid file locking issues
+Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
+
 try {
     $roles = & "$scriptPath\8-Get-CitrixRoles.ps1" -OutputPath (Join-Path $dataPath "citrix-roles.json") -CitrixVersion $CitrixVersion
     if ($roles) {
@@ -357,6 +374,15 @@ try {
 }
 catch {
     Write-Warning "Roles collection failed, continuing: $_"
+}
+finally {
+    # Restart transcript
+    try {
+        Start-Transcript -Path $debugFile -Append -ErrorAction SilentlyContinue | Out-Null
+    }
+    catch {
+        Write-Warning "Could not restart transcript: $_"
+    }
 }
 
 # 9. Collect VMware Server Specs (if VMware server specified)

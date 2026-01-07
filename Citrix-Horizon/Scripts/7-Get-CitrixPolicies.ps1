@@ -1,8 +1,8 @@
 # Get-CitrixPolicies.ps1
 # Extracts Citrix policy information
 # Author : LAB007.AI
-# Version: 1.1
-# Last Modified: 260105:2134
+# Version: 1.2
+# Last Modified: 260106:1545
 
 param(
     [string]$OutputPath = ".\Data\citrix-policies.json",
@@ -59,11 +59,11 @@ try {
         Write-Host "[DEBUG] Note: Get-BrokerGpoPolicy is typically part of Citrix.Broker.Admin.V2 and should be available if that module is loaded" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
     }
     
-    # Try multiple methods to get policies
+    # Try multiple methods to get policies (ordered by reliability)
     $policies = $null
     $policyMethod = ""
-    
-    # Method 0: Citrix Group Policy Provider (GP: drive) - Most comprehensive method
+
+    # Method 0: Get-BrokerPolicy (most common for Studio-configured policies)
     try {
         Write-Host "[DEBUG] Attempting Method 0: Citrix Group Policy Provider (GP: drive)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
         
@@ -372,10 +372,103 @@ try {
         }
     }
     
-    # Method 6: Try to export policies to a file (as fallback)
+    # Method 3: Try to get policy information from Citrix configuration
     if (-not $policies) {
-        Write-Host "Attempting to export policies to file..." -ForegroundColor Yellow
-        Write-Host "[DEBUG] Attempting Method 6: Export-BrokerPolicy" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+        try {
+            Write-Host "[DEBUG] Attempting Method 3: Citrix Configuration Query" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+
+            # Try to get policy summary information
+            $policySummary = @()
+            if ($global:CitrixAdminAddress) {
+                Write-Host "[DEBUG] Trying to get policy summary with AdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+
+                # Try to get policy counts and basic info
+                try {
+                    $desktopPolicies = Get-BrokerDesktopPolicy -AdminAddress $global:CitrixAdminAddress -MaxRecordCount 10 -ErrorAction SilentlyContinue
+                    if ($desktopPolicies) {
+                        $policySummary += @{
+                            Type = "Desktop Policies"
+                            Count = $desktopPolicies.Count
+                            Method = "Get-BrokerDesktopPolicy"
+                        }
+                        Write-Host "[DEBUG] Found $($desktopPolicies.Count) desktop policies" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                    }
+                } catch {
+                    Write-Host "[DEBUG] Get-BrokerDesktopPolicy failed: $_" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                }
+
+                try {
+                    $sessionPolicies = Get-BrokerSessionPolicy -AdminAddress $global:CitrixAdminAddress -MaxRecordCount 10 -ErrorAction SilentlyContinue
+                    if ($sessionPolicies) {
+                        $policySummary += @{
+                            Type = "Session Policies"
+                            Count = $sessionPolicies.Count
+                            Method = "Get-BrokerSessionPolicy"
+                        }
+                        Write-Host "[DEBUG] Found $($sessionPolicies.Count) session policies" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                    }
+                } catch {
+                    Write-Host "[DEBUG] Get-BrokerSessionPolicy failed: $_" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                }
+            }
+            else {
+                Write-Host "[DEBUG] Trying to get policy summary without AdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+
+                try {
+                    $desktopPolicies = Get-BrokerDesktopPolicy -MaxRecordCount 10 -ErrorAction SilentlyContinue
+                    if ($desktopPolicies) {
+                        $policySummary += @{
+                            Type = "Desktop Policies"
+                            Count = $desktopPolicies.Count
+                            Method = "Get-BrokerDesktopPolicy"
+                        }
+                        Write-Host "[DEBUG] Found $($desktopPolicies.Count) desktop policies" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                    }
+                } catch {
+                    Write-Host "[DEBUG] Get-BrokerDesktopPolicy failed: $_" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                }
+
+                try {
+                    $sessionPolicies = Get-BrokerSessionPolicy -MaxRecordCount 10 -ErrorAction SilentlyContinue
+                    if ($sessionPolicies) {
+                        $policySummary += @{
+                            Type = "Session Policies"
+                            Count = $sessionPolicies.Count
+                            Method = "Get-BrokerSessionPolicy"
+                        }
+                        Write-Host "[DEBUG] Found $($sessionPolicies.Count) session policies" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                    }
+                } catch {
+                    Write-Host "[DEBUG] Get-BrokerSessionPolicy failed: $_" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                }
+            }
+
+            if ($policySummary -and $policySummary.Count -gt 0) {
+                # Create a summary policy object
+                $policies = @([PSCustomObject]@{
+                    Name = "Policy Summary"
+                    Description = "Summary of Citrix policies found via configuration queries"
+                    Enabled = $true
+                    PolicySummary = $policySummary
+                    TotalPolicyTypes = $policySummary.Count
+                    TotalPolicies = ($policySummary | Measure-Object -Property Count -Sum).Sum
+                })
+                $policyMethod = "CitrixConfiguration"
+                Write-Host "Successfully retrieved policy summary from Citrix configuration" -ForegroundColor Green
+                Write-Host "[DEBUG] Citrix configuration query succeeded: Found $($policies[0].TotalPolicies) total policies across $($policies[0].TotalPolicyTypes) types" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            }
+        }
+        catch {
+            $errorMsg = "Citrix configuration query failed: $_"
+            Write-Warning $errorMsg
+            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+        }
+    }
+
+    # Method 4: Try to export policies to a file (as final fallback)
+    if (-not $policies) {
+        Write-Host "Attempting to export policies to file as final fallback..." -ForegroundColor Yellow
+        Write-Host "[DEBUG] Attempting Method 4: Export-BrokerPolicy" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
         try {
             $exportPath = Join-Path (Split-Path -Path $OutputPath -Parent) "citrix-policies-export.txt"
             Write-Host "[DEBUG] Export path: $exportPath" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
