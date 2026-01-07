@@ -1,9 +1,10 @@
 # Sync-ToGitHub.ps1
 # Automates syncing local code to GitHub repository with enhanced security
 # Uses force push to ignore remote-only files (can be disabled with -NoForcePush)
+# Includes intelligent error handling for branch protection and permission issues
 # Author : LAB007.AI
-# Version: 1.2
-# Last Modified: 260106:2130
+# Version: 1.3
+# Last Modified: 260106:2135
 
 param(
     [string]$CommitMessage = "",
@@ -330,28 +331,53 @@ else {
 
     # First try force push
     Write-Host "Attempting force push..." -ForegroundColor Gray
-    git push --force origin $currentBranch
+    git push --force origin $currentBranch 2>&1
+
+    # Capture the error for analysis
+    $forcePushExitCode = $LASTEXITCODE
+    $forcePushError = $error[0]
 
     # If force push fails, try alternative approaches
-    if ($LASTEXITCODE -ne 0) {
-        Write-Host "Force push failed. Trying alternative sync methods..." -ForegroundColor Yellow
+    if ($forcePushExitCode -ne 0) {
+        Write-Host "Force push failed (exit code: $forcePushExitCode)." -ForegroundColor Yellow
 
-        # Try force push with lease (safer)
-        Write-Host "Trying force push with lease..." -ForegroundColor Gray
-        git push --force-with-lease origin $currentBranch
+        # Check if it's a branch protection issue
+        if ($forcePushError -match "rejected.*fetch first" -or $forcePushError -match "non-fast-forward") {
+            Write-Host "This appears to be a branch protection or diverged branch issue." -ForegroundColor Yellow
+            Write-Host "Trying to sync with remote first..." -ForegroundColor Gray
 
-        # If that also fails, suggest manual resolution
+            # Try to pull and merge
+            git pull origin $currentBranch --allow-unrelated-histories 2>$null
+            if ($LASTEXITCODE -eq 0) {
+                Write-Host "Successfully merged remote changes. Retrying push..." -ForegroundColor Green
+                git push origin $currentBranch
+            } else {
+                Write-Host "Merge failed. Trying force push with lease..." -ForegroundColor Yellow
+                git push --force-with-lease origin $currentBranch 2>&1
+            }
+        } else {
+            Write-Host "Trying force push with lease as alternative..." -ForegroundColor Gray
+            git push --force-with-lease origin $currentBranch 2>&1
+        }
+
+        # If all force push attempts fail, provide manual options
         if ($LASTEXITCODE -ne 0) {
-            Write-Host "Force push with lease also failed." -ForegroundColor Red
-            Write-Host "This might be due to branch protection or permission issues." -ForegroundColor Red
+            Write-Host "All force push methods failed." -ForegroundColor Red
+            Write-Host "This is likely due to branch protection rules or permission restrictions." -ForegroundColor Red
             Write-Host ""
-            Write-Host "Manual resolution options:" -ForegroundColor Yellow
-            Write-Host "  1. Use -NoForcePush to disable force push: .\Sync-ToGitHub.ps1 -NoForcePush" -ForegroundColor White
-            Write-Host "  2. Check if branch protection prevents force pushes" -ForegroundColor White
-            Write-Host "  3. Verify you have push permissions to this repository" -ForegroundColor White
-            Write-Host "  4. Pull remote changes first: git pull origin $currentBranch --allow-unrelated-histories" -ForegroundColor White
-            Write-Host "  5. Reset local branch to remote: git reset --hard origin/$currentBranch" -ForegroundColor White
-            Write-Host "  6. Then push normally: git push origin $currentBranch" -ForegroundColor White
+            Write-Host "Immediate solutions:" -ForegroundColor Yellow
+            Write-Host "  1. Use -NoForcePush: .\Sync-ToGitHub.ps1 -NoForcePush" -ForegroundColor White
+            Write-Host "  2. Push to a new branch: .\Sync-ToGitHub.ps1 -Branch 'feature-updates'" -ForegroundColor White
+            Write-Host ""
+            Write-Host "Manual resolution:" -ForegroundColor Yellow
+            Write-Host "  1. Check repository settings for branch protection on 'master/main'" -ForegroundColor White
+            Write-Host "  2. Verify you have admin/maintainer access to enable force pushes" -ForegroundColor White
+            Write-Host "  3. Temporarily disable branch protection if you have permission" -ForegroundColor White
+            Write-Host "  4. Push to a different branch without protection" -ForegroundColor White
+            Write-Host ""
+            Write-Host "Local resolution commands:" -ForegroundColor Cyan
+            Write-Host "  git pull origin $currentBranch --allow-unrelated-histories" -ForegroundColor Gray
+            Write-Host "  git push origin $currentBranch" -ForegroundColor Gray
             exit 1
         }
     }
@@ -363,7 +389,11 @@ if ($LASTEXITCODE -eq 0) {
     Write-Host "Successfully synced to GitHub!" -ForegroundColor Green
     Write-Host "Repository: https://github.com/thomad99/LAB007-Main" -ForegroundColor Cyan
     Write-Host "Branch: $currentBranch" -ForegroundColor Cyan
-    Write-Host "Strategy: Force push (remote-only files ignored)" -ForegroundColor Gray
+    if ($NoForcePush) {
+        Write-Host "Strategy: Normal push" -ForegroundColor Gray
+    } else {
+        Write-Host "Strategy: Force push (remote-only files ignored)" -ForegroundColor Gray
+    }
     Write-Host "========================================" -ForegroundColor Green
 }
 else {
