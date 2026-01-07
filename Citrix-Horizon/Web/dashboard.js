@@ -21,35 +21,48 @@ let currentRoles = [];
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
     loadDefaultData();
-    
-    document.getElementById('loadFileBtn').addEventListener('click', () => {
-        document.getElementById('fileInput').click();
-    });
-    document.getElementById('fileInput').addEventListener('change', handleFileLoad);
-    
+
+    // Load Audit Data button
+    const loadFileBtn = document.getElementById('loadFileBtn');
+    const fileInput = document.getElementById('fileInput');
+
+    if (loadFileBtn && fileInput) {
+        loadFileBtn.addEventListener('click', () => {
+            fileInput.click();
+        });
+        fileInput.addEventListener('change', handleFileLoad);
+    }
+
     // Horizon Tasks button
-    document.getElementById('horizonTasksBtn').addEventListener('click', () => {
-        if (auditData) {
+    const horizonTasksBtn = document.getElementById('horizonTasksBtn');
+    if (horizonTasksBtn) {
+        horizonTasksBtn.addEventListener('click', () => {
             showHorizonTasksModal();
-        }
-    });
-    
+        });
+    }
+
     // Debug ZIP upload functionality
     const uploadDebugBtn = document.getElementById('uploadDebugBtn');
     const debugFileInput = document.getElementById('debugFileInput');
-    
+
     if (uploadDebugBtn && debugFileInput) {
         uploadDebugBtn.addEventListener('click', () => {
             debugFileInput.click();
         });
-        
+
         debugFileInput.addEventListener('change', (e) => {
             if (e.target.files.length > 0) {
                 uploadDebugFile(e.target.files[0]);
             }
         });
     }
-    
+
+    // Clone master images file input
+    const cloneMasterImagesFileInput = document.getElementById('cloneMasterImagesFileInput');
+    if (cloneMasterImagesFileInput) {
+        cloneMasterImagesFileInput.addEventListener('change', handleCloneMasterImagesFile);
+    }
+
     // Search functionality
     document.getElementById('serverSearch').addEventListener('input', filterServers);
     document.getElementById('appSearch').addEventListener('input', filterApps);
@@ -149,9 +162,13 @@ function handleFileLoad(event) {
         try {
             auditData = JSON.parse(e.target.result);
             displayDashboard(auditData);
+            // Clear the file input to allow re-uploading the same file
+            event.target.value = '';
         } catch (error) {
             showError('Error parsing JSON file: ' + error.message);
             hideDashboard();
+            // Clear the file input even on error
+            event.target.value = '';
         }
     };
     reader.onerror = function() {
@@ -2009,8 +2026,6 @@ function loadCloneMasterImagesFile() {
     const fileInput = document.getElementById('cloneMasterImagesFileInput');
     fileInput.click();
 }
-
-document.getElementById('cloneMasterImagesFileInput').addEventListener('change', handleCloneMasterImagesFile);
 
 function handleCloneMasterImagesFile(event) {
     const file = event.target.files[0];

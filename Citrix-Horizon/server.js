@@ -311,7 +311,7 @@ app.get('/api/download-audit-files', async (req, res) => {
 // Helper function to download local files as ZIP (fallback)
 function downloadLocalFiles(req, res) {
     try {
-        const zipFilename = 'Citrix-Audit-Scripts.zip';
+        const zipFilename = 'Citrix-Audit-Tools.zip';
         res.attachment(zipFilename);
 
         const archive = archiver('zip', {
@@ -325,13 +325,21 @@ function downloadLocalFiles(req, res) {
 
         archive.pipe(res);
 
-        // Add all PowerShell scripts from Scripts directory only
+        // Add Scripts directory
         const scriptsDir = path.join(__dirname, 'Scripts');
         if (fs.existsSync(scriptsDir)) {
             archive.directory(scriptsDir, 'Scripts');
         } else {
             res.status(404).json({ error: 'Scripts directory not found' });
             return;
+        }
+
+        // Add Web directory
+        const webDir = path.join(__dirname, 'Web');
+        if (fs.existsSync(webDir)) {
+            archive.directory(webDir, 'Web');
+        } else {
+            console.warn('Web directory not found, continuing without it');
         }
 
         archive.finalize();

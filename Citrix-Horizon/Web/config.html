@@ -181,10 +181,94 @@
 
                 <div class="form-group">
                     <label>
-                        <input type="checkbox" id="skipServerSpecs" name="skipServerSpecs" style="width: auto; margin-right: 8px;">
-                        Skip Server Specs Collection (faster execution)
+                        <input type="checkbox" id="runPreReqCheck" name="runPreReqCheck" checked style="width: auto; margin-right: 8px;">
+                        Run Pre-requisite Checks
                     </label>
-                    <div class="help-text">Check this to skip detailed server hardware information collection</div>
+                    <div class="help-text">Check this to run system pre-requisite checks before starting the audit</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="auditComponents">Audit Components to Run:</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditSiteInfo" name="auditSiteInfo" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Site Information</strong>
+                                <div style="font-size: 11px; color: #666;">Citrix site details & licensing</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditApplications" name="auditApplications" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Published Applications</strong>
+                                <div style="font-size: 11px; color: #666;">All published apps</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditDesktops" name="auditDesktops" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Published Desktops</strong>
+                                <div style="font-size: 11px; color: #666;">All published desktops</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditCatalogs" name="auditCatalogs" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Machine Catalogs</strong>
+                                <div style="font-size: 11px; color: #666;">Catalog configurations</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditDeliveryGroups" name="auditDeliveryGroups" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Delivery Groups</strong>
+                                <div style="font-size: 11px; color: #666;">Delivery group settings</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditUsageStats" name="auditUsageStats" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Usage Statistics</strong>
+                                <div style="font-size: 11px; color: #666;">Usage data & sessions</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditPolicies" name="auditPolicies" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Citrix Policies</strong>
+                                <div style="font-size: 11px; color: #666;">Policy configurations</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditRoles" name="auditRoles" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Management Roles</strong>
+                                <div style="font-size: 11px; color: #666;">Admin roles & permissions</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditVMwareSpecs" name="auditVMwareSpecs" style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>VMware Server Specs</strong>
+                                <div style="font-size: 11px; color: #666;">VMware VM specifications</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditServers" name="auditServers" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Server Information</strong>
+                                <div style="font-size: 11px; color: #666;">Citrix server details</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditDirectorOData" name="auditDirectorOData" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Director OData</strong>
+                                <div style="font-size: 11px; color: #666;">Monitoring data from Director</div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="help-text" style="margin-top: 10px;">Select which audit components you want to run</div>
                 </div>
 
                 <button type="submit" class="btn-submit" id="startAuditBtn">Start Audit</button>
@@ -216,7 +300,18 @@
                     document.getElementById('citrixVersion').value = parsed.citrixVersion || '1912';
                     document.getElementById('ddcName').value = parsed.ddcName || 'localhost';
                     document.getElementById('usageDays').value = parsed.usageDays || 30;
-                    document.getElementById('skipServerSpecs').checked = parsed.skipServerSpecs || false;
+                    document.getElementById('runPreReqCheck').checked = parsed.runPreReqCheck !== false;
+                    document.getElementById('auditSiteInfo').checked = parsed.auditComponents?.SiteInfo !== false;
+                    document.getElementById('auditApplications').checked = parsed.auditComponents?.Applications !== false;
+                    document.getElementById('auditDesktops').checked = parsed.auditComponents?.Desktops !== false;
+                    document.getElementById('auditCatalogs').checked = parsed.auditComponents?.Catalogs !== false;
+                    document.getElementById('auditDeliveryGroups').checked = parsed.auditComponents?.DeliveryGroups !== false;
+                    document.getElementById('auditUsageStats').checked = parsed.auditComponents?.UsageStats !== false;
+                    document.getElementById('auditPolicies').checked = parsed.auditComponents?.Policies !== false;
+                    document.getElementById('auditRoles').checked = parsed.auditComponents?.Roles !== false;
+                    document.getElementById('auditVMwareSpecs').checked = parsed.auditComponents?.VMwareSpecs || false;
+                    document.getElementById('auditServers').checked = parsed.auditComponents?.Servers !== false;
+                    document.getElementById('auditDirectorOData').checked = parsed.auditComponents?.DirectorOData !== false;
                 }
             } catch (e) {
                 console.log('No existing config found');
@@ -231,7 +326,20 @@
                 citrixVersion: document.getElementById('citrixVersion').value,
                 ddcName: document.getElementById('ddcName').value,
                 usageDays: parseInt(document.getElementById('usageDays').value),
-                skipServerSpecs: document.getElementById('skipServerSpecs').checked,
+                runPreReqCheck: document.getElementById('runPreReqCheck').checked,
+                auditComponents: {
+                    SiteInfo: document.getElementById('auditSiteInfo').checked,
+                    Applications: document.getElementById('auditApplications').checked,
+                    Desktops: document.getElementById('auditDesktops').checked,
+                    Catalogs: document.getElementById('auditCatalogs').checked,
+                    DeliveryGroups: document.getElementById('auditDeliveryGroups').checked,
+                    UsageStats: document.getElementById('auditUsageStats').checked,
+                    Policies: document.getElementById('auditPolicies').checked,
+                    Roles: document.getElementById('auditRoles').checked,
+                    VMwareSpecs: document.getElementById('auditVMwareSpecs').checked,
+                    Servers: document.getElementById('auditServers').checked,
+                    DirectorOData: document.getElementById('auditDirectorOData').checked
+                },
                 savedAt: new Date().toISOString()
             };
 
@@ -250,6 +358,10 @@
             URL.revokeObjectURL(configUrl);
 
             // Create batch file to run PowerShell script
+            const enabledComponents = Object.entries(config.auditComponents)
+                .filter(([key, value]) => value)
+                .map(([key, value]) => key);
+
             const batchContent = `@echo off
 cd /d "%~dp0"
 echo Starting LAB007 Discovery Tools Audit...
@@ -258,8 +370,10 @@ echo Configuration:
 echo   Version: ${config.citrixVersion}
 echo   DDC: ${config.ddcName}
 echo   Days: ${config.usageDays}
+echo   Pre-req Check: ${config.runPreReqCheck ? 'Yes' : 'No'}
+echo   Enabled Components: ${enabledComponents.join(', ')}
 echo.
-powershell.exe -ExecutionPolicy Bypass -File "Scripts\\Collect-CitrixAuditData.ps1" -CitrixVersion "${config.citrixVersion}" -DDCName "${config.ddcName}" -UsageDaysBack ${config.usageDays}${config.skipServerSpecs ? ' -SkipServerSpecs' : ''} -NonInteractive
+powershell.exe -ExecutionPolicy Bypass -File "Scripts\\Collect-CitrixAuditData.ps1" -CitrixVersion "${config.citrixVersion}" -DDCName "${config.ddcName}" -UsageDaysBack ${config.usageDays} -NonInteractive
 echo.
 echo Audit complete! Check the Data folder for results.
 pause`;
