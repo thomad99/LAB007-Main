@@ -474,12 +474,115 @@
             <div id="horizonTasksContent">
                 <!-- Task navigation tabs will be added here -->
                 <div id="horizonTasksTabs" style="border-bottom: 2px solid #ddd; margin-bottom: 20px;">
+                    <button class="task-tab" onclick="showHorizonTask('auditConfiguration')">Audit Configuration</button>
                     <button class="task-tab active" onclick="showHorizonTask('masterImageSearch')">Master Image Search</button>
                     <button class="task-tab" onclick="showHorizonTask('cloneMasterImage')">Clone Master Image</button>
                     <button class="task-tab" onclick="showHorizonTask('addApplications')">Add Applications to HZ</button>
                     <!-- More tasks can be added here -->
                 </div>
                 
+                <!-- Audit Configuration Task -->
+                <div id="auditConfigurationTask" class="horizon-task-panel">
+                    <h3>Audit Configuration</h3>
+                    <p>Configure which audit components to run and save settings.</p>
+
+                    <div style="margin: 20px 0;">
+                        <h4 style="margin-bottom: 15px;">Pre-requisite Checks</h4>
+                        <label style="display: flex; align-items: center; margin-bottom: 10px;">
+                            <input type="checkbox" id="runPreReqCheck" style="margin-right: 10px;">
+                            <span>Run pre-requisite checks before audit</span>
+                        </label>
+                    </div>
+
+                    <div style="margin: 20px 0;">
+                        <h4 style="margin-bottom: 15px;">Audit Components</h4>
+                        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 10px;">
+                            <label style="display: flex; align-items: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="checkbox" id="auditSiteInfo" style="margin-right: 10px;">
+                                <div>
+                                    <strong>Site Information</strong>
+                                    <div style="font-size: 12px; color: #666;">Collect Citrix site details and licensing</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="checkbox" id="auditApplications" style="margin-right: 10px;">
+                                <div>
+                                    <strong>Published Applications</strong>
+                                    <div style="font-size: 12px; color: #666;">Collect all published applications</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="checkbox" id="auditDesktops" style="margin-right: 10px;">
+                                <div>
+                                    <strong>Published Desktops</strong>
+                                    <div style="font-size: 12px; color: #666;">Collect all published desktops</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="checkbox" id="auditCatalogs" style="margin-right: 10px;">
+                                <div>
+                                    <strong>Machine Catalogs</strong>
+                                    <div style="font-size: 12px; color: #666;">Collect catalog configurations</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="checkbox" id="auditDeliveryGroups" style="margin-right: 10px;">
+                                <div>
+                                    <strong>Delivery Groups</strong>
+                                    <div style="font-size: 12px; color: #666;">Collect delivery group settings</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="checkbox" id="auditUsageStats" style="margin-right: 10px;">
+                                <div>
+                                    <strong>Usage Statistics</strong>
+                                    <div style="font-size: 12px; color: #666;">Collect usage data and sessions</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="checkbox" id="auditPolicies" style="margin-right: 10px;">
+                                <div>
+                                    <strong>Citrix Policies</strong>
+                                    <div style="font-size: 12px; color: #666;">Collect policy configurations</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="checkbox" id="auditRoles" style="margin-right: 10px;">
+                                <div>
+                                    <strong>Management Roles</strong>
+                                    <div style="font-size: 12px; color: #666;">Collect admin roles and permissions</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="checkbox" id="auditVMwareSpecs" style="margin-right: 10px;">
+                                <div>
+                                    <strong>VMware Server Specs</strong>
+                                    <div style="font-size: 12px; color: #666;">Collect VMware VM specifications</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="checkbox" id="auditServers" style="margin-right: 10px;">
+                                <div>
+                                    <strong>Server Information</strong>
+                                    <div style="font-size: 12px; color: #666;">Collect Citrix server details</div>
+                                </div>
+                            </label>
+                            <label style="display: flex; align-items: center; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                <input type="checkbox" id="auditDirectorOData" style="margin-right: 10px;">
+                                <div>
+                                    <strong>Director OData</strong>
+                                    <div style="font-size: 12px; color: #666;">Collect monitoring data from Director</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="margin: 20px 0; text-align: right;">
+                        <button class="btn btn-secondary" onclick="loadAuditConfiguration()">Load Current Config</button>
+                        <button class="btn btn-primary" onclick="saveAuditConfiguration()">Save Configuration</button>
+                    </div>
+                </div>
+
                 <!-- Clone Master Image Task -->
                 <div id="cloneMasterImageTask" class="horizon-task-panel active">
                     <h3>Clone Master Image</h3>

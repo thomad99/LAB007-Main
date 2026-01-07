@@ -583,11 +583,11 @@ function showHorizonTask(taskName) {
     // Hide all task panels
     const panels = document.querySelectorAll('.horizon-task-panel');
     panels.forEach(panel => panel.classList.remove('active'));
-    
+
     // Remove active class from all tabs
     const tabs = document.querySelectorAll('.task-tab');
     tabs.forEach(tab => tab.classList.remove('active'));
-    
+
     // Show selected task panel
     const selectedPanel = document.getElementById(taskName + 'Task');
     if (selectedPanel) {
@@ -1871,6 +1871,91 @@ function toggleSection(button) {
         section.classList.add('collapsed');
         body.style.display = 'none';
         button.textContent = '▼';
+    }
+}
+
+// Audit Configuration Functions
+async function loadAuditConfiguration() {
+    try {
+        const response = await fetch('/api/audit-config');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const config = await response.json();
+
+        // Set pre-req check
+        document.getElementById('runPreReqCheck').checked = config.runPreReqCheck || false;
+
+        // Set audit components
+        const componentMappings = {
+            'auditSiteInfo': 'SiteInfo',
+            'auditApplications': 'Applications',
+            'auditDesktops': 'Desktops',
+            'auditCatalogs': 'Catalogs',
+            'auditDeliveryGroups': 'DeliveryGroups',
+            'auditUsageStats': 'UsageStats',
+            'auditPolicies': 'Policies',
+            'auditRoles': 'Roles',
+            'auditVMwareSpecs': 'VMwareSpecs',
+            'auditServers': 'Servers',
+            'auditDirectorOData': 'DirectorOData'
+        };
+
+        Object.entries(componentMappings).forEach(([elementId, configKey]) => {
+            const checkbox = document.getElementById(elementId);
+            if (checkbox) {
+                checkbox.checked = config.auditComponents && config.auditComponents[configKey] !== undefined
+                    ? config.auditComponents[configKey]
+                    : true; // Default to enabled
+            }
+        });
+
+        alert('Audit configuration loaded successfully!');
+    } catch (error) {
+        console.error('Error loading audit configuration:', error);
+        alert('Failed to load audit configuration: ' + error.message);
+    }
+}
+
+async function saveAuditConfiguration() {
+    try {
+        // Collect form data
+        const config = {
+            runPreReqCheck: document.getElementById('runPreReqCheck').checked,
+            auditComponents: {
+                SiteInfo: document.getElementById('auditSiteInfo').checked,
+                Applications: document.getElementById('auditApplications').checked,
+                Desktops: document.getElementById('auditDesktops').checked,
+                Catalogs: document.getElementById('auditCatalogs').checked,
+                DeliveryGroups: document.getElementById('auditDeliveryGroups').checked,
+                UsageStats: document.getElementById('auditUsageStats').checked,
+                Policies: document.getElementById('auditPolicies').checked,
+                Roles: document.getElementById('auditRoles').checked,
+                VMwareSpecs: document.getElementById('auditVMwareSpecs').checked,
+                Servers: document.getElementById('auditServers').checked,
+                DirectorOData: document.getElementById('auditDirectorOData').checked
+            }
+        };
+
+        const response = await fetch('/api/audit-config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        });
+
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+
+        const result = await response.json();
+        alert('Audit configuration saved successfully!');
+
+    } catch (error) {
+        console.error('Error saving audit configuration:', error);
+        alert('Failed to save audit configuration: ' + error.message);
     }
 }
 

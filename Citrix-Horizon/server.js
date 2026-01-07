@@ -592,9 +592,67 @@ app.get('/uploads/debug/:filename', (req, res) => {
 });
 
 // Health check endpoint
+// Audit Configuration API
+app.get('/api/audit-config', (req, res) => {
+    const configPath = path.join(__dirname, 'lab007-config.json');
+
+    try {
+        if (fs.existsSync(configPath)) {
+            const configData = fs.readFileSync(configPath, 'utf8');
+            const config = JSON.parse(configData);
+            res.json(config);
+        } else {
+            // Return default configuration
+            const defaultConfig = {
+                runPreReqCheck: true,
+                auditComponents: {
+                    SiteInfo: true,
+                    Applications: true,
+                    Desktops: true,
+                    Catalogs: true,
+                    DeliveryGroups: true,
+                    UsageStats: true,
+                    Policies: true,
+                    Roles: true,
+                    VMwareSpecs: false,
+                    Servers: true,
+                    DirectorOData: true
+                }
+            };
+            res.json(defaultConfig);
+        }
+    } catch (error) {
+        console.error('Error reading audit config:', error);
+        res.status(500).json({ error: 'Failed to read audit configuration' });
+    }
+});
+
+app.post('/api/audit-config', (req, res) => {
+    const configPath = path.join(__dirname, 'lab007-config.json');
+
+    try {
+        const newConfig = req.body;
+
+        // Validate the configuration structure
+        if (!newConfig || typeof newConfig.runPreReqCheck !== 'boolean' || !newConfig.auditComponents) {
+            return res.status(400).json({ error: 'Invalid configuration format' });
+        }
+
+        // Write the configuration to file
+        fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2), 'utf8');
+
+        console.log('Audit configuration saved:', newConfig);
+        res.json({ success: true, message: 'Configuration saved successfully' });
+
+    } catch (error) {
+        console.error('Error saving audit config:', error);
+        res.status(500).json({ error: 'Failed to save audit configuration' });
+    }
+});
+
 app.get('/api/health', (req, res) => {
-    res.json({ 
-        status: 'ok', 
+    res.json({
+        status: 'ok',
         timestamp: new Date().toISOString(),
         service: 'Citrix Audit Dashboard'
     });

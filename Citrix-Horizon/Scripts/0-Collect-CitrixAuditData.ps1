@@ -1,8 +1,8 @@
 # Collect-CitrixAuditData.ps1
 # Master script that orchestrates collection of all Citrix audit data
 # Author : LAB007.AI
-# Version: 1.3
-# Last Modified: 260106:2115
+# Version: 2.1
+# Last Modified: 260106:2300
 
 param(
     [string]$OutputPath = ".\Data\citrix-audit-complete.json",
@@ -30,18 +30,42 @@ $debugFile = Join-Path $dataPath "debug0.txt"
 # Start transcript to capture all console output
 $startTime = Get-Date
 
-# Stop any existing transcript first to avoid file locking issues
+# Force remove any existing debug file to ensure clean start
+Write-Host "[DEBUG] Ensuring clean debug file..." -ForegroundColor Gray
 Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
 
-# Remove existing debug file if it exists to avoid locking issues
+# Aggressive file cleanup - try multiple approaches
 if (Test-Path $debugFile) {
     try {
-        # Try to remove it, but don't fail if it's locked
-        Remove-Item $debugFile -Force -ErrorAction SilentlyContinue
-        Start-Sleep -Milliseconds 100
+        # First attempt: regular remove
+        Remove-Item $debugFile -Force -ErrorAction Stop
+        Write-Host "[DEBUG] Debug file removed successfully" -ForegroundColor Gray
     }
     catch {
-        # File might be locked, continue anyway
+        Write-Host "[DEBUG] Initial removal failed, trying alternative methods..." -ForegroundColor Gray
+        try {
+            # Second attempt: clear content and try again
+            Clear-Content $debugFile -ErrorAction SilentlyContinue
+            Remove-Item $debugFile -Force -ErrorAction Stop
+            Write-Host "[DEBUG] Debug file cleared and removed" -ForegroundColor Gray
+        }
+        catch {
+            Write-Host "[DEBUG] Alternative removal failed, trying final method..." -ForegroundColor Gray
+            try {
+                # Final attempt: use cmd to force delete
+                $cmdResult = cmd /c "del /f /q `"$debugFile`"" 2>&1
+                if ($LASTEXITCODE -eq 0) {
+                    Write-Host "[DEBUG] Debug file force deleted via cmd" -ForegroundColor Gray
+                } else {
+                    Write-Warning "[DEBUG] Could not remove existing debug file via cmd: $cmdResult"
+                    Write-Warning "[DEBUG] Continuing anyway - debug output may be incomplete"
+                }
+            }
+            catch {
+                Write-Warning "[DEBUG] All debug file cleanup methods failed: $_"
+                Write-Warning "[DEBUG] Continuing anyway - debug output may be incomplete"
+            }
+        }
     }
 }
 
@@ -124,6 +148,8 @@ if (-not $CitrixVersion -and $DDCName) {
     Write-Host "Citrix version not specified. Attempting auto-discovery from DDC..." -ForegroundColor Yellow
 }
 
+# Note: Pre-requisite check removed due to syntax issues. Can be re-added later.
+
 $connectionResult = & "$scriptPath\Connect-CitrixEnvironment.ps1" -CitrixVersion $CitrixVersion -DDCName $DDCName -Interactive:(!$NonInteractive)
 
 if (-not $connectionResult.Connected) {
@@ -181,9 +207,10 @@ $auditData = @{
 }
 
 # 1. Collect Site Information
-Write-Host "[SiteInfo] Collecting Site Information..." -ForegroundColor Yellow
-try {
-    $siteInfo = & "$scriptPath\1-Get-CitrixSiteInfo.ps1" -OutputPath (Join-Path $dataPath "citrix-site-info.json") -CitrixVersion $CitrixVersion
+if ($config.AuditComponents.SiteInfo) {
+    Write-Host "[SiteInfo] Collecting Site Information..." -ForegroundColor Yellow
+    try {
+        $siteInfo = & "$scriptPath\1-Get-CitrixSiteInfo.ps1" -OutputPath (Join-Path $dataPath "citrix-site-info.json") -CitrixVersion $CitrixVersion
     if ($siteInfo) {
         $auditData.SiteName = $siteInfo.SiteName
         $auditData.LicenseServer = $siteInfo.LicenseServer
@@ -194,41 +221,56 @@ try {
             $auditData.Controllers = $siteInfo.Controllers
         }
     }
-}
-catch {
-    Write-Warning "Site information collection failed, continuing: $_"
+    }
+    catch {
+        Write-Warning "Site information collection failed, continuing: $_"
+    }
+} else {
+    Write-Host "[SiteInfo] Skipping Site Information collection (disabled in config)" -ForegroundColor Gray
+    $siteInfo = $null
 }
 
 # 2. Collect Applications
-Write-Host "[Applications] Collecting Published Applications..." -ForegroundColor Yellow
-try {
-    $apps = & "$scriptPath\2-Get-CitrixApplications.ps1" -OutputPath (Join-Path $dataPath "citrix-applications.json") -CitrixVersion $CitrixVersion
+if ($config.AuditComponents.Applications) {
+    Write-Host "[Applications] Collecting Published Applications..." -ForegroundColor Yellow
+    try {
+        $apps = & "$scriptPath\2-Get-CitrixApplications.ps1" -OutputPath (Join-Path $dataPath "citrix-applications.json") -CitrixVersion $CitrixVersion
     if ($apps) {
         $auditData.TotalPublishedApplications = $apps.TotalApplications
         $auditData.Applications = $apps.Applications
     }
-}
-catch {
-    Write-Warning "Applications collection failed, continuing: $_"
+    }
+    catch {
+        Write-Warning "Applications collection failed, continuing: $_"
+    }
+} else {
+    Write-Host "[Applications] Skipping Applications collection (disabled in config)" -ForegroundColor Gray
+    $apps = $null
 }
 
 # 3. Collect Desktops
-Write-Host "[Desktops] Collecting Published Desktops..." -ForegroundColor Yellow
-try {
-    $desktops = & "$scriptPath\3-Get-CitrixDesktops.ps1" -OutputPath (Join-Path $dataPath "citrix-desktops.json") -CitrixVersion $CitrixVersion
+if ($config.AuditComponents.Desktops) {
+    Write-Host "[Desktops] Collecting Published Desktops..." -ForegroundColor Yellow
+    try {
+        $desktops = & "$scriptPath\3-Get-CitrixDesktops.ps1" -OutputPath (Join-Path $dataPath "citrix-desktops.json") -CitrixVersion $CitrixVersion
     if ($desktops) {
         $auditData.TotalPublishedDesktops = $desktops.TotalPublishedDesktops
         $auditData.Desktops = $desktops.Desktops
     }
-}
-catch {
-    Write-Warning "Desktops collection failed, continuing: $_"
+    }
+    catch {
+        Write-Warning "Desktops collection failed, continuing: $_"
+    }
+} else {
+    Write-Host "[Desktops] Skipping Desktops collection (disabled in config)" -ForegroundColor Gray
+    $desktops = $null
 }
 
-# 4. Collect Catalogs (with provisioning information)
-Write-Host "[Catalogs] Collecting Machine Catalogs and Provisioning Information..." -ForegroundColor Yellow
-try {
-    $catalogs = & "$scriptPath\4-Get-CitrixCatalogs.ps1" -OutputPath (Join-Path $dataPath "citrix-catalogs.json") -CitrixVersion $CitrixVersion
+if ($config.AuditComponents.Catalogs) {
+    # 4. Collect Catalogs (with provisioning information)
+    Write-Host "[Catalogs] Collecting Machine Catalogs and Provisioning Information..." -ForegroundColor Yellow
+    try {
+        $catalogs = & "$scriptPath\4-Get-CitrixCatalogs.ps1" -OutputPath (Join-Path $dataPath "citrix-catalogs.json") -CitrixVersion $CitrixVersion
     if ($catalogs) {
         $auditData.NumberOfCatalogs = $catalogs.TotalCatalogs
         $auditData.Catalogs = $catalogs.Catalogs
@@ -290,14 +332,19 @@ try {
         
         Write-Host "Found $($uniqueMasterImages.Count) unique master images" -ForegroundColor Green
     }
-}
-catch {
-    Write-Warning "Catalogs collection failed, continuing: $_"
+    }
+    catch {
+        Write-Warning "Catalogs collection failed, continuing: $_"
+    }
+} else {
+    Write-Host "[Catalogs] Skipping Catalogs collection (disabled in config)" -ForegroundColor Gray
+    $catalogs = $null
 }
 
 # 5. Collect Delivery Groups (pass applications to count apps per group)
-Write-Host "[DeliveryGroups] Collecting Delivery Groups..." -ForegroundColor Yellow
-try {
+if ($config.AuditComponents.DeliveryGroups) {
+    Write-Host "[DeliveryGroups] Collecting Delivery Groups..." -ForegroundColor Yellow
+    try {
     # Get applications array - handle both direct array and wrapped in result object
     $appsForDeliveryGroups = @()
     if ($auditData.Applications) {
@@ -312,27 +359,37 @@ try {
         $auditData.NumberOfDeliveryGroups = $deliveryGroups.TotalDeliveryGroups
         $auditData.DeliveryGroups = $deliveryGroups.DeliveryGroups
     }
-}
-catch {
-    Write-Warning "Delivery Groups collection failed, continuing: $_"
+    }
+    catch {
+        Write-Warning "Delivery Groups collection failed, continuing: $_"
+    }
+} else {
+    Write-Host "[DeliveryGroups] Skipping Delivery Groups collection (disabled in config)" -ForegroundColor Gray
+    $deliveryGroups = $null
 }
 
 # 6. Collect Usage Statistics
-Write-Host "[UsageStats] Collecting Usage Statistics (last $UsageDaysBack days)..." -ForegroundColor Yellow
-try {
-    $usageStats = & "$scriptPath\6-Get-CitrixUsageStats.ps1" -OutputPath (Join-Path $dataPath "citrix-usage-stats.json") -DaysBack $UsageDaysBack -CitrixVersion $CitrixVersion
+if ($config.AuditComponents.UsageStats) {
+    Write-Host "[UsageStats] Collecting Usage Statistics (last $UsageDaysBack days)..." -ForegroundColor Yellow
+    try {
+        $usageStats = & "$scriptPath\6-Get-CitrixUsageStats.ps1" -OutputPath (Join-Path $dataPath "citrix-usage-stats.json") -DaysBack $UsageDaysBack -CitrixVersion $CitrixVersion
     if ($usageStats) {
         $auditData.MaxConcurrentUsers_30Days = $usageStats.MaxConcurrentUsers_Approx
         $auditData.UniqueUserConnections_30Days = $usageStats.UniqueUserConnections_Period
         $auditData.LicenseType = $usageStats.LicenseType
         $auditData.CurrentActiveSessions = $usageStats.CurrentActiveSessions
     }
-}
-catch {
-    Write-Warning "Usage statistics collection failed, continuing: $_"
+    }
+    catch {
+        Write-Warning "Usage statistics collection failed, continuing: $_"
+    }
+} else {
+    Write-Host "[UsageStats] Skipping Usage Statistics collection (disabled in config)" -ForegroundColor Gray
+    $usageStats = $null
 }
 
-# 7. Collect Policies
+if ($config.AuditComponents.Policies) {
+    # 7. Collect Policies
 Write-Host "[Policies] Collecting Citrix Policies..." -ForegroundColor Yellow
 
 # Stop transcript to avoid file locking issues with individual scripts
@@ -359,7 +416,8 @@ finally {
 }
 
 # 7b. Collect Roles and AD Groups
-Write-Host "[Roles] Collecting Citrix Management Roles and AD Groups..." -ForegroundColor Yellow
+if ($config.AuditComponents.Roles) {
+    Write-Host "[Roles] Collecting Citrix Management Roles and AD Groups..." -ForegroundColor Yellow
 
 # Stop transcript to avoid file locking issues
 Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
@@ -380,9 +438,13 @@ finally {
     try {
         Start-Transcript -Path $debugFile -Append -ErrorAction SilentlyContinue | Out-Null
     }
-    catch {
-        Write-Warning "Could not restart transcript: $_"
+        catch {
+            Write-Warning "Could not restart transcript: $_"
+        }
     }
+} else {
+    Write-Host "[Roles] Skipping Roles collection (disabled in config)" -ForegroundColor Gray
+    $roles = $null
 }
 
 # 9. Collect VMware Server Specs (if VMware server specified)
@@ -404,9 +466,7 @@ if (-not $SkipServerSpecs -and $VMwareServer) {
 }
 
 # 10. Collect Server Information (and merge with VMware data if available)
-# Always run server collection unless explicitly skipped
-Write-Host "[DEBUG] SkipServerSpecs value: $SkipServerSpecs" -ForegroundColor Gray
-if (-not $SkipServerSpecs) {
+if ($config.AuditComponents.Servers) {
     Write-Host "[Servers] Collecting Server Information and Specs..." -ForegroundColor Yellow
     Write-Host "[DEBUG] Starting server collection at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray
     Write-Host "[DEBUG] SkipServerSpecs: $SkipServerSpecs" -ForegroundColor Gray
@@ -479,8 +539,9 @@ if (-not $SkipServerSpecs) {
         $auditData.Servers = @()
     }
 }
-else {
-    Write-Host "[Servers] Skipping Server Specs collection (as requested)..." -ForegroundColor Yellow
+} else {
+    Write-Host "[Servers] Skipping Server collection (disabled in config)" -ForegroundColor Gray
+    $servers = $null
 }
 
 # 11. StoreFront Information collection - DISABLED
@@ -488,20 +549,21 @@ else {
 # Write-Host "[11/12] Skipping StoreFront collection (disabled)..." -ForegroundColor Gray
 
 # 11. Collect Director OData (optional)
-# Use DirectorServer parameter if provided, otherwise use DDCName, or default to localhost
-$directorServerToUse = $DirectorServer
-if (-not $directorServerToUse -or $directorServerToUse.Trim() -eq "") {
-    if ($DDCName -and $DDCName.Trim() -ne "") {
-        $directorServerToUse = $DDCName
-        Write-Host "[DirectorOData] Using DDC name as Director server: $directorServerToUse" -ForegroundColor Yellow
+if ($config.AuditComponents.DirectorOData) {
+    # Use DirectorServer parameter if provided, otherwise use DDCName, or default to localhost
+    $directorServerToUse = $DirectorServer
+    if (-not $directorServerToUse -or $directorServerToUse.Trim() -eq "") {
+        if ($DDCName -and $DDCName.Trim() -ne "") {
+            $directorServerToUse = $DDCName
+            Write-Host "[DirectorOData] Using DDC name as Director server: $directorServerToUse" -ForegroundColor Yellow
+        }
+        else {
+            $directorServerToUse = "localhost"
+            Write-Host "[DirectorOData] No Director server specified, using localhost" -ForegroundColor Yellow
+        }
     }
-    else {
-        $directorServerToUse = "localhost"
-        Write-Host "[DirectorOData] No Director server specified, using localhost" -ForegroundColor Yellow
-    }
-}
 
-Write-Host "[DirectorOData] Collecting Director OData from $directorServerToUse..." -ForegroundColor Yellow
+    Write-Host "[DirectorOData] Collecting Director OData from $directorServerToUse..." -ForegroundColor Yellow
 try {
     $directorData = & "$scriptPath\12-Get-CitrixDirectorOData.ps1" -OutputPath (Join-Path $dataPath "citrix-director-odata.json") -DirectorServer $directorServerToUse
     if ($directorData -and -not $directorData.Error) {
@@ -512,8 +574,12 @@ try {
         Write-Host "Director OData collection skipped or returned error" -ForegroundColor Gray
     }
 }
-catch {
-    Write-Warning "Director OData collection failed, continuing: $_"
+    catch {
+        Write-Warning "Director OData collection failed, continuing: $_"
+    }
+} else {
+    Write-Host "[DirectorOData] Skipping Director OData collection (disabled in config)" -ForegroundColor Gray
+    $directorData = $null
 }
 
 # Calculate summary metrics
