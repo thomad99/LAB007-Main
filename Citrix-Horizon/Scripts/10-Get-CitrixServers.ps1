@@ -2,8 +2,8 @@
 # Extracts server information including specs (RAM, CPU, Disk)
 # Uses VMware SDK as fallback if Citrix data unavailable
 # Author : LAB007.AI
-# Version: 1.3
-# Last Modified: 260106:1024
+# Version: 1.4
+# Last Modified: 260106:1500
 
 param(
     [string]$OutputPath = ".\Data\citrix-servers.json",
@@ -150,7 +150,7 @@ try {
                     
                     if ($specsCollected) {
                         $serverInfo.SpecsSource = "CIM"
-                        Write-Host "  ✓ Collected specs via CIM for $hostName" -ForegroundColor Green
+                        Write-Host "  SUCCESS: Collected specs via CIM for $hostName" -ForegroundColor Green
                     }
                     
                     Remove-CimSession -CimSession $cimSession
@@ -168,7 +168,7 @@ try {
                 # Check if VMware PowerCLI is available
                 $vmwareModule = Get-Module -ListAvailable -Name VMware.PowerCLI
                 if (-not $vmwareModule) {
-                    Write-Warning "  ✗ VMware PowerCLI module not available for $hostName. Place VMware PowerCLI files in .\Dependencies\VMware\ and run Install-RequiredModules.ps1"
+                    Write-Warning "  ERROR: VMware PowerCLI module not available for $hostName. Place VMware PowerCLI files in .\Dependencies\VMware\ and run Install-RequiredModules.ps1"
                 }
                 else {
                     try {
@@ -232,21 +232,20 @@ try {
                             }
                             
                             $serverInfo.SpecsSource = "VMware"
-                            Write-Host "  ✓ Successfully retrieved specs from VMware for $hostName (RAM: $($serverInfo.TotalRAM_GB)GB, CPU: $($serverInfo.CPUCount) vCPU, Disk: $($serverInfo.DiskTotalSize_GB)GB)" -ForegroundColor Green
+                            Write-Host "  SUCCESS: Successfully retrieved specs from VMware for $hostName (RAM: $($serverInfo.TotalRAM_GB)GB, CPU: $($serverInfo.CPUCount) vCPU, Disk: $($serverInfo.DiskTotalSize_GB)GB)" -ForegroundColor Green
                         }
                         else {
-                            Write-Warning "  ✗ VM not found in VMware for server $hostName (searched: $($searchNames -join ', '))"
+                            Write-Warning "  ERROR: VM not found in VMware for server $hostName (searched: $($searchNames -join ', '))"
                         }
                     }
                     catch {
-                        Write-Warning "  ✗ Could not retrieve specs from VMware for $hostName : $_"
+                        Write-Warning "  ERROR: Could not retrieve specs from VMware for $hostName : $_"
                     }
                 }
             }
             
             $uniqueServers[$hostName] = $serverInfo
         }
-    }
     
     if ($uniqueServers.Count -gt 0) {
         $servers = $uniqueServers.Values | ForEach-Object { $_ }
@@ -286,9 +285,33 @@ try {
             NoSpecs = $noSpecsCount
         }
     }
-    
-    # Convert to JSON and save
-    try {
+
+    # Stop transcript before saving
+    Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
+}
+catch {
+    Write-Error "Failed to collect Citrix server information: $_"
+    Write-Host "[DEBUG] Fatal error in server collection: $_" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] Stack trace: $($_.ScriptStackTrace)" | Out-File -FilePath $debugFile -Append
+
+    # Stop transcript on error
+    Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
+
+    # Return error result
+    return @{
+        Servers = @()
+        CollectedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+        Error = $_.Exception.Message
+        SpecsCollectionSummary = @{
+            FromCIM = 0
+            FromVMware = 0
+            NoSpecs = 0
+        }
+    }
+}
+
+# Convert to JSON and save (outside main try/catch)
+try {
         Write-Host "[DEBUG] Preparing to save server data. Total servers: $($servers.Count)" | Out-File -FilePath $debugFile -Append
         Write-Host "[DEBUG] Output file path: $OutputPath" | Out-File -FilePath $debugFile -Append
         Write-Host "[DEBUG] Output directory exists: $(Test-Path -Path $outputDir)" | Out-File -FilePath $debugFile -Append
@@ -321,32 +344,18 @@ try {
         
         Write-Host "[DEBUG] Server data saved successfully to: $OutputPath" | Out-File -FilePath $debugFile -Append
         Write-Host "[DEBUG] Script completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
+
+        return $result
     }
     catch {
         $errorMsg = "Failed to save server data to file: $_"
         Write-Error $errorMsg
         Write-Host "[DEBUG] ERROR saving file: $errorMsg" | Out-File -FilePath $debugFile -Append
-        Write-Host "[DEBUG] Error exception type: $($_.Exception.GetType().FullName)" | Out-File -FilePath $debugFile -Append
-        Write-Host "[DEBUG] Error exception message: $($_.Exception.Message)" | Out-File -FilePath $debugFile -Append
-        
-        # Try to save a minimal error file
-        try {
-            $errorResult = @{
-                TotalServers = 0
-                Servers = @()
-                CollectedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-                Error = "Failed to save file: $errorMsg"
-            }
-            $errorResult | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
-            Write-Host "[DEBUG] Error result file saved as fallback" | Out-File -FilePath $debugFile -Append
-        }
-        catch {
-            Write-Host "[DEBUG] Could not save error result file: $_" | Out-File -FilePath $debugFile -Append
-        }
-        
-        throw
+
+        # Return the result anyway since data collection succeeded
+        return $result
     }
-    
+
     return $result
 }
 catch {
@@ -404,6 +413,20 @@ catch {
         Write-Host "[DEBUG] Save error exception: $($_.Exception.Message)" | Out-File -FilePath $debugFile -Append
     }
     
-    return $errorResult
+    Write-Error "Failed to collect Citrix server information: $_"
+    Write-Host "[DEBUG] Fatal error in server collection: $_" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] Stack trace: $($_.ScriptStackTrace)" | Out-File -FilePath $debugFile -Append
+
+    # Return error result
+    return @{
+        Servers = @()
+        CollectedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+        Error = $_.Exception.Message
+        SpecsCollectionSummary = @{
+            FromCIM = 0
+            FromVMware = 0
+            NoSpecs = 0
+        }
+    }
 }
 

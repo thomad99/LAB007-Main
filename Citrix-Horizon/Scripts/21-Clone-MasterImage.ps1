@@ -1,8 +1,8 @@
 # Clone-MasterImage.ps1
 # Clones VMware master images with version increment for GoldenSun project
 # Author : LAB007.AI
-# Version: 1.0
-# Last Modified: 260106:1024
+# Version: 1.1
+# Last Modified: 260106:1500
 
 param(
     [Parameter(Mandatory=$true)]

@@ -2,8 +2,8 @@
 # Discovers VMware VMs matching SHC-M-* pattern for GoldenSun project
 # Connects to vCenter and extracts master image information
 # Author : LAB007.AI
-# Version: 1.0
-# Last Modified: 260106:1024
+# Version: 1.1
+# Last Modified: 260106:1500
 
 param(
     [string]$OutputPath = '.\Data\goldensun-master-images.json',

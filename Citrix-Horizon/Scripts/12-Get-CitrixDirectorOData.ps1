@@ -2,8 +2,8 @@
 # Collects OData from Citrix Director monitoring endpoints
 # Director exposes monitoring data via OData v3/v4 API (supports multiple versions)
 # Author : LAB007.AI
-# Version: 1.6
-# Last Modified: 260105:2134
+# Version: 1.8
+# Last Modified: 260106:1530
 
 param(
     [string]$OutputPath = ".\Data\citrix-director-odata.json",
@@ -280,8 +280,12 @@ try {
         }
     }
     
-    # Build base URL - try multiple OData versions for compatibility
-    $protocol = if ($UseHTTPS) { "https" } else { "http" }
+    # Protocols to try (HTTPS first for security, then HTTP as fallback)
+    $protocols = @("https", "http")
+    if (-not $UseHTTPS) {
+        # If HTTP explicitly requested, try HTTP first
+        $protocols = @("http", "https")
+    }
     
     # List of OData versions/paths to try (most common first)
     $odataPaths = @(
@@ -303,14 +307,22 @@ try {
     $baseUrl = $null
     $workingPath = $null
     
-    # Try each OData path to find one that works
-    Write-Host "Discovering OData endpoint (trying multiple versions)..." -ForegroundColor Yellow
+    # Try each protocol and OData path combination to find one that works
+    Write-Host "Discovering OData endpoint (trying HTTPS first, then HTTP fallback)..." -ForegroundColor Yellow
     $endpointFound = $false
-    foreach ($odataPath in $odataPaths) {
-        $testUrl = "${protocol}://${DirectorServer}:${Port}${odataPath}"
-        Write-Host "  Trying: $testUrl" -ForegroundColor Gray | Out-File -FilePath $debugFile -Append
-        
-        try {
+
+    foreach ($protocol in $protocols) {
+        if ($endpointFound) { break }  # Stop if we already found a working endpoint
+
+        Write-Host "Trying protocol: $protocol" -ForegroundColor Cyan | Out-File -FilePath $debugFile -Append
+
+        foreach ($odataPath in $odataPaths) {
+            if ($endpointFound) { break }  # Stop if we already found a working endpoint
+
+            $testUrl = "${protocol}://${DirectorServer}:${Port}${odataPath}"
+            Write-Host "  Trying: $testUrl" -ForegroundColor Gray | Out-File -FilePath $debugFile -Append
+
+            try {
             $testParams = @{
                 Uri = "$testUrl/`$metadata"
                 Method = 'Get'
@@ -321,8 +333,8 @@ try {
             if ($Credential) {
                 $testParams.Credential = $Credential
             }
-            
-            if ($SkipSSLValidation) {
+
+            if ($SkipSSLValidation -or $protocol -eq "http") {
                 Initialize-SSLBypass
             }
             
@@ -341,31 +353,31 @@ try {
                 Write-Host "[DEBUG] Working OData path: $odataPath (OData $version)" | Out-File -FilePath $debugFile -Append
                 $endpointFound = $true
             }
+            catch {
+                # Continue to next path - this is expected as we try multiple versions
+                $statusCode = $null
+                if ($_.Exception.Response) {
+                    $statusCode = [int]$_.Exception.Response.StatusCode
+                }
+                if ($statusCode -eq 404) {
+                    # 404 is expected for non-existent paths - don't log as error
+                    Write-Host "[DEBUG] Path $odataPath not found (404) - trying next version..." | Out-File -FilePath $debugFile -Append
+                }
+                else {
+                    Write-Host "[DEBUG] Path $odataPath failed (Status: $statusCode): $_" | Out-File -FilePath $debugFile -Append
+                }
+            }
         }
-        catch {
-            # Continue to next path - this is expected as we try multiple versions
-            $statusCode = $null
-            if ($_.Exception.Response) {
-                $statusCode = [int]$_.Exception.Response.StatusCode
-            }
-            if ($statusCode -eq 404) {
-                # 404 is expected for non-existent paths - don't log as error
-                Write-Host "[DEBUG] Path $odataPath not found (404) - trying next version..." | Out-File -FilePath $debugFile -Append
-            }
-            else {
-                Write-Host "[DEBUG] Path $odataPath failed (Status: $statusCode): $_" | Out-File -FilePath $debugFile -Append
-            }
-        }
-        
+
         if ($endpointFound) {
             break
         }
-    }
-    
-    # If no path worked, default to v4 (most common in newer versions)
+    }  # End foreach protocol
+
+    # If no path worked, default to v4 over HTTPS (most common in newer versions)
     if (-not $baseUrl) {
         $workingPath = "/citrix/monitor/odata/v4/Data"
-        $baseUrl = "${protocol}://${DirectorServer}:${Port}${workingPath}"
+        $baseUrl = "https://${DirectorServer}:${Port}${workingPath}"
         Write-Host "  WARNING: Could not verify endpoint, defaulting to: $workingPath" -ForegroundColor Yellow
         Write-Host "[DEBUG] Using default OData path: $workingPath" | Out-File -FilePath $debugFile -Append
     }
