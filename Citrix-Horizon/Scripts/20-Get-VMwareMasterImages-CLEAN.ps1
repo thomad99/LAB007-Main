@@ -7,7 +7,8 @@
 
 param(
     [string]$OutputPath = '.\Data\goldensun-master-images.json',
-    [string]$vCenterServer = 'shcvcsacx01v.ccr.cchcs.org'
+    [string]$vCenterServer = 'shcvcsacx01v.ccr.cchcs.org',
+    [string]$MasterImagePrefix = 'SHC-M-'
 )
 
 # Align output handling with other scripts (e.g., Get-CitrixCatalogs)
@@ -31,14 +32,16 @@ try {
     # Suppress certificate warnings
     Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -Confirm:$false -Scope Session | Out-Null
 
-    # Prompt for vCenter server (default provided)
-    $inputServer = Read-Host "Enter vCenter Server name or IP [$vCenterServer]"
-    if (-not [string]::IsNullOrWhiteSpace($inputServer)) {
-        $vCenterServer = $inputServer
-    }
+    # Validate vCenter server parameter
     if ([string]::IsNullOrWhiteSpace($vCenterServer)) {
         Write-Error 'vCenter Server name is required'
         exit 1
+    }
+
+    # Validate master image prefix
+    if ([string]::IsNullOrWhiteSpace($MasterImagePrefix)) {
+        Write-Warning 'MasterImagePrefix not specified, using default: SHC-M-'
+        $MasterImagePrefix = 'SHC-M-'
     }
 
     # Prompt for credentials
@@ -56,10 +59,10 @@ try {
         exit 1
     }
 
-    # Search for VMs matching SHC-M-* pattern
-    Write-Host 'Searching for VMs matching pattern SHC-M-*...' -ForegroundColor Yellow
+    # Search for VMs matching the specified prefix pattern
+    Write-Host "Searching for VMs matching pattern ${MasterImagePrefix}*..." -ForegroundColor Yellow
 
-    $vms = Get-VM -Name 'SHC-M-*' -ErrorAction SilentlyContinue
+    $vms = Get-VM -Name "${MasterImagePrefix}*" -ErrorAction SilentlyContinue
 
     if (-not $vms -or $vms.Count -eq 0) {
         Write-Warning 'No VMs found matching pattern SHC-M-*'
@@ -128,6 +131,7 @@ try {
     $result = @{
         TotalImages = $masterImages.Count
         vCenterServer = $vCenterServer
+        MasterImagePrefix = $MasterImagePrefix
         CollectedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
         MasterImages = $masterImages
     }
@@ -162,6 +166,7 @@ catch {
     $errorResult = @{
         TotalImages = 0
         vCenterServer = if ($vCenterServer) { $vCenterServer } else { 'Unknown' }
+        MasterImagePrefix = if ($MasterImagePrefix) { $MasterImagePrefix } else { 'Unknown' }
         CollectedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
         MasterImages = @()
         Error = $_.ToString()

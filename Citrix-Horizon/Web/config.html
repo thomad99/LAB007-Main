@@ -234,7 +234,7 @@
                             <input type="checkbox" id="auditDeliveryGroups" name="auditDeliveryGroups" checked style="width: auto; margin-right: 8px;">
                             <div>
                                 <strong>Delivery Groups</strong>
-                                <div style="font-size: 11px; color: #666;">Delivery group settings</div>
+                                <div style="font-size: 12px; color: #666;">Delivery group settings</div>
                             </div>
                         </label>
                         <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
@@ -283,22 +283,10 @@
                     <div class="help-text" style="margin-top: 10px;">Select which audit components you want to run</div>
                 </div>
 
-                <button type="submit" class="btn-submit" id="startAuditBtn">Start Audit</button>
+                <button type="submit" class="btn-submit" id="saveConfigBtn">Save Config</button>
             </form>
 
             <div id="statusMessage" class="status-message"></div>
-
-            <div id="auditInstructions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center; display: none;">
-                <p style="color: #6c757d; font-size: 0.9rem; margin-bottom: 15px;">
-                    Configuration saved! Click the button below to start the audit:
-                </p>
-                <button id="runAuditBtn" class="btn-submit" style="width: auto; padding: 12px 30px; margin: 0;">
-                    Run PowerShell Audit Script
-                </button>
-                <p style="color: #6c757d; font-size: 0.85rem; margin-top: 15px;">
-                    Or manually run: <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">.\Scripts\Collect-CitrixAuditData.ps1</code>
-                </p>
-            </div>
         </div>
     </div>
 
@@ -332,7 +320,7 @@
             }
         }
 
-        // Save configuration and prepare audit
+        // Save configuration
         document.getElementById('configForm').addEventListener('submit', function(e) {
             e.preventDefault();
 
@@ -362,70 +350,16 @@
             // Save to localStorage
             localStorage.setItem('lab007Config', JSON.stringify(config));
 
-            // Create downloadable JSON file
-            const configBlob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-            const configUrl = URL.createObjectURL(configBlob);
-            const configLink = document.createElement('a');
-            configLink.href = configUrl;
-            configLink.download = 'lab007-config.json';
-            document.body.appendChild(configLink);
-            configLink.click();
-            document.body.removeChild(configLink);
-            URL.revokeObjectURL(configUrl);
-
-            // Create batch file to run PowerShell script
-            const enabledComponents = Object.entries(config.auditComponents)
-                .filter(([key, value]) => value)
-                .map(([key, value]) => key);
-
-            const batchContent = `@echo off
-cd /d "%~dp0"
-echo Starting LAB007 Discovery Tools Audit...
-echo.
-echo Configuration:
-echo   Version: ${config.citrixVersion}
-echo   DDC: ${config.ddcName}
-echo   Days: ${config.usageDays}
-echo   Pre-req Check: ${config.runPreReqCheck ? 'Yes' : 'No'}
-echo   Enabled Components: ${enabledComponents.join(', ')}
-echo.
-powershell.exe -ExecutionPolicy Bypass -File "Scripts\\Collect-CitrixAuditData.ps1" -CitrixVersion "${config.citrixVersion}" -DDCName "${config.ddcName}" -UsageDaysBack ${config.usageDays} -NonInteractive
-echo.
-echo Audit complete! Check the Data folder for results.
-pause`;
-
-            const batchBlob = new Blob([batchContent], { type: 'text/plain' });
-            const batchUrl = URL.createObjectURL(batchBlob);
-            const batchLink = document.createElement('a');
-            batchLink.href = batchUrl;
-            batchLink.download = 'Start-Audit.bat';
-            document.body.appendChild(batchLink);
-            batchLink.click();
-            document.body.removeChild(batchLink);
-            URL.revokeObjectURL(batchUrl);
-
-            // Show success message and instructions
+            // Show success message
             const statusMsg = document.getElementById('statusMessage');
             statusMsg.className = 'status-message success';
             statusMsg.style.display = 'block';
-            statusMsg.innerHTML = 'Configuration saved! <strong>Start-Audit.bat</strong> file downloaded. Double-click it to start the audit.';
+            statusMsg.innerHTML = 'Configuration saved successfully!';
 
-            // Show audit instructions
-            document.getElementById('auditInstructions').style.display = 'block';
-            document.getElementById('configForm').style.display = 'none';
-        });
-
-        // Run audit button handler
-        document.getElementById('runAuditBtn').addEventListener('click', function() {
-            // Try to open the batch file
-            const batchPath = 'Start-Audit.bat';
-            window.location.href = 'file:///' + window.location.pathname.replace(/\/[^/]*$/, '/') + batchPath;
-            
-            // Fallback: show instructions
-            const statusMsg = document.getElementById('statusMessage');
-            statusMsg.className = 'status-message success';
-            statusMsg.style.display = 'block';
-            statusMsg.innerHTML = 'Please double-click <strong>Start-Audit.bat</strong> in your project folder to start the audit.';
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+                statusMsg.style.display = 'none';
+            }, 3000);
         });
 
         // Load config on page load

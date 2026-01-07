@@ -611,7 +611,8 @@ function closeMasterImagesModal() {
 // Horizon Environment Tasks Functions
 function loadConfigIntoModal() {
     try {
-        const config = localStorage.getItem('lab007Config');
+        // Try to load from localStorage first
+        let config = localStorage.getItem('lab007Config');
         if (config) {
             const parsed = JSON.parse(config);
 
@@ -626,9 +627,30 @@ function loadConfigIntoModal() {
             if (prefixField) {
                 prefixField.value = parsed.masterImagePrefix || 'SHC-M-';
             }
+        } else {
+            // Fallback to defaults if no config saved
+            const vCenterField = document.getElementById('searchVCenterServer');
+            if (vCenterField) {
+                vCenterField.value = 'shcvcsacx01v.ccr.cchcs.org';
+            }
+
+            const prefixField = document.getElementById('searchMasterPrefix');
+            if (prefixField) {
+                prefixField.value = 'SHC-M-';
+            }
         }
     } catch (error) {
-        console.log('No config found for modal, using defaults');
+        console.log('Error loading config for modal, using defaults', error);
+        // Fallback to defaults
+        const vCenterField = document.getElementById('searchVCenterServer');
+        if (vCenterField) {
+            vCenterField.value = 'shcvcsacx01v.ccr.cchcs.org';
+        }
+
+        const prefixField = document.getElementById('searchMasterPrefix');
+        if (prefixField) {
+            prefixField.value = 'SHC-M-';
+        }
     }
 }
 
@@ -709,7 +731,7 @@ function populateMasterImagesCloneList() {
 }
 
 function createCloneScript() {
-    const namingConvention = document.getElementById('cloneNamingConvention').value || 'HZ-M-xxxxxxx';
+    const namingConvention = 'HZ-M-xxxxxxx'; // Default naming convention
 
     if (selectedCloneImages.size === 0) {
         alert('Please select at least one master image to clone.');
@@ -910,17 +932,21 @@ function createMasterImageSearchScript() {
 }
 
 function generateMasterImageSearchScript(vCenterServer, masterPrefix) {
-    // Read the base script template (script 20)
-    const baseScript = `# Get-VMwareMasterImages.ps1
+    // Generate script name based on prefix
+    const scriptName = `Get-MasterImages-${masterPrefix.replace(/-$/, '')}.ps1`;
+
+    // Generate the PowerShell script
+    const script = `# ${scriptName}
 # Discovers VMware VMs matching ${masterPrefix} pattern for GoldenSun project
 # Connects to vCenter and extracts master image information
 # Author : LAB007.AI
 # Version: 1.0
-# Last Modified: 260106:2115
+# Generated: ${(new Date()).toISOString().split('T')[0]}
 
 param(
-    [string]$OutputPath = '.\Data\goldensun-master-images.json',
-    [string]$vCenterServer = '${vCenterServer}'
+    [string]$OutputPath = '.\\Data\\goldensun-master-images.json',
+    [string]$vCenterServer = '${vCenterServer}',
+    [string]$MasterImagePrefix = '${masterPrefix}'
 )
 
 # Align output handling with other scripts (e.g., Get-CitrixCatalogs)
@@ -929,29 +955,12 @@ if (-not (Test-Path -Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 }
 
-# Setup debug logging
-$debugFile = Join-Path $outputDir "debug20.txt"
-
-# Force delete existing debug file to ensure clean start
-if (Test-Path $debugFile) {
-    try {
-        Remove-Item $debugFile -Force -ErrorAction Stop
-    } catch {
-        Write-Warning "Could not delete existing debug file $debugFile : $_"
-    }
-}
-
 try {
-    Write-Host "[DEBUG] Script started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
-    Write-Host "[DEBUG] OutputPath: $OutputPath" | Out-File -FilePath $debugFile -Append
-    Write-Host "[DEBUG] vCenterServer: $vCenterServer" | Out-File -FilePath $debugFile -Append
-
     # Check if VMware PowerCLI is available
     $vmwareModule = Get-Module -ListAvailable -Name VMware.PowerCLI
     if (-not $vmwareModule) {
         Write-Error 'VMware PowerCLI module not found. Please install it first.'
         Write-Host 'You can install it with: Install-Module -Name VMware.PowerCLI -Scope CurrentUser' -ForegroundColor Yellow
-        Write-Host "[DEBUG] VMware PowerCLI module not found" | Out-File -FilePath $debugFile -Append
         exit 1
     }
 
@@ -961,14 +970,16 @@ try {
     # Suppress certificate warnings
     Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -Confirm:$false -Scope Session | Out-Null
 
-    # Prompt for vCenter server (default provided)
-    $inputServer = Read-Host "Enter vCenter Server name or IP [$vCenterServer]"
-    if (-not [string]::IsNullOrWhiteSpace($inputServer)) {
-        $vCenterServer = $inputServer
-    }
+    # Validate vCenter server parameter
     if ([string]::IsNullOrWhiteSpace($vCenterServer)) {
         Write-Error 'vCenter Server name is required'
         exit 1
+    }
+
+    # Validate master image prefix
+    if ([string]::IsNullOrWhiteSpace($MasterImagePrefix)) {
+        Write-Warning 'MasterImagePrefix not specified, using default: ${masterPrefix}'
+        $MasterImagePrefix = '${masterPrefix}'
     }
 
     # Prompt for credentials
@@ -976,7 +987,7 @@ try {
 
     Write-Host "Connecting to vCenter Server: $vCenterServer..." -ForegroundColor Yellow
 
-    # Connect to vCenter (will prompt for credentials)
+    # Connect to vCenter
     try {
         $connection = Connect-VIServer -Server $vCenterServer -Credential $credential -ErrorAction Stop
         Write-Host "Successfully connected to $vCenterServer" -ForegroundColor Green
@@ -986,13 +997,13 @@ try {
         exit 1
     }
 
-    # Search for VMs matching the specified pattern
-    Write-Host 'Searching for VMs matching pattern ${masterPrefix}...' -ForegroundColor Yellow
+    # Search for VMs matching the specified prefix pattern
+    Write-Host "Searching for VMs matching pattern ${MasterImagePrefix}*..." -ForegroundColor Yellow
 
-    $vms = Get-VM -Name '${masterPrefix}*' -ErrorAction SilentlyContinue
+    $vms = Get-VM -Name "${MasterImagePrefix}*" -ErrorAction SilentlyContinue
 
     if (-not $vms -or $vms.Count -eq 0) {
-        Write-Warning 'No VMs found matching pattern ${masterPrefix}*'
+        Write-Warning "No VMs found matching pattern ${MasterImagePrefix}*"
         $masterImages = @()
     } else {
         Write-Host "Found $($vms.Count) master image(s)" -ForegroundColor Green
@@ -1003,13 +1014,12 @@ try {
             Write-Host "Processing: $($vm.Name)..." -ForegroundColor Cyan
 
             # Get VM details
-            $vmView = $vm | Get-View
             $cluster = Get-Cluster -VM $vm -ErrorAction SilentlyContinue
             $vmHost = Get-VMHost -VM $vm -ErrorAction SilentlyContinue
             $datastore = Get-Datastore -VM $vm -ErrorAction SilentlyContinue | Select-Object -First 1
 
             # Parse VM name to extract components
-            # Expected format: ${masterPrefix}{ImageName}V{Version} or ${masterPrefix}{ImageName}
+            # Expected format: {Prefix}{ImageName}V{Version} or {Prefix}{ImageName}
             $vmName = $vm.Name
             $shortName = $vmName
             $clusterName = if ($cluster) { $cluster.Name } else { 'Unknown' }
@@ -1067,6 +1077,7 @@ try {
     $result = @{
         TotalImages = $masterImages.Count
         vCenterServer = $vCenterServer
+        MasterImagePrefix = $MasterImagePrefix
         CollectedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
         MasterImages = $masterImages
     }
@@ -1104,6 +1115,7 @@ catch {
     $errorResult = @{
         TotalImages = 0
         vCenterServer = if ($vCenterServer) { $vCenterServer } else { 'Unknown' }
+        MasterImagePrefix = if ($MasterImagePrefix) { $MasterImagePrefix } else { 'Unknown' }
         CollectedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
         MasterImages = @()
         Error = $_.ToString()
@@ -1114,7 +1126,7 @@ catch {
     exit 1
 }`;
 
-    return baseScript;
+    return script;
 }
 
 function copySearchScript() {
@@ -1135,10 +1147,9 @@ function downloadSearchScript() {
     const vCenterServer = document.getElementById('searchVCenterServer').value.trim();
     const masterPrefix = document.getElementById('searchMasterPrefix').value.trim();
 
-    // Create filename with parameters
-    const safeVCenter = vCenterServer.replace(/[^a-zA-Z0-9]/g, '_');
-    const safePrefix = masterPrefix.replace(/[^a-zA-Z0-9\-]/g, '_');
-    const filename = `Get-VMwareMasterImages_${safeVCenter}_${safePrefix}.ps1`;
+    // Create filename based on prefix
+    const cleanPrefix = masterPrefix.replace(/-$/, '').replace(/[^a-zA-Z0-9\-]/g, '_');
+    const filename = `Get-MasterImages-${cleanPrefix}.ps1`;
 
     // Create and download the file
     const blob = new Blob([scriptContent], { type: 'text/plain' });
@@ -1987,7 +1998,6 @@ function handleCloneMasterImagesFile(event) {
             document.getElementById('cloneMasterImagesFileName').textContent = `Loaded: ${file.name}`;
 
             // Show the hidden sections after successful file load
-            document.getElementById('cloneNamingSection').style.display = 'block';
             document.getElementById('cloneImagesSection').style.display = 'block';
             document.getElementById('cloneScriptSection').style.display = 'block';
 
