@@ -2,8 +2,8 @@
 # Collects OData from Citrix Director monitoring endpoints
 # Director exposes monitoring data via OData v3/v4 API (supports multiple versions)
 # Author : LAB007.AI
-# Version: 1.8
-# Last Modified: 260106:2110
+# Version: 1.9
+# Last Modified: 260106:2145
 
 param(
     [string]$OutputPath = ".\Data\citrix-director-odata.json",
@@ -88,8 +88,8 @@ function Invoke-ODataRequest {
             $requestParams.Credential = $Credential
         }
         
-        # Handle SSL validation
-        if ($SkipSSLValidation) {
+        # Handle SSL validation - always try SSL bypass for HTTPS to handle self-signed certificates
+        if ($SkipSSLValidation -or $BaseUrl -match "^https://") {
             Initialize-SSLBypass
         }
         
@@ -321,7 +321,11 @@ try {
     foreach ($protocol in $protocols) {
         if ($endpointFound) { break }  # Stop if we already found a working endpoint
 
-        Write-Host "Trying protocol: $protocol" -ForegroundColor Cyan | Out-File -FilePath $debugFile -Append
+        $protocolName = $protocol.ToUpper()
+        Write-Host "Trying protocol: $protocolName" -ForegroundColor Cyan | Out-File -FilePath $debugFile -Append
+        if ($protocol -eq "http" -and $protocols[0] -eq "https") {
+            Write-Host "  (Falling back to HTTP after HTTPS failed)" -ForegroundColor Yellow
+        }
 
         foreach ($odataPath in $odataPaths) {
             if ($endpointFound) { break }  # Stop if we already found a working endpoint
@@ -341,9 +345,8 @@ try {
                     $testParams.Credential = $Credential
                 }
 
-                if ($SkipSSLValidation -or $protocol -eq "http") {
-                    Initialize-SSLBypass
-                }
+                # Always try SSL bypass for both HTTPS and HTTP to handle self-signed certificates
+                Initialize-SSLBypass
 
                 $testResponse = Invoke-WebRequest @testParams
                 if ($testResponse.StatusCode -eq 200) {

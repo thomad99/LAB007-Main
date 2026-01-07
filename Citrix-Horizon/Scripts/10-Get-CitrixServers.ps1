@@ -1,7 +1,7 @@
 # Get-CitrixServers.ps1
 # Extracts server information including specs (RAM, CPU, Disk)
 # Uses VMware SDK as fallback if Citrix data unavailable
-# Last Modified: 260106:2110
+# Last Modified: 260106:2140
 
 param(
     [string]$OutputPath = ".\Data\citrix-servers.json",
@@ -158,7 +158,7 @@ try {
                         
                         if ($specsCollected) {
                             $serverInfo.SpecsSource = "CIM"
-                            Write-Host "  ✓ Collected specs via CIM for $hostName" -ForegroundColor Green
+                            Write-Host "  OK: Collected specs via CIM for $hostName" -ForegroundColor Green
                         }
                         
                         Remove-CimSession -CimSession $cimSession
@@ -221,7 +221,7 @@ try {
                                 # Disk (sum all virtual disks)
                                 $totalDiskGB = 0
                                 foreach ($disk in $vmConfig.Config.Hardware.Device) {
-                                    if ($disk -is [VMware.Vim.VirtualDisk]) {
+                                    if ($disk.GetType().Name -eq 'VirtualDisk') {
                                         $totalDiskGB += [math]::Round(($disk.CapacityInKB / 1MB), 2)
                                     }
                                 }
@@ -237,18 +237,18 @@ try {
                                 }
                                 
                                 $serverInfo.SpecsSource = "VMware"
-                                Write-Host "  ✓ Successfully retrieved specs from VMware for $hostName (RAM: $($serverInfo.TotalRAM_GB)GB, CPU: $($serverInfo.CPUCount) vCPU, Disk: $($serverInfo.DiskTotalSize_GB)GB)" -ForegroundColor Green
+                                Write-Host "  OK: Successfully retrieved specs from VMware for $hostName (RAM: $($serverInfo.TotalRAM_GB)GB, CPU: $($serverInfo.CPUCount) vCPU, Disk: $($serverInfo.DiskTotalSize_GB)GB)" -ForegroundColor Green
                             }
                             else {
-                                Write-Warning "  ✗ VM not found in VMware for server $hostName (searched: $($searchNames -join ', '))"
+                                Write-Warning "  ERROR: VM not found in VMware for server $hostName (searched: $($searchNames -join ', '))"
                             }
-                        }  # End foreach searchName
+                        }
                         else {
-                            Write-Warning "  ✗ VMware PowerCLI module not available for $hostName. Place VMware PowerCLI files in .\Dependencies\VMware\ and run Install-RequiredModules.ps1"
+                            Write-Warning "  ERROR: VMware PowerCLI module not available for $hostName. Place VMware PowerCLI files in .\Dependencies\VMware\ and run Install-RequiredModules.ps1"
                         }
                     }
                     catch {
-                        Write-Warning "  ✗ Could not retrieve specs from VMware for $hostName : $_"
+                        Write-Warning "  ERROR: Could not retrieve specs from VMware for $hostName : $_"
                     }
                 }
                 

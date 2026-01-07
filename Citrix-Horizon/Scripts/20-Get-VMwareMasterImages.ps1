@@ -3,7 +3,7 @@
 # Connects to vCenter and extracts master image information
 # Author : LAB007.AI
 # Version: 1.1
-# Last Modified: 260106:2120
+# Last Modified: 260106:2150
 
 param(
     [string]$OutputPath = '.\Data\goldensun-master-images.json',
@@ -58,19 +58,28 @@ try {
         exit 1
     }
 
-    # Prompt for credentials
-    $credential = Get-Credential -Message "Enter vCenter credentials for $vCenterServer"
+    # Check if already connected to this vCenter server
+    $existingConnection = $global:DefaultVIServers | Where-Object { $_.Name -eq $vCenterServer -and $_.IsConnected }
 
-    Write-Host "Connecting to vCenter Server: $vCenterServer..." -ForegroundColor Yellow
-
-    # Connect to vCenter (will prompt for credentials)
-    try {
-        $connection = Connect-VIServer -Server $vCenterServer -Credential $credential -ErrorAction Stop
-        Write-Host "Successfully connected to $vCenterServer" -ForegroundColor Green
+    if ($existingConnection) {
+        Write-Host "Already connected to $vCenterServer" -ForegroundColor Green
+        $connection = $existingConnection
     }
-    catch {
-        Write-Error "Failed to connect to vCenter: $_"
-        exit 1
+    else {
+        # Prompt for credentials
+        $credential = Get-Credential -Message "Enter vCenter credentials for $vCenterServer"
+
+        Write-Host "Connecting to vCenter Server: $vCenterServer..." -ForegroundColor Yellow
+
+        # Connect to vCenter (will prompt for credentials)
+        try {
+            $connection = Connect-VIServer -Server $vCenterServer -Credential $credential -ErrorAction Stop
+            Write-Host "Successfully connected to $vCenterServer" -ForegroundColor Green
+        }
+        catch {
+            Write-Error "Failed to connect to vCenter: $_"
+            exit 1
+        }
     }
 
     # Search for VMs matching SHC-M-* pattern
@@ -87,57 +96,86 @@ try {
         $masterImages = @()
 
         foreach ($vm in $vms) {
-            Write-Host "Processing: $($vm.Name)..." -ForegroundColor Cyan
+            try {
+                Write-Host "Processing: $($vm.Name)..." -ForegroundColor Cyan
 
-            # Get VM details
-            $vmView = $vm | Get-View
-            $cluster = Get-Cluster -VM $vm -ErrorAction SilentlyContinue
-            $vmHost = Get-VMHost -VM $vm -ErrorAction SilentlyContinue
-            $datastore = Get-Datastore -VM $vm -ErrorAction SilentlyContinue | Select-Object -First 1
+                # Get VM details
+                $vmView = $vm | Get-View
+                $cluster = Get-Cluster -VM $vm -ErrorAction SilentlyContinue
+                $vmHost = Get-VMHost -VM $vm -ErrorAction SilentlyContinue
+                $datastore = Get-Datastore -VM $vm -ErrorAction SilentlyContinue | Select-Object -First 1
 
-            # Parse VM name to extract components
-            # Expected format: SHC-M-{ImageName}V{Version} or SHC-M-{ImageName}
-            $vmName = $vm.Name
-            $shortName = $vmName
-            $clusterName = if ($cluster) { $cluster.Name } else { 'Unknown' }
-            $version = 'V1'
+                # Parse VM name to extract components
+                # Expected format: SHC-M-{ImageName}V{Version} or SHC-M-{ImageName}
+                $vmName = $vm.Name
+                $shortName = $vmName
+                $clusterName = if ($cluster) { $cluster.Name } else { 'Unknown' }
+                $version = 'V1'
 
-            # Extract version if present (look for V followed by number at the end)
-            if ($vmName -match '(.+?)(V\d+)$') {
-                $shortName = $matches[1]
-                $version = $matches[2]
+                # Extract version if present (look for V followed by number at the end)
+                if ($vmName -match '(.+?)(V\d+)$') {
+                    $shortName = $matches[1]
+                    $version = $matches[2]
+                }
+
+                # Get snapshot information
+                $snapshots = Get-Snapshot -VM $vm -ErrorAction SilentlyContinue
+                $hasSnapshot = ($snapshots -and $snapshots.Count -gt 0)
+                $latestSnapshot = if ($hasSnapshot) {
+                    $snapshots | Sort-Object -Property Created -Descending | Select-Object -First 1
+                } else {
+                    $null
+                }
+
+                $imageInfo = @{
+                    Name = $vmName
+                    ShortName = $shortName
+                    Version = $version
+                    Cluster = $clusterName
+                    Host = if ($vmHost) { $vmHost.Name } else { 'Unknown' }
+                    Datastore = if ($datastore) { $datastore.Name } else { 'Unknown' }
+                    PowerState = $vm.PowerState.ToString()
+                    NumCPU = $vm.NumCpu
+                    MemoryGB = $vm.MemoryGB
+                    ProvisionedSpaceGB = [math]::Round($vm.ProvisionedSpaceGB, 2)
+                    UsedSpaceGB = [math]::Round($vm.UsedSpaceGB, 2)
+                    GuestOS = $vm.Guest.OSFullName
+                    HasSnapshot = $hasSnapshot
+                    SnapshotCount = if ($snapshots) { $snapshots.Count } else { 0 }
+                    LatestSnapshot = $latestSnapshot
+                    Notes = $vm.Notes
+                }
+
+                $masterImages += $imageInfo
+                Write-Host "  OK: $vmName - Cluster: $clusterName, Version: $version" -ForegroundColor Green
             }
+            catch {
+                Write-Warning "Failed to process VM $($vm.Name): $_"
+                Write-Host "[DEBUG] Error processing VM $($vm.Name): $_" | Out-File -FilePath $debugFile -Append
 
-            # Get snapshot information
-            $snapshots = Get-Snapshot -VM $vm -ErrorAction SilentlyContinue
-            $hasSnapshot = ($snapshots -and $snapshots.Count -gt 0)
-            $latestSnapshot = if ($hasSnapshot) {
-                $snapshots | Sort-Object -Property Created -Descending | Select-Object -First 1
-            } else {
-                $null
+                # Create error entry for failed VM
+                $errorImageInfo = @{
+                    Name = $vm.Name
+                    ShortName = $vm.Name
+                    Version = 'ERROR'
+                    Cluster = 'Error'
+                    Host = 'Error'
+                    Datastore = 'Error'
+                    PowerState = 'Error'
+                    NumCPU = 0
+                    MemoryGB = 0
+                    ProvisionedSpaceGB = 0
+                    UsedSpaceGB = 0
+                    GuestOS = 'Error'
+                    HasSnapshot = $false
+                    SnapshotCount = 0
+                    LatestSnapshot = $null
+                    Notes = "Error: $_"
+                }
+
+                $masterImages += $errorImageInfo
+                Write-Host "  ERROR: $($vm.Name) - Failed to retrieve details" -ForegroundColor Red
             }
-
-            $imageInfo = @{
-                Name = $vmName
-                ShortName = $shortName
-                Version = $version
-                Cluster = $clusterName
-                Host = if ($vmHost) { $vmHost.Name } else { 'Unknown' }
-                Datastore = if ($datastore) { $datastore.Name } else { 'Unknown' }
-                PowerState = $vm.PowerState.ToString()
-                NumCPU = $vm.NumCpu
-                MemoryGB = $vm.MemoryGB
-                ProvisionedSpaceGB = [math]::Round($vm.ProvisionedSpaceGB, 2)
-                UsedSpaceGB = [math]::Round($vm.UsedSpaceGB, 2)
-                GuestOS = $vm.Guest.OSFullName
-                HasSnapshot = $hasSnapshot
-                SnapshotCount = if ($snapshots) { $snapshots.Count } else { 0 }
-                LatestSnapshot = $latestSnapshot
-                Notes = $vm.Notes
-            }
-
-            $masterImages += $imageInfo
-            Write-Host "  OK: $vmName - Cluster: $clusterName, Version: $version" -ForegroundColor Green
         }
     }
 
