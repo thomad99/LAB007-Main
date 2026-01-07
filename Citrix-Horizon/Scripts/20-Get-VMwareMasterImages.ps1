@@ -3,7 +3,7 @@
 # Connects to vCenter and extracts master image information
 # Author : LAB007.AI
 # Version: 1.1
-# Last Modified: 260106:1948
+# Last Modified: 260106:2058
 
 param(
     [string]$OutputPath = '.\Data\goldensun-master-images.json',
@@ -16,12 +16,29 @@ if (-not (Test-Path -Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 }
 
+# Setup debug logging
+$debugFile = Join-Path $outputDir "debug20.txt"
+
+# Force delete existing debug file to ensure clean start
+if (Test-Path $debugFile) {
+    try {
+        Remove-Item $debugFile -Force -ErrorAction Stop
+    } catch {
+        Write-Warning "Could not delete existing debug file $debugFile : $_"
+    }
+}
+
 try {
+    Write-Host "[DEBUG] Script started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] OutputPath: $OutputPath" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] vCenterServer: $vCenterServer" | Out-File -FilePath $debugFile -Append
+
     # Check if VMware PowerCLI is available
     $vmwareModule = Get-Module -ListAvailable -Name VMware.PowerCLI
     if (-not $vmwareModule) {
         Write-Error 'VMware PowerCLI module not found. Please install it first.'
         Write-Host 'You can install it with: Install-Module -Name VMware.PowerCLI -Scope CurrentUser' -ForegroundColor Yellow
+        Write-Host "[DEBUG] VMware PowerCLI module not found" | Out-File -FilePath $debugFile -Append
         exit 1
     }
 
@@ -140,6 +157,9 @@ try {
     Write-Host 'Master images information collected successfully!' -ForegroundColor Green
     Write-Host "Total images found: $($masterImages.Count)" -ForegroundColor White
     Write-Host "Data saved to: $OutputPath" -ForegroundColor Gray
+
+    Write-Host "[DEBUG] Collection completed successfully at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] Total images found: $($masterImages.Count)" | Out-File -FilePath $debugFile -Append
 
     # Disconnect from vCenter
     Disconnect-VIServer -Server $vCenterServer -Confirm:$false -ErrorAction SilentlyContinue

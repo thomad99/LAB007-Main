@@ -2,7 +2,7 @@
 # Extracts Citrix policy information
 # Author : LAB007.AI
 # Version: 1.2
-# Last Modified: 260106:1948
+# Last Modified: 260106:2058
 
 param(
     [string]$OutputPath = ".\Data\citrix-policies.json",
@@ -15,6 +15,18 @@ if (-not (Test-Path -Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 }
 
+# Setup debug logging
+$debugFile = Join-Path $outputDir "debug7.txt"
+
+# Force delete existing debug file to ensure clean start
+if (Test-Path $debugFile) {
+    try {
+        Remove-Item $debugFile -Force -ErrorAction Stop
+    } catch {
+        Write-Warning "Could not delete existing debug file $debugFile : $_"
+    }
+}
+
 try {
     # Note: Citrix modules/snap-ins must be loaded manually before running this script
     # Get all policies (use AdminAddress if DDC was specified)
@@ -22,41 +34,41 @@ try {
     $maxRecords = 10000
     
     Write-Host "Attempting to collect Citrix policies..." -ForegroundColor Yellow
-    Write-Host "[DEBUG] Policy collection started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] CitrixVersion: $CitrixVersion" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Policy collection started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] CitrixVersion: $CitrixVersion" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
     
     # Check what policy commands are available
-    Write-Host "[DEBUG] Checking available policy commands..." | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Checking available policy commands..." | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
     $availableCommands = @()
     $commandsToCheck = @('Get-BrokerPolicy', 'Get-BrokerGpoPolicy', 'Get-ConfigPolicySet', 'Get-ConfigPolicyRule', 'Get-ConfigPolicy', 'Export-BrokerPolicy')
     foreach ($cmd in $commandsToCheck) {
         $cmdObj = Get-Command -Name $cmd -ErrorAction SilentlyContinue
         if ($cmdObj) {
             $availableCommands += $cmd
-            Write-Host "[DEBUG] Command available: $cmd" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] Command available: $cmd" | Out-File -FilePath $debugFile -Append
             # Get command details
             try {
                 $cmdDetails = Get-Command -Name $cmd | Select-Object -Property Name, Source, CommandType, Parameters
-                Write-Host "[DEBUG] Command details for $cmd : Source=$($cmdDetails.Source), Type=$($cmdDetails.CommandType)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Command details for $cmd : Source=$($cmdDetails.Source), Type=$($cmdDetails.CommandType)" | Out-File -FilePath $debugFile -Append
             }
             catch {
                 # Ignore errors getting command details
             }
         }
         else {
-            Write-Host "[DEBUG] Command NOT available: $cmd" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+            Write-Host "[DEBUG] Command NOT available: $cmd" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
         }
     }
-    Write-Host "[DEBUG] Available commands: $($availableCommands -join ', ')" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+    Write-Host "[DEBUG] Available commands: $($availableCommands -join ', ')" | Out-File -FilePath $debugFile -Append
     
     # Note about Get-BrokerGpoPolicy
     if ($availableCommands -contains 'Get-BrokerGpoPolicy') {
-        Write-Host "[DEBUG] Get-BrokerGpoPolicy is available - will attempt to use it for GPO-based policy collection" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+        Write-Host "[DEBUG] Get-BrokerGpoPolicy is available - will attempt to use it for GPO-based policy collection" | Out-File -FilePath $debugFile -Append
     }
     else {
-        Write-Host "[DEBUG] Get-BrokerGpoPolicy is NOT available - this command may require Citrix.Broker.Admin.V2 module/snap-in" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
-        Write-Host "[DEBUG] Note: Get-BrokerGpoPolicy is typically part of Citrix.Broker.Admin.V2 and should be available if that module is loaded" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+        Write-Host "[DEBUG] Get-BrokerGpoPolicy is NOT available - this command may require Citrix.Broker.Admin.V2 module/snap-in" | Out-File -FilePath $debugFile -Append
+        Write-Host "[DEBUG] Note: Get-BrokerGpoPolicy is typically part of Citrix.Broker.Admin.V2 and should be available if that module is loaded" | Out-File -FilePath $debugFile -Append
     }
     
     # Try multiple methods to get policies (ordered by reliability)
@@ -65,7 +77,7 @@ try {
 
     # Method 0: Get-BrokerPolicy (most common for Studio-configured policies)
     try {
-        Write-Host "[DEBUG] Attempting Method 0: Citrix Group Policy Provider (GP: drive)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+        Write-Host "[DEBUG] Attempting Method 0: Citrix Group Policy Provider (GP: drive)" | Out-File -FilePath $debugFile -Append
         
         # Try to load Group Policy Provider module/snap-in if not already loaded
         $gpModuleLoaded = $false
@@ -77,14 +89,14 @@ try {
                     $availableModule = Get-Module -ListAvailable -Name $moduleName -ErrorAction SilentlyContinue
                     if ($availableModule) {
                         Import-Module -Name $moduleName -ErrorAction SilentlyContinue
-                        Write-Host "[DEBUG] Loaded module: $moduleName" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                        Write-Host "[DEBUG] Loaded module: $moduleName" | Out-File -FilePath $debugFile -Append
                         $gpModuleLoaded = $true
                         break
                     }
                 }
                 else {
                     $gpModuleLoaded = $true
-                    Write-Host "[DEBUG] Module already loaded: $moduleName" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                    Write-Host "[DEBUG] Module already loaded: $moduleName" | Out-File -FilePath $debugFile -Append
                     break
                 }
             }
@@ -95,14 +107,14 @@ try {
                         $availableSnapin = Get-PSSnapin -Registered -Name $moduleName -ErrorAction SilentlyContinue
                         if ($availableSnapin) {
                             Add-PSSnapin -Name $moduleName -ErrorAction SilentlyContinue
-                            Write-Host "[DEBUG] Loaded snap-in: $moduleName" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                            Write-Host "[DEBUG] Loaded snap-in: $moduleName" | Out-File -FilePath $debugFile -Append
                             $gpModuleLoaded = $true
                             break
                         }
                     }
                     else {
                         $gpModuleLoaded = $true
-                        Write-Host "[DEBUG] Snap-in already loaded: $moduleName" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                        Write-Host "[DEBUG] Snap-in already loaded: $moduleName" | Out-File -FilePath $debugFile -Append
                         break
                     }
                 }
@@ -121,17 +133,17 @@ try {
                 $gpDrive = Get-PSDrive -Name "GP" -ErrorAction SilentlyContinue
             }
             catch {
-                Write-Host "[DEBUG] GP: drive not accessible even after loading module" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] GP: drive not accessible even after loading module" | Out-File -FilePath $debugFile -Append
             }
         }
         
         if ($gpDrive) {
-            Write-Host "[DEBUG] GP: drive is available" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] GP: drive is available" | Out-File -FilePath $debugFile -Append
             
             # Navigate to the policy root
             $policyRoot = Get-Item "GP:\" -ErrorAction SilentlyContinue
             if ($policyRoot) {
-                Write-Host "[DEBUG] Successfully accessed GP:\ root" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Successfully accessed GP:\ root" | Out-File -FilePath $debugFile -Append
                 
                 # Get all policies from the tree
                 $allPolicyItems = @()
@@ -147,21 +159,21 @@ try {
                 
                 foreach ($path in $policyPaths) {
                     try {
-                        Write-Host "[DEBUG] Checking path: $path" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                        Write-Host "[DEBUG] Checking path: $path" | Out-File -FilePath $debugFile -Append
                         $items = Get-Item -Path $path -ErrorAction SilentlyContinue
                         if ($items) {
-                            Write-Host "[DEBUG] Found items at $path" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                            Write-Host "[DEBUG] Found items at $path" | Out-File -FilePath $debugFile -Append
                             
                             # Get child items (policies)
                             $childItems = Get-ChildItem -Path $path -Recurse -ErrorAction SilentlyContinue
                             if ($childItems) {
-                                Write-Host "[DEBUG] Found $($childItems.Count) child items at $path" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                                Write-Host "[DEBUG] Found $($childItems.Count) child items at $path" | Out-File -FilePath $debugFile -Append
                                 $allPolicyItems += $childItems
                             }
                         }
                     }
                     catch {
-                        Write-Host "[DEBUG] Error accessing $path : $_" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                        Write-Host "[DEBUG] Error accessing $path : $_" | Out-File -FilePath $debugFile -Append
                     }
                 }
                 
@@ -169,19 +181,19 @@ try {
                 try {
                     $allItems = Get-ChildItem -Path "GP:\" -Recurse -ErrorAction SilentlyContinue
                     if ($allItems) {
-                        Write-Host "[DEBUG] Found $($allItems.Count) total items recursively from GP:\" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                        Write-Host "[DEBUG] Found $($allItems.Count) total items recursively from GP:\" | Out-File -FilePath $debugFile -Append
                         $allPolicyItems += $allItems
                     }
                 }
                 catch {
-                    Write-Host "[DEBUG] Error getting recursive items: $_" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                    Write-Host "[DEBUG] Error getting recursive items: $_" | Out-File -FilePath $debugFile -Append
                 }
                 
                 # Remove duplicates
                 $uniqueItems = $allPolicyItems | Select-Object -Unique
                 
                 if ($uniqueItems -and $uniqueItems.Count -gt 0) {
-                    Write-Host "[DEBUG] Found $($uniqueItems.Count) unique policy items via GP: drive" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                    Write-Host "[DEBUG] Found $($uniqueItems.Count) unique policy items via GP: drive" | Out-File -FilePath $debugFile -Append
                     
                     # Convert to policy objects
                     $policies = @()
@@ -211,93 +223,93 @@ try {
                             $policies += $policyObj
                         }
                         catch {
-                            Write-Host "[DEBUG] Error processing policy item $($item.Name): $_" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                            Write-Host "[DEBUG] Error processing policy item $($item.Name): $_" | Out-File -FilePath $debugFile -Append
                         }
                     }
                     
                     if ($policies -and $policies.Count -gt 0) {
                         $policyMethod = "GroupPolicyProvider"
                         Write-Host "Successfully retrieved policies using Citrix Group Policy Provider" -ForegroundColor Green
-                        Write-Host "[DEBUG] GroupPolicyProvider succeeded: Found $($policies.Count) policies" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                        Write-Host "[DEBUG] GroupPolicyProvider succeeded: Found $($policies.Count) policies" | Out-File -FilePath $debugFile -Append
                     }
                 }
                 else {
-                    Write-Host "[DEBUG] No policy items found in GP: drive" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                    Write-Host "[DEBUG] No policy items found in GP: drive" | Out-File -FilePath $debugFile -Append
                 }
             }
             else {
-                Write-Host "[DEBUG] Could not access GP:\ root" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Could not access GP:\ root" | Out-File -FilePath $debugFile -Append
             }
         }
         else {
-            Write-Host "[DEBUG] GP: drive is NOT available - Group Policy Provider may not be installed or loaded" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
-            Write-Host "[DEBUG] Try loading: Import-Module Citrix.GroupPolicy.Commands or Add-PSSnapin Citrix.GroupPolicy.Commands" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] GP: drive is NOT available - Group Policy Provider may not be installed or loaded" | Out-File -FilePath $debugFile -Append
+            Write-Host "[DEBUG] Try loading: Import-Module Citrix.GroupPolicy.Commands or Add-PSSnapin Citrix.GroupPolicy.Commands" | Out-File -FilePath $debugFile -Append
         }
     }
     catch {
         $errorMsg = "Group Policy Provider method failed: $_"
         Write-Warning $errorMsg
-        Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
-        Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+        Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath $debugFile -Append
+        Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath $debugFile -Append
     }
     
     # Method 1: Get-BrokerPolicy (newer versions)
     try {
-        Write-Host "[DEBUG] Attempting Method 1: Get-BrokerPolicy" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+        Write-Host "[DEBUG] Attempting Method 1: Get-BrokerPolicy" | Out-File -FilePath $debugFile -Append
         if ($global:CitrixAdminAddress) {
-            Write-Host "[DEBUG] Calling Get-BrokerPolicy with AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] Calling Get-BrokerPolicy with AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append
             $policies = Get-BrokerPolicy -AdminAddress $global:CitrixAdminAddress -MaxRecordCount $maxRecords -ErrorAction Stop
         }
         else {
-            Write-Host "[DEBUG] Calling Get-BrokerPolicy without AdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] Calling Get-BrokerPolicy without AdminAddress" | Out-File -FilePath $debugFile -Append
             $policies = Get-BrokerPolicy -MaxRecordCount $maxRecords -ErrorAction Stop
         }
         if ($policies) {
             $policyMethod = "Get-BrokerPolicy"
             Write-Host "Successfully retrieved policies using Get-BrokerPolicy" -ForegroundColor Green
-            Write-Host "[DEBUG] Get-BrokerPolicy succeeded: Found $($policies.Count) policies" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] Get-BrokerPolicy succeeded: Found $($policies.Count) policies" | Out-File -FilePath $debugFile -Append
         }
     }
     catch {
         $errorMsg = "Get-BrokerPolicy failed: $_"
         Write-Warning $errorMsg
-        Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
-        Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+        Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath $debugFile -Append
+        Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath $debugFile -Append
     }
     
     # Method 2: Get-BrokerGpoPolicy (GPO-based policies - may require specific module)
     if (-not $policies) {
         try {
-            Write-Host "[DEBUG] Attempting Method 2: Get-BrokerGpoPolicy" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] Attempting Method 2: Get-BrokerGpoPolicy" | Out-File -FilePath $debugFile -Append
             if ($global:CitrixAdminAddress) {
-                Write-Host "[DEBUG] Calling Get-BrokerGpoPolicy with AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Calling Get-BrokerGpoPolicy with AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append
                 $policies = Get-BrokerGpoPolicy -AdminAddress $global:CitrixAdminAddress -MaxRecordCount $maxRecords -ErrorAction SilentlyContinue
             }
             else {
-                Write-Host "[DEBUG] Calling Get-BrokerGpoPolicy without AdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Calling Get-BrokerGpoPolicy without AdminAddress" | Out-File -FilePath $debugFile -Append
                 $policies = Get-BrokerGpoPolicy -MaxRecordCount $maxRecords -ErrorAction SilentlyContinue
             }
             if ($policies) {
                 $policyMethod = "Get-BrokerGpoPolicy"
                 Write-Host "Successfully retrieved policies using Get-BrokerGpoPolicy" -ForegroundColor Green
-                Write-Host "[DEBUG] Get-BrokerGpoPolicy succeeded: Found $($policies.Count) GPO policies" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Get-BrokerGpoPolicy succeeded: Found $($policies.Count) GPO policies" | Out-File -FilePath $debugFile -Append
             }
             else {
-                Write-Host "[DEBUG] Get-BrokerGpoPolicy returned no results" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Get-BrokerGpoPolicy returned no results" | Out-File -FilePath $debugFile -Append
             }
         }
         catch {
             $errorMsg = "Get-BrokerGpoPolicy failed: $_"
             Write-Warning $errorMsg
-            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
-            Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath $debugFile -Append
+            Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath $debugFile -Append
         }
     }
     
     # Method 3: Get-ConfigPolicySet (alternative)
     if (-not $policies) {
         try {
-            Write-Host "[DEBUG] Attempting Method 3: Get-ConfigPolicySet" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] Attempting Method 3: Get-ConfigPolicySet" | Out-File -FilePath $debugFile -Append
             if ($global:CitrixAdminAddress) {
                 $policies = Get-ConfigPolicySet -AdminAddress $global:CitrixAdminAddress -ErrorAction SilentlyContinue
             }
@@ -307,23 +319,23 @@ try {
             if ($policies) {
                 $policyMethod = "Get-ConfigPolicySet"
                 Write-Host "Successfully retrieved policies using Get-ConfigPolicySet" -ForegroundColor Green
-                Write-Host "[DEBUG] Get-ConfigPolicySet succeeded: Found $($policies.Count) policy sets" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Get-ConfigPolicySet succeeded: Found $($policies.Count) policy sets" | Out-File -FilePath $debugFile -Append
             }
             else {
-                Write-Host "[DEBUG] Get-ConfigPolicySet returned no results" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Get-ConfigPolicySet returned no results" | Out-File -FilePath $debugFile -Append
             }
         }
         catch {
             $errorMsg = "Get-ConfigPolicySet failed: $_"
             Write-Warning $errorMsg
-            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath $debugFile -Append
         }
     }
     
     # Method 4: Get-ConfigPolicyRule (another alternative)
     if (-not $policies) {
         try {
-            Write-Host "[DEBUG] Attempting Method 4: Get-ConfigPolicyRule" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] Attempting Method 4: Get-ConfigPolicyRule" | Out-File -FilePath $debugFile -Append
             if ($global:CitrixAdminAddress) {
                 $policies = Get-ConfigPolicyRule -AdminAddress $global:CitrixAdminAddress -ErrorAction SilentlyContinue
             }
@@ -333,23 +345,23 @@ try {
             if ($policies) {
                 $policyMethod = "Get-ConfigPolicyRule"
                 Write-Host "Successfully retrieved policies using Get-ConfigPolicyRule" -ForegroundColor Green
-                Write-Host "[DEBUG] Get-ConfigPolicyRule succeeded: Found $($policies.Count) policy rules" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Get-ConfigPolicyRule succeeded: Found $($policies.Count) policy rules" | Out-File -FilePath $debugFile -Append
             }
             else {
-                Write-Host "[DEBUG] Get-ConfigPolicyRule returned no results" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Get-ConfigPolicyRule returned no results" | Out-File -FilePath $debugFile -Append
             }
         }
         catch {
             $errorMsg = "Get-ConfigPolicyRule failed: $_"
             Write-Warning $errorMsg
-            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath $debugFile -Append
         }
     }
     
     # Method 5: Get-ConfigPolicy (yet another alternative)
     if (-not $policies) {
         try {
-            Write-Host "[DEBUG] Attempting Method 5: Get-ConfigPolicy" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] Attempting Method 5: Get-ConfigPolicy" | Out-File -FilePath $debugFile -Append
             if ($global:CitrixAdminAddress) {
                 $policies = Get-ConfigPolicy -AdminAddress $global:CitrixAdminAddress -ErrorAction SilentlyContinue
             }
@@ -359,28 +371,28 @@ try {
             if ($policies) {
                 $policyMethod = "Get-ConfigPolicy"
                 Write-Host "Successfully retrieved policies using Get-ConfigPolicy" -ForegroundColor Green
-                Write-Host "[DEBUG] Get-ConfigPolicy succeeded: Found $($policies.Count) policies" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Get-ConfigPolicy succeeded: Found $($policies.Count) policies" | Out-File -FilePath $debugFile -Append
             }
             else {
-                Write-Host "[DEBUG] Get-ConfigPolicy returned no results" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Get-ConfigPolicy returned no results" | Out-File -FilePath $debugFile -Append
             }
         }
         catch {
             $errorMsg = "Get-ConfigPolicy failed: $_"
             Write-Warning $errorMsg
-            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath $debugFile -Append
         }
     }
     
     # Method 3: Try to get policy information from Citrix configuration
     if (-not $policies) {
         try {
-            Write-Host "[DEBUG] Attempting Method 3: Citrix Configuration Query" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] Attempting Method 3: Citrix Configuration Query" | Out-File -FilePath $debugFile -Append
 
             # Try to get policy summary information
             $policySummary = @()
             if ($global:CitrixAdminAddress) {
-                Write-Host "[DEBUG] Trying to get policy summary with AdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Trying to get policy summary with AdminAddress" | Out-File -FilePath $debugFile -Append
 
                 # Try to get policy counts and basic info
                 try {
@@ -391,10 +403,10 @@ try {
                             Count = $desktopPolicies.Count
                             Method = "Get-BrokerDesktopPolicy"
                         }
-                        Write-Host "[DEBUG] Found $($desktopPolicies.Count) desktop policies" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                        Write-Host "[DEBUG] Found $($desktopPolicies.Count) desktop policies" | Out-File -FilePath $debugFile -Append
                     }
                 } catch {
-                    Write-Host "[DEBUG] Get-BrokerDesktopPolicy failed: $_" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                    Write-Host "[DEBUG] Get-BrokerDesktopPolicy failed: $_" | Out-File -FilePath $debugFile -Append
                 }
 
                 try {
@@ -405,14 +417,14 @@ try {
                             Count = $sessionPolicies.Count
                             Method = "Get-BrokerSessionPolicy"
                         }
-                        Write-Host "[DEBUG] Found $($sessionPolicies.Count) session policies" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                        Write-Host "[DEBUG] Found $($sessionPolicies.Count) session policies" | Out-File -FilePath $debugFile -Append
                     }
                 } catch {
-                    Write-Host "[DEBUG] Get-BrokerSessionPolicy failed: $_" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                    Write-Host "[DEBUG] Get-BrokerSessionPolicy failed: $_" | Out-File -FilePath $debugFile -Append
                 }
             }
             else {
-                Write-Host "[DEBUG] Trying to get policy summary without AdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Trying to get policy summary without AdminAddress" | Out-File -FilePath $debugFile -Append
 
                 try {
                     $desktopPolicies = Get-BrokerDesktopPolicy -MaxRecordCount 10 -ErrorAction SilentlyContinue
@@ -422,10 +434,10 @@ try {
                             Count = $desktopPolicies.Count
                             Method = "Get-BrokerDesktopPolicy"
                         }
-                        Write-Host "[DEBUG] Found $($desktopPolicies.Count) desktop policies" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                        Write-Host "[DEBUG] Found $($desktopPolicies.Count) desktop policies" | Out-File -FilePath $debugFile -Append
                     }
                 } catch {
-                    Write-Host "[DEBUG] Get-BrokerDesktopPolicy failed: $_" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                    Write-Host "[DEBUG] Get-BrokerDesktopPolicy failed: $_" | Out-File -FilePath $debugFile -Append
                 }
 
                 try {
@@ -436,10 +448,10 @@ try {
                             Count = $sessionPolicies.Count
                             Method = "Get-BrokerSessionPolicy"
                         }
-                        Write-Host "[DEBUG] Found $($sessionPolicies.Count) session policies" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                        Write-Host "[DEBUG] Found $($sessionPolicies.Count) session policies" | Out-File -FilePath $debugFile -Append
                     }
                 } catch {
-                    Write-Host "[DEBUG] Get-BrokerSessionPolicy failed: $_" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                    Write-Host "[DEBUG] Get-BrokerSessionPolicy failed: $_" | Out-File -FilePath $debugFile -Append
                 }
             }
 
@@ -455,34 +467,34 @@ try {
                 })
                 $policyMethod = "CitrixConfiguration"
                 Write-Host "Successfully retrieved policy summary from Citrix configuration" -ForegroundColor Green
-                Write-Host "[DEBUG] Citrix configuration query succeeded: Found $($policies[0].TotalPolicies) total policies across $($policies[0].TotalPolicyTypes) types" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Citrix configuration query succeeded: Found $($policies[0].TotalPolicies) total policies across $($policies[0].TotalPolicyTypes) types" | Out-File -FilePath $debugFile -Append
             }
         }
         catch {
             $errorMsg = "Citrix configuration query failed: $_"
             Write-Warning $errorMsg
-            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath $debugFile -Append
         }
     }
 
     # Method 4: Try to export policies to a file (as final fallback)
     if (-not $policies) {
         Write-Host "Attempting to export policies to file as final fallback..." -ForegroundColor Yellow
-        Write-Host "[DEBUG] Attempting Method 4: Export-BrokerPolicy" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+        Write-Host "[DEBUG] Attempting Method 4: Export-BrokerPolicy" | Out-File -FilePath $debugFile -Append
         try {
             $exportPath = Join-Path (Split-Path -Path $OutputPath -Parent) "citrix-policies-export.txt"
-            Write-Host "[DEBUG] Export path: $exportPath" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] Export path: $exportPath" | Out-File -FilePath $debugFile -Append
             if ($global:CitrixAdminAddress) {
-                Write-Host "[DEBUG] Calling Export-BrokerPolicy with AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Calling Export-BrokerPolicy with AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append
                 Export-BrokerPolicy -AdminAddress $global:CitrixAdminAddress -FilePath $exportPath -ErrorAction SilentlyContinue | Out-Null
             }
             else {
-                Write-Host "[DEBUG] Calling Export-BrokerPolicy without AdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Calling Export-BrokerPolicy without AdminAddress" | Out-File -FilePath $debugFile -Append
                 Export-BrokerPolicy -FilePath $exportPath -ErrorAction SilentlyContinue | Out-Null
             }
             if (Test-Path $exportPath) {
                 Write-Host "Policies exported to file: $exportPath" -ForegroundColor Green
-                Write-Host "[DEBUG] Export-BrokerPolicy succeeded: File created at $exportPath" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Export-BrokerPolicy succeeded: File created at $exportPath" | Out-File -FilePath $debugFile -Append
                 $exportContent = Get-Content $exportPath -Raw
                 # Create a policy entry from the export
                 $policies = @([PSCustomObject]@{
@@ -495,14 +507,14 @@ try {
                 $policyMethod = "Export-BrokerPolicy"
             }
             else {
-                Write-Host "[DEBUG] Export-BrokerPolicy did not create file at $exportPath" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+                Write-Host "[DEBUG] Export-BrokerPolicy did not create file at $exportPath" | Out-File -FilePath $debugFile -Append
             }
         }
         catch {
             $errorMsg = "Export-BrokerPolicy failed: $_"
             Write-Warning $errorMsg
-            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
-            Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+            Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath $debugFile -Append
+            Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath $debugFile -Append
         }
     }
     
@@ -619,12 +631,12 @@ try {
     }
     
     # Convert to JSON and save
-    Write-Host "[DEBUG] Preparing to save policy data. Total policies: $($policyList.Count), Method: $policyMethod" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Preparing to save policy data. Total policies: $($policyList.Count), Method: $policyMethod" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
     $result | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputPath -Encoding UTF8
     
     Write-Host "Policies information collected successfully. Total: $($policyList.Count) (Method: $policyMethod)" -ForegroundColor Green
-    Write-Host "[DEBUG] Policy data saved successfully to: $OutputPath" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] Script completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Policy data saved successfully to: $OutputPath" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Script completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
     return $result
 }
 catch {

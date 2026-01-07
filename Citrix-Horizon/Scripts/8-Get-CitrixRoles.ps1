@@ -2,7 +2,7 @@
 # Extracts Citrix management roles and their assigned AD groups
 # Author : LAB007.AI
 # Version: 1.1
-# Last Modified: 260105:1827
+# Last Modified: 260106:2101
 
 param(
     [string]$OutputPath = ".\Data\citrix-roles.json",
@@ -15,6 +15,18 @@ if (-not (Test-Path -Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
 }
 
+# Setup debug logging
+$debugFile = Join-Path $outputDir "debug8.txt"
+
+# Force delete existing debug file to ensure clean start
+if (Test-Path $debugFile) {
+    try {
+        Remove-Item $debugFile -Force -ErrorAction Stop
+    } catch {
+        Write-Warning "Could not delete existing debug file $debugFile : $_"
+    }
+}
+
 try {
     # Note: Citrix modules/snap-ins must be loaded manually before running this script
     # Get all roles (use AdminAddress if DDC was specified)
@@ -22,53 +34,53 @@ try {
     $maxRecords = 10000
     
     Write-Host "Attempting to collect Citrix management roles..." -ForegroundColor Yellow
-    Write-Host "[DEBUG] Roles collection started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] CitrixVersion: $CitrixVersion" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Roles collection started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] CitrixVersion: $CitrixVersion" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
     
     # Check what role commands are available
-    Write-Host "[DEBUG] Checking available role commands..." | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Checking available role commands..." | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
     $availableCommands = @()
     $commandsToCheck = @('Get-AdminRole', 'Get-AdminAdministrator', 'Get-AdminRoleAssignment', 'Get-AdminScope')
     foreach ($cmd in $commandsToCheck) {
         $cmdObj = Get-Command -Name $cmd -ErrorAction SilentlyContinue
         if ($cmdObj) {
             $availableCommands += $cmd
-            Write-Host "[DEBUG] Command available: $cmd" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+            Write-Host "[DEBUG] Command available: $cmd" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
         }
         else {
-            Write-Host "[DEBUG] Command NOT available: $cmd" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+            Write-Host "[DEBUG] Command NOT available: $cmd" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
         }
     }
-    Write-Host "[DEBUG] Available commands: $($availableCommands -join ', ')" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Available commands: $($availableCommands -join ', ')" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
     
     # Try Get-AdminRole first (for roles)
     $roles = $null
     try {
-        Write-Host "[DEBUG] Attempting Get-AdminRole..." | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] Attempting Get-AdminRole..." | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
         if ($global:CitrixAdminAddress) {
-            Write-Host "[DEBUG] Calling Get-AdminRole with AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+            Write-Host "[DEBUG] Calling Get-AdminRole with AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
             $roles = Get-AdminRole -AdminAddress $global:CitrixAdminAddress -MaxRecordCount $maxRecords -ErrorAction Stop
         }
         else {
-            Write-Host "[DEBUG] Calling Get-AdminRole without AdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+            Write-Host "[DEBUG] Calling Get-AdminRole without AdminAddress" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
             $roles = Get-AdminRole -MaxRecordCount $maxRecords -ErrorAction Stop
         }
         Write-Host "Successfully retrieved $($roles.Count) roles using Get-AdminRole" -ForegroundColor Green
-        Write-Host "[DEBUG] Get-AdminRole succeeded: Found $($roles.Count) roles" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] Get-AdminRole succeeded: Found $($roles.Count) roles" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
     }
     catch {
         $errorMsg = "Get-AdminRole failed: $_"
         Write-Warning $errorMsg
-        Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
-        Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
         $roles = @()
     }
     
     # Get administrators (users/groups assigned to roles)
     $administrators = $null
     try {
-        Write-Host "[DEBUG] Attempting Get-AdminAdministrator..." | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] Attempting Get-AdminAdministrator..." | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
         if ($global:CitrixAdminAddress) {
             $administrators = Get-AdminAdministrator -AdminAddress $global:CitrixAdminAddress -MaxRecordCount $maxRecords -ErrorAction Stop
         }
@@ -76,13 +88,13 @@ try {
             $administrators = Get-AdminAdministrator -MaxRecordCount $maxRecords -ErrorAction Stop
         }
         Write-Host "Successfully retrieved $($administrators.Count) administrators using Get-AdminAdministrator" -ForegroundColor Green
-        Write-Host "[DEBUG] Get-AdminAdministrator succeeded: Found $($administrators.Count) administrators" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] Get-AdminAdministrator succeeded: Found $($administrators.Count) administrators" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
     }
     catch {
         $errorMsg = "Get-AdminAdministrator failed: $_"
         Write-Warning $errorMsg
-        Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
-        Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
         $administrators = @()
     }
     
@@ -336,12 +348,12 @@ try {
         $result.Errors += $errorMsg
     }
     
-    Write-Host "[DEBUG] Preparing to save role data. Total roles: $($roleData.Count)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Preparing to save role data. Total roles: $($roleData.Count)" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
     $result | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputPath -Encoding UTF8
 
     Write-Host "Roles collection complete: $($roleData.Count) roles found" -ForegroundColor Green
-    Write-Host "[DEBUG] Role data saved successfully to: $OutputPath" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] Script completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Role data saved successfully to: $OutputPath" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Script completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
     return $result
 }
 catch {

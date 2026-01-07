@@ -2,22 +2,44 @@
 # Clones VMware master images with version increment for GoldenSun project
 # Author : LAB007.AI
 # Version: 1.1
-# Last Modified: 260106:1948
+# Last Modified: 260106:2058
 
 param(
     [Parameter(Mandatory=$true)]
     [string]$SourceVMName,
-    
+
     [string]$vCenterServer = "",
-    
+
     [switch]$WhatIf
 )
 
+# Setup debug logging
+$dataPath = ".\Data"
+if (-not (Test-Path -Path $dataPath)) {
+    New-Item -ItemType Directory -Path $dataPath -Force | Out-Null
+}
+$debugFile = Join-Path $dataPath "debug21.txt"
+
+# Force delete existing debug file to ensure clean start
+if (Test-Path $debugFile) {
+    try {
+        Remove-Item $debugFile -Force -ErrorAction Stop
+    } catch {
+        Write-Warning "Could not delete existing debug file $debugFile : $_"
+    }
+}
+
 try {
+    Write-Host "[DEBUG] Script started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] SourceVMName: $SourceVMName" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] vCenterServer: $vCenterServer" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] WhatIf: $WhatIf" | Out-File -FilePath $debugFile -Append
+
     # Check if VMware PowerCLI is available
     $vmwareModule = Get-Module -ListAvailable -Name VMware.PowerCLI
     if (-not $vmwareModule) {
         Write-Error "VMware PowerCLI module not found. Please install it first."
+        Write-Host "[DEBUG] VMware PowerCLI module not found" | Out-File -FilePath $debugFile -Append
         exit 1
     }
 
@@ -138,7 +160,10 @@ try {
     Write-Host "  Power State: $($newVM.PowerState)" -ForegroundColor White
     Write-Host "  CPUs: $($newVM.NumCpu)" -ForegroundColor White
     Write-Host "  Memory: $($newVM.MemoryGB) GB" -ForegroundColor White
-    
+
+    Write-Host "[DEBUG] Clone operation completed successfully at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] New VM created: $($newVM.Name)" | Out-File -FilePath $debugFile -Append
+
     return @{
         Success = $true
         SourceVM = $sourceVM.Name

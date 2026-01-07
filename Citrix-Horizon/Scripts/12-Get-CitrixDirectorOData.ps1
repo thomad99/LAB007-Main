@@ -3,7 +3,7 @@
 # Director exposes monitoring data via OData v3/v4 API (supports multiple versions)
 # Author : LAB007.AI
 # Version: 1.8
-# Last Modified: 260106:1948
+# Last Modified: 260106:2110
 
 param(
     [string]$OutputPath = ".\Data\citrix-director-odata.json",
@@ -23,7 +23,17 @@ if (-not (Test-Path -Path $outputDir)) {
 }
 
 # Setup debug logging
-$debugFile = Join-Path $outputDir "debug-director-odata.txt"
+$debugFile = Join-Path $outputDir "debug12.txt"
+
+# Force delete existing debug file to ensure clean start
+if (Test-Path $debugFile) {
+    try {
+        Remove-Item $debugFile -Force -ErrorAction Stop
+    } catch {
+        Write-Warning "Could not delete existing debug file $debugFile : $_"
+    }
+}
+
 $startTime = Get-Date
 Write-Host "[DEBUG] Starting Director OData collection at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
 
@@ -63,7 +73,6 @@ function Invoke-ODataRequest {
             $url += "?`$top=$MaxRecords"
         }
         
-        Write-Host "[DEBUG] Requesting: $url" | Out-File -FilePath $debugFile -Append
         Write-Host "Querying $EntitySet..." -ForegroundColor Cyan
         
         # Prepare request parameters
@@ -106,13 +115,11 @@ function Invoke-ODataRequest {
         
         $result.Success = $true
         Write-Host "  SUCCESS: Collected $($result.RecordCount) records" -ForegroundColor Green
-        Write-Host "[DEBUG] Successfully collected $($result.RecordCount) records from $EntitySet" | Out-File -FilePath $debugFile -Append
     }
     catch {
         $errorMsg = $_.Exception.Message
         $result.Error = $errorMsg
         Write-Host "  ERROR: Failed: $errorMsg" -ForegroundColor Red
-        Write-Host "[DEBUG] Error collecting $EntitySet : $errorMsg" | Out-File -FilePath $debugFile -Append
     }
     
     return $result
@@ -193,7 +200,7 @@ function Get-ODataEntitySets {
     }
     catch {
         Write-Warning "Could not discover entity sets from metadata: $_"
-        Write-Host "[DEBUG] Metadata discovery failed: $_" | Out-File -FilePath $debugFile -Append
+        # Note: debug logging not available in function scope
     }
     
     # If discovery failed, use common Director entity sets
@@ -323,35 +330,36 @@ try {
             Write-Host "  Trying: $testUrl" -ForegroundColor Gray | Out-File -FilePath $debugFile -Append
 
             try {
-            $testParams = @{
-                Uri = "$testUrl/`$metadata"
-                Method = 'Get'
-                ErrorAction = 'Stop'
-                TimeoutSec = 5
-            }
-            
-            if ($Credential) {
-                $testParams.Credential = $Credential
-            }
-
-            if ($SkipSSLValidation -or $protocol -eq "http") {
-                Initialize-SSLBypass
-            }
-            
-            $testResponse = Invoke-WebRequest @testParams
-            if ($testResponse.StatusCode -eq 200) {
-                $baseUrl = $testUrl
-                $workingPath = $odataPath
-                # Extract version from path for display
-                $version = "Unknown"
-                if ($odataPath -match '/v([0-9]+)/') {
-                    $version = "v$($matches[1])"
-                } else {
-                    $version = "Unknown"
+                $testParams = @{
+                    Uri = "$testUrl/`$metadata"
+                    Method = 'Get'
+                    ErrorAction = 'Stop'
+                    TimeoutSec = 5
                 }
-                Write-Host "  OK: Found working endpoint: $odataPath (OData $version)" -ForegroundColor Green
-                Write-Host "[DEBUG] Working OData path: $odataPath (OData $version)" | Out-File -FilePath $debugFile -Append
-                $endpointFound = $true
+
+                if ($Credential) {
+                    $testParams.Credential = $Credential
+                }
+
+                if ($SkipSSLValidation -or $protocol -eq "http") {
+                    Initialize-SSLBypass
+                }
+
+                $testResponse = Invoke-WebRequest @testParams
+                if ($testResponse.StatusCode -eq 200) {
+                    $baseUrl = $testUrl
+                    $workingPath = $odataPath
+                    # Extract version from path for display
+                    $version = "Unknown"
+                    if ($odataPath -match '/v([0-9]+)/') {
+                        $version = "v$($matches[1])"
+                    } else {
+                        $version = "Unknown"
+                    }
+                    Write-Host "  OK: Found working endpoint: $odataPath (OData $version)" -ForegroundColor Green
+                    Write-Host "[DEBUG] Working OData path: $odataPath (OData $version)" | Out-File -FilePath $debugFile -Append
+                    $endpointFound = $true
+                }
             }
             catch {
                 # Continue to next path - this is expected as we try multiple versions
@@ -367,7 +375,7 @@ try {
                     Write-Host "[DEBUG] Path $odataPath failed (Status: $statusCode): $_" | Out-File -FilePath $debugFile -Append
                 }
             }
-        }
+        }  # End foreach odataPath
 
         if ($endpointFound) {
             break
