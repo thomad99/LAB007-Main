@@ -796,8 +796,165 @@ function closeConfigModal() {
 }
 
 // Folder Browser Functions
-function showFolderBrowserModal() {
-    document.getElementById('folderBrowserModal').style.display = 'block';
+let vmwareFolders = [];
+
+async function showFolderBrowserModal() {
+    const modal = document.getElementById('folderBrowserModal');
+    const content = document.getElementById('folderBrowserContent');
+
+    // Show loading state
+    content.innerHTML = '<div style="text-align: center; padding: 40px;"><p>Loading VMware folder structure...</p></div>';
+    modal.style.display = 'block';
+
+    try {
+        // Try to load folders from JSON file
+        const response = await fetch('/data/vmware-folders.json', { cache: 'no-cache' });
+
+        if (response.ok) {
+            const folderData = await response.json();
+            vmwareFolders = folderData.Folders || [];
+
+            // Build the folder browser UI
+            buildFolderBrowserUI(vmwareFolders);
+        } else {
+            // Fallback to common folder suggestions
+            console.warn('Could not load VMware folders, using default suggestions');
+            buildFallbackFolderBrowserUI();
+        }
+    } catch (error) {
+        console.error('Error loading VMware folders:', error);
+        buildFallbackFolderBrowserUI();
+    }
+}
+
+function buildFolderBrowserUI(folders) {
+    const content = document.getElementById('folderBrowserContent');
+
+    if (!folders || folders.length === 0) {
+        content.innerHTML = `
+            <div style="margin-bottom: 20px;">
+                <p style="color: #666; margin-bottom: 15px;">No VMware folders found. The folder structure may not have been collected yet.</p>
+                <p style="color: #666; font-size: 14px;">Run the VMware folder collection script first to populate this list.</p>
+            </div>
+            <div style="margin-bottom: 20px;">
+                <label for="customFolderPath" style="display: block; margin-bottom: 8px; font-weight: bold;">Or enter custom path:</label>
+                <input type="text" id="customFolderPath" placeholder="/vm/custom/path" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+            </div>
+            <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
+                <button class="btn btn-secondary" onclick="closeFolderBrowserModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="confirmCustomFolder()" style="margin-left: 10px;">Use Custom Path</button>
+            </div>
+        `;
+        return;
+    }
+
+    // Group folders by depth for better organization
+    const rootFolders = folders.filter(f => !f.FullPath.includes('/') || f.FullPath.split('/').length <= 2);
+    const subFolders = folders.filter(f => f.FullPath.includes('/') && f.FullPath.split('/').length > 2);
+
+    let html = `
+        <div style="margin-bottom: 20px;">
+            <p style="color: #666; margin-bottom: 15px;">Select a VMware folder for VM placement. Found ${folders.length} folders:</p>
+        </div>
+
+        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background-color: #f8f9fa;">
+    `;
+
+    // Add root folders first
+    if (rootFolders.length > 0) {
+        html += '<div style="margin-bottom: 15px;"><strong>Root Folders:</strong></div>';
+        rootFolders.forEach(folder => {
+            const displayName = folder.FullPath === '/' ? '/ (Root)' : folder.FullPath;
+            const childIndicator = folder.HasChildren ? ' 📁' : ' 📄';
+            const vmCount = folder.VMCount > 0 ? ` (${folder.VMCount} VMs)` : '';
+
+            html += `
+                <div class="folder-option" onclick="selectFolder('${folder.FullPath}')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    ${childIndicator} <strong>${displayName}</strong>${vmCount}
+                </div>
+            `;
+        });
+    }
+
+    // Add subfolders
+    if (subFolders.length > 0) {
+        html += '<div style="margin: 15px 0 10px 0; border-top: 1px solid #ddd; padding-top: 10px;"><strong>Sub Folders:</strong></div>';
+        subFolders.slice(0, 20).forEach(folder => {  // Limit to first 20 subfolders for performance
+            const displayName = folder.FullPath;
+            const childIndicator = folder.HasChildren ? ' 📁' : ' 📄';
+            const vmCount = folder.VMCount > 0 ? ` (${folder.VMCount} VMs)` : '';
+
+            html += `
+                <div class="folder-option" onclick="selectFolder('${folder.FullPath}')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee; font-size: 13px;">
+                    ${childIndicator} ${displayName}${vmCount}
+                </div>
+            `;
+        });
+
+        if (subFolders.length > 20) {
+            html += `<div style="text-align: center; padding: 10px; color: #666; font-size: 12px;">... and ${subFolders.length - 20} more folders</div>`;
+        }
+    }
+
+    html += `
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="customFolderPath" style="display: block; margin-bottom: 8px; font-weight: bold;">Or enter custom path:</label>
+            <input type="text" id="customFolderPath" placeholder="/vm/custom/path" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+
+        <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
+            <button class="btn btn-secondary" onclick="closeFolderBrowserModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="confirmCustomFolder()" style="margin-left: 10px;">Use Custom Path</button>
+        </div>
+    `;
+
+    content.innerHTML = html;
+}
+
+function buildFallbackFolderBrowserUI() {
+    const content = document.getElementById('folderBrowserContent');
+
+    content.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <p style="color: #666; margin-bottom: 15px;">Unable to load VMware folder structure. Using common folder suggestions:</p>
+
+            <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background-color: #f8f9fa;">
+                <div class="folder-option" onclick="selectFolder('/vm')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    📁 <strong>/vm</strong> - Root VM folder
+                </div>
+                <div class="folder-option" onclick="selectFolder('/vm/prod')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    📁 <strong>/vm/prod</strong> - Production VMs
+                </div>
+                <div class="folder-option" onclick="selectFolder('/vm/prod/windows')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    📁 <strong>/vm/prod/windows</strong> - Windows production VMs
+                </div>
+                <div class="folder-option" onclick="selectFolder('/vm/test')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    📁 <strong>/vm/test</strong> - Test VMs
+                </div>
+                <div class="folder-option" onclick="selectFolder('/vm/dev')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    📁 <strong>/vm/dev</strong> - Development VMs
+                </div>
+                <div class="folder-option" onclick="selectFolder('/vm/archive')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    📁 <strong>/vm/archive</strong> - Archived VMs
+                </div>
+                <div class="folder-option" onclick="selectFolder('/vm/backup')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    📁 <strong>/vm/backup</strong> - Backup VMs
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="customFolderPath" style="display: block; margin-bottom: 8px; font-weight: bold;">Or enter custom path:</label>
+            <input type="text" id="customFolderPath" placeholder="/vm/custom/path" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+
+        <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
+            <button class="btn btn-secondary" onclick="closeFolderBrowserModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="confirmCustomFolder()" style="margin-left: 10px;">Use Custom Path</button>
+        </div>
+    `;
 }
 
 function closeFolderBrowserModal() {
@@ -818,8 +975,141 @@ function confirmCustomFolder() {
 }
 
 // Source Folder Browser Functions
-function showSourceFolderBrowserModal() {
-    document.getElementById('sourceFolderBrowserModal').style.display = 'block';
+async function showSourceFolderBrowserModal() {
+    const modal = document.getElementById('sourceFolderBrowserModal');
+    const content = document.getElementById('sourceFolderBrowserContent');
+
+    // Show loading state
+    content.innerHTML = '<div style="text-align: center; padding: 40px;"><p>Loading VMware folder structure...</p></div>';
+    modal.style.display = 'block';
+
+    try {
+        // Try to load folders from JSON file
+        const response = await fetch('/data/vmware-folders.json', { cache: 'no-cache' });
+
+        if (response.ok) {
+            const folderData = await response.json();
+            const folders = folderData.Folders || [];
+
+            // Build the source folder browser UI (focused on archive/backup folders)
+            buildSourceFolderBrowserUI(folders);
+        } else {
+            // Fallback to common archive folder suggestions
+            console.warn('Could not load VMware folders, using default archive suggestions');
+            buildFallbackSourceFolderBrowserUI();
+        }
+    } catch (error) {
+        console.error('Error loading VMware folders:', error);
+        buildFallbackSourceFolderBrowserUI();
+    }
+}
+
+function buildSourceFolderBrowserUI(folders) {
+    const content = document.getElementById('sourceFolderBrowserContent');
+
+    // Filter for archive/backup type folders
+    const archiveFolders = folders.filter(f =>
+        f.FullPath.toLowerCase().includes('archive') ||
+        f.FullPath.toLowerCase().includes('backup') ||
+        f.FullPath.toLowerCase().includes('retired') ||
+        f.FullPath.toLowerCase().includes('old') ||
+        f.FullPath.toLowerCase().includes('decommission')
+    );
+
+    let html = `
+        <div style="margin-bottom: 20px;">
+            <p style="color: #666; margin-bottom: 15px;">Select a folder to move source VMs after cloning:</p>
+        </div>
+
+        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background-color: #f8f9fa;">
+    `;
+
+    if (archiveFolders.length > 0) {
+        html += '<div style="margin-bottom: 15px;"><strong>Archive/Backup Folders:</strong></div>';
+        archiveFolders.forEach(folder => {
+            const displayName = folder.FullPath;
+            const childIndicator = folder.HasChildren ? ' 📁' : ' 📄';
+            const vmCount = folder.VMCount > 0 ? ` (${folder.VMCount} VMs)` : '';
+
+            html += `
+                <div class="folder-option" onclick="selectSourceFolder('${folder.FullPath}')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    ${childIndicator} <strong>${displayName}</strong>${vmCount}
+                </div>
+            `;
+        });
+    } else {
+        html += '<div style="margin-bottom: 15px;"><strong>No archive folders found. Using general suggestions:</strong></div>';
+    }
+
+    // Add some common archive folder suggestions
+    const commonArchiveFolders = ['/vm/archive', '/vm/backup', '/vm/retired', '/vm/old', '/vm/decommissioned'];
+
+    html += '<div style="margin: 15px 0 10px 0; border-top: 1px solid #ddd; padding-top: 10px;"><strong>Common Archive Paths:</strong></div>';
+    commonArchiveFolders.forEach(folderPath => {
+        const isAvailable = folders.some(f => f.FullPath === folderPath);
+        const statusIndicator = isAvailable ? ' ✅' : ' ❓';
+        const statusClass = isAvailable ? '' : ' opacity: 0.6;';
+
+        html += `
+            <div class="folder-option" onclick="selectSourceFolder('${folderPath}')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;${statusClass}">
+                📁 <strong>${folderPath}</strong>${statusIndicator}
+            </div>
+        `;
+    });
+
+    html += `
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="customSourceFolderPath" style="display: block; margin-bottom: 8px; font-weight: bold;">Or enter custom path:</label>
+            <input type="text" id="customSourceFolderPath" placeholder="/vm/custom/archive" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+
+        <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
+            <button class="btn btn-secondary" onclick="closeSourceFolderBrowserModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="confirmCustomSourceFolder()" style="margin-left: 10px;">Use Custom Path</button>
+        </div>
+    `;
+
+    content.innerHTML = html;
+}
+
+function buildFallbackSourceFolderBrowserUI() {
+    const content = document.getElementById('sourceFolderBrowserContent');
+
+    content.innerHTML = `
+        <div style="margin-bottom: 20px;">
+            <p style="color: #666; margin-bottom: 15px;">Unable to load VMware folder structure. Using common archive folder suggestions:</p>
+
+            <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background-color: #f8f9fa;">
+                <div class="folder-option" onclick="selectSourceFolder('/vm/archive')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    📁 <strong>/vm/archive</strong> - Archive folder
+                </div>
+                <div class="folder-option" onclick="selectSourceFolder('/vm/backup')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    📁 <strong>/vm/backup</strong> - Backup folder
+                </div>
+                <div class="folder-option" onclick="selectSourceFolder('/vm/retired')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    📁 <strong>/vm/retired</strong> - Retired VMs
+                </div>
+                <div class="folder-option" onclick="selectSourceFolder('/vm/old')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    📁 <strong>/vm/old</strong> - Old VMs
+                </div>
+                <div class="folder-option" onclick="selectSourceFolder('/vm/decommissioned')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                    📁 <strong>/vm/decommissioned</strong> - Decommissioned VMs
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 20px;">
+            <label for="customSourceFolderPath" style="display: block; margin-bottom: 8px; font-weight: bold;">Or enter custom path:</label>
+            <input type="text" id="customSourceFolderPath" placeholder="/vm/custom/archive" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+        </div>
+
+        <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
+            <button class="btn btn-secondary" onclick="closeSourceFolderBrowserModal()">Cancel</button>
+            <button class="btn btn-primary" onclick="confirmCustomSourceFolder()" style="margin-left: 10px;">Use Custom Path</button>
+        </div>
+    `;
 }
 
 function closeSourceFolderBrowserModal() {

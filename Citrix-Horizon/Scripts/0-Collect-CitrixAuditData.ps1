@@ -548,7 +548,25 @@ if ($config.AuditComponents.Servers) {
 # StoreFront collection has been disabled. To re-enable, uncomment the section below.
 # Write-Host "[11/12] Skipping StoreFront collection (disabled)..." -ForegroundColor Gray
 
-# 11. Collect Director OData (optional)
+# 11. Collect VMware Folder Structure (if VMware server specified)
+$vmwareFolders = $null
+if ($VMwareServer) {
+    Write-Host "[VMwareFolders] Collecting VMware VM Folder Structure..." -ForegroundColor Yellow
+    try {
+        $vmwareFolders = & "$scriptPath\21-Get-VMwareFolders.ps1" -OutputPath (Join-Path $dataPath "vmware-folders.json") -VMwareServer $VMwareServer -VMwareUsername $VMwareUsername -VMwarePassword $VMwarePassword
+        if ($vmwareFolders -and $vmwareFolders.Folders) {
+            Write-Host "VMware folder structure collected: $($vmwareFolders.TotalFolders) folders" -ForegroundColor Green
+        }
+        else {
+            Write-Warning "VMware folder structure collection returned no data"
+        }
+    }
+    catch {
+        Write-Warning "VMware folder structure collection failed: $_"
+    }
+}
+
+# 12. Collect Director OData (optional)
 if ($config.AuditComponents.DirectorOData) {
     # Use DirectorServer parameter if provided, otherwise use DDCName, or default to localhost
     $directorServerToUse = $DirectorServer

@@ -501,7 +501,7 @@
 
                     <div id="cloneImagesSection" style="margin: 20px 0; display: none;">
                         <h4 style="margin-bottom: 10px;">Master Images:</h4>
-                        <div id="masterImagesCloneList" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px;">
+                        <div id="masterImagesCloneList" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background-color: #f8f9fa;">
                             <p>Loading master images...</p>
                         </div>
                     </div>
@@ -706,11 +706,9 @@
 
     <!-- Config Modal -->
     <div id="configModal" class="modal" style="display: none;">
-        <div class="modal-content" style="max-width: 800px; width: 90%;">
-            <div class="modal-header">
-                <h2>⚙️ Configuration</h2>
-                <span class="close" onclick="closeConfigModal()">&times;</span>
-            </div>
+        <div class="modal-content" style="max-width: 800px; width: 90%; margin-top: 100px;">
+            <span class="modal-close" onclick="closeConfigModal()">&times;</span>
+            <h2>⚙️ Configuration</h2>
             <div id="configContent">
                 <form id="mainConfigForm">
                     <div class="config-section">
