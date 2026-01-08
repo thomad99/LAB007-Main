@@ -183,6 +183,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 Policies: document.getElementById('configAuditPolicies').checked,
                 Roles: document.getElementById('configAuditRoles').checked,
                 VMwareSpecs: document.getElementById('configAuditVMwareSpecs').checked,
+                VMwareFolders: document.getElementById('configAuditVMwareFolders').checked,
                 Servers: document.getElementById('configAuditServers').checked,
                 DirectorOData: document.getElementById('configAuditDirectorOData').checked
             },
@@ -1220,6 +1221,7 @@ async function loadConfigIntoMainModal() {
             document.getElementById('configAuditPolicies').checked = config.auditComponents?.Policies !== false;
             document.getElementById('configAuditRoles').checked = config.auditComponents?.Roles !== false;
             document.getElementById('configAuditVMwareSpecs').checked = config.auditComponents?.VMwareSpecs || false;
+            document.getElementById('configAuditVMwareFolders').checked = config.auditComponents?.VMwareFolders || false;
             document.getElementById('configAuditServers').checked = config.auditComponents?.Servers !== false;
             document.getElementById('configAuditDirectorOData').checked = config.auditComponents?.DirectorOData !== false;
         } else {

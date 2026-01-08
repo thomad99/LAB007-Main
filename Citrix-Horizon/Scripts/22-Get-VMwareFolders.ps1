@@ -28,6 +28,25 @@ if (Test-Path $debugFile) {
     }
 }
 
+# Helper function to build full folder path
+function Get-FolderPath {
+    param([VMware.VimAutomation.ViCore.Types.V1.Inventory.Folder]$Folder)
+
+    $pathParts = @()
+    $current = $Folder
+
+    while ($current -and $current.Parent) {
+        $pathParts = @($current.Name) + $pathParts
+        $current = $current.Parent
+    }
+
+    if ($pathParts.Count -eq 0) {
+        return "/"
+    }
+
+    return "/" + ($pathParts -join "/")
+}
+
 try {
     Write-Host "[DEBUG] Script started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
     Write-Host "[DEBUG] OutputPath: $OutputPath" | Out-File -FilePath $debugFile -Append
@@ -124,22 +143,27 @@ try {
             return $result
         }
 
-        # Prompt for credentials if not provided
+        # Prompt for credentials using Windows credential dialog
+        $credential = $null
         if ([string]::IsNullOrWhiteSpace($VMwareUsername)) {
-            $VMwareUsername = Read-Host "Enter vCenter username for $VMwareServer"
-            Write-Host "[DEBUG] VMwareUsername prompted from user" | Out-File -FilePath $debugFile -Append
-        }
-
-        if ([string]::IsNullOrWhiteSpace($VMwarePassword)) {
-            $VMwarePassword = Read-Host "Enter vCenter password for $VMwareServer" -AsSecureString
-            $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($VMwarePassword)
-            $VMwarePassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
-            Write-Host "[DEBUG] VMwarePassword prompted from user" | Out-File -FilePath $debugFile -Append
+            # No username from config, prompt for both username and password
+            Write-Host "Prompting for vCenter credentials..." -ForegroundColor Yellow
+            $credential = Get-Credential -Message "Enter vCenter credentials for $VMwareServer"
+            Write-Host "[DEBUG] Credentials prompted from user (no username in config)" | Out-File -FilePath $debugFile -Append
+        } else {
+            # Username from config, pre-fill it in the credential prompt
+            Write-Host "Prompting for vCenter password (username: $VMwareUsername)..." -ForegroundColor Yellow
+            $credential = Get-Credential -UserName $VMwareUsername -Message "Enter vCenter password for $VMwareServer"
+            Write-Host "[DEBUG] Password prompted from user (username from config)" | Out-File -FilePath $debugFile -Append
         }
 
         # Connect to vCenter
         try {
-            $connection = Connect-VIServer -Server $VMwareServer -User $VMwareUsername -Password $VMwarePassword -ErrorAction Stop
+            if ($credential) {
+                $connection = Connect-VIServer -Server $VMwareServer -Credential $credential -ErrorAction Stop
+            } else {
+                $connection = Connect-VIServer -Server $VMwareServer -ErrorAction Stop
+            }
             Write-Host "Successfully connected to $VMwareServer" -ForegroundColor Green
             Write-Host "[DEBUG] Successfully connected to $VMwareServer" | Out-File -FilePath $debugFile -Append
         }
@@ -247,21 +271,3 @@ finally {
     # Let the calling script handle disconnection
 }
 
-# Helper function to build full folder path
-function Get-FolderPath {
-    param([VMware.VimAutomation.ViCore.Types.V1.Inventory.Folder]$Folder)
-
-    $pathParts = @()
-    $current = $Folder
-
-    while ($current -and $current.Parent) {
-        $pathParts = @($current.Name) + $pathParts
-        $current = $current.Parent
-    }
-
-    if ($pathParts.Count -eq 0) {
-        return "/"
-    }
-
-    return "/" + ($pathParts -join "/")
-}

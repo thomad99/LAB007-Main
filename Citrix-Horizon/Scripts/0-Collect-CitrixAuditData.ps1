@@ -126,10 +126,18 @@ Write-Host "Run .\Scripts\Install-RequiredModules.ps1 to automatically install m
 Write-Host ""
 
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-$configPath = Join-Path (Split-Path -Parent $scriptPath) "..\LAB007-Config.JSON"
+$configPath = Join-Path $scriptPath "LAB007-Config.JSON"
+
+# Show config file path for debugging
+$resolvedConfigPath = [System.IO.Path]::GetFullPath($configPath)
+Write-Host "[DEBUG] Config file path: $resolvedConfigPath" -ForegroundColor Gray
 
 # Read configuration from file - always load it for AuditComponents
 $config = & "$scriptPath\Read-Configuration.ps1" -ConfigPath $configPath
+
+# Display config content for verification
+Write-Host "[DEBUG] Current configuration:" -ForegroundColor Gray
+$config | ConvertTo-Json -Depth 3 | Write-Host
 
 # Display VMware configuration status
 Write-Host ""
@@ -206,20 +214,7 @@ if (-not $connectionResult.Connected) {
 $CitrixVersion = $connectionResult.Version
 $DDCName = $connectionResult.DDCName
 
-# Save discovered version to config file for future use
-try {
-    $configToSave = @{
-        CitrixVersion = $CitrixVersion
-        DDCName = $DDCName
-        UsageDays = $UsageDaysBack
-        # SkipServerSpecs is not saved - server collection should always run by default
-    }
-    $configToSave | ConvertTo-Json | Out-File -FilePath $configPath -Encoding UTF8 -Force
-    Write-Host "Configuration saved to: $configPath" -ForegroundColor Gray
-}
-catch {
-    Write-Warning "Could not save configuration: $_"
-}
+# Note: Config file is read-only - discovered values are used but not saved back
 
 Write-Host ""
 Write-Host "Configuration:" -ForegroundColor Cyan
@@ -466,6 +461,10 @@ finally {
         Write-Warning "Could not restart transcript: $_"
     }
 }
+} else {
+    Write-Host "[Policies] Skipping Policies collection (disabled in config)" -ForegroundColor Gray
+    $policies = $null
+}
 
 # 7b. Collect Roles and AD Groups
 if ($config.AuditComponents.Roles) {
@@ -511,17 +510,17 @@ $vmwareSpecs = $null
 
 # Log VMware collection decision
 if (-not $SkipServerSpecs -and $VMwareServer -and $config.AuditComponents.VMwareSpecs) {
-    Write-Host "[VMwareSpecs] ✓ WILL RUN - VMware Server Specs collection enabled" -ForegroundColor Green
+    Write-Host "VMwareSpecs: ENABLED - VMware Server Specs collection will run" -ForegroundColor Green
     Write-Host "[VMwareSpecs]   Server: $VMwareServer" -ForegroundColor Gray
     Write-Host "[VMwareSpecs]   Collecting VMware Server Specs..." -ForegroundColor Yellow
 } elseif ($SkipServerSpecs) {
-    Write-Host "[VMwareSpecs] ✗ SKIPPED - SkipServerSpecs parameter is set to true" -ForegroundColor Red
+    Write-Host "VMwareSpecs: SKIPPED - SkipServerSpecs parameter is set to true" -ForegroundColor Red
 } elseif (-not $VMwareServer) {
-    Write-Host "[VMwareSpecs] ✗ SKIPPED - No VMwareServer specified (set vCenterServer in config)" -ForegroundColor Red
+    Write-Host "VMwareSpecs: SKIPPED - No VMwareServer specified (set vCenterServer in config)" -ForegroundColor Red
 } elseif (-not $config.AuditComponents.VMwareSpecs) {
-    Write-Host "[VMwareSpecs] ✗ SKIPPED - VMwareSpecs audit component disabled in config" -ForegroundColor Red
+    Write-Host "VMwareSpecs: SKIPPED - VMwareSpecs audit component disabled in config" -ForegroundColor Red
 } else {
-    Write-Host "[VMwareSpecs] ✗ SKIPPED - Unknown reason" -ForegroundColor Red
+    Write-Host "VMwareSpecs: SKIPPED - Unknown reason" -ForegroundColor Red
 }
 
 if (-not $SkipServerSpecs -and $VMwareServer -and $config.AuditComponents.VMwareSpecs) {
@@ -548,9 +547,9 @@ if ($config.AuditComponents.Servers) {
 
     # Log VMware merging decision
     if ($VMwareServer -and -not $SkipServerSpecs) {
-        Write-Host "[Servers] ✓ VMware data WILL be merged with Citrix server data" -ForegroundColor Green
+        Write-Host "Servers: MERGE - VMware data will be merged with Citrix server data" -ForegroundColor Green
     } else {
-        Write-Host "[Servers] ✗ VMware data will NOT be merged (no VMwareServer or SkipServerSpecs=true)" -ForegroundColor Yellow
+        Write-Host "Servers: NO-MERGE - VMware data will NOT be merged (no VMwareServer or SkipServerSpecs=true)" -ForegroundColor Yellow
     }
     
     try {
@@ -619,7 +618,6 @@ if ($config.AuditComponents.Servers) {
         $auditData.TotalNumberOfServers = 0
         $auditData.Servers = @()
     }
-}
 } else {
     Write-Host "[Servers] Skipping Server collection (disabled in config)" -ForegroundColor Gray
     $servers = $null
@@ -629,30 +627,27 @@ if ($config.AuditComponents.Servers) {
 # StoreFront collection has been disabled. To re-enable, uncomment the section below.
 # Write-Host "[11/12] Skipping StoreFront collection (disabled)..." -ForegroundColor Gray
 
-# 11. Collect VMware Folder Structure (if VMware server specified)
-$vmwareFolders = $null
-
-# Log VMware folders collection decision
-if ($VMwareServer) {
-    Write-Host "[VMwareFolders] ✓ WILL RUN - VMware Folder Structure collection enabled" -ForegroundColor Green
-    Write-Host "[VMwareFolders]   Server: $VMwareServer" -ForegroundColor Gray
+# 11. Collect VMware Folder Structure (optional)
+if ($config.AuditComponents.VMwareFolders) {
+    Write-Host "VMwareFolders: ENABLED - VMware Folder Structure collection enabled in config" -ForegroundColor Green
+    Write-Host "VMwareFolders: Server: $VMwareServer" -ForegroundColor Gray
     Write-Host "[VMwareFolders] Collecting VMware VM Folder Structure..." -ForegroundColor Yellow
-} else {
-    Write-Host "[VMwareFolders] ✗ SKIPPED - No VMwareServer specified (set vCenterServer in config)" -ForegroundColor Red
-}
 
-if ($VMwareServer) {
-try {
-    $vmwareFolders = & "$scriptPath\22-Get-VMwareFolders.ps1" -OutputPath (Join-Path $dataPath "vmware-folders.json") -VMwareServer $VMwareServer -VMwareUsername $VMwareUsername -VMwarePassword $VMwarePassword
-    if ($vmwareFolders -and $vmwareFolders.Folders) {
-        Write-Host "VMware folder structure collected: $($vmwareFolders.TotalFolders) folders" -ForegroundColor Green
+    try {
+        $vmwareFolders = & "$scriptPath\22-Get-VMwareFolders.ps1" -OutputPath (Join-Path $dataPath "vmware-folders.json") -VMwareServer $VMwareServer -VMwareUsername $VMwareUsername -VMwarePassword $VMwarePassword
+        if ($vmwareFolders -and $vmwareFolders.Folders) {
+            Write-Host "VMware folder structure collected: $($vmwareFolders.TotalFolders) folders" -ForegroundColor Green
+        }
+        else {
+            Write-Warning "VMware folder structure collection returned no data"
+        }
     }
-    else {
-        Write-Warning "VMware folder structure collection returned no data"
+    catch {
+        Write-Warning "VMware folder structure collection failed: $_"
     }
-}
-catch {
-    Write-Warning "VMware folder structure collection failed: $_"
+} else {
+    Write-Host "[VMwareFolders] Skipping VMware Folder collection (disabled in config)" -ForegroundColor Gray
+    $vmwareFolders = $null
 }
 
 # 12. Collect Director OData (optional)
@@ -672,7 +667,17 @@ if ($config.AuditComponents.DirectorOData) {
 
     Write-Host "[DirectorOData] Collecting Director OData from $directorServerToUse..." -ForegroundColor Yellow
 try {
+    Write-Host "[DEBUG] Calling OData script..." -ForegroundColor Gray
     $directorData = & "$scriptPath\12-Get-CitrixDirectorOData.ps1" -OutputPath (Join-Path $dataPath "citrix-director-odata.json") -DirectorServer $directorServerToUse
+    Write-Host "[DEBUG] OData script returned: $($directorData -ne $null)" -ForegroundColor Gray
+    if ($directorData) {
+        Write-Host "[DEBUG] DirectorData type: $($directorData.GetType().Name)" -ForegroundColor Gray
+        Write-Host "[DEBUG] Has Error property: $($directorData.PSObject.Properties.Name -contains 'Error')" -ForegroundColor Gray
+        if ($directorData.PSObject.Properties.Name -contains 'Error') {
+            Write-Host "[DEBUG] Error value: '$($directorData.Error)'" -ForegroundColor Gray
+        }
+    }
+
     if ($directorData -and -not $directorData.Error) {
         $auditData.DirectorOData = $directorData
         Write-Host "Director OData collected successfully" -ForegroundColor Green
@@ -880,7 +885,7 @@ try {
                         Move-Item -Path $tempZip -Destination $zipPath -Force -ErrorAction Stop
                         $moved = $true
                         $zipCreated = $true
-                        Write-Host "ZIP file created successfully: $zipPath ($fileCount files)" -ForegroundColor Green
+                        Write-Host "ZIP file created successfully: $zipPath with $fileCount files" -ForegroundColor Green
                     }
                     catch {
                         $retryCount++
@@ -895,7 +900,7 @@ try {
                                 Copy-Item -Path $tempZip -Destination $zipPath -Force -ErrorAction Stop
                                 Remove-Item $tempZip -Force -ErrorAction SilentlyContinue
                                 $zipCreated = $true
-                                Write-Host "ZIP file copied successfully: $zipPath ($fileCount files)" -ForegroundColor Green
+                                Write-Host "ZIP file copied successfully: $zipPath with $fileCount files" -ForegroundColor Green
                             }
                             catch {
                                 Write-Warning "Failed to copy ZIP file: $_"

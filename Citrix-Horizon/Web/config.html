@@ -282,6 +282,13 @@
                             </div>
                         </label>
                         <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditVMwareFolders" name="auditVMwareFolders" style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>VMware Folder Structure</strong>
+                                <div style="font-size: 11px; color: #666;">VMware VM folder hierarchy</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
                             <input type="checkbox" id="auditServers" name="auditServers" checked style="width: auto; margin-right: 8px;">
                             <div>
                                 <strong>Server Information</strong>
@@ -342,6 +349,7 @@
             document.getElementById('auditPolicies').checked = config.auditComponents?.Policies !== false;
             document.getElementById('auditRoles').checked = config.auditComponents?.Roles !== false;
             document.getElementById('auditVMwareSpecs').checked = config.auditComponents?.VMwareSpecs || false;
+            document.getElementById('auditVMwareFolders').checked = config.auditComponents?.VMwareFolders || false;
             document.getElementById('auditServers').checked = config.auditComponents?.Servers !== false;
             document.getElementById('auditDirectorOData').checked = config.auditComponents?.DirectorOData !== false;
         }
@@ -367,6 +375,7 @@
                     Policies: document.getElementById('auditPolicies').checked,
                     Roles: document.getElementById('auditRoles').checked,
                     VMwareSpecs: document.getElementById('auditVMwareSpecs').checked,
+                    VMwareFolders: document.getElementById('auditVMwareFolders').checked,
                     Servers: document.getElementById('auditServers').checked,
                     DirectorOData: document.getElementById('auditDirectorOData').checked
                 },

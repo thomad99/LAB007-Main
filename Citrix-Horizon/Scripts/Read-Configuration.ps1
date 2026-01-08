@@ -5,7 +5,7 @@
 # Last Modified: 260106:2200
 
 param(
-    [string]$ConfigPath = ".\..\LAB007-Config.JSON"
+    [string]$ConfigPath = ".\LAB007-Config.JSON"
 )
 
 function Get-Configuration {
@@ -25,6 +25,7 @@ function Get-Configuration {
             Policies = $true
             Roles = $true
             VMwareSpecs = $false  # Disabled by default since it requires VMware credentials
+            VMwareFolders = $false  # Disabled by default since it requires VMware credentials
             Servers = $true
             DirectorOData = $true
         }

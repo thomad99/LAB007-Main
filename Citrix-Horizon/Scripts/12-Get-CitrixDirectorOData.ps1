@@ -9,7 +9,7 @@ param(
     [string]$OutputPath = ".\Data\citrix-director-odata.json",
     [string]$DirectorServer,
     [switch]$UseHTTPS = $true,
-    [int]$Port = 443,
+    [int]$Port,  # Default will be set based on protocol
     [PSCredential]$Credential,
     [switch]$SkipSSLValidation = $false,
     [int]$MaxRecordsPerEntity = 10000,
@@ -496,11 +496,13 @@ try {
         }
     }
     
-    # Protocols to try (HTTPS first for security, then HTTP as fallback)
-    $protocols = @("https", "http")
-    if (-not $UseHTTPS) {
-        # If HTTP explicitly requested, try HTTP first
-        $protocols = @("http", "https")
+    # Set protocol and default port based on UseHTTPS parameter
+    if ($UseHTTPS) {
+        $protocols = @("https")  # HTTPS only, no HTTP fallback
+        if (-not $Port) { $Port = 443 }
+    } else {
+        $protocols = @("http")   # HTTP only, no HTTPS fallback
+        if (-not $Port) { $Port = 80 }
     }
     
     # List of OData versions/paths to try (most common first)
@@ -524,17 +526,14 @@ try {
     $workingPath = $null
     
     # Try each protocol and OData path combination to find one that works
-    Write-Host "Discovering OData endpoint (trying HTTPS first, then HTTP fallback)..." -ForegroundColor Yellow
+    Write-Host "Discovering OData endpoint..." -ForegroundColor Yellow
     $endpointFound = $false
 
     foreach ($protocol in $protocols) {
         if ($endpointFound) { break }  # Stop if we already found a working endpoint
 
         $protocolName = $protocol.ToUpper()
-        Write-Host "Trying protocol: $protocolName" -ForegroundColor Cyan | Out-File -FilePath $debugFile -Append
-        if ($protocol -eq "http" -and $protocols[0] -eq "https") {
-            Write-Host "  (Falling back to HTTP after HTTPS failed)" -ForegroundColor Yellow
-        }
+        Write-Host "Trying protocol: $protocolName (Port: $Port)" -ForegroundColor Cyan | Out-File -FilePath $debugFile -Append
 
         foreach ($odataPath in $odataPaths) {
             if ($endpointFound) { break }  # Stop if we already found a working endpoint
