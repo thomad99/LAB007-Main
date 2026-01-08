@@ -1234,3 +1234,89 @@ button:disabled {
     padding: 5px 0;
 }
 
+/* Config Modal Styles */
+.config-section {
+    margin-bottom: 30px;
+    padding: 20px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.config-section h3 {
+    color: var(--primary-color);
+    margin-bottom: 20px;
+    font-size: 18px;
+    font-weight: 600;
+}
+
+.audit-components-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 15px;
+    margin-top: 15px;
+}
+
+.audit-component {
+    display: flex !important;
+    align-items: flex-start;
+    padding: 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: white;
+    transition: border-color 0.3s ease, box-shadow 0.3s ease;
+}
+
+.audit-component:hover {
+    border-color: var(--primary-color);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.audit-component input[type="checkbox"] {
+    width: auto !important;
+    margin-right: 12px;
+    margin-top: 2px;
+    flex-shrink: 0;
+}
+
+.audit-component strong {
+    display: block;
+    color: var(--dark-text);
+    margin-bottom: 4px;
+}
+
+.component-desc {
+    font-size: 12px;
+    color: #666;
+    line-height: 1.3;
+}
+
+.form-actions {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border-color);
+}
+
+.form-actions .btn {
+    margin: 0 10px;
+    min-width: 150px;
+}
+
+#configStatusMessage {
+    margin-top: 20px;
+    text-align: center;
+}
+
+#configStatusMessage.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+#configStatusMessage.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+

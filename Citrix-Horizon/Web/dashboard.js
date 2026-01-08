@@ -53,6 +53,15 @@ document.addEventListener('DOMContentLoaded', async function() {
         console.error('Load Audit Data elements not found!');
     }
 
+    // Config button
+    const configBtn = document.getElementById('configBtn');
+    if (configBtn) {
+        configBtn.addEventListener('click', () => {
+            console.log('Config button clicked');
+            showConfigModal();
+        });
+    }
+
     // Horizon Tasks button - always available
     const horizonTasksBtn = document.getElementById('horizonTasksBtn');
     console.log('horizonTasksBtn element:', horizonTasksBtn);
@@ -63,7 +72,13 @@ document.addEventListener('DOMContentLoaded', async function() {
         horizonTasksBtn.style.cursor = 'pointer';
 
         horizonTasksBtn.addEventListener('click', () => {
-            showHorizonTasksModal();
+            console.log('HZ Tasks button clicked - calling showHorizonTasksModal');
+            try {
+                showHorizonTasksModal();
+                console.log('showHorizonTasksModal completed successfully');
+            } catch (error) {
+                console.error('Error in showHorizonTasksModal:', error);
+            }
         });
         console.log('Horizon Tasks event listener attached');
     }
@@ -655,21 +670,147 @@ function loadConfigIntoModal() {
 }
 
 function showHorizonTasksModal() {
+    console.log('showHorizonTasksModal function called');
     const modal = document.getElementById('horizonTasksModal');
-    modal.style.display = 'block';
+    console.log('Modal element:', modal);
+    if (modal) {
+        modal.style.display = 'block';
+        console.log('Modal display set to block');
+    } else {
+        console.error('Modal element not found!');
+        return;
+    }
 
     // Load configuration values into the modal
-    loadConfigIntoModal();
+    try {
+        loadConfigIntoModal();
+        console.log('loadConfigIntoModal completed');
+    } catch (error) {
+        console.error('Error in loadConfigIntoModal:', error);
+    }
 
     // Note: Button uses onclick attribute instead of event listener
 
     // Default to Master Image Search tab
-    showHorizonTask('masterImageSearch');
+    try {
+        showHorizonTask('masterImageSearch');
+        console.log('showHorizonTask completed');
+    } catch (error) {
+        console.error('Error in showHorizonTask:', error);
+    }
 }
 
 function closeHorizonTasksModal() {
     document.getElementById('horizonTasksModal').style.display = 'none';
 }
+
+// Config Modal Functions
+function showConfigModal() {
+    console.log('showConfigModal function called');
+    const modal = document.getElementById('configModal');
+    if (modal) {
+        modal.style.display = 'block';
+        loadConfigIntoMainModal();
+        console.log('Config modal displayed');
+    } else {
+        console.error('Config modal element not found!');
+    }
+}
+
+function closeConfigModal() {
+    document.getElementById('configModal').style.display = 'none';
+}
+
+function loadConfigIntoMainModal() {
+    try {
+        const config = localStorage.getItem('lab007Config');
+        if (config) {
+            const parsed = JSON.parse(config);
+
+            // Load Citrix config
+            document.getElementById('configCitrixVersion').value = parsed.citrixVersion || '1912';
+            document.getElementById('configDdcName').value = parsed.ddcName || 'localhost';
+            document.getElementById('configUsageDays').value = parsed.usageDays || 30;
+            document.getElementById('configRunPreReqCheck').checked = parsed.runPreReqCheck !== false;
+
+            // Load VMware config
+            document.getElementById('configVCenterServer').value = parsed.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
+            document.getElementById('configMasterImagePrefix').value = parsed.masterImagePrefix || 'SHC-M-';
+
+            // Load audit components
+            document.getElementById('configAuditSiteInfo').checked = parsed.auditComponents?.SiteInfo !== false;
+            document.getElementById('configAuditApplications').checked = parsed.auditComponents?.Applications !== false;
+            document.getElementById('configAuditDesktops').checked = parsed.auditComponents?.Desktops !== false;
+            document.getElementById('configAuditCatalogs').checked = parsed.auditComponents?.Catalogs !== false;
+            document.getElementById('configAuditDeliveryGroups').checked = parsed.auditComponents?.DeliveryGroups !== false;
+            document.getElementById('configAuditUsageStats').checked = parsed.auditComponents?.UsageStats !== false;
+            document.getElementById('configAuditPolicies').checked = parsed.auditComponents?.Policies !== false;
+            document.getElementById('configAuditRoles').checked = parsed.auditComponents?.Roles !== false;
+            document.getElementById('configAuditVMwareSpecs').checked = parsed.auditComponents?.VMwareSpecs || false;
+            document.getElementById('configAuditServers').checked = parsed.auditComponents?.Servers !== false;
+            document.getElementById('configAuditDirectorOData').checked = parsed.auditComponents?.DirectorOData !== false;
+
+            console.log('Config loaded into main modal');
+        } else {
+            console.log('No existing config found, using defaults');
+        }
+    } catch (error) {
+        console.error('Error loading config into main modal:', error);
+    }
+}
+
+// Handle main config form submission
+document.addEventListener('DOMContentLoaded', function() {
+    const mainConfigForm = document.getElementById('mainConfigForm');
+    if (mainConfigForm) {
+        mainConfigForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const config = {
+                citrixVersion: document.getElementById('configCitrixVersion').value,
+                ddcName: document.getElementById('configDdcName').value,
+                usageDays: parseInt(document.getElementById('configUsageDays').value),
+                vCenterServer: document.getElementById('configVCenterServer').value,
+                masterImagePrefix: document.getElementById('configMasterImagePrefix').value,
+                runPreReqCheck: document.getElementById('configRunPreReqCheck').checked,
+                auditComponents: {
+                    SiteInfo: document.getElementById('configAuditSiteInfo').checked,
+                    Applications: document.getElementById('configAuditApplications').checked,
+                    Desktops: document.getElementById('configAuditDesktops').checked,
+                    Catalogs: document.getElementById('configAuditCatalogs').checked,
+                    DeliveryGroups: document.getElementById('configAuditDeliveryGroups').checked,
+                    UsageStats: document.getElementById('configAuditUsageStats').checked,
+                    Policies: document.getElementById('configAuditPolicies').checked,
+                    Roles: document.getElementById('configAuditRoles').checked,
+                    VMwareSpecs: document.getElementById('configAuditVMwareSpecs').checked,
+                    Servers: document.getElementById('configAuditServers').checked,
+                    DirectorOData: document.getElementById('configAuditDirectorOData').checked
+                },
+                savedAt: new Date().toISOString()
+            };
+
+            // Save to localStorage
+            localStorage.setItem('lab007Config', JSON.stringify(config));
+
+            // Show success message
+            const statusMsg = document.getElementById('configStatusMessage');
+            statusMsg.className = 'status-message success';
+            statusMsg.style.display = 'block';
+            statusMsg.innerHTML = '✅ Configuration saved successfully!';
+            statusMsg.style.textAlign = 'center';
+            statusMsg.style.padding = '15px';
+            statusMsg.style.borderRadius = '8px';
+            statusMsg.style.marginTop = '20px';
+
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+                statusMsg.style.display = 'none';
+            }, 3000);
+
+            console.log('Configuration saved to localStorage');
+        });
+    }
+});
 
 function showHorizonTask(taskName) {
     // Hide all task panels
@@ -686,8 +827,16 @@ function showHorizonTask(taskName) {
         selectedPanel.classList.add('active');
     }
     
-    // Activate selected tab
-    event.target.classList.add('active');
+    // Activate selected tab (only if event exists)
+    if (event && event.target) {
+        event.target.classList.add('active');
+    } else {
+        // Find and activate the tab by task name
+        const tab = document.querySelector(`[onclick*="showHorizonTask('${taskName}')"]`);
+        if (tab) {
+            tab.classList.add('active');
+        }
+    }
     
     // Task-specific initialization
     if (taskName === 'cloneMasterImage') {

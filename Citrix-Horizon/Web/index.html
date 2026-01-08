@@ -34,7 +34,7 @@
                     <button id="uploadDebugBtn" class="btn btn-secondary" style="background: #ffc107; color: #000; border-color: #ffc107; z-index: 10000;">Upload Debug ZIP</button>
                     <input type="file" id="debugFileInput" accept=".zip" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
                 </div>
-                <a href="/citrix/goldensun" class="btn btn-secondary" style="text-decoration: none; display: inline-block; background: linear-gradient(135deg, #d4af37 0%, #f4d03f 100%); color: #000; border: none; font-weight: 600;">☀️ GoldenSun</a>
+                <button id="configBtn" class="btn btn-secondary" style="background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%); color: white; border: none; font-weight: 600;">⚙️ Config</button>
                 <button id="horizonTasksBtn" class="btn btn-primary">HZ Tasks</button>
             </div>
         </header>
@@ -580,6 +580,162 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Config Modal -->
+    <div id="configModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 800px; width: 90%;">
+            <div class="modal-header">
+                <h2>⚙️ Configuration</h2>
+                <span class="close" onclick="closeConfigModal()">&times;</span>
+            </div>
+            <div id="configContent">
+                <form id="mainConfigForm">
+                    <div class="config-section">
+                        <h3>Citrix Configuration</h3>
+                        <div class="form-group">
+                            <label for="configCitrixVersion">Citrix Version:</label>
+                            <select id="configCitrixVersion" name="citrixVersion" required>
+                                <option value="1912" selected>1912 / 7.x (Snap-ins)</option>
+                                <option value="2009">2009</option>
+                                <option value="2012">2012</option>
+                                <option value="2112">2112</option>
+                                <option value="2203">2203</option>
+                                <option value="2209">2209</option>
+                                <option value="2305">2305</option>
+                                <option value="2311">2311</option>
+                            </select>
+                            <div class="help-text">Select your Citrix environment version</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="configDdcName">Delivery Controller (DDC) Name:</label>
+                            <input type="text" id="configDdcName" name="ddcName" value="localhost" required placeholder="localhost or FQDN">
+                            <div class="help-text">Enter the DDC hostname or FQDN (e.g., ddc01.domain.com)</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="configUsageDays">Days of Usage Data:</label>
+                            <input type="number" id="configUsageDays" name="usageDays" value="30" min="1" max="365" required>
+                            <div class="help-text">Number of days to analyze for usage statistics (1-365)</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="configRunPreReqCheck" name="runPreReqCheck" checked style="width: auto; margin-right: 8px;">
+                                Run Pre-requisite Checks
+                            </label>
+                            <div class="help-text">Check this to run system pre-requisite checks before starting the audit</div>
+                        </div>
+                    </div>
+
+                    <div class="config-section">
+                        <h3>VMware Configuration</h3>
+                        <div class="form-group">
+                            <label for="configVCenterServer">vCenter Server:</label>
+                            <input type="text" id="configVCenterServer" name="vCenterServer" value="shcvcsacx01v.ccr.cchcs.org" placeholder="vCenter FQDN">
+                            <div class="help-text">Enter your vCenter server FQDN for VMware operations</div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="configMasterImagePrefix">Master Image Prefix:</label>
+                            <input type="text" id="configMasterImagePrefix" name="masterImagePrefix" value="SHC-M-" placeholder="e.g., SHC-M-">
+                            <div class="help-text">Prefix used to identify master images (images will be searched using: [Prefix]* pattern)</div>
+                        </div>
+                    </div>
+
+                    <div class="config-section">
+                        <h3>Audit Components</h3>
+                        <div class="audit-components-grid">
+                            <label class="audit-component">
+                                <input type="checkbox" id="configAuditSiteInfo" name="auditSiteInfo" checked>
+                                <div>
+                                    <strong>Site Information</strong>
+                                    <div class="component-desc">Citrix site details & licensing</div>
+                                </div>
+                            </label>
+                            <label class="audit-component">
+                                <input type="checkbox" id="configAuditApplications" name="auditApplications" checked>
+                                <div>
+                                    <strong>Published Applications</strong>
+                                    <div class="component-desc">All published apps</div>
+                                </div>
+                            </label>
+                            <label class="audit-component">
+                                <input type="checkbox" id="configAuditDesktops" name="auditDesktops" checked>
+                                <div>
+                                    <strong>Published Desktops</strong>
+                                    <div class="component-desc">All published desktops</div>
+                                </div>
+                            </label>
+                            <label class="audit-component">
+                                <input type="checkbox" id="configAuditCatalogs" name="auditCatalogs" checked>
+                                <div>
+                                    <strong>Machine Catalogs</strong>
+                                    <div class="component-desc">Catalog configurations</div>
+                                </div>
+                            </label>
+                            <label class="audit-component">
+                                <input type="checkbox" id="configAuditDeliveryGroups" name="auditDeliveryGroups" checked>
+                                <div>
+                                    <strong>Delivery Groups</strong>
+                                    <div class="component-desc">Delivery group settings</div>
+                                </div>
+                            </label>
+                            <label class="audit-component">
+                                <input type="checkbox" id="configAuditUsageStats" name="auditUsageStats" checked>
+                                <div>
+                                    <strong>Usage Statistics</strong>
+                                    <div class="component-desc">Usage data & sessions</div>
+                                </div>
+                            </label>
+                            <label class="audit-component">
+                                <input type="checkbox" id="configAuditPolicies" name="auditPolicies" checked>
+                                <div>
+                                    <strong>Citrix Policies</strong>
+                                    <div class="component-desc">Policy configurations</div>
+                                </div>
+                            </label>
+                            <label class="audit-component">
+                                <input type="checkbox" id="configAuditRoles" name="auditRoles" checked>
+                                <div>
+                                    <strong>Management Roles</strong>
+                                    <div class="component-desc">Admin roles & permissions</div>
+                                </div>
+                            </label>
+                            <label class="audit-component">
+                                <input type="checkbox" id="configAuditVMwareSpecs" name="auditVMwareSpecs">
+                                <div>
+                                    <strong>VMware Server Specs</strong>
+                                    <div class="component-desc">VMware VM specifications</div>
+                                </div>
+                            </label>
+                            <label class="audit-component">
+                                <input type="checkbox" id="configAuditServers" name="auditServers" checked>
+                                <div>
+                                    <strong>Server Information</strong>
+                                    <div class="component-desc">Citrix server details</div>
+                                </div>
+                            </label>
+                            <label class="audit-component">
+                                <input type="checkbox" id="configAuditDirectorOData" name="auditDirectorOData" checked>
+                                <div>
+                                    <strong>Director OData</strong>
+                                    <div class="component-desc">Monitoring data from Director</div>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary" id="saveMainConfigBtn">💾 Save Configuration</button>
+                        <button type="button" class="btn btn-secondary" onclick="closeConfigModal()">Cancel</button>
+                    </div>
+                </form>
+
+                <div id="configStatusMessage" class="status-message" style="display: none;"></div>
             </div>
         </div>
     </div>
