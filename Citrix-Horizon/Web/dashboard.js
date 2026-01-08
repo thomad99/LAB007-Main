@@ -123,13 +123,13 @@ document.addEventListener('DOMContentLoaded', async function() {
     document.getElementById('serverSearch').addEventListener('input', filterServers);
     document.getElementById('appSearch').addEventListener('input', filterApps);
     
-    // Global search functionality
+    // Global search functionality (disabled - function not implemented)
     const globalSearchInput = document.getElementById('globalSearch');
     if (globalSearchInput) {
-        globalSearchInput.addEventListener('input', performGlobalSearch);
+        // globalSearchInput.addEventListener('input', performGlobalSearch);
         globalSearchInput.addEventListener('keydown', function(e) {
             if (e.key === 'Escape') {
-                clearGlobalSearch();
+                // clearGlobalSearch();
             }
         });
     }
@@ -162,92 +162,59 @@ document.addEventListener('DOMContentLoaded', async function() {
 
     // Handle main config form submission
     const mainConfigForm = document.getElementById('mainConfigForm');
+    const saveMainConfigBtn = document.getElementById('saveMainConfigBtn');
+
+    console.log('Setting up config form listener, form element:', mainConfigForm);
+    console.log('Save button element:', saveMainConfigBtn);
+
     if (mainConfigForm) {
+        console.log('Config form found, attaching submit listener');
         mainConfigForm.addEventListener('submit', function(e) {
             e.preventDefault();
-            console.log('Config form submitted');
+            console.log('Config form submitted - starting download process');
+            handleConfigDownload();
+        });
 
-            const config = {
-                citrixVersion: document.getElementById('configCitrixVersion').value,
-                ddcName: document.getElementById('configDdcName').value,
-                usageDays: parseInt(document.getElementById('configUsageDays').value),
-                vCenterServer: document.getElementById('configVCenterServer').value,
-                vCenterUsername: document.getElementById('configVCenterUsername').value,
-                vCenterPassword: document.getElementById('configVCenterPassword').value,
-                masterImagePrefix: document.getElementById('configMasterImagePrefix').value,
-                runPreReqCheck: document.getElementById('configRunPreReqCheck').checked,
-                auditComponents: {
-                    SiteInfo: document.getElementById('configAuditSiteInfo').checked,
-                    Applications: document.getElementById('configAuditApplications').checked,
-                    Desktops: document.getElementById('configAuditDesktops').checked,
-                    Catalogs: document.getElementById('configAuditCatalogs').checked,
-                    DeliveryGroups: document.getElementById('configAuditDeliveryGroups').checked,
-                    UsageStats: document.getElementById('configAuditUsageStats').checked,
-                    Policies: document.getElementById('configAuditPolicies').checked,
-                    Roles: document.getElementById('configAuditRoles').checked,
-                    VMwareSpecs: document.getElementById('configAuditVMwareSpecs').checked,
-                    Servers: document.getElementById('configAuditServers').checked,
-                    DirectorOData: document.getElementById('configAuditDirectorOData').checked
-                },
-                savedAt: new Date().toISOString()
-            };
+        // Also attach direct click handler to button as backup
+        if (saveMainConfigBtn) {
+            console.log('Attaching direct click handler to save button');
+            saveMainConfigBtn.addEventListener('click', function(e) {
+                console.log('Save button clicked directly');
+                e.preventDefault();
+                handleConfigDownload();
+            });
+        }
+    }
 
-            console.log('Config object created:', config);
+    // Config download function
+    function handleConfigDownload() {
+        console.log('handleConfigDownload called');
 
-            try {
-                // Create downloadable JSON file
-                const configJson = JSON.stringify(config, null, 2);
-                const blob = new Blob([configJson], { type: 'application/json' });
-                const url = URL.createObjectURL(blob);
+        const config = {
+            citrixVersion: document.getElementById('configCitrixVersion').value,
+            ddcName: document.getElementById('configDdcName').value,
+            usageDays: parseInt(document.getElementById('configUsageDays').value),
+            vCenterServer: document.getElementById('configVCenterServer').value,
+            vCenterUsername: document.getElementById('configVCenterUsername').value,
+            vCenterPassword: document.getElementById('configVCenterPassword').value,
+            masterImagePrefix: document.getElementById('configMasterImagePrefix').value,
+            runPreReqCheck: document.getElementById('configRunPreReqCheck').checked,
+            auditComponents: {
+                SiteInfo: document.getElementById('configAuditSiteInfo').checked,
+                Applications: document.getElementById('configAuditApplications').checked,
+                Desktops: document.getElementById('configAuditDesktops').checked,
+                Catalogs: document.getElementById('configAuditCatalogs').checked,
+                DeliveryGroups: document.getElementById('configAuditDeliveryGroups').checked,
+                UsageStats: document.getElementById('configAuditUsageStats').checked,
+                Policies: document.getElementById('configAuditPolicies').checked,
+                Roles: document.getElementById('configAuditRoles').checked,
+                VMwareSpecs: document.getElementById('configAuditVMwareSpecs').checked,
+                Servers: document.getElementById('configAuditServers').checked,
+                DirectorOData: document.getElementById('configAuditDirectorOData').checked
+            },
+            savedAt: new Date().toISOString()
+        };
 
-                // Create temporary download link
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = 'LAB007-Config.JSON';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-
-                // Clean up the URL object
-                URL.revokeObjectURL(url);
-
-                // Show success message
-                const statusMsg = document.getElementById('configStatusMessage');
-                statusMsg.className = 'status-message success';
-                statusMsg.style.display = 'block';
-                statusMsg.innerHTML = '<strong>Configuration file downloaded!</strong><br><br>' +
-                    'Save the <strong>LAB007-Config.JSON</strong> file to:<br>' +
-                    '<code>Citrix-Horizon\\LAB007-Config.JSON</code><br><br>' +
-                    '<em>(same level as the Scripts folder, not inside it)</em>';
-                statusMsg.style.textAlign = 'center';
-                statusMsg.style.padding = '15px';
-                statusMsg.style.borderRadius = '8px';
-                statusMsg.style.marginTop = '20px';
-
-                // Keep success message visible longer so user can read instructions
-                setTimeout(() => {
-                    statusMsg.style.display = 'none';
-                }, 10000);
-
-            } catch (error) {
-                console.error('Failed to create config file:', error);
-                // Show error message
-                const statusMsg = document.getElementById('configStatusMessage');
-                statusMsg.className = 'status-message error';
-                statusMsg.style.display = 'block';
-                statusMsg.innerHTML = 'Failed to create configuration file. Please try again.';
-                statusMsg.style.textAlign = 'center';
-                statusMsg.style.padding = '15px';
-                statusMsg.style.borderRadius = '8px';
-                statusMsg.style.marginTop = '20px';
-
-                // Hide error message after 5 seconds
-                setTimeout(() => {
-                    statusMsg.style.display = 'none';
-                }, 5000);
-            }
-
-            console.log('Configuration file created for download');
         });
 
     }
