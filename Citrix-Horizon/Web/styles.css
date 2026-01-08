@@ -1302,6 +1302,17 @@ button:disabled {
     overflow-y: auto;
 }
 
+/* Horizon Tasks Modal Specific Styles */
+#horizonTasksModal {
+    z-index: 1050; /* Higher than regular modals but lower than config */
+}
+
+#horizonTasksModal .modal-content {
+    margin-top: 120px; /* Move down from top to avoid covering header */
+    max-height: calc(100vh - 140px); /* Account for larger margin-top */
+    overflow-y: auto;
+}
+
 #configModal .modal-content h2 {
     margin-bottom: 20px;
 }
