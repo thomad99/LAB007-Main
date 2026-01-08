@@ -160,32 +160,6 @@ document.addEventListener('DOMContentLoaded', async function() {
         moveSourceCheckbox.dispatchEvent(new Event('change'));
     }
 
-    // Handle main config form submission
-    const mainConfigForm = document.getElementById('mainConfigForm');
-    const saveMainConfigBtn = document.getElementById('saveMainConfigBtn');
-
-    console.log('Setting up config form listener, form element:', mainConfigForm);
-    console.log('Save button element:', saveMainConfigBtn);
-
-    if (mainConfigForm) {
-        console.log('Config form found, attaching submit listener');
-        mainConfigForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            console.log('Config form submitted - starting download process');
-            handleConfigDownload();
-        });
-
-        // Also attach direct click handler to button as backup
-        if (saveMainConfigBtn) {
-            console.log('Attaching direct click handler to save button');
-            saveMainConfigBtn.addEventListener('click', function(e) {
-                console.log('Save button clicked directly');
-                e.preventDefault();
-                handleConfigDownload();
-            });
-        }
-    }
-
     // Config download function
     function handleConfigDownload() {
         console.log('handleConfigDownload called');
@@ -215,8 +189,88 @@ document.addEventListener('DOMContentLoaded', async function() {
             savedAt: new Date().toISOString()
         };
 
+        console.log('Config object created:', config);
+
+        try {
+            // Create downloadable JSON file
+            const configJson = JSON.stringify(config, null, 2);
+            const blob = new Blob([configJson], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            // Create temporary download link
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'LAB007-Config.JSON';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            // Clean up the URL object
+            URL.revokeObjectURL(url);
+
+            // Show success message
+            const statusMsg = document.getElementById('configStatusMessage');
+            statusMsg.className = 'status-message success';
+            statusMsg.style.display = 'block';
+            statusMsg.innerHTML = '<strong>Configuration file downloaded!</strong><br><br>' +
+                'Save the <strong>LAB007-Config.JSON</strong> file to:<br>' +
+                '<code>Citrix-Horizon\\LAB007-Config.JSON</code><br><br>' +
+                '<em>(same level as the Scripts folder, not inside it)</em>';
+            statusMsg.style.textAlign = 'center';
+            statusMsg.style.padding = '15px';
+            statusMsg.style.borderRadius = '8px';
+            statusMsg.style.marginTop = '20px';
+
+            // Keep success message visible longer so user can read instructions
+            setTimeout(() => {
+                statusMsg.style.display = 'none';
+            }, 10000);
+
+        } catch (error) {
+            console.error('Failed to create config file:', error);
+            // Show error message
+            const statusMsg = document.getElementById('configStatusMessage');
+            statusMsg.className = 'status-message error';
+            statusMsg.style.display = 'block';
+            statusMsg.innerHTML = 'Failed to create configuration file. Please try again.';
+            statusMsg.style.textAlign = 'center';
+            statusMsg.style.padding = '15px';
+            statusMsg.style.borderRadius = '8px';
+            statusMsg.style.marginTop = '20px';
+
+            // Hide error message after 5 seconds
+            setTimeout(() => {
+                statusMsg.style.display = 'none';
+            }, 5000);
+        }
+
+        console.log('Configuration file created for download');
+    }
+
+    // Handle main config form submission
+    const mainConfigForm = document.getElementById('mainConfigForm');
+    const saveMainConfigBtn = document.getElementById('saveMainConfigBtn');
+
+    console.log('Setting up config form listener, form element:', mainConfigForm);
+    console.log('Save button element:', saveMainConfigBtn);
+
+    if (mainConfigForm) {
+        console.log('Config form found, attaching submit listener');
+        mainConfigForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            console.log('Config form submitted - starting download process');
+            handleConfigDownload();
         });
 
+        // Also attach direct click handler to button as backup
+        if (saveMainConfigBtn) {
+            console.log('Attaching direct click handler to save button');
+            saveMainConfigBtn.addEventListener('click', function(e) {
+                console.log('Save button clicked directly');
+                e.preventDefault();
+                handleConfigDownload();
+            });
+        }
     }
 });
 
