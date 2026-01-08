@@ -506,8 +506,36 @@
                         </div>
                     </div>
 
-                    <div id="cloneScriptSection" style="margin: 20px 0; text-align: right; display: none;">
-                        <button id="createCloneScriptBtn" class="btn btn-primary" onclick="createCloneScript()">Create Script</button>
+                    <div id="cloneScriptSection" style="margin: 20px 0; display: none;">
+                        <h4 style="margin-bottom: 15px;">Clone Destination Configuration</h4>
+
+                        <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
+                            <label for="cloneDestinationFolder" style="display: block; margin-bottom: 8px; font-weight: bold;">VMware Destination Folder:</label>
+                            <div style="display: flex; gap: 10px; align-items: center;">
+                                <input type="text" id="cloneDestinationFolder" placeholder="e.g., /vm/prod/windows" style="flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;" value="/vm">
+                                <button id="browseCloneFoldersBtn" class="btn btn-secondary" onclick="showFolderBrowserModal()" style="padding: 8px 15px;">Browse</button>
+                            </div>
+                            <p style="margin-top: 5px; color: #666; font-size: 12px;">Specify the VMware folder path where cloned VMs will be placed. Use forward slashes (/) for folder separation.</p>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
+                            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Source VM Move Options:</label>
+                            <div style="display: flex; align-items: center; gap: 15px;">
+                                <label style="display: flex; align-items: center; cursor: pointer;">
+                                    <input type="checkbox" id="moveSourceAfterClone" style="margin-right: 8px;">
+                                    Move source VMs to folder after cloning
+                                </label>
+                            </div>
+                            <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+                                <input type="text" id="sourceMoveFolder" placeholder="e.g., /vm/archive" style="flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;" value="/vm/archive" disabled>
+                                <button id="browseSourceFoldersBtn" class="btn btn-secondary" onclick="showSourceFolderBrowserModal()" style="padding: 8px 15px;" disabled>Browse</button>
+                            </div>
+                            <p style="margin-top: 5px; color: #666; font-size: 12px;">If checked, source VMs will be moved to this folder after successful cloning.</p>
+                        </div>
+
+                        <div style="text-align: right;">
+                            <button id="createCloneScriptBtn" class="btn btn-primary" onclick="createCloneScript()">Create Script</button>
+                        </div>
                     </div>
                     
                     <div id="cloneScriptOutput" style="display: none; margin-top: 20px;">
@@ -579,6 +607,98 @@
                             <button class="btn btn-secondary" onclick="downloadAppCommands()">Download Script</button>
                         </div>
                     </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Folder Browser Modal -->
+    <div id="folderBrowserModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px; width: 90%;">
+            <div class="modal-header">
+                <h2>📁 Browse VMware Folders</h2>
+                <span class="close" onclick="closeFolderBrowserModal()">&times;</span>
+            </div>
+            <div id="folderBrowserContent">
+                <div style="margin-bottom: 20px;">
+                    <p style="color: #666; margin-bottom: 15px;">Select a VMware folder for VM placement. Common folder structures are shown below:</p>
+
+                    <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background-color: #f8f9fa;">
+                        <div class="folder-option" onclick="selectFolder('/vm')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                            📁 <strong>/vm</strong> - Root VM folder
+                        </div>
+                        <div class="folder-option" onclick="selectFolder('/vm/prod')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                            📁 <strong>/vm/prod</strong> - Production VMs
+                        </div>
+                        <div class="folder-option" onclick="selectFolder('/vm/prod/windows')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                            📁 <strong>/vm/prod/windows</strong> - Windows production VMs
+                        </div>
+                        <div class="folder-option" onclick="selectFolder('/vm/test')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                            📁 <strong>/vm/test</strong> - Test VMs
+                        </div>
+                        <div class="folder-option" onclick="selectFolder('/vm/dev')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                            📁 <strong>/vm/dev</strong> - Development VMs
+                        </div>
+                        <div class="folder-option" onclick="selectFolder('/vm/archive')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                            📁 <strong>/vm/archive</strong> - Archived VMs
+                        </div>
+                        <div class="folder-option" onclick="selectFolder('/vm/backup')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                            📁 <strong>/vm/backup</strong> - Backup VMs
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label for="customFolderPath" style="display: block; margin-bottom: 8px; font-weight: bold;">Or enter custom path:</label>
+                    <input type="text" id="customFolderPath" placeholder="/vm/custom/path" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+
+                <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
+                    <button class="btn btn-secondary" onclick="closeFolderBrowserModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="confirmCustomFolder()" style="margin-left: 10px;">Use Custom Path</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Source Folder Browser Modal -->
+    <div id="sourceFolderBrowserModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 600px; width: 90%;">
+            <div class="modal-header">
+                <h2>📁 Browse Archive Folders</h2>
+                <span class="close" onclick="closeSourceFolderBrowserModal()">&times;</span>
+            </div>
+            <div id="sourceFolderBrowserContent">
+                <div style="margin-bottom: 20px;">
+                    <p style="color: #666; margin-bottom: 15px;">Select a folder to move source VMs after cloning:</p>
+
+                    <div style="max-height: 300px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background-color: #f8f9fa;">
+                        <div class="folder-option" onclick="selectSourceFolder('/vm/archive')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                            📁 <strong>/vm/archive</strong> - Archive folder
+                        </div>
+                        <div class="folder-option" onclick="selectSourceFolder('/vm/backup')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                            📁 <strong>/vm/backup</strong> - Backup folder
+                        </div>
+                        <div class="folder-option" onclick="selectSourceFolder('/vm/retired')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                            📁 <strong>/vm/retired</strong> - Retired VMs
+                        </div>
+                        <div class="folder-option" onclick="selectSourceFolder('/vm/old')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                            📁 <strong>/vm/old</strong> - Old VMs
+                        </div>
+                        <div class="folder-option" onclick="selectSourceFolder('/vm/decommissioned')" style="cursor: pointer; padding: 8px; margin: 2px 0; border-radius: 4px; background: white; border: 1px solid #eee;">
+                            📁 <strong>/vm/decommissioned</strong> - Decommissioned VMs
+                        </div>
+                    </div>
+                </div>
+
+                <div style="margin-bottom: 20px;">
+                    <label for="customSourceFolderPath" style="display: block; margin-bottom: 8px; font-weight: bold;">Or enter custom path:</label>
+                    <input type="text" id="customSourceFolderPath" placeholder="/vm/custom/archive" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+                </div>
+
+                <div style="text-align: right; border-top: 1px solid #eee; padding-top: 15px;">
+                    <button class="btn btn-secondary" onclick="closeSourceFolderBrowserModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="confirmCustomSourceFolder()" style="margin-left: 10px;">Use Custom Path</button>
                 </div>
             </div>
         </div>
