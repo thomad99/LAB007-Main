@@ -136,6 +136,57 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Animate loading text letter by letter
     animateLoadingText();
+
+    // Handle main config form submission
+    const mainConfigForm = document.getElementById('mainConfigForm');
+    if (mainConfigForm) {
+        mainConfigForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const config = {
+                citrixVersion: document.getElementById('configCitrixVersion').value,
+                ddcName: document.getElementById('configDdcName').value,
+                usageDays: parseInt(document.getElementById('configUsageDays').value),
+                vCenterServer: document.getElementById('configVCenterServer').value,
+                masterImagePrefix: document.getElementById('configMasterImagePrefix').value,
+                runPreReqCheck: document.getElementById('configRunPreReqCheck').checked,
+                auditComponents: {
+                    SiteInfo: document.getElementById('configAuditSiteInfo').checked,
+                    Applications: document.getElementById('configAuditApplications').checked,
+                    Desktops: document.getElementById('configAuditDesktops').checked,
+                    Catalogs: document.getElementById('configAuditCatalogs').checked,
+                    DeliveryGroups: document.getElementById('configAuditDeliveryGroups').checked,
+                    UsageStats: document.getElementById('configAuditUsageStats').checked,
+                    Policies: document.getElementById('configAuditPolicies').checked,
+                    Roles: document.getElementById('configAuditRoles').checked,
+                    VMwareSpecs: document.getElementById('configAuditVMwareSpecs').checked,
+                    Servers: document.getElementById('configAuditServers').checked,
+                    DirectorOData: document.getElementById('configAuditDirectorOData').checked
+                },
+                savedAt: new Date().toISOString()
+            };
+
+            // Save to localStorage
+            localStorage.setItem('lab007Config', JSON.stringify(config));
+
+            // Show success message
+            const statusMsg = document.getElementById('configStatusMessage');
+            statusMsg.className = 'status-message success';
+            statusMsg.style.display = 'block';
+            statusMsg.innerHTML = '✅ Configuration saved successfully!';
+            statusMsg.style.textAlign = 'center';
+            statusMsg.style.padding = '15px';
+            statusMsg.style.borderRadius = '8px';
+            statusMsg.style.marginTop = '20px';
+
+            // Hide success message after 3 seconds
+            setTimeout(() => {
+                statusMsg.style.display = 'none';
+            }, 3000);
+
+            console.log('Configuration saved to localStorage');
+        });
+    }
 });
 
 // Function to animate loading text letter by letter
@@ -759,58 +810,6 @@ function loadConfigIntoMainModal() {
     }
 }
 
-// Handle main config form submission
-document.addEventListener('DOMContentLoaded', function() {
-    const mainConfigForm = document.getElementById('mainConfigForm');
-    if (mainConfigForm) {
-        mainConfigForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const config = {
-                citrixVersion: document.getElementById('configCitrixVersion').value,
-                ddcName: document.getElementById('configDdcName').value,
-                usageDays: parseInt(document.getElementById('configUsageDays').value),
-                vCenterServer: document.getElementById('configVCenterServer').value,
-                masterImagePrefix: document.getElementById('configMasterImagePrefix').value,
-                runPreReqCheck: document.getElementById('configRunPreReqCheck').checked,
-                auditComponents: {
-                    SiteInfo: document.getElementById('configAuditSiteInfo').checked,
-                    Applications: document.getElementById('configAuditApplications').checked,
-                    Desktops: document.getElementById('configAuditDesktops').checked,
-                    Catalogs: document.getElementById('configAuditCatalogs').checked,
-                    DeliveryGroups: document.getElementById('configAuditDeliveryGroups').checked,
-                    UsageStats: document.getElementById('configAuditUsageStats').checked,
-                    Policies: document.getElementById('configAuditPolicies').checked,
-                    Roles: document.getElementById('configAuditRoles').checked,
-                    VMwareSpecs: document.getElementById('configAuditVMwareSpecs').checked,
-                    Servers: document.getElementById('configAuditServers').checked,
-                    DirectorOData: document.getElementById('configAuditDirectorOData').checked
-                },
-                savedAt: new Date().toISOString()
-            };
-
-            // Save to localStorage
-            localStorage.setItem('lab007Config', JSON.stringify(config));
-
-            // Show success message
-            const statusMsg = document.getElementById('configStatusMessage');
-            statusMsg.className = 'status-message success';
-            statusMsg.style.display = 'block';
-            statusMsg.innerHTML = '✅ Configuration saved successfully!';
-            statusMsg.style.textAlign = 'center';
-            statusMsg.style.padding = '15px';
-            statusMsg.style.borderRadius = '8px';
-            statusMsg.style.marginTop = '20px';
-
-            // Hide success message after 3 seconds
-            setTimeout(() => {
-                statusMsg.style.display = 'none';
-            }, 3000);
-
-            console.log('Configuration saved to localStorage');
-        });
-    }
-});
 
 function showHorizonTask(taskName) {
     // Hide all task panels
@@ -987,7 +986,7 @@ function generateCloneScript(selectedImages) {
         '    $defaultIndex = ($folders | Where-Object { $_.FullPath -eq $DefaultFolderPath } | Select-Object -First 1)',
         '    $defaultNum = if ($defaultIndex) { [array]::IndexOf($folders, $defaultIndex) + 1 } else { 1 }',
         '    ',
-        '    $selection = Read-Host "Select destination folder (default: $defaultNum for '$DefaultFolderPath')"',
+        '    $selection = Read-Host "Select destination folder (default: $defaultNum for \'$DefaultFolderPath\')"',
         '    if ([string]::IsNullOrWhiteSpace($selection)) {',
         '        $selection = $defaultNum',
         '    }',
