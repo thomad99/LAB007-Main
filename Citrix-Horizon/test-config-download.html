@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Config Download</title>
+</head>
+<body>
+    <h1>Test Configuration Download</h1>
+    <p>This is a simple test to verify the config download functionality works.</p>
+
+    <button onclick="downloadTestConfig()">Download Test Config</button>
+
+    <script>
+        function downloadTestConfig() {
+            const config = {
+                citrixVersion: "1912",
+                ddcName: "test-server",
+                usageDays: 30,
+                vCenterServer: "test-vcenter",
+                masterImagePrefix: "TEST-",
+                runPreReqCheck: true,
+                auditComponents: {
+                    SiteInfo: true,
+                    Applications: true,
+                    Desktops: true,
+                    Catalogs: true,
+                    DeliveryGroups: true,
+                    UsageStats: true,
+                    Policies: true,
+                    Roles: true,
+                    VMwareSpecs: false,
+                    Servers: true,
+                    DirectorOData: true
+                },
+                savedAt: new Date().toISOString()
+            };
+
+            const configJson = JSON.stringify(config, null, 2);
+            const blob = new Blob([configJson], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'LAB007-Tools-Config.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            URL.revokeObjectURL(url);
+
+            alert('Test config file should download now!\n\nSave it to: Citrix-Horizon\\LAB007-Tools-Config.json');
+        }
+    </script>
+</body>
+</html>

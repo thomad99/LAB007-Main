@@ -149,6 +149,10 @@
             <div style="text-align: center; margin-bottom: 30px;">
                 <img src="images/LAB007-LOGO-TRANS.png" alt="Lab007 Logo" style="max-height: 300px; margin-bottom: 15px;">
                 <p class="subtitle" style="font-size: 1.5rem; margin-top: 20px;">Configuration</p>
+                <div style="background: #e3f2fd; border: 1px solid #2196f3; border-radius: 8px; padding: 15px; margin: 20px 0; max-width: 500px; margin-left: auto; margin-right: auto;">
+                    <strong>💡 Local Usage:</strong> Click "Save Config" to download the configuration file.<br>
+                    Save it to the same directory as your PowerShell scripts.
+                </div>
             </div>
 
             <form id="configForm">
@@ -283,7 +287,7 @@
                     <div class="help-text" style="margin-top: 10px;">Select which audit components you want to run</div>
                 </div>
 
-                <button type="submit" class="btn-submit" id="saveConfigBtn">Save Config</button>
+                <button type="submit" class="btn-submit" id="saveConfigBtn">Download Config File</button>
             </form>
 
             <div id="statusMessage" class="status-message"></div>
@@ -291,36 +295,44 @@
     </div>
 
     <script>
-        // Load existing configuration if available
-        function loadExistingConfig() {
+        // Load existing configuration from server (if available)
+        async function loadExistingConfig() {
             try {
-                const config = localStorage.getItem('lab007Config');
-                if (config) {
-                    const parsed = JSON.parse(config);
-                    document.getElementById('citrixVersion').value = parsed.citrixVersion || '1912';
-                    document.getElementById('ddcName').value = parsed.ddcName || 'localhost';
-                    document.getElementById('usageDays').value = parsed.usageDays || 30;
-                    document.getElementById('vCenterServer').value = parsed.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
-                    document.getElementById('masterImagePrefix').value = parsed.masterImagePrefix || 'SHC-M-';
-                    document.getElementById('runPreReqCheck').checked = parsed.runPreReqCheck !== false;
-                    document.getElementById('auditSiteInfo').checked = parsed.auditComponents?.SiteInfo !== false;
-                    document.getElementById('auditApplications').checked = parsed.auditComponents?.Applications !== false;
-                    document.getElementById('auditDesktops').checked = parsed.auditComponents?.Desktops !== false;
-                    document.getElementById('auditCatalogs').checked = parsed.auditComponents?.Catalogs !== false;
-                    document.getElementById('auditDeliveryGroups').checked = parsed.auditComponents?.DeliveryGroups !== false;
-                    document.getElementById('auditUsageStats').checked = parsed.auditComponents?.UsageStats !== false;
-                    document.getElementById('auditPolicies').checked = parsed.auditComponents?.Policies !== false;
-                    document.getElementById('auditRoles').checked = parsed.auditComponents?.Roles !== false;
-                    document.getElementById('auditVMwareSpecs').checked = parsed.auditComponents?.VMwareSpecs || false;
-                    document.getElementById('auditServers').checked = parsed.auditComponents?.Servers !== false;
-                    document.getElementById('auditDirectorOData').checked = parsed.auditComponents?.DirectorOData !== false;
+                const response = await fetch('/api/audit-config');
+                if (response.ok) {
+                    const config = await response.json();
+                    applyConfigToForm(config);
+                    console.log('Configuration loaded from server');
+                } else {
+                    console.log('Server available but config not found, using defaults');
                 }
             } catch (e) {
-                console.log('No existing config found');
+                // Server not available - this is expected when running locally
+                console.log('No server available - using default configuration');
             }
         }
 
-        // Save configuration
+        function applyConfigToForm(config) {
+            document.getElementById('citrixVersion').value = config.citrixVersion || '1912';
+            document.getElementById('ddcName').value = config.ddcName || 'localhost';
+            document.getElementById('usageDays').value = config.usageDays || 30;
+            document.getElementById('vCenterServer').value = config.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
+            document.getElementById('masterImagePrefix').value = config.masterImagePrefix || 'SHC-M-';
+            document.getElementById('runPreReqCheck').checked = config.runPreReqCheck !== false;
+            document.getElementById('auditSiteInfo').checked = config.auditComponents?.SiteInfo !== false;
+            document.getElementById('auditApplications').checked = config.auditComponents?.Applications !== false;
+            document.getElementById('auditDesktops').checked = config.auditComponents?.Desktops !== false;
+            document.getElementById('auditCatalogs').checked = config.auditComponents?.Catalogs !== false;
+            document.getElementById('auditDeliveryGroups').checked = config.auditComponents?.DeliveryGroups !== false;
+            document.getElementById('auditUsageStats').checked = config.auditComponents?.UsageStats !== false;
+            document.getElementById('auditPolicies').checked = config.auditComponents?.Policies !== false;
+            document.getElementById('auditRoles').checked = config.auditComponents?.Roles !== false;
+            document.getElementById('auditVMwareSpecs').checked = config.auditComponents?.VMwareSpecs || false;
+            document.getElementById('auditServers').checked = config.auditComponents?.Servers !== false;
+            document.getElementById('auditDirectorOData').checked = config.auditComponents?.DirectorOData !== false;
+        }
+
+        // Save configuration as downloadable file
         document.getElementById('configForm').addEventListener('submit', function(e) {
             e.preventDefault();
 
@@ -347,19 +359,50 @@
                 savedAt: new Date().toISOString()
             };
 
-            // Save to localStorage
-            localStorage.setItem('lab007Config', JSON.stringify(config));
+            try {
+                // Create downloadable JSON file
+                const configJson = JSON.stringify(config, null, 2);
+                const blob = new Blob([configJson], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
 
-            // Show success message
-            const statusMsg = document.getElementById('statusMessage');
-            statusMsg.className = 'status-message success';
-            statusMsg.style.display = 'block';
-            statusMsg.innerHTML = 'Configuration saved successfully!';
+                // Create temporary download link
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'LAB007-Tools-Config.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
 
-            // Hide success message after 3 seconds
-            setTimeout(() => {
-                statusMsg.style.display = 'none';
-            }, 3000);
+                // Clean up the URL object
+                URL.revokeObjectURL(url);
+
+                // Show success message with instructions
+                const statusMsg = document.getElementById('statusMessage');
+                statusMsg.className = 'status-message success';
+                statusMsg.style.display = 'block';
+                statusMsg.innerHTML = '<strong>Configuration file downloaded!</strong><br><br>' +
+                    'Save the <strong>LAB007-Tools-Config.json</strong> file to the parent directory of your Scripts folder.<br><br>' +
+                    '<em>For LAB007 Citrix-Horizon:</em> Save to <code>Citrix-Horizon\\LAB007-Tools-Config.json</code><br>' +
+                    '(same level as the Scripts folder, not inside it)';
+
+                // Keep success message visible longer so user can read instructions
+                setTimeout(() => {
+                    statusMsg.style.display = 'none';
+                }, 8000);
+
+            } catch (error) {
+                console.error('Error creating config file:', error);
+
+                // Show error message
+                const statusMsg = document.getElementById('statusMessage');
+                statusMsg.className = 'status-message error';
+                statusMsg.style.display = 'block';
+                statusMsg.innerHTML = 'Failed to create configuration file. Please try again.';
+
+                setTimeout(() => {
+                    statusMsg.style.display = 'none';
+                }, 5000);
+            }
         });
 
         // Load config on page load
