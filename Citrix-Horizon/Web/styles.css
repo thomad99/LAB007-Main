@@ -1313,6 +1313,19 @@ button:disabled {
     overflow-y: auto;
 }
 
+/* Folder Browser Modal Specific Styles */
+#folderBrowserModal,
+#sourceFolderBrowserModal {
+    z-index: 1200; /* Higher than all other modals */
+}
+
+#folderBrowserModal .modal-content,
+#sourceFolderBrowserModal .modal-content {
+    margin-top: 100px; /* Position nicely on screen */
+    max-height: calc(100vh - 120px);
+    overflow-y: auto;
+}
+
 #configModal .modal-content h2 {
     margin-bottom: 20px;
 }
