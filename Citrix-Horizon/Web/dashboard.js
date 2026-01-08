@@ -125,6 +125,9 @@ document.addEventListener('DOMContentLoaded', async function() {
         vmwareFoldersFileInput.addEventListener('change', handleVMwareFoldersFile);
     }
 
+    // Load config and populate clone folder fields
+    loadConfigForCloneFields();
+
     // Search functionality
     document.getElementById('serverSearch').addEventListener('input', filterServers);
     document.getElementById('appSearch').addEventListener('input', filterApps);
@@ -2827,6 +2830,43 @@ function toggleSection(button) {
 
 // VMware Folders Functions
 let vmwareFoldersData = [];
+
+// Load config and populate clone folder fields
+async function loadConfigForCloneFields() {
+    try {
+        // Try to load config from server
+        const response = await fetch('/api/audit-config');
+        if (response.ok) {
+            const config = await response.json();
+            console.log('Config loaded for clone fields:', config);
+
+            // Populate clone folder fields from config
+            const destField = document.getElementById('cloneDestinationFolder');
+            const sourceField = document.getElementById('sourceMoveFolder');
+
+            if (destField && config.cloneDestinationFolder) {
+                destField.value = config.cloneDestinationFolder;
+                console.log('Set destination folder from config:', config.cloneDestinationFolder);
+            }
+
+            if (sourceField && config.sourceMoveFolder) {
+                sourceField.value = config.sourceMoveFolder;
+                console.log('Set source move folder from config:', config.sourceMoveFolder);
+            }
+
+            // If both folders are configured, show a note
+            if (config.cloneDestinationFolder && config.sourceMoveFolder) {
+                const note = document.createElement('div');
+                note.style.cssText = 'margin-top: 10px; padding: 10px; background: #e8f5e8; border: 1px solid #4caf50; border-radius: 4px; color: #2e7d32; font-size: 14px;';
+                note.innerHTML = '📁 <strong>Folders configured from LAB007-Config.JSON</strong><br>Destination and source move folders are pre-filled from your saved configuration.';
+                destField.parentNode.insertBefore(note, destField.nextSibling);
+            }
+        }
+    } catch (error) {
+        console.log('Could not load config for clone fields:', error);
+        // This is expected when running locally without server
+    }
+}
 
 function loadVMwareFoldersFile() {
     const fileInput = document.getElementById('vmwareFoldersFileInput');

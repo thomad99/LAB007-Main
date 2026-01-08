@@ -57,6 +57,8 @@ function Get-Configuration {
                 vCenterServer = if ($config.vCenterServer) { $config.vCenterServer } elseif ($config.VMwareServer) { $config.VMwareServer } else { $null }
                 vCenterUsername = if ($config.vCenterUsername) { $config.vCenterUsername } elseif ($config.VMwareUsername) { $config.VMwareUsername } else { $null }
                 vCenterPassword = if ($config.vCenterPassword) { $config.vCenterPassword } elseif ($config.VMwarePassword) { $config.VMwarePassword } else { $null }
+                cloneDestinationFolder = if ($config.cloneDestinationFolder) { $config.cloneDestinationFolder } else { $null }
+                sourceMoveFolder = if ($config.sourceMoveFolder) { $config.sourceMoveFolder } else { $null }
                 SkipServerSpecs = if ($null -ne $config.skipServerSpecs) { [bool]$config.skipServerSpecs } elseif ($null -ne $config.SkipServerSpecs) { [bool]$config.SkipServerSpecs } else { $defaultConfig.SkipServerSpecs }
                 RunPreReqCheck = if ($null -ne $config.runPreReqCheck) { [bool]$config.runPreReqCheck } elseif ($null -ne $config.RunPreReqCheck) { [bool]$config.RunPreReqCheck } else { $defaultConfig.RunPreReqCheck }
                 AuditComponents = $auditComponents

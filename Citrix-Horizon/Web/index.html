@@ -523,10 +523,10 @@
                         <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
                             <label for="cloneDestinationFolder" style="display: block; margin-bottom: 8px; font-weight: bold;">VMware Destination Folder:</label>
                             <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="text" id="cloneDestinationFolder" placeholder="e.g., /vm/prod/windows" style="flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;" value="/vm">
-                                <button id="browseCloneFoldersBtn" class="btn btn-secondary" onclick="showFolderBrowserModal()" style="padding: 8px 15px;">Browse</button>
+                                <input type="text" id="cloneDestinationFolder" placeholder="Configured from LAB007-Config.JSON" style="flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; background-color: #f5f5f5;" readonly>
+                                <button id="browseCloneFoldersBtn" class="btn btn-secondary" style="padding: 8px 15px; opacity: 0.5; cursor: not-allowed;" disabled>Browse</button>
                             </div>
-                            <p style="margin-top: 5px; color: #666; font-size: 12px;">Specify the VMware folder path where cloned VMs will be placed. Use forward slashes (/) for folder separation.</p>
+                            <p style="margin-top: 5px; color: #666; font-size: 12px;">Destination folder is configured in LAB007-Config.JSON. Use the Config tab to change folder settings.</p>
                         </div>
 
                         <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
@@ -538,10 +538,10 @@
                                 </label>
                             </div>
                             <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
-                                <input type="text" id="sourceMoveFolder" placeholder="e.g., /vm/archive" style="flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;" value="/vm/archive" disabled>
-                                <button id="browseSourceFoldersBtn" class="btn btn-secondary" onclick="showSourceFolderBrowserModal()" style="padding: 8px 15px;" disabled>Browse</button>
+                                <input type="text" id="sourceMoveFolder" placeholder="Configured from LAB007-Config.JSON" style="flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; background-color: #f5f5f5;" readonly>
+                                <button id="browseSourceFoldersBtn" class="btn btn-secondary" style="padding: 8px 15px; opacity: 0.5; cursor: not-allowed;" disabled>Browse</button>
                             </div>
-                            <p style="margin-top: 5px; color: #666; font-size: 12px;">If checked, source VMs will be moved to this folder after successful cloning.</p>
+                            <p style="margin-top: 5px; color: #666; font-size: 12px;">Source move folder is configured in LAB007-Config.JSON. Use the Config tab to change folder settings.</p>
                         </div>
 
                         <div style="text-align: right;">
