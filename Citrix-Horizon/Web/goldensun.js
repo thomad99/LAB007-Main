@@ -420,9 +420,7 @@ Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -Confirm:$false -Scop
 
 # Connect to vCenter
 $vCenterServer = "${masterImagesData.vCenterServer}"
-Write-Host "Connecting to vCenter: $vCenterServer..." -ForegroundColor Yellow
 $connection = Connect-VIServer -Server $vCenterServer -ErrorAction Stop
-Write-Host "Connected successfully!" -ForegroundColor Green
 
 # Clone results
 $results = @()
@@ -645,8 +643,6 @@ try {
     # Prompt for credentials
     $credential = Get-Credential -Message "Enter vCenter credentials for $vCenterServer"
 
-    Write-Host "Connecting to vCenter Server: $vCenterServer..." -ForegroundColor Yellow
-
     # Connect to vCenter (will prompt for credentials)
     try {
         $connection = Connect-VIServer -Server $vCenterServer -Credential $credential -ErrorAction Stop
@@ -671,7 +667,7 @@ try {
         $masterImages = @()
 
         foreach ($vm in $vms) {
-            Write-Host "Processing: $($vm.Name)..." -ForegroundColor Cyan
+            # Processing output removed for cleaner display
 
             # Get VM details
             $vmView = $vm | Get-View
@@ -749,11 +745,13 @@ try {
     Write-Host ''
     Write-Host 'Master images information collected successfully!' -ForegroundColor Green
     Write-Host "Total images found: $($masterImages.Count)" -ForegroundColor White
-    Write-Host "Data saved to: $OutputPath" -ForegroundColor Gray
+    Write-Host ''
+    Write-Host '===========================' -ForegroundColor Green
+    Write-Host "Data saved to: $OutputPath" -ForegroundColor Green
+    Write-Host '===========================' -ForegroundColor Green
 
     # Disconnect from vCenter
     Disconnect-VIServer -Server $vCenterServer -Confirm:$false -ErrorAction SilentlyContinue
-    Write-Host 'Disconnected from vCenter' -ForegroundColor Gray
 
     return $result
 }

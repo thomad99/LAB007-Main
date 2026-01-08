@@ -1791,6 +1791,7 @@ try {
     Write-Host "[DEBUG] OutputPath: $OutputPath" | Out-File -FilePath $debugFile -Append
     Write-Host "[DEBUG] vCenterServer: $vCenterServer" | Out-File -FilePath $debugFile -Append
     Write-Host "[DEBUG] MasterImagePrefix: $MasterImagePrefix" | Out-File -FilePath $debugFile -Append
+    # DEBUG output removed from screen for cleaner display
     # Check if VMware PowerCLI is available
     $vmwareModule = Get-Module -ListAvailable -Name VMware.PowerCLI
     if (-not $vmwareModule) {
@@ -1825,7 +1826,6 @@ try {
     # Connect to vCenter
     try {
         $connection = Connect-VIServer -Server $vCenterServer -Credential $credential -ErrorAction Stop
-        Write-Host "Successfully connected to $vCenterServer" -ForegroundColor Green
         Write-Host "[DEBUG] Successfully connected to $vCenterServer" | Out-File -FilePath $debugFile -Append
     }
     catch {
@@ -1835,7 +1835,6 @@ try {
     }
 
     # Search for VMs matching the specified prefix pattern
-    Write-Host "Searching for VMs matching pattern $MasterImagePrefix*..." -ForegroundColor Yellow
     Write-Host "[DEBUG] Searching for VMs matching pattern $MasterImagePrefix*" | Out-File -FilePath $debugFile -Append
 
     $vms = Get-VM -Name "$MasterImagePrefix*" -ErrorAction SilentlyContinue
@@ -1850,8 +1849,7 @@ try {
         $masterImages = @()
 
         foreach ($vm in $vms) {
-            Write-Host "Processing: $($vm.Name)..." -ForegroundColor Cyan
-            Write-Host "[DEBUG] Processing: $($vm.Name)" | Out-File -FilePath $debugFile -Append
+            # Processing output removed for cleaner display
 
             # Get VM details
             $cluster = Get-Cluster -VM $vm -ErrorAction SilentlyContinue
@@ -1930,13 +1928,13 @@ try {
     Write-Host ''
     Write-Host 'Master images information collected successfully!' -ForegroundColor Green
     Write-Host "Total images found: $($masterImages.Count)" -ForegroundColor White
-    Write-Host "Data saved to: $OutputPath" -ForegroundColor Gray
-    Write-Host "[DEBUG] Collection completed successfully at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
-    Write-Host "[DEBUG] Total images found: $($masterImages.Count)" | Out-File -FilePath $debugFile -Append
+    Write-Host ''
+    Write-Host '===========================' -ForegroundColor Green
+    Write-Host "Data saved to: $OutputPath" -ForegroundColor Green
+    Write-Host '===========================' -ForegroundColor Green
 
     # Disconnect from vCenter
     Disconnect-VIServer -Server $vCenterServer -Confirm:$false -ErrorAction SilentlyContinue
-    Write-Host 'Disconnected from vCenter' -ForegroundColor Gray
     Write-Host "[DEBUG] Disconnected from vCenter" | Out-File -FilePath $debugFile -Append
 
     return $result
