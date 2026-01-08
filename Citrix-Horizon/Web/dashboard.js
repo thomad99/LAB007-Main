@@ -173,7 +173,7 @@ document.addEventListener('DOMContentLoaded', async function() {
             const statusMsg = document.getElementById('configStatusMessage');
             statusMsg.className = 'status-message success';
             statusMsg.style.display = 'block';
-            statusMsg.innerHTML = '✅ Configuration saved successfully!';
+            statusMsg.innerHTML = 'Configuration saved successfully!';
             statusMsg.style.textAlign = 'center';
             statusMsg.style.padding = '15px';
             statusMsg.style.borderRadius = '8px';
@@ -978,7 +978,7 @@ function generateCloneScript(selectedImages) {
         '    ',
         '    $folders = Get-VMFolders',
         '    for ($i = 0; $i -lt $folders.Count; $i++) {',
-        '        $marker = if ($folders[$i].FullPath -eq $DefaultFolderPath) { " → " } else { "   " }',
+        '        $marker = if ($folders[$i].FullPath -eq $DefaultFolderPath) { " -> " } else { "    " }',
         '        Write-Host "$marker$($i + 1). $($folders[$i].Name)" -ForegroundColor White',
         '    }',
         '    ',
