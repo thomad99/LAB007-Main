@@ -119,6 +119,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         cloneMasterImagesFileInput.addEventListener('change', handleCloneMasterImagesFile);
     }
 
+    // VMware folders file input
+    const vmwareFoldersFileInput = document.getElementById('vmwareFoldersFileInput');
+    if (vmwareFoldersFileInput) {
+        vmwareFoldersFileInput.addEventListener('change', handleVMwareFoldersFile);
+    }
+
     // Search functionality
     document.getElementById('serverSearch').addEventListener('input', filterServers);
     document.getElementById('appSearch').addEventListener('input', filterApps);
@@ -869,8 +875,16 @@ async function showFolderBrowserModal() {
     content.innerHTML = '<div style="text-align: center; padding: 40px;"><p>Loading VMware folder structure...</p></div>';
     modal.style.display = 'block';
 
+    // Check if VMware folders data has been uploaded
+    if (vmwareFoldersData && vmwareFoldersData.Folders && vmwareFoldersData.Folders.length > 0) {
+        vmwareFolders = vmwareFoldersData.Folders;
+        console.log(`Using uploaded VMware folders data: ${vmwareFolders.length} folders`);
+        buildFolderBrowserUI(vmwareFolders);
+        return;
+    }
+
     try {
-        // Try to load folders from JSON file
+        // Try to load folders from server (for deployed version)
         const response = await fetch('/data/vmware-folders.json', { cache: 'no-cache' });
 
         if (response.ok) {
@@ -881,7 +895,7 @@ async function showFolderBrowserModal() {
             buildFolderBrowserUI(vmwareFolders);
         } else {
             // Fallback to common folder suggestions
-            console.warn('Could not load VMware folders, using default suggestions');
+            console.warn('Could not load VMware folders from server, using default suggestions');
             buildFallbackFolderBrowserUI();
         }
     } catch (error) {
@@ -1046,8 +1060,16 @@ async function showSourceFolderBrowserModal() {
     content.innerHTML = '<div style="text-align: center; padding: 40px;"><p>Loading VMware folder structure...</p></div>';
     modal.style.display = 'block';
 
+    // Check if VMware folders data has been uploaded
+    if (vmwareFoldersData && vmwareFoldersData.Folders && vmwareFoldersData.Folders.length > 0) {
+        const folders = vmwareFoldersData.Folders;
+        console.log(`Using uploaded VMware folders data for source selection: ${folders.length} folders`);
+        buildSourceFolderBrowserUI(folders);
+        return;
+    }
+
     try {
-        // Try to load folders from JSON file
+        // Try to load folders from server (for deployed version)
         const response = await fetch('/data/vmware-folders.json', { cache: 'no-cache' });
 
         if (response.ok) {
@@ -1058,7 +1080,7 @@ async function showSourceFolderBrowserModal() {
             buildSourceFolderBrowserUI(folders);
         } else {
             // Fallback to common archive folder suggestions
-            console.warn('Could not load VMware folders, using default archive suggestions');
+            console.warn('Could not load VMware folders from server, using default archive suggestions');
             buildFallbackSourceFolderBrowserUI();
         }
     } catch (error) {
@@ -2802,6 +2824,35 @@ function toggleSection(button) {
     }
 }
 
+
+// VMware Folders Functions
+let vmwareFoldersData = [];
+
+function loadVMwareFoldersFile() {
+    const fileInput = document.getElementById('vmwareFoldersFileInput');
+    fileInput.click();
+}
+
+function handleVMwareFoldersFile(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            vmwareFoldersData = JSON.parse(e.target.result);
+            document.getElementById('vmwareFoldersFileName').textContent = `Loaded: ${file.name}`;
+
+            // Update the global vmwareFolders variable used by folder browser
+            vmwareFolders = vmwareFoldersData.Folders || [];
+
+            console.log(`Loaded ${vmwareFolders.length} VMware folders from ${file.name}`);
+        } catch (error) {
+            alert(`Error parsing JSON file: ${error.message}`);
+        }
+    };
+    reader.readAsText(file);
+}
 
 // Clone Master Images Functions
 let cloneMasterImagesData = [];

@@ -513,6 +513,14 @@
                         <h4 style="margin-bottom: 15px;">Clone Destination Configuration</h4>
 
                         <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
+                            <h4 style="margin-bottom: 10px;">Load VMware Folders List</h4>
+                            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Load VMware folder structure from a JSON file created by the VMware folders collection script to enable folder browsing.</p>
+                            <button id="loadVMwareFoldersBtn" class="btn btn-secondary" onclick="loadVMwareFoldersFile()">Load VMware Folders JSON</button>
+                            <input type="file" id="vmwareFoldersFileInput" accept=".json" style="display: none;">
+                            <span id="vmwareFoldersFileName" style="margin-left: 15px; color: #666;"></span>
+                        </div>
+
+                        <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
                             <label for="cloneDestinationFolder" style="display: block; margin-bottom: 8px; font-weight: bold;">VMware Destination Folder:</label>
                             <div style="display: flex; gap: 10px; align-items: center;">
                                 <input type="text" id="cloneDestinationFolder" placeholder="e.g., /vm/prod/windows" style="flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;" value="/vm">
