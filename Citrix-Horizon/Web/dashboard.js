@@ -192,35 +192,132 @@ document.addEventListener('DOMContentLoaded', async function() {
 
             console.log('Config object created:', config);
 
-            // Save to localStorage
             try {
-                localStorage.setItem('lab007Config', JSON.stringify(config));
-                console.log('Config saved to localStorage successfully');
+                // Create downloadable JSON file
+                const configJson = JSON.stringify(config, null, 2);
+                const blob = new Blob([configJson], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+
+                // Create temporary download link
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'LAB007-Tools-Config.json';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                // Clean up the URL object
+                URL.revokeObjectURL(url);
+
+                // Show success message
+                const statusMsg = document.getElementById('configStatusMessage');
+                statusMsg.className = 'status-message success';
+                statusMsg.style.display = 'block';
+                statusMsg.innerHTML = '<strong>Configuration file downloaded!</strong><br><br>' +
+                    'Save the <strong>LAB007-Tools-Config.json</strong> file to:<br>' +
+                    '<code>Citrix-Horizon\\LAB007-Tools-Config.json</code><br><br>' +
+                    '<em>(same level as the Scripts folder, not inside it)</em>';
+                statusMsg.style.textAlign = 'center';
+                statusMsg.style.padding = '15px';
+                statusMsg.style.borderRadius = '8px';
+                statusMsg.style.marginTop = '20px';
+
+                // Keep success message visible longer so user can read instructions
+                setTimeout(() => {
+                    statusMsg.style.display = 'none';
+                }, 10000);
+
             } catch (error) {
-                console.error('Failed to save to localStorage:', error);
-                alert('Failed to save to localStorage: ' + error.message);
+                console.error('Failed to create config file:', error);
+                // Show error message
+                const statusMsg = document.getElementById('configStatusMessage');
+                statusMsg.className = 'status-message error';
+                statusMsg.style.display = 'block';
+                statusMsg.innerHTML = 'Failed to create configuration file. Please try again.';
+                statusMsg.style.textAlign = 'center';
+                statusMsg.style.padding = '15px';
+                statusMsg.style.borderRadius = '8px';
+                statusMsg.style.marginTop = '20px';
+
+                // Hide error message after 5 seconds
+                setTimeout(() => {
+                    statusMsg.style.display = 'none';
+                }, 5000);
             }
 
-            // Also save to JSON file for PowerShell scripts
-            saveConfigToFile(config);
-
-            // Show success message
-            const statusMsg = document.getElementById('configStatusMessage');
-            statusMsg.className = 'status-message success';
-            statusMsg.style.display = 'block';
-            statusMsg.innerHTML = 'Configuration saved successfully!';
-            statusMsg.style.textAlign = 'center';
-            statusMsg.style.padding = '15px';
-            statusMsg.style.borderRadius = '8px';
-            statusMsg.style.marginTop = '20px';
-
-            // Hide success message after 3 seconds
-            setTimeout(() => {
-                statusMsg.style.display = 'none';
-            }, 3000);
-
-            console.log('Configuration saved to localStorage');
+            console.log('Configuration file created for download');
         });
+
+        // Handle Save As button for main config
+        const saveAsMainConfigBtn = document.getElementById('saveAsMainConfigBtn');
+        if (saveAsMainConfigBtn) {
+            saveAsMainConfigBtn.addEventListener('click', async function() {
+                console.log('Save As clicked');
+
+                const config = {
+                    citrixVersion: document.getElementById('configCitrixVersion').value,
+                    ddcName: document.getElementById('configDdcName').value,
+                    usageDays: parseInt(document.getElementById('configUsageDays').value),
+                    vCenterServer: document.getElementById('configVCenterServer').value,
+                    masterImagePrefix: document.getElementById('configMasterImagePrefix').value,
+                    runPreReqCheck: document.getElementById('configRunPreReqCheck').checked,
+                    auditComponents: {
+                        SiteInfo: document.getElementById('configAuditSiteInfo').checked,
+                        Applications: document.getElementById('configAuditApplications').checked,
+                        Desktops: document.getElementById('configAuditDesktops').checked,
+                        Catalogs: document.getElementById('configAuditCatalogs').checked,
+                        DeliveryGroups: document.getElementById('configAuditDeliveryGroups').checked,
+                        UsageStats: document.getElementById('configAuditUsageStats').checked,
+                        Policies: document.getElementById('configAuditPolicies').checked,
+                        Roles: document.getElementById('configAuditRoles').checked,
+                        VMwareSpecs: document.getElementById('configAuditVMwareSpecs').checked,
+                        Servers: document.getElementById('configAuditServers').checked,
+                        DirectorOData: document.getElementById('configAuditDirectorOData').checked
+                    },
+                    savedAt: new Date().toISOString()
+                };
+
+                const configJson = JSON.stringify(config, null, 2);
+
+                try {
+                    // Check if File System Access API is supported (Chrome, Edge)
+                    if ('showSaveFilePicker' in window) {
+                        const handle = await window.showSaveFilePicker({
+                            suggestedName: 'LAB007-Tools-Config.json',
+                            types: [{
+                                description: 'JSON Configuration File',
+                                accept: { 'application/json': ['.json'] }
+                            }]
+                        });
+
+                        const writable = await handle.createWritable();
+                        await writable.write(configJson);
+                        await writable.close();
+
+                        // Show success message
+                        const statusMsg = document.getElementById('configStatusMessage');
+                        statusMsg.className = 'status-message success';
+                        statusMsg.style.display = 'block';
+                        statusMsg.innerHTML = '<strong>Configuration file saved!</strong><br><br>' +
+                            'File saved using: <strong>File System Access API (Save As dialog)</strong><br><br>' +
+                            '<em>Ensure the file is located at:</em><br><code>Citrix-Horizon\\LAB007-Tools-Config.json</code>';
+                        statusMsg.style.textAlign = 'center';
+                        statusMsg.style.padding = '15px';
+                        statusMsg.style.borderRadius = '8px';
+                        statusMsg.style.marginTop = '20px';
+
+                        setTimeout(() => {
+                            statusMsg.style.display = 'none';
+                        }, 10000);
+                    } else {
+                        throw new Error('File System Access API not supported');
+                    }
+                } catch (error) {
+                    console.error('Save As failed:', error);
+                    alert('Save As not supported in this browser. Use the Download button instead.');
+                }
+            });
+        }
     }
 });
 
@@ -1141,41 +1238,40 @@ function confirmCustomSourceFolder() {
     closeSourceFolderBrowserModal();
 }
 
-function loadConfigIntoMainModal() {
+async function loadConfigIntoMainModal() {
     try {
-        const config = localStorage.getItem('lab007Config');
-        if (config) {
-            const parsed = JSON.parse(config);
+        const response = await fetch('/api/audit-config');
+        if (response.ok) {
+            const config = await response.json();
+            console.log('Config loaded from server into main modal:', config);
 
             // Load Citrix config
-            document.getElementById('configCitrixVersion').value = parsed.citrixVersion || '1912';
-            document.getElementById('configDdcName').value = parsed.ddcName || 'localhost';
-            document.getElementById('configUsageDays').value = parsed.usageDays || 30;
-            document.getElementById('configRunPreReqCheck').checked = parsed.runPreReqCheck !== false;
+            document.getElementById('configCitrixVersion').value = config.citrixVersion || '1912';
+            document.getElementById('configDdcName').value = config.ddcName || 'localhost';
+            document.getElementById('configUsageDays').value = config.usageDays || 30;
+            document.getElementById('configRunPreReqCheck').checked = config.runPreReqCheck !== false;
 
             // Load VMware config
-            document.getElementById('configVCenterServer').value = parsed.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
-            document.getElementById('configMasterImagePrefix').value = parsed.masterImagePrefix || 'SHC-M-';
+            document.getElementById('configVCenterServer').value = config.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
+            document.getElementById('configMasterImagePrefix').value = config.masterImagePrefix || 'SHC-M-';
 
             // Load audit components
-            document.getElementById('configAuditSiteInfo').checked = parsed.auditComponents?.SiteInfo !== false;
-            document.getElementById('configAuditApplications').checked = parsed.auditComponents?.Applications !== false;
-            document.getElementById('configAuditDesktops').checked = parsed.auditComponents?.Desktops !== false;
-            document.getElementById('configAuditCatalogs').checked = parsed.auditComponents?.Catalogs !== false;
-            document.getElementById('configAuditDeliveryGroups').checked = parsed.auditComponents?.DeliveryGroups !== false;
-            document.getElementById('configAuditUsageStats').checked = parsed.auditComponents?.UsageStats !== false;
-            document.getElementById('configAuditPolicies').checked = parsed.auditComponents?.Policies !== false;
-            document.getElementById('configAuditRoles').checked = parsed.auditComponents?.Roles !== false;
-            document.getElementById('configAuditVMwareSpecs').checked = parsed.auditComponents?.VMwareSpecs || false;
-            document.getElementById('configAuditServers').checked = parsed.auditComponents?.Servers !== false;
-            document.getElementById('configAuditDirectorOData').checked = parsed.auditComponents?.DirectorOData !== false;
-
-            console.log('Config loaded into main modal');
+            document.getElementById('configAuditSiteInfo').checked = config.auditComponents?.SiteInfo !== false;
+            document.getElementById('configAuditApplications').checked = config.auditComponents?.Applications !== false;
+            document.getElementById('configAuditDesktops').checked = config.auditComponents?.Desktops !== false;
+            document.getElementById('configAuditCatalogs').checked = config.auditComponents?.Catalogs !== false;
+            document.getElementById('configAuditDeliveryGroups').checked = config.auditComponents?.DeliveryGroups !== false;
+            document.getElementById('configAuditUsageStats').checked = config.auditComponents?.UsageStats !== false;
+            document.getElementById('configAuditPolicies').checked = config.auditComponents?.Policies !== false;
+            document.getElementById('configAuditRoles').checked = config.auditComponents?.Roles !== false;
+            document.getElementById('configAuditVMwareSpecs').checked = config.auditComponents?.VMwareSpecs || false;
+            document.getElementById('configAuditServers').checked = config.auditComponents?.Servers !== false;
+            document.getElementById('configAuditDirectorOData').checked = config.auditComponents?.DirectorOData !== false;
         } else {
-            console.log('No existing config found, using defaults');
+            console.log('No config found on server, using defaults');
         }
     } catch (error) {
-        console.error('Error loading config into main modal:', error);
+        console.error('Error loading config from server into main modal:', error);
     }
 }
 

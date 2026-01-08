@@ -848,7 +848,17 @@
                     </div>
 
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary" id="saveMainConfigBtn">💾 Save Configuration</button>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-bottom: 10px;">
+                            <button type="button" class="btn btn-primary" id="saveAsMainConfigBtn" style="flex: 1;">📁 Save As...</button>
+                            <button type="submit" class="btn btn-primary" id="saveMainConfigBtn" style="flex: 1;">💾 Download</button>
+                        </div>
+                        <div style="text-align: center; margin-bottom: 15px;">
+                            <small style="color: #666;">
+                                <strong>Save As:</strong> Choose where to save the file<br>
+                                <strong>Download:</strong> Saves to browser's download folder<br>
+                                <em>Move file to: <code>Citrix-Horizon\LAB007-Tools-Config.json</code></em>
+                            </small>
+                        </div>
                         <button type="button" class="btn btn-secondary" onclick="closeConfigModal()">Cancel</button>
                     </div>
                 </form>

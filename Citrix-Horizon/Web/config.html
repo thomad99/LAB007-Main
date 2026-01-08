@@ -287,7 +287,17 @@
                     <div class="help-text" style="margin-top: 10px;">Select which audit components you want to run</div>
                 </div>
 
-                <button type="submit" class="btn-submit" id="saveConfigBtn">Download Config File</button>
+                <div style="display: flex; gap: 10px; justify-content: center;">
+                    <button type="button" class="btn-submit" id="saveAsConfigBtn" style="flex: 1;">📁 Save As...</button>
+                    <button type="submit" class="btn-submit" id="saveConfigBtn" style="flex: 1;">💾 Download</button>
+                </div>
+                <div style="margin-top: 10px; text-align: center;">
+                    <small style="color: #666;">
+                        <strong>Save As:</strong> Choose where to save the file<br>
+                        <strong>Download:</strong> Saves to browser's download folder<br>
+                        <em>Move file to: <code>Citrix-Horizon\LAB007-Tools-Config.json</code></em>
+                    </small>
+                </div>
             </form>
 
             <div id="statusMessage" class="status-message"></div>
@@ -332,11 +342,9 @@
             document.getElementById('auditDirectorOData').checked = config.auditComponents?.DirectorOData !== false;
         }
 
-        // Save configuration as downloadable file
-        document.getElementById('configForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-
-            const config = {
+        // Function to create config object
+        function createConfigObject() {
+            return {
                 citrixVersion: document.getElementById('citrixVersion').value,
                 ddcName: document.getElementById('ddcName').value,
                 usageDays: parseInt(document.getElementById('usageDays').value),
@@ -358,6 +366,60 @@
                 },
                 savedAt: new Date().toISOString()
             };
+        }
+
+        // Function to show success message
+        function showConfigSuccessMessage(method) {
+            const statusMsg = document.getElementById('statusMessage');
+            statusMsg.className = 'status-message success';
+            statusMsg.style.display = 'block';
+            statusMsg.innerHTML = '<strong>Configuration file saved!</strong><br><br>' +
+                `File saved using: <strong>${method}</strong><br><br>` +
+                '<em>Ensure the file is located at:</em><br><code>Citrix-Horizon\\LAB007-Tools-Config.json</code><br>' +
+                '(same level as the Scripts folder, not inside it)';
+
+            setTimeout(() => {
+                statusMsg.style.display = 'none';
+            }, 10000);
+        }
+
+        // Save As button - uses File System Access API for browsers that support it
+        document.getElementById('saveAsConfigBtn').addEventListener('click', async function() {
+            const config = createConfigObject();
+            const configJson = JSON.stringify(config, null, 2);
+
+            try {
+                // Check if File System Access API is supported (Chrome, Edge)
+                if ('showSaveFilePicker' in window) {
+                    const handle = await window.showSaveFilePicker({
+                        suggestedName: 'LAB007-Tools-Config.json',
+                        types: [{
+                            description: 'JSON Configuration File',
+                            accept: { 'application/json': ['.json'] }
+                        }]
+                    });
+
+                    const writable = await handle.createWritable();
+                    await writable.write(configJson);
+                    await writable.close();
+
+                    showConfigSuccessMessage('File System Access API (Save As dialog)');
+                } else {
+                    throw new Error('File System Access API not supported');
+                }
+            } catch (error) {
+                console.error('Save As failed:', error);
+
+                // Fallback to download if Save As fails or isn't supported
+                alert('Save As not supported in this browser. Use the Download button instead.');
+            }
+        });
+
+        // Download button - fallback for all browsers
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const config = createConfigObject();
 
             try {
                 // Create downloadable JSON file
@@ -376,19 +438,7 @@
                 // Clean up the URL object
                 URL.revokeObjectURL(url);
 
-                // Show success message with instructions
-                const statusMsg = document.getElementById('statusMessage');
-                statusMsg.className = 'status-message success';
-                statusMsg.style.display = 'block';
-                statusMsg.innerHTML = '<strong>Configuration file downloaded!</strong><br><br>' +
-                    'Save the <strong>LAB007-Tools-Config.json</strong> file to the parent directory of your Scripts folder.<br><br>' +
-                    '<em>For LAB007 Citrix-Horizon:</em> Save to <code>Citrix-Horizon\\LAB007-Tools-Config.json</code><br>' +
-                    '(same level as the Scripts folder, not inside it)';
-
-                // Keep success message visible longer so user can read instructions
-                setTimeout(() => {
-                    statusMsg.style.display = 'none';
-                }, 8000);
+                showConfigSuccessMessage('Download to browser folder');
 
             } catch (error) {
                 console.error('Error creating config file:', error);
