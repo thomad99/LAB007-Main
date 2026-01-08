@@ -54,21 +54,66 @@ try {
         Write-Host "No active vCenter connection found. Attempting to connect..." -ForegroundColor Yellow
         Write-Host "[DEBUG] No active vCenter connection found" | Out-File -FilePath $debugFile -Append
 
-        # Validate parameters
+        # If no parameters provided, try to read from config file
+        if ([string]::IsNullOrWhiteSpace($VMwareServer) -or [string]::IsNullOrWhiteSpace($VMwareUsername)) {
+            Write-Host "Reading VMware configuration from config file..." -ForegroundColor Gray
+            $configPath = Join-Path (Split-Path -Parent $scriptPath) "lab007-config.json"
+            Write-Host "[DEBUG] Looking for config file: $configPath" | Out-File -FilePath $debugFile -Append
+
+            if (Test-Path $configPath) {
+                try {
+                    $config = Get-Content -Path $configPath -Raw | ConvertFrom-Json
+                    Write-Host "Configuration loaded from: $configPath" -ForegroundColor Green
+                    Write-Host "[DEBUG] Config file loaded successfully" | Out-File -FilePath $debugFile -Append
+
+                    # Use config values if parameters not provided
+                    if ([string]::IsNullOrWhiteSpace($VMwareServer) -and $config.vCenterServer) {
+                        $VMwareServer = $config.vCenterServer
+                        Write-Host "Using vCenter server from config: $VMwareServer" -ForegroundColor Cyan
+                        Write-Host "[DEBUG] VMwareServer set from config: $VMwareServer" | Out-File -FilePath $debugFile -Append
+                    }
+
+                    if ([string]::IsNullOrWhiteSpace($VMwareUsername) -and $config.vCenterUsername) {
+                        $VMwareUsername = $config.vCenterUsername
+                        Write-Host "Using vCenter username from config: $VMwareUsername" -ForegroundColor Cyan
+                        Write-Host "[DEBUG] VMwareUsername set from config: $VMwareUsername" | Out-File -FilePath $debugFile -Append
+                    }
+
+                    if ([string]::IsNullOrWhiteSpace($VMwarePassword) -and $config.vCenterPassword) {
+                        $VMwarePassword = $config.vCenterPassword
+                        Write-Host "Using vCenter password from config" -ForegroundColor Cyan
+                        Write-Host "[DEBUG] VMwarePassword set from config" | Out-File -FilePath $debugFile -Append
+                    }
+                }
+                catch {
+                    Write-Warning "Could not read config file: $_"
+                    Write-Host "[DEBUG] Config file read error: $_" | Out-File -FilePath $debugFile -Append
+                }
+            }
+            else {
+                Write-Host "No config file found at: $configPath" -ForegroundColor Yellow
+                Write-Host "[DEBUG] Config file not found: $configPath" | Out-File -FilePath $debugFile -Append
+            }
+        }
+
+        # Validate parameters - VMware server is required
         if ([string]::IsNullOrWhiteSpace($VMwareServer)) {
-            Write-Error 'VMware server not specified and no active connection found'
-            Write-Host "[DEBUG] VMware server not specified" | Out-File -FilePath $debugFile -Append
+            Write-Error 'VMware server not specified and no active connection found. Please specify -VMwareServer parameter or configure it in lab007-config.json'
+            Write-Host "[DEBUG] VMware server not specified after config check" | Out-File -FilePath $debugFile -Append
             exit 1
         }
 
+        # Prompt for credentials if not provided
         if ([string]::IsNullOrWhiteSpace($VMwareUsername)) {
             $VMwareUsername = Read-Host "Enter vCenter username for $VMwareServer"
+            Write-Host "[DEBUG] VMwareUsername prompted from user" | Out-File -FilePath $debugFile -Append
         }
 
         if ([string]::IsNullOrWhiteSpace($VMwarePassword)) {
             $VMwarePassword = Read-Host "Enter vCenter password for $VMwareServer" -AsSecureString
             $BSTR = [System.Runtime.InteropServices.Marshal]::SecureStringToBSTR($VMwarePassword)
             $VMwarePassword = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto($BSTR)
+            Write-Host "[DEBUG] VMwarePassword prompted from user" | Out-File -FilePath $debugFile -Append
         }
 
         # Connect to vCenter

@@ -675,20 +675,50 @@ app.post('/api/audit-config', (req, res) => {
     try {
         const newConfig = req.body;
 
-        // Validate the configuration structure
-        if (!newConfig || typeof newConfig.runPreReqCheck !== 'boolean' || !newConfig.auditComponents) {
+        // Validate the configuration structure - support both formats
+        if (!newConfig) {
             return res.status(400).json({ error: 'Invalid configuration format' });
         }
 
-        // Write the configuration to file
-        fs.writeFileSync(configPath, JSON.stringify(newConfig, null, 2), 'utf8');
+        // Convert web interface format to script format if needed
+        let configToSave = newConfig;
+        if (newConfig.vCenterServer || newConfig.citrixVersion) {
+            // Convert from web interface format to script format
+            configToSave = {
+                citrixVersion: newConfig.citrixVersion || '1912',
+                ddcName: newConfig.ddcName || 'localhost',
+                usageDays: newConfig.usageDays || 30,
+                vCenterServer: newConfig.vCenterServer || '',
+                vCenterUsername: newConfig.vCenterUsername || '',
+                vCenterPassword: newConfig.vCenterPassword || '',
+                masterImagePrefix: newConfig.masterImagePrefix || 'SHC-M-',
+                runPreReqCheck: newConfig.runPreReqCheck !== false,
+                skipServerSpecs: newConfig.skipServerSpecs || false,
+                auditComponents: newConfig.auditComponents || {
+                    SiteInfo: true,
+                    Applications: true,
+                    Desktops: true,
+                    Catalogs: true,
+                    DeliveryGroups: true,
+                    UsageStats: true,
+                    Policies: true,
+                    Roles: true,
+                    VMwareSpecs: false,
+                    Servers: true,
+                    DirectorOData: true
+                }
+            };
+        }
 
-        console.log('Audit configuration saved:', newConfig);
+        // Write the configuration to file
+        fs.writeFileSync(configPath, JSON.stringify(configToSave, null, 2), 'utf8');
+
+        console.log('Configuration saved:', configToSave);
         res.json({ success: true, message: 'Configuration saved successfully' });
 
     } catch (error) {
-        console.error('Error saving audit config:', error);
-        res.status(500).json({ error: 'Failed to save audit configuration' });
+        console.error('Error saving config:', error);
+        res.status(500).json({ error: 'Failed to save configuration' });
     }
 });
 

@@ -32,7 +32,19 @@ $startTime = Get-Date
 
 # Force remove any existing debug file to ensure clean start
 Write-Host "[DEBUG] Ensuring clean debug file..." -ForegroundColor Gray
-Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
+
+# Stop any existing transcript (ignore if none is running)
+try {
+    Stop-Transcript -ErrorAction Stop | Out-Null
+    Write-Host "[DEBUG] Stopped existing transcript" -ForegroundColor Gray
+} catch {
+    # This is expected if no transcript was running
+    if ($_.Exception.Message -notmatch "not currently transcribing") {
+        Write-Warning "Unexpected error stopping transcript: $_"
+    } else {
+        Write-Host "[DEBUG] No existing transcript to stop (this is normal)" -ForegroundColor Gray
+    }
+}
 
 # Aggressive file cleanup - try multiple approaches
 if (Test-Path $debugFile) {
@@ -393,7 +405,14 @@ if ($config.AuditComponents.Policies) {
 Write-Host "[Policies] Collecting Citrix Policies..." -ForegroundColor Yellow
 
 # Stop transcript to avoid file locking issues with individual scripts
-Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
+try {
+    Stop-Transcript -ErrorAction Stop | Out-Null
+} catch {
+    # Ignore if no transcript was running
+    if ($_.Exception.Message -notmatch "not currently transcribing") {
+        Write-Warning "Unexpected error stopping transcript: $_"
+    }
+}
 
 try {
     $policies = & "$scriptPath\7-Get-CitrixPolicies.ps1" -OutputPath (Join-Path $dataPath "citrix-policies.json") -CitrixVersion $CitrixVersion
@@ -420,7 +439,14 @@ if ($config.AuditComponents.Roles) {
     Write-Host "[Roles] Collecting Citrix Management Roles and AD Groups..." -ForegroundColor Yellow
 
 # Stop transcript to avoid file locking issues
-Stop-Transcript -ErrorAction SilentlyContinue | Out-Null
+try {
+    Stop-Transcript -ErrorAction Stop | Out-Null
+} catch {
+    # Ignore if no transcript was running
+    if ($_.Exception.Message -notmatch "not currently transcribing") {
+        Write-Warning "Unexpected error stopping transcript: $_"
+    }
+}
 
 try {
     $roles = & "$scriptPath\8-Get-CitrixRoles.ps1" -OutputPath (Join-Path $dataPath "citrix-roles.json") -CitrixVersion $CitrixVersion

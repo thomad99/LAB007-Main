@@ -1,12 +1,15 @@
 # Get-CitrixPolicies.ps1
-# Extracts Citrix policy information
+# Extracts comprehensive Citrix policy information
 # Author : LAB007.AI
-# Version: 1.2
-# Last Modified: 260106:2058
+# Version: 2.0
+# Last Modified: 260107:1400
 
 param(
     [string]$OutputPath = ".\Data\citrix-policies.json",
-    [string]$CitrixVersion = "1912"
+    [string]$CitrixVersion = "1912",
+    [switch]$IncludeGPO = $true,
+    [switch]$IncludeStudioPolicies = $true,
+    [switch]$IncludeConfigPolicies = $true
 )
 
 # Ensure output directory exists
@@ -34,14 +37,19 @@ try {
     $maxRecords = 10000
     
     Write-Host "Attempting to collect Citrix policies..." -ForegroundColor Yellow
-    Write-Host "[DEBUG] Policy collection started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] CitrixVersion: $CitrixVersion" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Policy collection started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] CitrixVersion: $CitrixVersion" | Out-File -FilePath $debugFile -Append
     
     # Check what policy commands are available
-    Write-Host "[DEBUG] Checking available policy commands..." | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Checking available policy commands..." | Out-File -FilePath $debugFile -Append
     $availableCommands = @()
-    $commandsToCheck = @('Get-BrokerPolicy', 'Get-BrokerGpoPolicy', 'Get-ConfigPolicySet', 'Get-ConfigPolicyRule', 'Get-ConfigPolicy', 'Export-BrokerPolicy')
+    $commandsToCheck = @(
+        'Get-BrokerPolicy', 'Get-BrokerGpoPolicy', 'Get-ConfigPolicySet',
+        'Get-ConfigPolicyRule', 'Get-ConfigPolicy', 'Export-BrokerPolicy',
+        'Get-BrokerDesktopPolicy', 'Get-BrokerSessionPreLaunch', 'Get-BrokerSessionLinger',
+        'Get-BrokerReconnectOnLogon', 'Get-BrokerDesktopGroupPolicy', 'Get-BrokerMachinePolicy'
+    )
     foreach ($cmd in $commandsToCheck) {
         $cmdObj = Get-Command -Name $cmd -ErrorAction SilentlyContinue
         if ($cmdObj) {
@@ -49,7 +57,7 @@ try {
             Write-Host "[DEBUG] Command available: $cmd" | Out-File -FilePath $debugFile -Append
             # Get command details
             try {
-                $cmdDetails = Get-Command -Name $cmd | Select-Object -Property Name, Source, CommandType, Parameters
+                $cmdDetails = Get-Command -Name $cmd | Select-Object -Property Name, Source, CommandType
                 Write-Host "[DEBUG] Command details for $cmd : Source=$($cmdDetails.Source), Type=$($cmdDetails.CommandType)" | Out-File -FilePath $debugFile -Append
             }
             catch {
@@ -57,7 +65,7 @@ try {
             }
         }
         else {
-            Write-Host "[DEBUG] Command NOT available: $cmd" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+            Write-Host "[DEBUG] Command NOT available: $cmd" | Out-File -FilePath $debugFile -Append
         }
     }
     Write-Host "[DEBUG] Available commands: $($availableCommands -join ', ')" | Out-File -FilePath $debugFile -Append
@@ -71,11 +79,149 @@ try {
         Write-Host "[DEBUG] Note: Get-BrokerGpoPolicy is typically part of Citrix.Broker.Admin.V2 and should be available if that module is loaded" | Out-File -FilePath $debugFile -Append
     }
     
-    # Try multiple methods to get policies (ordered by reliability)
-    $policies = $null
-    $policyMethod = ""
+    # Initialize comprehensive policy collection
+    $allPolicies = @{
+        StudioPolicies = @()
+        GPOPolicies = @()
+        ConfigPolicies = @()
+        DesktopGroupPolicies = @()
+        MachinePolicies = @()
+        SessionPolicies = @()
+        CollectionMethod = ""
+        Errors = @()
+    }
 
-    # Method 0: Get-BrokerPolicy (most common for Studio-configured policies)
+    # Method 1: Collect Studio Policies (Broker Policies)
+    if ($IncludeStudioPolicies) {
+        Write-Host "Collecting Studio/Broker Policies..." -ForegroundColor Cyan
+        try {
+            if ($availableCommands -contains 'Get-BrokerPolicy') {
+                $studioPolicies = Get-BrokerPolicy -MaxRecordCount $maxRecords -ErrorAction Stop
+                Write-Host "Found $($studioPolicies.Count) Studio policies" -ForegroundColor Green
+                $allPolicies.StudioPolicies = $studioPolicies | ForEach-Object {
+                    @{
+                        Name = $_.Name
+                        Uid = $_.Uid
+                        Description = $_.Description
+                        Enabled = $_.Enabled
+                        Priority = $_.Priority
+                        PolicyType = "Studio"
+                        Settings = $_.Settings
+                        Metadata = @{
+                            CreatedDate = $_.CreatedDate
+                            ModifiedDate = $_.ModifiedDate
+                            PolicySource = "Broker"
+                        }
+                    }
+                }
+            }
+        }
+        catch {
+            Write-Warning "Failed to collect Studio policies: $_"
+            $allPolicies.Errors += "Studio Policies: $_"
+        }
+
+        # Collect Desktop Group Policies
+        try {
+            if ($availableCommands -contains 'Get-BrokerDesktopGroupPolicy') {
+                $dgPolicies = Get-BrokerDesktopGroupPolicy -MaxRecordCount $maxRecords -ErrorAction Stop
+                Write-Host "Found $($dgPolicies.Count) Desktop Group policies" -ForegroundColor Green
+                $allPolicies.DesktopGroupPolicies = $dgPolicies | ForEach-Object {
+                    @{
+                        DesktopGroupName = $_.DesktopGroupName
+                        DesktopGroupUid = $_.DesktopGroupUid
+                        PolicyName = $_.PolicyName
+                        PolicyUid = $_.PolicyUid
+                        Settings = $_.Settings
+                        PolicyType = "DesktopGroup"
+                    }
+                }
+            }
+        }
+        catch {
+            Write-Warning "Failed to collect Desktop Group policies: $_"
+            $allPolicies.Errors += "Desktop Group Policies: $_"
+        }
+
+        # Collect Machine Policies
+        try {
+            if ($availableCommands -contains 'Get-BrokerMachinePolicy') {
+                $machinePolicies = Get-BrokerMachinePolicy -MaxRecordCount $maxRecords -ErrorAction Stop
+                Write-Host "Found $($machinePolicies.Count) Machine policies" -ForegroundColor Green
+                $allPolicies.MachinePolicies = $machinePolicies | ForEach-Object {
+                    @{
+                        MachineName = $_.MachineName
+                        MachineUid = $_.MachineUid
+                        PolicyName = $_.PolicyName
+                        PolicyUid = $_.PolicyUid
+                        Settings = $_.Settings
+                        PolicyType = "Machine"
+                    }
+                }
+            }
+        }
+        catch {
+            Write-Warning "Failed to collect Machine policies: $_"
+            $allPolicies.Errors += "Machine Policies: $_"
+        }
+    }
+
+    # Method 2: Collect GPO-based Policies
+    if ($IncludeGPO) {
+        Write-Host "Collecting GPO-based Policies..." -ForegroundColor Cyan
+        try {
+            if ($availableCommands -contains 'Get-BrokerGpoPolicy') {
+                $gpoPolicies = Get-BrokerGpoPolicy -MaxRecordCount $maxRecords -ErrorAction Stop
+                Write-Host "Found $($gpoPolicies.Count) GPO policies" -ForegroundColor Green
+                $allPolicies.GPOPolicies = $gpoPolicies | ForEach-Object {
+                    @{
+                        Name = $_.Name
+                        Path = $_.Path
+                        PolicyType = "GPO"
+                        Settings = $_.Settings
+                        Metadata = @{
+                            GpoGuid = $_.GpoGuid
+                            DomainName = $_.DomainName
+                            LastModified = $_.LastModified
+                        }
+                    }
+                }
+            }
+        }
+        catch {
+            Write-Warning "Failed to collect GPO policies: $_"
+            $allPolicies.Errors += "GPO Policies: $_"
+        }
+    }
+
+    # Method 3: Collect Configuration Policies
+    if ($IncludeConfigPolicies) {
+        Write-Host "Collecting Configuration Policies..." -ForegroundColor Cyan
+        try {
+            if ($availableCommands -contains 'Get-ConfigPolicy') {
+                $configPolicies = Get-ConfigPolicy -MaxRecordCount $maxRecords -ErrorAction Stop
+                Write-Host "Found $($configPolicies.Count) Configuration policies" -ForegroundColor Green
+                $allPolicies.ConfigPolicies = $configPolicies | ForEach-Object {
+                    @{
+                        Name = $_.Name
+                        Uid = $_.Uid
+                        PolicyType = "Configuration"
+                        Settings = $_.Settings
+                        Metadata = @{
+                            CreatedDate = $_.CreatedDate
+                            ModifiedDate = $_.ModifiedDate
+                        }
+                    }
+                }
+            }
+        }
+        catch {
+            Write-Warning "Failed to collect Configuration policies: $_"
+            $allPolicies.Errors += "Config Policies: $_"
+        }
+    }
+
+    # Method 0: Legacy GP Drive method (original approach)
     try {
         Write-Host "[DEBUG] Attempting Method 0: Citrix Group Policy Provider (GP: drive)" | Out-File -FilePath $debugFile -Append
         
@@ -622,21 +768,57 @@ try {
         $policyList = @()
     }
     
-    # Add method used to result
+    # Create comprehensive result
+    $totalPolicies = $allPolicies.StudioPolicies.Count + $allPolicies.GPOPolicies.Count + $allPolicies.ConfigPolicies.Count + $allPolicies.DesktopGroupPolicies.Count + $allPolicies.MachinePolicies.Count
+
     $result = @{
-        TotalPolicies = $policyList.Count
-        Policies = $policyList
+        TotalPolicies = $totalPolicies
+        StudioPolicies = @{
+            Count = $allPolicies.StudioPolicies.Count
+            Policies = $allPolicies.StudioPolicies
+        }
+        GPOPolicies = @{
+            Count = $allPolicies.GPOPolicies.Count
+            Policies = $allPolicies.GPOPolicies
+        }
+        ConfigPolicies = @{
+            Count = $allPolicies.ConfigPolicies.Count
+            Policies = $allPolicies.ConfigPolicies
+        }
+        DesktopGroupPolicies = @{
+            Count = $allPolicies.DesktopGroupPolicies.Count
+            Policies = $allPolicies.DesktopGroupPolicies
+        }
+        MachinePolicies = @{
+            Count = $allPolicies.MachinePolicies.Count
+            Policies = $allPolicies.MachinePolicies
+        }
+        SessionPolicies = @{
+            Count = $allPolicies.SessionPolicies.Count
+            Policies = $allPolicies.SessionPolicies
+        }
         CollectedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-        CollectionMethod = $policyMethod
+        CollectionMethods = @{
+            IncludeStudioPolicies = $IncludeStudioPolicies
+            IncludeGPO = $IncludeGPO
+            IncludeConfigPolicies = $IncludeConfigPolicies
+        }
+        Errors = $allPolicies.Errors
     }
-    
+
     # Convert to JSON and save
-    Write-Host "[DEBUG] Preparing to save policy data. Total policies: $($policyList.Count), Method: $policyMethod" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Preparing to save comprehensive policy data. Total policies: $totalPolicies" | Out-File -FilePath $debugFile -Append
     $result | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputPath -Encoding UTF8
-    
-    Write-Host "Policies information collected successfully. Total: $($policyList.Count) (Method: $policyMethod)" -ForegroundColor Green
-    Write-Host "[DEBUG] Policy data saved successfully to: $OutputPath" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] Script completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+
+    Write-Host "Comprehensive policy information collected successfully!" -ForegroundColor Green
+    Write-Host "  Studio Policies: $($allPolicies.StudioPolicies.Count)" -ForegroundColor Cyan
+    Write-Host "  GPO Policies: $($allPolicies.GPOPolicies.Count)" -ForegroundColor Cyan
+    Write-Host "  Config Policies: $($allPolicies.ConfigPolicies.Count)" -ForegroundColor Cyan
+    Write-Host "  Desktop Group Policies: $($allPolicies.DesktopGroupPolicies.Count)" -ForegroundColor Cyan
+    Write-Host "  Machine Policies: $($allPolicies.MachinePolicies.Count)" -ForegroundColor Cyan
+    Write-Host "  Total: $totalPolicies policies" -ForegroundColor Green
+    Write-Host "[DEBUG] Policy data saved successfully to: $OutputPath" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] Script completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
     return $result
 }
 catch {

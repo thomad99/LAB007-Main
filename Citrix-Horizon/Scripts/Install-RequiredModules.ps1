@@ -220,7 +220,8 @@ if (-not $SkipCitrix) {
     
     if ($missingModules.Count -gt 0) {
         Write-Host ""
-        Write-Host "[Citrix] Missing modules: $($missingModules -join ', ')" -ForegroundColor Yellow
+        $missingMods = $missingModules -join ', '
+        Write-Host "[Citrix] Missing modules: $missingMods" -ForegroundColor Yellow
         Write-Host "[Citrix] Citrix PowerShell SDK must be installed manually." -ForegroundColor Yellow
         Write-Host ""
         Write-Host "Installation:" -ForegroundColor Cyan
@@ -333,7 +334,8 @@ if (-not $SkipCitrix) {
         Write-Host "[Citrix] All required modules are available!" -ForegroundColor Green
     }
     else {
-        Write-Host "[Citrix] Missing modules: $($finalMissingModules -join ', ')" -ForegroundColor Red
+        $missingList = $finalMissingModules -join ', '
+        Write-Host "[Citrix] Missing modules: $missingList" -ForegroundColor Red
         Write-Host "[Citrix] Please install Citrix PowerShell SDK manually" -ForegroundColor Yellow
         Write-Host "[Citrix] Installation: Place Citrix SDK MSI installer files in .\Dependencies\Citrix" -ForegroundColor Gray
     }

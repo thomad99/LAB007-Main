@@ -13,7 +13,9 @@ param(
     [PSCredential]$Credential,
     [switch]$SkipSSLValidation = $false,
     [int]$MaxRecordsPerEntity = 10000,
-    [string[]]$EntityFilter = @()  # If specified, only collect these entities
+    [string[]]$EntityFilter = @(),  # If specified, only collect these entities
+    [switch]$UseQueryPresets,  # Use predefined query sets for comprehensive data collection
+    [string[]]$QueryPresets = @()  # Specific query presets to run
 )
 
 # Ensure output directory exists
@@ -54,7 +56,13 @@ function Invoke-ODataRequest {
         [string]$EntitySet,
         [PSCredential]$Credential,
         [bool]$SkipSSLValidation,
-        [int]$MaxRecords = 10000
+        [int]$MaxRecords = 10000,
+        [string]$Select,
+        [string]$Filter,
+        [string]$OrderBy,
+        [string]$Expand,
+        [int]$Skip = 0,
+        [switch]$Count
     )
     
     $result = @{
@@ -67,10 +75,42 @@ function Invoke-ODataRequest {
     try {
         # Build OData URL
         $url = "$BaseUrl/$EntitySet"
-        
-        # Add $top to limit records if MaxRecords is specified
+
+        # Build query parameters
+        $queryParams = @()
+
+        # Add various OData query options
+        if ($Select) {
+            $queryParams += "`$select=$Select"
+        }
+
+        if ($Filter) {
+            $queryParams += "`$filter=$Filter"
+        }
+
+        if ($OrderBy) {
+            $queryParams += "`$orderby=$OrderBy"
+        }
+
+        if ($Expand) {
+            $queryParams += "`$expand=$Expand"
+        }
+
         if ($MaxRecords -gt 0) {
-            $url += "?`$top=$MaxRecords"
+            $queryParams += "`$top=$MaxRecords"
+        }
+
+        if ($Skip -gt 0) {
+            $queryParams += "`$skip=$Skip"
+        }
+
+        if ($Count) {
+            $queryParams += "`$count=true"
+        }
+
+        # Add query parameters to URL
+        if ($queryParams.Count -gt 0) {
+            $url += "?" + ($queryParams -join "&")
         }
         
         Write-Host "Querying $EntitySet..." -ForegroundColor Cyan
@@ -123,6 +163,175 @@ function Invoke-ODataRequest {
     }
     
     return $result
+}
+
+# Function to get predefined OData query presets
+function Get-ODataQueryPresets {
+    param(
+        [int]$MaxRecords = 1000
+    )
+
+    $presets = @{
+
+        # Session-related queries
+        "CurrentSessions" = @{
+            EntitySet = "Sessions"
+            Filter = "StartDate gt $(Get-Date (Get-Date).AddDays(-1) -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+            OrderBy = "StartDate desc"
+            Top = $MaxRecords
+            Description = "Current sessions from last 24 hours"
+        }
+
+        "ActiveSessions" = @{
+            EntitySet = "Sessions"
+            Filter = "SessionState eq 0"  # Active state
+            OrderBy = "StartDate desc"
+            Top = $MaxRecords
+            Description = "Currently active sessions"
+        }
+
+        "DisconnectedSessions" = @{
+            EntitySet = "Sessions"
+            Filter = "SessionState eq 1"  # Disconnected state
+            OrderBy = "StartDate desc"
+            Top = $MaxRecords
+            Description = "Disconnected sessions"
+        }
+
+        # Application usage queries
+        "TopApplications" = @{
+            EntitySet = "Applications"
+            OrderBy = "TotalLaunches desc"
+            Top = 100
+            Description = "Top 100 most launched applications"
+        }
+
+        "RecentApplicationUsage" = @{
+            EntitySet = "ApplicationSessions"
+            Filter = "StartDate gt $(Get-Date (Get-Date).AddDays(-7) -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+            OrderBy = "StartDate desc"
+            Top = $MaxRecords
+            Description = "Application usage from last 7 days"
+        }
+
+        # Machine performance queries
+        "MachinePerformance" = @{
+            EntitySet = "MachinePerformanceMetrics"
+            Filter = "CollectedDate gt $(Get-Date (Get-Date).AddHours(-24) -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+            OrderBy = "CollectedDate desc"
+            Top = $MaxRecords
+            Description = "Machine performance metrics from last 24 hours"
+        }
+
+        "HighLoadMachines" = @{
+            EntitySet = "LoadIndexes"
+            Filter = "LoadIndexPercentage gt 80"
+            OrderBy = "LoadIndexPercentage desc"
+            Top = 50
+            Description = "Machines with high load (>80%)"
+        }
+
+        # Failure analysis queries
+        "RecentFailures" = @{
+            EntitySet = "Failures"
+            Filter = "FailureDate gt $(Get-Date (Get-Date).AddDays(-7) -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+            OrderBy = "FailureDate desc"
+            Top = $MaxRecords
+            Description = "Failures from last 7 days"
+        }
+
+        "ConnectionFailures" = @{
+            EntitySet = "ConnectionFailureLogs"
+            Filter = "FailureDate gt $(Get-Date (Get-Date).AddDays(-3) -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+            OrderBy = "FailureDate desc"
+            Top = $MaxRecords
+            Description = "Connection failures from last 3 days"
+        }
+
+        # User activity queries
+        "TopUsers" = @{
+            EntitySet = "Sessions"
+            Select = "UserName,UserFullName"
+            Filter = "StartDate gt $(Get-Date (Get-Date).AddDays(-30) -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+            OrderBy = "StartDate desc"
+            Top = 100
+            Description = "Top 100 users by recent activity"
+        }
+
+        # Desktop usage queries
+        "DesktopSessions" = @{
+            EntitySet = "DesktopSessions"
+            Filter = "StartDate gt $(Get-Date (Get-Date).AddDays(-7) -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+            OrderBy = "StartDate desc"
+            Top = $MaxRecords
+            Description = "Desktop sessions from last 7 days"
+        }
+
+        # Performance metrics queries
+        "LogonPerformance" = @{
+            EntitySet = "LogOnPerformanceMetrics"
+            Filter = "LogOnStartDate gt $(Get-Date (Get-Date).AddDays(-7) -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+            OrderBy = "LogOnStartDate desc"
+            Top = $MaxRecords
+            Description = "Logon performance metrics from last 7 days"
+        }
+
+        # Capacity and resource queries
+        "MachineCapacity" = @{
+            EntitySet = "Machines"
+            Select = "Name,DnsName,SessionCount,LoadIndex,InMaintenanceMode"
+            OrderBy = "LoadIndex desc"
+            Top = $MaxRecords
+            Description = "Machine capacity and load information"
+        }
+
+        # Alert and monitoring queries
+        "ActiveAlerts" = @{
+            EntitySet = "AlertRuleInstances"
+            Filter = "State eq 'Active'"
+            OrderBy = "RaisedDate desc"
+            Top = 100
+            Description = "Currently active alert instances"
+        }
+
+        # Historical trend queries
+        "SessionTrends" = @{
+            EntitySet = "Trends"
+            Filter = "TrendType eq 'SessionCount' and CollectedDate gt $(Get-Date (Get-Date).AddDays(-30) -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+            OrderBy = "CollectedDate desc"
+            Top = $MaxRecords
+            Description = "Session count trends for last 30 days"
+        }
+
+        # Catalog and delivery group queries
+        "DeliveryGroupUsage" = @{
+            EntitySet = "DeliveryGroups"
+            Select = "Name,TotalMachines,AvailableMachines,SessionCount"
+            OrderBy = "SessionCount desc"
+            Top = 100
+            Description = "Delivery group usage statistics"
+        }
+
+        # Hypervisor queries
+        "HypervisorStatus" = @{
+            EntitySet = "Hypervisors"
+            Select = "Name,State,TotalMachines,AvailableMachines"
+            OrderBy = "Name"
+            Top = $MaxRecords
+            Description = "Hypervisor status and capacity"
+        }
+
+        # Administrative queries
+        "AdminOperations" = @{
+            EntitySet = "AdminLogOnOperations"
+            Filter = "OperationStartDate gt $(Get-Date (Get-Date).AddDays(-7) -Format 'yyyy-MM-ddTHH:mm:ssZ')"
+            OrderBy = "OperationStartDate desc"
+            Top = $MaxRecords
+            Description = "Administrative operations from last 7 days"
+        }
+    }
+
+    return $presets
 }
 
 # Function to discover available entity sets
@@ -330,8 +539,14 @@ try {
         foreach ($odataPath in $odataPaths) {
             if ($endpointFound) { break }  # Stop if we already found a working endpoint
 
-            $testUrl = "${protocol}://${DirectorServer}:${Port}${odataPath}"
-            Write-Host "  Trying: $testUrl" -ForegroundColor Gray | Out-File -FilePath $debugFile -Append
+            # Only add port if it's not the default port for the protocol
+            $portString = ""
+            if (($protocol -eq "https" -and $Port -ne 443) -or ($protocol -eq "http" -and $Port -ne 80)) {
+                $portString = ":$Port"
+            }
+            $testUrl = "${protocol}://${DirectorServer}${portString}${odataPath}"
+            Write-Host "  Trying: $testUrl" -ForegroundColor Gray
+            Write-Host "[DEBUG] Testing URL: $testUrl (Protocol: $protocol, Port: $Port, PortString: '$portString', Path: $odataPath)" | Out-File -FilePath $debugFile -Append
 
             try {
                 $testParams = @{
@@ -388,9 +603,16 @@ try {
     # If no path worked, default to v4 over HTTPS (most common in newer versions)
     if (-not $baseUrl) {
         $workingPath = "/citrix/monitor/odata/v4/Data"
-        $baseUrl = "https://${DirectorServer}:${Port}${workingPath}"
+        # Use default HTTPS port (443) unless specified otherwise
+        $defaultProtocol = "https"
+        $defaultPort = 443
+        $portString = ""
+        if ($Port -ne $defaultPort) {
+            $portString = ":$Port"
+        }
+        $baseUrl = "${defaultProtocol}://${DirectorServer}${portString}${workingPath}"
         Write-Host "  WARNING: Could not verify endpoint, defaulting to: $workingPath" -ForegroundColor Yellow
-        Write-Host "[DEBUG] Using default OData path: $workingPath" | Out-File -FilePath $debugFile -Append
+        Write-Host "[DEBUG] Using default OData path: $workingPath (URL: $baseUrl)" | Out-File -FilePath $debugFile -Append
     }
     
     Write-Host "Director OData Base URL: $baseUrl" -ForegroundColor Cyan
@@ -429,13 +651,146 @@ try {
         }
     }
     
-    # Discover entity sets
-    $entitySets = Get-ODataEntitySets -BaseUrl $baseUrl -Credential $Credential -SkipSSLValidation $SkipSSLValidation
-    
-    # Filter entity sets if specified
-    if ($EntityFilter.Count -gt 0) {
-        $entitySets = $entitySets | Where-Object { $EntityFilter -contains $_ }
-        Write-Host "Filtered to $($entitySets.Count) entity sets based on filter" -ForegroundColor Yellow
+    # Determine collection approach
+    if ($UseQueryPresets) {
+        Write-Host "Using predefined query presets for comprehensive data collection..." -ForegroundColor Cyan
+
+        # Get all available presets
+        $allPresets = Get-ODataQueryPresets -MaxRecords $MaxRecordsPerEntity
+
+        # Filter presets if specific ones requested
+        if ($QueryPresets.Count -gt 0) {
+            $selectedPresets = @{}
+            foreach ($presetName in $QueryPresets) {
+                if ($allPresets.ContainsKey($presetName)) {
+                    $selectedPresets[$presetName] = $allPresets[$presetName]
+                } else {
+                    Write-Warning "Query preset '$presetName' not found"
+                }
+            }
+            $queryPresets = $selectedPresets
+        } else {
+            $queryPresets = $allPresets
+        }
+
+        Write-Host "Will execute $($queryPresets.Count) query presets" -ForegroundColor Green
+        Write-Host ""
+
+        # Collection results for presets
+        $collectionResults = @{
+            CollectionDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            DirectorServer = $DirectorServer
+            BaseUrl = $baseUrl
+            QueryPresets = @{}
+            Summary = @{
+                TotalPresets = $queryPresets.Count
+                SuccessfulQueries = 0
+                FailedQueries = 0
+                TotalRecords = 0
+            }
+        }
+
+        # Execute each query preset
+        $presetIndex = 0
+        foreach ($presetName in $queryPresets.Keys) {
+            $presetIndex++
+            $preset = $queryPresets[$presetName]
+
+            Write-Host "[$presetIndex/$($queryPresets.Count)] Executing preset: $presetName" -ForegroundColor Cyan
+            Write-Host "  Description: $($preset.Description)" -ForegroundColor Gray
+            Write-Host "  Entity: $($preset.EntitySet)" -ForegroundColor Gray
+
+            $result = Invoke-ODataRequest -BaseUrl $baseUrl -EntitySet $preset.EntitySet `
+                -Credential $Credential -SkipSSLValidation $SkipSSLValidation `
+                -MaxRecords $preset.Top -Select $preset.Select -Filter $preset.Filter `
+                -OrderBy $preset.OrderBy -Expand $preset.Expand
+
+            if ($result.Success) {
+                $collectionResults.QueryPresets[$presetName] = @{
+                    Success = $true
+                    RecordCount = $result.RecordCount
+                    Data = $result.Data
+                    Query = $preset
+                    ExecutedAt = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                }
+                $collectionResults.Summary.SuccessfulQueries++
+                $collectionResults.Summary.TotalRecords += $result.RecordCount
+                Write-Host "  SUCCESS: $($result.RecordCount) records" -ForegroundColor Green
+            } else {
+                $collectionResults.QueryPresets[$presetName] = @{
+                    Success = $false
+                    Error = $result.Error
+                    Query = $preset
+                    ExecutedAt = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                }
+                $collectionResults.Summary.FailedQueries++
+                Write-Host "  FAILED: $($result.Error)" -ForegroundColor Red
+            }
+
+            Write-Host ""
+            # Small delay to avoid overwhelming the server
+            Start-Sleep -Milliseconds 200
+        }
+    } else {
+        # Original entity set collection approach
+        Write-Host "Using entity set discovery approach..." -ForegroundColor Cyan
+
+        # Discover entity sets
+        $entitySets = Get-ODataEntitySets -BaseUrl $baseUrl -Credential $Credential -SkipSSLValidation $SkipSSLValidation
+
+        # Filter entity sets if specified
+        if ($EntityFilter.Count -gt 0) {
+            $entitySets = $entitySets | Where-Object { $EntityFilter -contains $_ }
+            Write-Host "Filtered to $($entitySets.Count) entity sets based on filter" -ForegroundColor Yellow
+        }
+
+        Write-Host ""
+        Write-Host "Found $($entitySets.Count) entity sets to collect" -ForegroundColor Green
+        Write-Host ""
+
+        # Collection results for entity sets
+        $collectionResults = @{
+            CollectionDate = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+            DirectorServer = $DirectorServer
+            BaseUrl = $baseUrl
+            EntitySets = @{}
+            Summary = @{
+                TotalEntitySets = $entitySets.Count
+                SuccessfulCollections = 0
+                FailedCollections = 0
+                TotalRecords = 0
+            }
+        }
+
+        # Collect data from each entity set
+        $entityIndex = 0
+        foreach ($entitySet in $entitySets) {
+            $entityIndex++
+            Write-Host "[$entityIndex/$($entitySets.Count)] Collecting $entitySet..." -ForegroundColor Cyan
+
+            $result = Invoke-ODataRequest -BaseUrl $baseUrl -EntitySet $entitySet -Credential $Credential -SkipSSLValidation $SkipSSLValidation -MaxRecords $MaxRecordsPerEntity
+
+            if ($result.Success) {
+                $collectionResults.EntitySets[$entitySet] = @{
+                    Success = $true
+                    RecordCount = $result.RecordCount
+                    Data = $result.Data
+                    CollectedAt = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                }
+                $collectionResults.Summary.SuccessfulCollections++
+                $collectionResults.Summary.TotalRecords += $result.RecordCount
+            } else {
+                $collectionResults.EntitySets[$entitySet] = @{
+                    Success = $false
+                    Error = $result.Error
+                    CollectedAt = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+                }
+                $collectionResults.Summary.FailedCollections++
+            }
+
+            # Small delay to avoid overwhelming the server
+            Start-Sleep -Milliseconds 100
+        }
     }
     
     Write-Host ""
@@ -502,9 +857,19 @@ try {
     Write-Host "Collection Complete!" -ForegroundColor Green
     Write-Host "========================================" -ForegroundColor Green
     Write-Host "Summary:" -ForegroundColor Cyan
-    Write-Host "  Total Entity Sets: $($collectionResults.Summary.TotalEntitySets)" -ForegroundColor White
-    Write-Host "  Successful: $($collectionResults.Summary.SuccessfulCollections)" -ForegroundColor Green
-    Write-Host "  Failed: $($collectionResults.Summary.FailedCollections)" -ForegroundColor $(if ($collectionResults.Summary.FailedCollections -gt 0) { "Red" } else { "White" })
+
+    if ($UseQueryPresets) {
+        Write-Host "  Collection Mode: Query Presets" -ForegroundColor White
+        Write-Host "  Total Query Presets: $($collectionResults.Summary.TotalPresets)" -ForegroundColor White
+        Write-Host "  Successful Queries: $($collectionResults.Summary.SuccessfulQueries)" -ForegroundColor Green
+        Write-Host "  Failed Queries: $($collectionResults.Summary.FailedQueries)" -ForegroundColor $(if ($collectionResults.Summary.FailedQueries -gt 0) { "Red" } else { "White" })
+    } else {
+        Write-Host "  Collection Mode: Entity Sets" -ForegroundColor White
+        Write-Host "  Total Entity Sets: $($collectionResults.Summary.TotalEntitySets)" -ForegroundColor White
+        Write-Host "  Successful Collections: $($collectionResults.Summary.SuccessfulCollections)" -ForegroundColor Green
+        Write-Host "  Failed Collections: $($collectionResults.Summary.FailedCollections)" -ForegroundColor $(if ($collectionResults.Summary.FailedCollections -gt 0) { "Red" } else { "White" })
+    }
+
     Write-Host "  Total Records: $($collectionResults.Summary.TotalRecords)" -ForegroundColor White
     Write-Host "  Output File: $OutputPath" -ForegroundColor White
     Write-Host ""

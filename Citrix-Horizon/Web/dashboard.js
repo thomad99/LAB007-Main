@@ -165,6 +165,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (mainConfigForm) {
         mainConfigForm.addEventListener('submit', function(e) {
             e.preventDefault();
+            console.log('Config form submitted');
 
             const config = {
                 citrixVersion: document.getElementById('configCitrixVersion').value,
@@ -189,8 +190,19 @@ document.addEventListener('DOMContentLoaded', async function() {
                 savedAt: new Date().toISOString()
             };
 
+            console.log('Config object created:', config);
+
             // Save to localStorage
-            localStorage.setItem('lab007Config', JSON.stringify(config));
+            try {
+                localStorage.setItem('lab007Config', JSON.stringify(config));
+                console.log('Config saved to localStorage successfully');
+            } catch (error) {
+                console.error('Failed to save to localStorage:', error);
+                alert('Failed to save to localStorage: ' + error.message);
+            }
+
+            // Also save to JSON file for PowerShell scripts
+            saveConfigToFile(config);
 
             // Show success message
             const statusMsg = document.getElementById('configStatusMessage');
@@ -2852,5 +2864,33 @@ function selectAllCloneImages() {
 function deselectAllCloneImages() {
     selectedCloneImages.clear();
     displayCloneMasterImages();
+}
+
+// Function to save config to JSON file for PowerShell scripts
+async function saveConfigToFile(config) {
+    try {
+        console.log('Saving config to file:', config);
+        const response = await fetch('/api/audit-config', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(config)
+        });
+
+        console.log('API response status:', response.status);
+        const responseText = await response.text();
+        console.log('API response:', responseText);
+
+        if (!response.ok) {
+            console.error('Could not save config to file:', response.status, responseText);
+            alert('Failed to save config to file: ' + response.status + ' ' + responseText);
+        } else {
+            console.log('Config saved to file successfully');
+        }
+    } catch (error) {
+        console.error('Error saving config to file:', error);
+        alert('Error saving config to file: ' + error.message);
+    }
 }
 

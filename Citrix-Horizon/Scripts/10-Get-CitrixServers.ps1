@@ -41,11 +41,11 @@ if (Test-Path $debugFile) {
 try {
     # Note: Citrix modules/snap-ins must be loaded manually before running this script
     Write-Host "Collecting server information from Citrix..." -ForegroundColor Yellow
-    Write-Host "[DEBUG] Script started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] OutputPath: $OutputPath" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] OutputDir: $outputDir" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] CitrixVersion: $CitrixVersion" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Script started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] OutputPath: $OutputPath" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] OutputDir: $outputDir" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] CitrixVersion: $CitrixVersion" | Out-File -FilePath $debugFile -Append
     
     # Check if VMware will be used as fallback
     if ($VMwareServer) {
