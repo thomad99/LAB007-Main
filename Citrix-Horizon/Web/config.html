@@ -198,6 +198,18 @@
                 </div>
 
                 <div class="form-group">
+                    <label for="vCenterUsername">vCenter Username:</label>
+                    <input type="text" id="vCenterUsername" name="vCenterUsername" value="" placeholder="username@domain.com">
+                    <div class="help-text">Optional: VMware username for vCenter authentication</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="vCenterPassword">vCenter Password:</label>
+                    <input type="password" id="vCenterPassword" name="vCenterPassword" value="" placeholder="password">
+                    <div class="help-text">Optional: VMware password for vCenter authentication</div>
+                </div>
+
+                <div class="form-group">
                     <label for="masterImagePrefix">Master Image Prefix:</label>
                     <input type="text" id="masterImagePrefix" name="masterImagePrefix" value="SHC-M-" placeholder="e.g., SHC-M-">
                     <div class="help-text">Prefix used to identify master images (images will be searched using: [Prefix]* pattern)</div>
@@ -287,15 +299,11 @@
                     <div class="help-text" style="margin-top: 10px;">Select which audit components you want to run</div>
                 </div>
 
-                <div style="display: flex; gap: 10px; justify-content: center;">
-                    <button type="button" class="btn-submit" id="saveAsConfigBtn" style="flex: 1;">📁 Save As...</button>
-                    <button type="submit" class="btn-submit" id="saveConfigBtn" style="flex: 1;">💾 Download</button>
-                </div>
+                <button type="submit" class="btn-submit" id="saveConfigBtn" style="width: 100%;">💾 Download Config File</button>
                 <div style="margin-top: 10px; text-align: center;">
                     <small style="color: #666;">
-                        <strong>Save As:</strong> Choose where to save the file<br>
-                        <strong>Download:</strong> Saves to browser's download folder<br>
-                        <em>Move file to: <code>Citrix-Horizon\LAB007-Tools-Config.json</code></em>
+                        Downloads <strong>LAB007-Config.JSON</strong> to your browser's download folder.<br>
+                        <em>Save file to: <code>Citrix-Horizon\LAB007-Config.JSON</code></em>
                     </small>
                 </div>
             </form>
@@ -323,12 +331,14 @@
         }
 
         function applyConfigToForm(config) {
-            document.getElementById('citrixVersion').value = config.citrixVersion || '1912';
-            document.getElementById('ddcName').value = config.ddcName || 'localhost';
-            document.getElementById('usageDays').value = config.usageDays || 30;
-            document.getElementById('vCenterServer').value = config.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
-            document.getElementById('masterImagePrefix').value = config.masterImagePrefix || 'SHC-M-';
-            document.getElementById('runPreReqCheck').checked = config.runPreReqCheck !== false;
+                    document.getElementById('citrixVersion').value = config.citrixVersion || '1912';
+                    document.getElementById('ddcName').value = config.ddcName || 'localhost';
+                    document.getElementById('usageDays').value = config.usageDays || 30;
+                    document.getElementById('vCenterServer').value = config.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
+                    document.getElementById('vCenterUsername').value = config.vCenterUsername || '';
+                    document.getElementById('vCenterPassword').value = config.vCenterPassword || '';
+                    document.getElementById('masterImagePrefix').value = config.masterImagePrefix || 'SHC-M-';
+                    document.getElementById('runPreReqCheck').checked = config.runPreReqCheck !== false;
             document.getElementById('auditSiteInfo').checked = config.auditComponents?.SiteInfo !== false;
             document.getElementById('auditApplications').checked = config.auditComponents?.Applications !== false;
             document.getElementById('auditDesktops').checked = config.auditComponents?.Desktops !== false;
@@ -349,6 +359,8 @@
                 ddcName: document.getElementById('ddcName').value,
                 usageDays: parseInt(document.getElementById('usageDays').value),
                 vCenterServer: document.getElementById('vCenterServer').value,
+                vCenterUsername: document.getElementById('vCenterUsername').value,
+                vCenterPassword: document.getElementById('vCenterPassword').value,
                 masterImagePrefix: document.getElementById('masterImagePrefix').value,
                 runPreReqCheck: document.getElementById('runPreReqCheck').checked,
                 auditComponents: {
@@ -375,7 +387,7 @@
             statusMsg.style.display = 'block';
             statusMsg.innerHTML = '<strong>Configuration file saved!</strong><br><br>' +
                 `File saved using: <strong>${method}</strong><br><br>` +
-                '<em>Ensure the file is located at:</em><br><code>Citrix-Horizon\\LAB007-Tools-Config.json</code><br>' +
+                '<em>Ensure the file is located at:</em><br><code>Citrix-Horizon\\LAB007-Config.JSON</code><br>' +
                 '(same level as the Scripts folder, not inside it)';
 
             setTimeout(() => {
@@ -383,37 +395,6 @@
             }, 10000);
         }
 
-        // Save As button - uses File System Access API for browsers that support it
-        document.getElementById('saveAsConfigBtn').addEventListener('click', async function() {
-            const config = createConfigObject();
-            const configJson = JSON.stringify(config, null, 2);
-
-            try {
-                // Check if File System Access API is supported (Chrome, Edge)
-                if ('showSaveFilePicker' in window) {
-                    const handle = await window.showSaveFilePicker({
-                        suggestedName: 'LAB007-Tools-Config.json',
-                        types: [{
-                            description: 'JSON Configuration File',
-                            accept: { 'application/json': ['.json'] }
-                        }]
-                    });
-
-                    const writable = await handle.createWritable();
-                    await writable.write(configJson);
-                    await writable.close();
-
-                    showConfigSuccessMessage('File System Access API (Save As dialog)');
-                } else {
-                    throw new Error('File System Access API not supported');
-                }
-            } catch (error) {
-                console.error('Save As failed:', error);
-
-                // Fallback to download if Save As fails or isn't supported
-                alert('Save As not supported in this browser. Use the Download button instead.');
-            }
-        });
 
         // Download button - fallback for all browsers
         document.getElementById('configForm').addEventListener('submit', function(e) {
@@ -430,7 +411,7 @@
                 // Create temporary download link
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'LAB007-Tools-Config.json';
+                a.download = 'LAB007-Config.JSON';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);

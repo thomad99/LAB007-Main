@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Simple HTTP server to serve Citrix-Horizon web files and handle config saving.
-This allows the config.html to work locally and save to LAB007-Tools-Config.json
+This allows the config.html to work locally and save to LAB007-Config.JSON
 """
 
 import http.server
@@ -19,15 +19,15 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             self.send_error(HTTPStatus.NOT_FOUND, "Endpoint not found")
 
     def handle_config_save(self):
-        """Handle saving configuration to LAB007-Tools-Config.json"""
+        """Handle saving configuration to LAB007-Config.JSON"""
         try:
             # Read the request body
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length)
             config = json.loads(post_data.decode('utf-8'))
 
-            # Save to LAB007-Tools-Config.json
-            config_path = 'LAB007-Tools-Config.json'
+            # Save to LAB007-Config.JSON
+            config_path = 'LAB007-Config.JSON'
             with open(config_path, 'w') as f:
                 json.dump(config, f, indent=2)
 
@@ -53,9 +53,9 @@ class ConfigHandler(http.server.SimpleHTTPRequestHandler):
             super().do_GET()
 
     def handle_config_load(self):
-        """Handle loading configuration from LAB007-Tools-Config.json"""
+        """Handle loading configuration from LAB007-Config.JSON"""
         try:
-            config_path = 'LAB007-Tools-Config.json'
+            config_path = 'LAB007-Config.JSON'
             if os.path.exists(config_path):
                 with open(config_path, 'r') as f:
                     config = json.load(f)

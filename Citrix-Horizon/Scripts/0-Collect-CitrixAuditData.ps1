@@ -126,24 +126,57 @@ Write-Host "Run .\Scripts\Install-RequiredModules.ps1 to automatically install m
 Write-Host ""
 
 $scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-$configPath = Join-Path (Split-Path -Parent $scriptPath) "lab007-config.json"
+$configPath = Join-Path (Split-Path -Parent $scriptPath) "..\LAB007-Config.JSON"
 
-# Read configuration from file if available
-if (-not $CitrixVersion -or -not $DDCName) {
-    $config = & "$scriptPath\Read-Configuration.ps1" -ConfigPath $configPath
-    
-    if (-not $CitrixVersion) {
-        $CitrixVersion = $config.CitrixVersion
-    }
-    if (-not $DDCName) {
-        $DDCName = $config.DDCName
-    }
-    if (-not $PSBoundParameters.ContainsKey('UsageDaysBack')) {
-        $UsageDaysBack = $config.UsageDays
-    }
-    # SkipServerSpecs is always defaulted to $false - server collection should always run
-    # Config file value is ignored - use -SkipServerSpecs parameter if you need to skip
+# Read configuration from file - always load it for AuditComponents
+$config = & "$scriptPath\Read-Configuration.ps1" -ConfigPath $configPath
+
+# Display VMware configuration status
+Write-Host ""
+Write-Host "=== VMware Configuration Status ===" -ForegroundColor Cyan
+if ($config.vCenterServer) {
+    Write-Host "vCenter Server: $($config.vCenterServer)" -ForegroundColor Green
+} else {
+    Write-Host "vCenter Server: Not configured (set vCenterServer in LAB007-Config.JSON)" -ForegroundColor Red
 }
+
+if ($config.AuditComponents.VMwareSpecs) {
+    Write-Host "VMware Specs Collection: Enabled" -ForegroundColor Green
+} else {
+    Write-Host "VMware Specs Collection: Disabled (enable VMwareSpecs in config)" -ForegroundColor Yellow
+}
+
+Write-Host "VMware Folders Collection: $(if ($config.vCenterServer) { 'Will run' } else { 'Will be skipped' })" -ForegroundColor $(if ($config.vCenterServer) { 'Green' } else { 'Red' })
+Write-Host "==================================" -ForegroundColor Cyan
+Write-Host ""
+
+# Use config values if not provided via parameters
+if (-not $CitrixVersion) {
+    $CitrixVersion = $config.CitrixVersion
+}
+if (-not $DDCName) {
+    $DDCName = $config.DDCName
+}
+if (-not $PSBoundParameters.ContainsKey('UsageDaysBack')) {
+    $UsageDaysBack = $config.UsageDays
+}
+
+# Set VMware parameters from config if not provided via parameters
+if (-not $VMwareServer -and $config.vCenterServer) {
+    $VMwareServer = $config.vCenterServer
+    Write-Host "[VMware] VMwareServer set from config: $VMwareServer" -ForegroundColor Cyan
+}
+if (-not $VMwareUsername -and $config.VMwareUsername) {
+    $VMwareUsername = $config.VMwareUsername
+    Write-Host "[VMware] VMwareUsername set from config" -ForegroundColor Cyan
+}
+if (-not $VMwarePassword -and $config.VMwarePassword) {
+    $VMwarePassword = $config.VMwarePassword
+    Write-Host "[VMware] VMwarePassword set from config" -ForegroundColor Cyan
+}
+
+# SkipServerSpecs is always defaulted to $false - server collection should always run
+# Config file value is ignored - use -SkipServerSpecs parameter if you need to skip
 
 # Connect to Citrix environment (auto-discovers version if DDC provided but version not specified)
 # If DDC is provided but version is not, we'll try to auto-discover it
@@ -475,8 +508,23 @@ finally {
 
 # 9. Collect VMware Server Specs (if VMware server specified)
 $vmwareSpecs = $null
-if (-not $SkipServerSpecs -and $VMwareServer) {
-    Write-Host "[VMwareSpecs] Collecting VMware Server Specs..." -ForegroundColor Yellow
+
+# Log VMware collection decision
+if (-not $SkipServerSpecs -and $VMwareServer -and $config.AuditComponents.VMwareSpecs) {
+    Write-Host "[VMwareSpecs] ✓ WILL RUN - VMware Server Specs collection enabled" -ForegroundColor Green
+    Write-Host "[VMwareSpecs]   Server: $VMwareServer" -ForegroundColor Gray
+    Write-Host "[VMwareSpecs]   Collecting VMware Server Specs..." -ForegroundColor Yellow
+} elseif ($SkipServerSpecs) {
+    Write-Host "[VMwareSpecs] ✗ SKIPPED - SkipServerSpecs parameter is set to true" -ForegroundColor Red
+} elseif (-not $VMwareServer) {
+    Write-Host "[VMwareSpecs] ✗ SKIPPED - No VMwareServer specified (set vCenterServer in config)" -ForegroundColor Red
+} elseif (-not $config.AuditComponents.VMwareSpecs) {
+    Write-Host "[VMwareSpecs] ✗ SKIPPED - VMwareSpecs audit component disabled in config" -ForegroundColor Red
+} else {
+    Write-Host "[VMwareSpecs] ✗ SKIPPED - Unknown reason" -ForegroundColor Red
+}
+
+if (-not $SkipServerSpecs -and $VMwareServer -and $config.AuditComponents.VMwareSpecs) {
     try {
         $vmwareSpecs = & "$scriptPath\9-Get-VMwareServerSpecs.ps1" -OutputPath (Join-Path $dataPath "vmware-server-specs.json") -VMwareServer $VMwareServer -VMwareUsername $VMwareUsername -VMwarePassword $VMwarePassword
         if ($vmwareSpecs -and $vmwareSpecs.VMSpecs) {
@@ -497,6 +545,13 @@ if ($config.AuditComponents.Servers) {
     Write-Host "[DEBUG] Starting server collection at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" -ForegroundColor Gray
     Write-Host "[DEBUG] SkipServerSpecs: $SkipServerSpecs" -ForegroundColor Gray
     Write-Host "[DEBUG] VMwareServer: $VMwareServer" -ForegroundColor Gray
+
+    # Log VMware merging decision
+    if ($VMwareServer -and -not $SkipServerSpecs) {
+        Write-Host "[Servers] ✓ VMware data WILL be merged with Citrix server data" -ForegroundColor Green
+    } else {
+        Write-Host "[Servers] ✗ VMware data will NOT be merged (no VMwareServer or SkipServerSpecs=true)" -ForegroundColor Yellow
+    }
     
     try {
         Write-Host "[DEBUG] Calling 10-Get-CitrixServers.ps1..." -ForegroundColor Gray
@@ -576,20 +631,28 @@ if ($config.AuditComponents.Servers) {
 
 # 11. Collect VMware Folder Structure (if VMware server specified)
 $vmwareFolders = $null
+
+# Log VMware folders collection decision
 if ($VMwareServer) {
+    Write-Host "[VMwareFolders] ✓ WILL RUN - VMware Folder Structure collection enabled" -ForegroundColor Green
+    Write-Host "[VMwareFolders]   Server: $VMwareServer" -ForegroundColor Gray
     Write-Host "[VMwareFolders] Collecting VMware VM Folder Structure..." -ForegroundColor Yellow
-    try {
-        $vmwareFolders = & "$scriptPath\21-Get-VMwareFolders.ps1" -OutputPath (Join-Path $dataPath "vmware-folders.json") -VMwareServer $VMwareServer -VMwareUsername $VMwareUsername -VMwarePassword $VMwarePassword
-        if ($vmwareFolders -and $vmwareFolders.Folders) {
-            Write-Host "VMware folder structure collected: $($vmwareFolders.TotalFolders) folders" -ForegroundColor Green
-        }
-        else {
-            Write-Warning "VMware folder structure collection returned no data"
-        }
+} else {
+    Write-Host "[VMwareFolders] ✗ SKIPPED - No VMwareServer specified (set vCenterServer in config)" -ForegroundColor Red
+}
+
+if ($VMwareServer) {
+try {
+    $vmwareFolders = & "$scriptPath\22-Get-VMwareFolders.ps1" -OutputPath (Join-Path $dataPath "vmware-folders.json") -VMwareServer $VMwareServer -VMwareUsername $VMwareUsername -VMwarePassword $VMwarePassword
+    if ($vmwareFolders -and $vmwareFolders.Folders) {
+        Write-Host "VMware folder structure collected: $($vmwareFolders.TotalFolders) folders" -ForegroundColor Green
     }
-    catch {
-        Write-Warning "VMware folder structure collection failed: $_"
+    else {
+        Write-Warning "VMware folder structure collection returned no data"
     }
+}
+catch {
+    Write-Warning "VMware folder structure collection failed: $_"
 }
 
 # 12. Collect Director OData (optional)

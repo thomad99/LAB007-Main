@@ -5,7 +5,7 @@
 # Last Modified: 260106:2200
 
 param(
-    [string]$ConfigPath = ".\lab007-config.json",
+    [string]$ConfigPath = ".\..\LAB007-Config.JSON",
     [bool]$RunPreReqCheck = $true,
     [bool]$SiteInfo = $true,
     [bool]$Applications = $true,

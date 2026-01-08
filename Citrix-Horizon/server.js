@@ -602,7 +602,7 @@ app.get('/uploads/debug/:filename', (req, res) => {
 // Health check endpoint
 // Audit Configuration API
 app.get('/api/audit-config', (req, res) => {
-    const configPath = path.join(__dirname, 'lab007-config.json');
+    const configPath = path.join(__dirname, 'LAB007-Config.JSON');
 
     try {
         if (fs.existsSync(configPath)) {
@@ -636,7 +636,7 @@ app.get('/api/audit-config', (req, res) => {
 });
 
 app.get('/citrix/api/audit-config', (req, res) => {
-    const configPath = path.join(__dirname, 'lab007-config.json');
+    const configPath = path.join(__dirname, 'LAB007-Config.JSON');
 
     try {
         if (fs.existsSync(configPath)) {
@@ -670,7 +670,7 @@ app.get('/citrix/api/audit-config', (req, res) => {
 });
 
 app.post('/api/audit-config', (req, res) => {
-    const configPath = path.join(__dirname, 'lab007-config.json');
+    const configPath = path.join(__dirname, 'LAB007-Config.JSON');
 
     try {
         const newConfig = req.body;
@@ -723,7 +723,7 @@ app.post('/api/audit-config', (req, res) => {
 });
 
 app.post('/citrix/api/audit-config', (req, res) => {
-    const configPath = path.join(__dirname, 'lab007-config.json');
+    const configPath = path.join(__dirname, 'LAB007-Config.JSON');
 
     try {
         const newConfig = req.body;

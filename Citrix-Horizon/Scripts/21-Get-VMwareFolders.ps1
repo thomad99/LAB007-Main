@@ -1,4 +1,4 @@
-# 22-Get-VMwareFolders.ps1
+# 21-Get-VMwareFolders.ps1
 # Retrieves VMware VM folder structure for LAB007 Horizon Environment Tasks
 # Author : LAB007.AI
 # Version: 1.0
@@ -17,7 +17,7 @@ $dataPath = Split-Path -Path $OutputPath -Parent
 if (-not (Test-Path -Path $dataPath)) {
     New-Item -ItemType Directory -Path $dataPath -Force | Out-Null
 }
-$debugFile = Join-Path $dataPath "debug22.txt"
+$debugFile = Join-Path $dataPath "debug21.txt"
 
 # Force delete existing debug file to ensure clean start
 if (Test-Path $debugFile) {
@@ -96,32 +96,11 @@ try {
             }
         }
 
-        # Check if VMware server is available - if not, skip gracefully
+        # Validate parameters - VMware server is required
         if ([string]::IsNullOrWhiteSpace($VMwareServer)) {
-            Write-Host "VMware server not configured. Skipping VMware folder collection." -ForegroundColor Yellow
-            Write-Host "[DEBUG] VMware server not specified after config check - skipping" | Out-File -FilePath $debugFile -Append
-
-            # Return empty result
-            $result = @{
-                Success = $false
-                Message = "VMware server not configured"
-                TotalFolders = 0
-                Folders = @()
-                Timestamp = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-            }
-
-            # Save result to file
-            try {
-                $result | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputPath -Encoding UTF8 -Force
-                Write-Host "VMware folders result saved to: $OutputPath" -ForegroundColor Gray
-                Write-Host "[DEBUG] Empty result saved to $OutputPath" | Out-File -FilePath $debugFile -Append
-            }
-            catch {
-                Write-Warning "Could not save result to $OutputPath : $_"
-                Write-Host "[DEBUG] Could not save result: $_" | Out-File -FilePath $debugFile -Append
-            }
-
-            return $result
+            Write-Error 'VMware server not specified and no active connection found. Please specify -VMwareServer parameter or configure it in LAB007-Config.JSON'
+            Write-Host "[DEBUG] VMware server not specified after config check" | Out-File -FilePath $debugFile -Append
+            exit 1
         }
 
         # Prompt for credentials if not provided

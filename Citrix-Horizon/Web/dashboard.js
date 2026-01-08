@@ -172,6 +172,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 ddcName: document.getElementById('configDdcName').value,
                 usageDays: parseInt(document.getElementById('configUsageDays').value),
                 vCenterServer: document.getElementById('configVCenterServer').value,
+                vCenterUsername: document.getElementById('configVCenterUsername').value,
+                vCenterPassword: document.getElementById('configVCenterPassword').value,
                 masterImagePrefix: document.getElementById('configMasterImagePrefix').value,
                 runPreReqCheck: document.getElementById('configRunPreReqCheck').checked,
                 auditComponents: {
@@ -201,7 +203,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 // Create temporary download link
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = 'LAB007-Tools-Config.json';
+                a.download = 'LAB007-Config.JSON';
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
@@ -214,8 +216,8 @@ document.addEventListener('DOMContentLoaded', async function() {
                 statusMsg.className = 'status-message success';
                 statusMsg.style.display = 'block';
                 statusMsg.innerHTML = '<strong>Configuration file downloaded!</strong><br><br>' +
-                    'Save the <strong>LAB007-Tools-Config.json</strong> file to:<br>' +
-                    '<code>Citrix-Horizon\\LAB007-Tools-Config.json</code><br><br>' +
+                    'Save the <strong>LAB007-Config.JSON</strong> file to:<br>' +
+                    '<code>Citrix-Horizon\\LAB007-Config.JSON</code><br><br>' +
                     '<em>(same level as the Scripts folder, not inside it)</em>';
                 statusMsg.style.textAlign = 'center';
                 statusMsg.style.padding = '15px';
@@ -248,76 +250,6 @@ document.addEventListener('DOMContentLoaded', async function() {
             console.log('Configuration file created for download');
         });
 
-        // Handle Save As button for main config
-        const saveAsMainConfigBtn = document.getElementById('saveAsMainConfigBtn');
-        if (saveAsMainConfigBtn) {
-            saveAsMainConfigBtn.addEventListener('click', async function() {
-                console.log('Save As clicked');
-
-                const config = {
-                    citrixVersion: document.getElementById('configCitrixVersion').value,
-                    ddcName: document.getElementById('configDdcName').value,
-                    usageDays: parseInt(document.getElementById('configUsageDays').value),
-                    vCenterServer: document.getElementById('configVCenterServer').value,
-                    masterImagePrefix: document.getElementById('configMasterImagePrefix').value,
-                    runPreReqCheck: document.getElementById('configRunPreReqCheck').checked,
-                    auditComponents: {
-                        SiteInfo: document.getElementById('configAuditSiteInfo').checked,
-                        Applications: document.getElementById('configAuditApplications').checked,
-                        Desktops: document.getElementById('configAuditDesktops').checked,
-                        Catalogs: document.getElementById('configAuditCatalogs').checked,
-                        DeliveryGroups: document.getElementById('configAuditDeliveryGroups').checked,
-                        UsageStats: document.getElementById('configAuditUsageStats').checked,
-                        Policies: document.getElementById('configAuditPolicies').checked,
-                        Roles: document.getElementById('configAuditRoles').checked,
-                        VMwareSpecs: document.getElementById('configAuditVMwareSpecs').checked,
-                        Servers: document.getElementById('configAuditServers').checked,
-                        DirectorOData: document.getElementById('configAuditDirectorOData').checked
-                    },
-                    savedAt: new Date().toISOString()
-                };
-
-                const configJson = JSON.stringify(config, null, 2);
-
-                try {
-                    // Check if File System Access API is supported (Chrome, Edge)
-                    if ('showSaveFilePicker' in window) {
-                        const handle = await window.showSaveFilePicker({
-                            suggestedName: 'LAB007-Tools-Config.json',
-                            types: [{
-                                description: 'JSON Configuration File',
-                                accept: { 'application/json': ['.json'] }
-                            }]
-                        });
-
-                        const writable = await handle.createWritable();
-                        await writable.write(configJson);
-                        await writable.close();
-
-                        // Show success message
-                        const statusMsg = document.getElementById('configStatusMessage');
-                        statusMsg.className = 'status-message success';
-                        statusMsg.style.display = 'block';
-                        statusMsg.innerHTML = '<strong>Configuration file saved!</strong><br><br>' +
-                            'File saved using: <strong>File System Access API (Save As dialog)</strong><br><br>' +
-                            '<em>Ensure the file is located at:</em><br><code>Citrix-Horizon\\LAB007-Tools-Config.json</code>';
-                        statusMsg.style.textAlign = 'center';
-                        statusMsg.style.padding = '15px';
-                        statusMsg.style.borderRadius = '8px';
-                        statusMsg.style.marginTop = '20px';
-
-                        setTimeout(() => {
-                            statusMsg.style.display = 'none';
-                        }, 10000);
-                    } else {
-                        throw new Error('File System Access API not supported');
-                    }
-                } catch (error) {
-                    console.error('Save As failed:', error);
-                    alert('Save As not supported in this browser. Use the Download button instead.');
-                }
-            });
-        }
     }
 });
 
@@ -1253,6 +1185,8 @@ async function loadConfigIntoMainModal() {
 
             // Load VMware config
             document.getElementById('configVCenterServer').value = config.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
+            document.getElementById('configVCenterUsername').value = config.vCenterUsername || '';
+            document.getElementById('configVCenterPassword').value = config.vCenterPassword || '';
             document.getElementById('configMasterImagePrefix').value = config.masterImagePrefix || 'SHC-M-';
 
             // Load audit components

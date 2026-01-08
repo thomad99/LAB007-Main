@@ -27,7 +27,7 @@ $SensitivePatterns = @(
     "*secret*.json",
     "*credential*.json",
     "*token*.txt",
-    "lab007-config.json",
+    "LAB007-Config.JSON",
     "Data\*.json",
     "Data\*.zip",
     "Data\debug.txt",

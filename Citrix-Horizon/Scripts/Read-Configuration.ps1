@@ -5,7 +5,7 @@
 # Last Modified: 260106:2200
 
 param(
-    [string]$ConfigPath = ".\lab007-config.json"
+    [string]$ConfigPath = ".\..\LAB007-Config.JSON"
 )
 
 function Get-Configuration {
@@ -53,6 +53,9 @@ function Get-Configuration {
                 CitrixVersion = if ($config.citrixVersion) { $config.citrixVersion } elseif ($config.CitrixVersion) { $config.CitrixVersion } else { $defaultConfig.CitrixVersion }
                 DDCName = if ($config.ddcName) { $config.ddcName } elseif ($config.DDCName) { $config.DDCName } else { $defaultConfig.DDCName }
                 UsageDays = if ($config.usageDays) { [int]$config.usageDays } elseif ($config.UsageDays) { [int]$config.UsageDays } else { $defaultConfig.UsageDays }
+                vCenterServer = if ($config.vCenterServer) { $config.vCenterServer } elseif ($config.VMwareServer) { $config.VMwareServer } else { $null }
+                vCenterUsername = if ($config.vCenterUsername) { $config.vCenterUsername } elseif ($config.VMwareUsername) { $config.VMwareUsername } else { $null }
+                vCenterPassword = if ($config.vCenterPassword) { $config.vCenterPassword } elseif ($config.VMwarePassword) { $config.VMwarePassword } else { $null }
                 SkipServerSpecs = if ($null -ne $config.skipServerSpecs) { [bool]$config.skipServerSpecs } elseif ($null -ne $config.SkipServerSpecs) { [bool]$config.SkipServerSpecs } else { $defaultConfig.SkipServerSpecs }
                 RunPreReqCheck = if ($null -ne $config.runPreReqCheck) { [bool]$config.runPreReqCheck } elseif ($null -ne $config.RunPreReqCheck) { [bool]$config.RunPreReqCheck } else { $defaultConfig.RunPreReqCheck }
                 AuditComponents = $auditComponents

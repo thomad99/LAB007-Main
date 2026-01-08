@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Download Functionality</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; }
+        .test-btn { padding: 10px 20px; background: #007bff; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 10px 0; }
+        .test-btn:hover { background: #0056b3; }
+    </style>
+</head>
+<body>
+    <h1>Test Download Functionality</h1>
+    <p>This tests the exact same download code used in the config forms.</p>
+
+    <button class="test-btn" onclick="testDownload()">Test Download LAB007-Config.JSON</button>
+
+    <div id="result"></div>
+
+    <script>
+        function testDownload() {
+            const resultDiv = document.getElementById('result');
+
+            // Test config object (same as forms)
+            const config = {
+                citrixVersion: "1912",
+                ddcName: "localhost",
+                usageDays: 30,
+                vCenterServer: "test-server",
+                vCenterUsername: "",
+                vCenterPassword: "",
+                masterImagePrefix: "SHC-M-",
+                runPreReqCheck: true,
+                auditComponents: {
+                    SiteInfo: true,
+                    Applications: true,
+                    Desktops: true,
+                    Catalogs: true,
+                    DeliveryGroups: true,
+                    UsageStats: true,
+                    Policies: true,
+                    Roles: true,
+                    VMwareSpecs: false,
+                    Servers: true,
+                    DirectorOData: true
+                },
+                savedAt: new Date().toISOString()
+            };
+
+            try {
+                // Create downloadable JSON file
+                const configJson = JSON.stringify(config, null, 2);
+                const blob = new Blob([configJson], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+
+                // Create temporary download link
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'LAB007-Config.JSON';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                // Clean up the URL object
+                URL.revokeObjectURL(url);
+
+                resultDiv.innerHTML = '<div style="color: green; padding: 10px; border: 1px solid green; margin: 10px 0;">✓ Download initiated! Check your browser\'s download folder for LAB007-Config.JSON</div>';
+
+            } catch (error) {
+                console.error('Download test failed:', error);
+                resultDiv.innerHTML = '<div style="color: red; padding: 10px; border: 1px solid red; margin: 10px 0;">✗ Download failed: ' + error.message + '</div>';
+            }
+        }
+    </script>
+</body>
+</html>

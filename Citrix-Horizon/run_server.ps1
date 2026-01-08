@@ -2,7 +2,7 @@
 Write-Host "Starting LAB007 Citrix Configuration Server..." -ForegroundColor Green
 Write-Host ""
 Write-Host "This server allows you to use config.html locally and save configurations" -ForegroundColor Yellow
-Write-Host "to LAB007-Tools-Config.json for use with PowerShell scripts." -ForegroundColor Yellow
+Write-Host "to LAB007-Config.JSON for use with PowerShell scripts." -ForegroundColor Yellow
 Write-Host ""
 Write-Host "Server will be available at: http://localhost:8000" -ForegroundColor Cyan
 Write-Host "Open config.html at: http://localhost:8000/config.html" -ForegroundColor Cyan

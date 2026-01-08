@@ -20,7 +20,7 @@ When you open `config.html` directly in your browser (by double-clicking the fil
 
 4. **Save the file** to the correct location:
    ```
-   Citrix-Horizon/LAB007-Tools-Config.json
+   Citrix-Horizon/LAB007-Config.JSON
    ```
    (This is the parent directory of the Scripts folder)
 
@@ -53,12 +53,12 @@ Use the test file to verify download functionality:
 - Make sure pop-ups aren't blocked
 
 **Configuration not working**
-- Ensure the file is saved as `LAB007-Tools-Config.json`
-- Save it to the correct directory: `Citrix-Horizon/LAB007-Tools-Config.json`
+- Ensure the file is saved as `LAB007-Config.JSON`
+- Save it to the correct directory: `Citrix-Horizon/LAB007-Config.JSON`
 - Verify the JSON format is valid (no extra characters)
 
 **Scripts can't find config**
-- PowerShell scripts look for `..\LAB007-Tools-Config.json` (parent directory)
+- PowerShell scripts look for `..\LAB007-Config.JSON` (parent directory)
 - If scripts are in `Scripts/` folder, config must be in main `Citrix-Horizon/` folder
 
 ## Alternative: Node.js Server (Advanced)

@@ -42,14 +42,14 @@
 
             const a = document.createElement('a');
             a.href = url;
-            a.download = 'LAB007-Tools-Config.json';
+            a.download = 'LAB007-Config.JSON';
             document.body.appendChild(a);
             a.click();
             document.body.removeChild(a);
 
             URL.revokeObjectURL(url);
 
-            alert('Test config file should download now!\n\nSave it to: Citrix-Horizon\\LAB007-Tools-Config.json');
+            alert('Test config file should download now!\n\nSave it to: Citrix-Horizon\\LAB007-Config.JSON');
         }
     </script>
 </body>
