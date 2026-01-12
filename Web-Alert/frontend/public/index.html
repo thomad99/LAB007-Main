@@ -230,6 +230,7 @@
                 </div>
                 <button type="submit" class="btn btn-primary">Start Monitoring</button>
                 <button type="button" onclick="testConnectivity()" class="btn" style="background-color: #6c757d; color: white; margin-left: 10px;">Test Connection</button>
+                <button type="button" onclick="testJavaScript()" class="btn" style="background-color: #28a745; color: white; margin-left: 10px;">Test JS</button>
             </form>
             <div id="statusBox" class="status-box">
                 <h2>Monitoring Status</h2>
@@ -250,19 +251,128 @@
         window.testConnectivity = async function() {
             try {
                 console.log('Testing basic connectivity...');
+
+                // First, test if we can reach the server at all
+                console.log('Step 1: Testing basic server reachability...');
+                const healthUrl = window.location.protocol + '//' + window.location.host + '/health';
+                console.log('Health check URL:', healthUrl);
+
+                try {
+                    const healthResponse = await fetch(healthUrl, {
+                        method: 'GET',
+                        headers: { 'Accept': 'application/json' },
+                        mode: 'cors'
+                    });
+
+                    console.log('Health check response status:', healthResponse.status);
+
+                    if (healthResponse.ok) {
+                        const healthData = await healthResponse.json();
+                        console.log('Health check passed:', healthData);
+                    } else {
+                        console.warn('Health check failed with status:', healthResponse.status);
+                    }
+                } catch (healthError) {
+                    console.warn('Health check error:', healthError.message);
+                }
+
+                // Now test the API endpoint
+                console.log('Step 2: Testing API endpoint...');
                 const testUrl = window.location.protocol + '//' + window.location.host + '/api/test';
+                console.log('Testing URL:', testUrl);
+
                 const response = await fetch(testUrl, {
                     method: 'GET',
-                    headers: { 'Accept': 'application/json' },
+                    headers: {
+                        'Accept': 'application/json',
+                        'Cache-Control': 'no-cache'
+                    },
                     mode: 'cors',
                     credentials: 'same-origin'
                 });
+
+                console.log('Response status:', response.status);
+                console.log('Response headers:', Object.fromEntries(response.headers.entries()));
+
+                if (!response.ok) {
+                    // Get response as text to see what we got
+                    const textContent = await response.text();
+                    console.log('Error response content (first 500 chars):', textContent.substring(0, 500));
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+
+                const contentType = response.headers.get('content-type');
+                console.log('Content-Type:', contentType);
+
+                if (!contentType || !contentType.includes('application/json')) {
+                    // If not JSON, get as text to see what we got
+                    const textContent = await response.text();
+                    console.log('Response content (first 500 chars):', textContent.substring(0, 500));
+                    throw new Error(`Expected JSON but got ${contentType || 'unknown content type'}`);
+                }
+
                 const data = await response.json();
                 console.log('Connectivity test result:', data);
-                alert('✅ Connectivity test passed: ' + JSON.stringify(data));
+
+                // Validate the response structure
+                if (!data || typeof data !== 'object') {
+                    throw new Error('Response is not a valid JSON object');
+                }
+
+                if (!data.message) {
+                    throw new Error('Response missing required "message" field');
+                }
+
+                alert('✅ Connectivity test passed!\n\n' +
+                      'Server Response: ' + JSON.stringify(data, null, 2) + '\n\n' +
+                      'Status: ' + response.status + '\n' +
+                      'Content-Type: ' + contentType);
+
             } catch (error) {
                 console.error('Connectivity test failed:', error);
-                alert('❌ Connectivity test failed: ' + error.message);
+                console.error('Error details:', {
+                    message: error.message,
+                    stack: error.stack,
+                    name: error.name
+                });
+
+                let errorMessage = '❌ Connectivity test failed: ' + error.message;
+
+                // Provide more specific error messages
+                if (error.message.includes('fetch')) {
+                    errorMessage += '\n\nPossible causes:\n• Server is not running\n• Network connectivity issues\n• CORS policy blocking request';
+                } else if (error.message.includes('JSON')) {
+                    errorMessage += '\n\nPossible causes:\n• Server returned HTML instead of JSON\n• API endpoint not responding correctly\n• Server configuration issue';
+                }
+
+                errorMessage += '\n\nCheck browser console for detailed error information.';
+
+                alert(errorMessage);
+            }
+        };
+
+        // Simple JavaScript functionality test
+        window.testJavaScript = function() {
+            try {
+                console.log('Testing JavaScript functionality...');
+                const testData = {
+                    timestamp: new Date().toISOString(),
+                    userAgent: navigator.userAgent,
+                    url: window.location.href,
+                    protocol: window.location.protocol,
+                    host: window.location.host,
+                    pathname: window.location.pathname
+                };
+                console.log('JavaScript test data:', testData);
+                alert('✅ JavaScript is working!\n\n' +
+                      'URL: ' + testData.url + '\n' +
+                      'Protocol: ' + testData.protocol + '\n' +
+                      'Host: ' + testData.host + '\n' +
+                      'Timestamp: ' + testData.timestamp + '\n\n' +
+                      'If the Test Connection button fails, the issue is with the server/API, not JavaScript.');
+            } catch (error) {
+                console.error('JavaScript test failed:', error);
+                alert('❌ JavaScript test failed: ' + error.message);
             }
         };
 

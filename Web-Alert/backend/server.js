@@ -857,6 +857,38 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Handle CORS preflight for test endpoint
+app.options('/api/test', (req, res) => {
+    console.log('[Web-Alert] OPTIONS /api/test (CORS preflight)');
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.sendStatus(200);
+});
+
+// Add this simple test route (moved up to ensure it's not overridden)
+app.get('/api/test', (req, res) => {
+    console.log('[Web-Alert] GET /api/test endpoint called');
+    console.log('[Web-Alert] Request method:', req.method);
+    console.log('[Web-Alert] Request headers:', req.headers);
+    console.log('[Web-Alert] Request origin:', req.headers.origin);
+    console.log('[Web-Alert] Request host:', req.headers.host);
+
+    // Ensure CORS headers are set
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+
+    const response = {
+        message: 'Test route working',
+        timestamp: new Date().toISOString(),
+        server: 'Web-Alert',
+        version: '1.0'
+    };
+    console.log('[Web-Alert] Sending response:', response);
+    res.json(response);
+});
+
 // API endpoint to start monitoring
 app.post('/api/monitor', async (req, res) => {
     console.log('[Web-Alert API] POST /api/monitor called');
@@ -1514,11 +1546,6 @@ app.get('/api/health', async (req, res) => {
             stack: error.stack
         });
     }
-});
-
-// Add this simple test route
-app.get('/api/test', (req, res) => {
-    res.json({ message: 'Test route working' });
 });
 
 // Add this new endpoint

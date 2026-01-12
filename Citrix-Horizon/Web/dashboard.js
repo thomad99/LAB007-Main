@@ -173,31 +173,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     function handleConfigDownload() {
         console.log('handleConfigDownload called');
 
-        // Safely get form values with validation
-        const getElementValue = (id) => {
-            const element = document.getElementById(id);
-            return element ? element.value : '';
-        };
-
-        const getElementChecked = (id) => {
-            const element = document.getElementById(id);
-            return element ? element.checked : false;
-        };
-
-        const parseNumberSafely = (value, defaultValue = 30) => {
-            const parsed = parseInt(value);
-            return isNaN(parsed) ? defaultValue : Math.max(1, Math.min(365, parsed));
-        };
-
         const config = {
-            citrixVersion: getElementValue('configCitrixVersion'),
-            ddcName: getElementValue('configDdcName'),
-            usageDays: parseNumberSafely(getElementValue('configUsageDays')),
-            vCenterServer: getElementValue('configVCenterServer'),
-            vCenterUsername: getElementValue('configVCenterUsername'),
-            vCenterPassword: getElementValue('configVCenterPassword'),
-            masterImagePrefix: getElementValue('configMasterImagePrefix') || 'SHC-M-',
-            runPreReqCheck: getElementChecked('configRunPreReqCheck'),
+            citrixVersion: document.getElementById('configCitrixVersion').value,
+            ddcName: document.getElementById('configDdcName').value,
+            usageDays: parseInt(document.getElementById('configUsageDays').value),
+            vCenterServer: document.getElementById('configVCenterServer').value,
+            vCenterUsername: document.getElementById('configVCenterUsername').value,
+            vCenterPassword: document.getElementById('configVCenterPassword').value,
+            masterImagePrefix: document.getElementById('configMasterImagePrefix').value,
+            runPreReqCheck: document.getElementById('configRunPreReqCheck').checked,
             auditComponents: {
                 SiteInfo: document.getElementById('configAuditSiteInfo').checked,
                 Applications: document.getElementById('configAuditApplications').checked,
@@ -368,13 +352,10 @@ function handleFileLoad(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Check if file name matches 0-Citrix-audit*.json pattern (case-insensitive)
-    const fileName = file.name || '';
-    const fileNameLower = fileName.toLowerCase();
-    const isValidFileName = fileNameLower.startsWith('0-citrix-audit') && fileNameLower.endsWith('.json');
-
-    if (!isValidFileName) {
-        showError(`Invalid file selected. Please select a file matching the pattern "0-Citrix-audit*.json". Selected: ${fileName}`);
+    // Check if file name matches 0-Citrix-audit*.json pattern
+    const fileNamePattern = /^0-Citrix-audit.*\.json$/i;
+    if (!fileNamePattern.test(file.name)) {
+        showError(`Invalid file selected. Please select a file matching the pattern "0-Citrix-audit*.json". Selected: ${file.name}`);
         return;
     }
 
@@ -894,87 +875,6 @@ function closeConfigModal() {
     document.getElementById('configModal').style.display = 'none';
 }
 
-async function testConnection() {
-    const testBtn = document.getElementById('testConnectionBtn');
-    const originalText = testBtn.innerHTML;
-
-    // Show loading state
-    testBtn.innerHTML = '🔄 Testing...';
-    testBtn.disabled = true;
-
-    try {
-        // Collect form data with safe extraction
-        const getElementValue = (id) => {
-            const element = document.getElementById(id);
-            return element ? element.value : '';
-        };
-
-        const getElementChecked = (id) => {
-            const element = document.getElementById(id);
-            return element ? element.checked : false;
-        };
-
-        const parseNumberSafely = (value, defaultValue = 30) => {
-            const parsed = parseInt(value);
-            return isNaN(parsed) ? defaultValue : Math.max(1, Math.min(365, parsed));
-        };
-
-        const config = {
-            citrixVersion: getElementValue('configCitrixVersion'),
-            ddcName: getElementValue('configDdcName'),
-            usageDays: parseNumberSafely(getElementValue('configUsageDays')),
-            vCenterServer: getElementValue('configVCenterServer'),
-            vCenterUsername: getElementValue('configVCenterUsername'),
-            vCenterPassword: getElementValue('configVCenterPassword'),
-            masterImagePrefix: getElementValue('configMasterImagePrefix') || 'SHC-M-',
-            runPreReqCheck: getElementChecked('configRunPreReqCheck')
-        };
-
-        // Call test connection API
-        const response = await fetch('/citrix/api/test-connection', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(config)
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-            // Show success message with results
-            let message = '✅ Connection test completed!\n\n';
-
-            if (result.results.citrixConnection.status === 'success') {
-                message += `• Citrix: ✅ Connected to ${result.results.citrixConnection.server}\n`;
-            } else {
-                message += `• Citrix: ❌ ${result.results.citrixConnection.message}\n`;
-            }
-
-            if (result.results.vmwareConnection.tested) {
-                if (result.results.vmwareConnection.status === 'success') {
-                    message += `• VMware: ✅ Connected to ${result.results.vmwareConnection.server}\n`;
-                } else {
-                    message += `• VMware: ❌ ${result.results.vmwareConnection.message}\n`;
-                }
-            } else {
-                message += `• VMware: ⚠️ Not configured\n`;
-            }
-
-            alert(message);
-        } else {
-            alert(`❌ Connection test failed: ${result.error}`);
-        }
-
-    } catch (error) {
-        console.error('Test connection error:', error);
-        alert(`❌ Connection test error: ${error.message}`);
-    } finally {
-        // Restore button state
-        testBtn.innerHTML = originalText;
-        testBtn.disabled = false;
-    }
-}
 
 // Folder Browser Functions
 let vmwareFolders = [];
