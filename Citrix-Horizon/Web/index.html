@@ -27,7 +27,7 @@
             <div class="refresh-controls" style="z-index: 9999; position: relative;">
                 <a href="/citrix/api/download-audit-files" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Download Tools</a>
                 <div class="file-input-wrapper" style="display: inline-block; position: relative;">
-                    <button id="loadFileBtn" class="btn btn-primary" style="z-index: 10000;">Load Audit Data</button>
+                    <button id="loadFileBtn" class="btn btn-primary" style="z-index: 10000;" title="Load 0-Citrix-audit*.json files">Load Audit Data</button>
                     <input type="file" id="fileInput" accept=".json" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
                 </div>
                 <button id="configBtn" class="btn btn-secondary" style="display: flex; align-items: center; gap: 6px;">
@@ -39,6 +39,7 @@
                     <input type="file" id="debugFileInput" accept=".zip" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
                 </div>
                 <button id="horizonTasksBtn" class="btn btn-primary">HZ Tasks</button>
+                <button onclick="window.location.href='todo.html'" class="btn btn-secondary" style="background: #17a2b8; border-color: #17a2b8;">📋 ToDo List</button>
             </div>
         </header>
 
@@ -875,6 +876,13 @@
                                 <div>
                                     <strong>Director OData</strong>
                                     <div class="component-desc">Monitoring data from Director</div>
+                                </div>
+                            </label>
+                            <label class="audit-component">
+                                <input type="checkbox" id="configAuditAppIcons" name="auditAppIcons" checked>
+                                <div>
+                                    <strong>App Icons</strong>
+                                    <div class="component-desc">Export Citrix application icons</div>
                                 </div>
                             </label>
                         </div>

@@ -36,12 +36,19 @@ document.getElementById('alertForm').addEventListener('submit', async (e) => {
     try {
         console.log('Sending form data:', formData);
         statusBox.innerHTML += '<p>📡 Connecting to server...</p>';
-        
-        const response = await fetch('api/monitor', {
+
+        // Use absolute URL for better Safari iOS compatibility
+        const apiUrl = window.location.protocol + '//' + window.location.host + '/api/monitor';
+        console.log('Using API URL:', apiUrl);
+
+        const response = await fetch(apiUrl, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json'
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
             },
+            mode: 'cors',
+            credentials: 'same-origin',
             body: JSON.stringify(formData)
         });
 

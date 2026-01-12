@@ -252,7 +252,15 @@
         // Check SMS service status on page load
         async function checkSMSStatus() {
             try {
-                const response = await fetch('/api/check-sms');
+                const checkSmsUrl = window.location.protocol + '//' + window.location.host + '/api/check-sms';
+                const response = await fetch(checkSmsUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                });
                 const data = await response.json();
                 const statusBox = document.getElementById('smsStatus');
                 
@@ -296,7 +304,8 @@
             resultBox.innerHTML = '<p>⏳ Sending test email...</p>';
             
             try {
-                const response = await fetch('/api/test-email', {
+                const testEmailUrl = window.location.protocol + '//' + window.location.host + '/api/test-email';
+                const response = await fetch(testEmailUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -340,7 +349,8 @@
             resultBox.innerHTML = '<p>⏳ Sending test SMS...</p>';
             
             try {
-                const response = await fetch('/api/test-sms', {
+                const testSmsUrl = window.location.protocol + '//' + window.location.host + '/api/test-sms';
+                const response = await fetch(testSmsUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -392,7 +402,8 @@
             resultBox.innerHTML = '<p>⏳ Sending test SMS via gateway...</p>';
 
             try {
-                const response = await fetch('/api/test-sms-gateway', {
+                const testSmsGatewayUrl = window.location.protocol + '//' + window.location.host + '/api/test-sms-gateway';
+                const response = await fetch(testSmsGatewayUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -492,7 +503,8 @@
             resultBox.innerHTML = '<p>⏳ Testing all carriers (this may take a minute)...</p>';
             
             try {
-                const response = await fetch('/api/test-all-carriers', {
+                const testAllCarriersUrl = window.location.protocol + '//' + window.location.host + '/api/test-all-carriers';
+                const response = await fetch(testAllCarriersUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'

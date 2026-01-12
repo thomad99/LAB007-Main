@@ -143,7 +143,15 @@
         
         async function loadAlertInfo() {
             try {
-                const response = await fetch(`/webalert/api/subscriber/${subscriberId}`);
+                const subscriberUrl = window.location.protocol + '//' + window.location.host + `/api/subscriber/${subscriberId}`;
+                const response = await fetch(subscriberUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                });
                 const data = await response.json();
                 
                 if (data.success) {
@@ -175,7 +183,8 @@
             button.textContent = 'Stopping...';
             
             try {
-                const response = await fetch(`/webalert/api/stop/${subscriberId}`, {
+                const stopUrl = window.location.protocol + '//' + window.location.host + `/api/stop/${subscriberId}`;
+                const response = await fetch(stopUrl, {
                     method: 'POST'
                 });
                 const data = await response.json();

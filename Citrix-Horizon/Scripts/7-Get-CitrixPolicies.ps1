@@ -9,7 +9,9 @@ param(
     [string]$CitrixVersion = "1912",
     [switch]$IncludeGPO = $true,
     [switch]$IncludeStudioPolicies = $true,
-    [switch]$IncludeConfigPolicies = $true
+    [switch]$IncludeConfigPolicies = $true,
+    [switch]$ExportPolicyTemplates = $true,
+    [string]$TemplatesPath = ".\Data\PolicyTemplates"
 )
 
 # Ensure output directory exists
@@ -767,7 +769,159 @@ try {
     if (-not $policyList) {
         $policyList = @()
     }
-    
+
+    # Export policy templates if requested
+    $exportedTemplates = @()
+    if ($ExportPolicyTemplates -and ($allPolicies.StudioPolicies.Count -gt 0 -or $allPolicies.GPOPolicies.Count -gt 0)) {
+        Write-Host "Exporting policy templates..." -ForegroundColor Yellow
+        Write-Host "[DEBUG] Starting policy template export" | Out-File -FilePath $debugFile -Append
+
+        # Ensure templates directory exists
+        if (-not (Test-Path -Path $TemplatesPath)) {
+            New-Item -ItemType Directory -Path $TemplatesPath -Force | Out-Null
+            Write-Host "Created templates directory: $TemplatesPath" -ForegroundColor Gray
+        }
+
+        # Check for required export cmdlets
+        $exportCommandsAvailable = @{}
+        $exportCmdlets = @('Export-BrokerPolicy', 'Export-BrokerGpoPolicy')
+        foreach ($cmdlet in $exportCmdlets) {
+            $cmdObj = Get-Command -Name $cmdlet -ErrorAction SilentlyContinue
+            $exportCommandsAvailable[$cmdlet] = $cmdObj -ne $null
+            Write-Host "[DEBUG] Export cmdlet '$cmdlet' available: $($exportCommandsAvailable[$cmdlet])" | Out-File -FilePath $debugFile -Append
+        }
+
+        # Report snap-in status
+        $gpoModule = Get-Module -Name "Citrix.GroupPolicy.Commands" -ErrorAction SilentlyContinue
+        $gpoSnapin = Get-PSSnapin -Name "Citrix.GroupPolicy.Commands" -ErrorAction SilentlyContinue
+
+        if ($gpoModule -or $gpoSnapin) {
+            Write-Host "✓ Citrix Group Policy module/snap-in is available" -ForegroundColor Green
+        } else {
+            Write-Host "⚠ Citrix Group Policy module/snap-in is NOT available" -ForegroundColor Yellow
+            Write-Host "  Note: GPO export functionality will be limited" -ForegroundColor Gray
+        }
+
+        # Export Studio policies
+        if ($allPolicies.StudioPolicies.Count -gt 0 -and $exportCommandsAvailable['Export-BrokerPolicy']) {
+            Write-Host "Exporting Studio policy templates..." -ForegroundColor Cyan
+            foreach ($policy in $allPolicies.StudioPolicies) {
+                try {
+                    $templateName = "$($policy.Name)-ExportX"
+                    $templatePath = Join-Path $TemplatesPath "$templateName.xml"
+
+                    Write-Host "  Exporting: $($policy.Name) → $templateName" -ForegroundColor Gray
+
+                    if ($global:CitrixAdminAddress) {
+                        Export-BrokerPolicy -AdminAddress $global:CitrixAdminAddress -Name $policy.Name -FilePath $templatePath -ErrorAction Stop
+                    } else {
+                        Export-BrokerPolicy -Name $policy.Name -FilePath $templatePath -ErrorAction Stop
+                    }
+
+                    # Try to export as GPT if GPO functionality is available
+                    if ($exportCommandsAvailable['Export-BrokerGpoPolicy']) {
+                        try {
+                            $gptPath = Join-Path $TemplatesPath "$templateName"
+                            if ($global:CitrixAdminAddress) {
+                                Export-BrokerGpoPolicy -AdminAddress $global:CitrixAdminAddress -Name $policy.Name -Path $gptPath -ErrorAction Stop
+                            } else {
+                                Export-BrokerGpoPolicy -Name $policy.Name -Path $gptPath -ErrorAction Stop
+                            }
+
+                            $exportedTemplates += @{
+                                PolicyName = $policy.Name
+                                TemplateName = $templateName
+                                TemplatePath = $templatePath
+                                GPTPath = $gptPath
+                                PolicyType = "Studio"
+                                ExportedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+                                GPTExported = $true
+                            }
+                            Write-Host "  ✓ GPT exported: $gptPath" -ForegroundColor Green
+                        }
+                        catch {
+                            Write-Warning "Failed to export GPT for $($policy.Name): $_"
+                            $exportedTemplates += @{
+                                PolicyName = $policy.Name
+                                TemplateName = $templateName
+                                TemplatePath = $templatePath
+                                PolicyType = "Studio"
+                                ExportedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+                                GPTExported = $false
+                                GPTError = $_.Exception.Message
+                            }
+                        }
+                    } else {
+                        $exportedTemplates += @{
+                            PolicyName = $policy.Name
+                            TemplateName = $templateName
+                            TemplatePath = $templatePath
+                            PolicyType = "Studio"
+                            ExportedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+                            GPTExported = $false
+                            GPTError = "Export-BrokerGpoPolicy not available"
+                        }
+                    }
+
+                    Write-Host "  ✓ Template exported: $templateName" -ForegroundColor Green
+                }
+                catch {
+                    Write-Warning "Failed to export template for $($policy.Name): $_"
+                    $exportedTemplates += @{
+                        PolicyName = $policy.Name
+                        PolicyType = "Studio"
+                        ExportedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+                        ExportError = $_.Exception.Message
+                        GPTExported = $false
+                    }
+                }
+            }
+        }
+
+        # Export GPO policies if available
+        if ($allPolicies.GPOPolicies.Count -gt 0 -and $exportCommandsAvailable['Export-BrokerGpoPolicy']) {
+            Write-Host "Exporting GPO policy templates..." -ForegroundColor Cyan
+            foreach ($policy in $allPolicies.GPOPolicies) {
+                try {
+                    $templateName = "$($policy.Name)-ExportX"
+                    $gptPath = Join-Path $TemplatesPath $templateName
+
+                    Write-Host "  Exporting GPO: $($policy.Name) → $templateName" -ForegroundColor Gray
+
+                    if ($global:CitrixAdminAddress) {
+                        Export-BrokerGpoPolicy -AdminAddress $global:CitrixAdminAddress -Name $policy.Name -Path $gptPath -ErrorAction Stop
+                    } else {
+                        Export-BrokerGpoPolicy -Name $policy.Name -Path $gptPath -ErrorAction Stop
+                    }
+
+                    $exportedTemplates += @{
+                        PolicyName = $policy.Name
+                        TemplateName = $templateName
+                        GPTPath = $gptPath
+                        PolicyType = "GPO"
+                        ExportedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+                        GPTExported = $true
+                    }
+
+                    Write-Host "  ✓ GPO exported: $gptPath" -ForegroundColor Green
+                }
+                catch {
+                    Write-Warning "Failed to export GPO template for $($policy.Name): $_"
+                    $exportedTemplates += @{
+                        PolicyName = $policy.Name
+                        PolicyType = "GPO"
+                        ExportedAt = (Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+                        ExportError = $_.Exception.Message
+                        GPTExported = $false
+                    }
+                }
+            }
+        }
+
+        Write-Host "Policy template export completed: $($exportedTemplates.Count) templates processed" -ForegroundColor Green
+        Write-Host "[DEBUG] Policy template export completed" | Out-File -FilePath $debugFile -Append
+    }
+
     # Create comprehensive result
     $totalPolicies = $allPolicies.StudioPolicies.Count + $allPolicies.GPOPolicies.Count + $allPolicies.ConfigPolicies.Count + $allPolicies.DesktopGroupPolicies.Count + $allPolicies.MachinePolicies.Count
 
@@ -797,11 +951,17 @@ try {
             Count = $allPolicies.SessionPolicies.Count
             Policies = $allPolicies.SessionPolicies
         }
+        ExportedTemplates = @{
+            Count = $exportedTemplates.Count
+            Templates = $exportedTemplates
+            TemplatesPath = $TemplatesPath
+        }
         CollectedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
         CollectionMethods = @{
             IncludeStudioPolicies = $IncludeStudioPolicies
             IncludeGPO = $IncludeGPO
             IncludeConfigPolicies = $IncludeConfigPolicies
+            ExportPolicyTemplates = $ExportPolicyTemplates
         }
         Errors = $allPolicies.Errors
     }
@@ -817,6 +977,9 @@ try {
     Write-Host "  Desktop Group Policies: $($allPolicies.DesktopGroupPolicies.Count)" -ForegroundColor Cyan
     Write-Host "  Machine Policies: $($allPolicies.MachinePolicies.Count)" -ForegroundColor Cyan
     Write-Host "  Total: $totalPolicies policies" -ForegroundColor Green
+    if ($ExportPolicyTemplates) {
+        Write-Host "  Exported Templates: $($exportedTemplates.Count)" -ForegroundColor Magenta
+    }
     Write-Host "[DEBUG] Policy data saved successfully to: $OutputPath" | Out-File -FilePath $debugFile -Append
     Write-Host "[DEBUG] Script completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
     return $result

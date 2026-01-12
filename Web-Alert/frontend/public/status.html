@@ -241,7 +241,18 @@
         async function loadStatus() {
             try {
                 console.log('Loading status data...');
-                const response = await fetch('api/status');
+                // Use absolute URL for better Safari iOS compatibility
+                const statusUrl = window.location.protocol + '//' + window.location.host + '/api/status';
+                console.log('Using status URL:', statusUrl);
+
+                const response = await fetch(statusUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                });
                 console.log('Status response:', response.status, response.statusText);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
@@ -333,7 +344,8 @@
         // Function to stop all monitoring
         async function stopAllMonitoring() {
             try {
-                const response = await fetch('api/stop-all-monitoring', {
+                const stopAllUrl = window.location.protocol + '//' + window.location.host + '/api/stop-all-monitoring';
+                const response = await fetch(stopAllUrl, {
                     method: 'POST'
                 });
                 const result = await response.json();
@@ -348,7 +360,15 @@
         // Function to show changes/diff
         async function showChanges(urlId) {
             try {
-                const response = await fetch(`api/changes/${urlId}`);
+                const changesUrl = window.location.protocol + '//' + window.location.host + `/api/changes/${urlId}`;
+                const response = await fetch(changesUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                });
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
@@ -426,7 +446,8 @@
         // Function to clear history
         async function clearHistory() {
             try {
-                const response = await fetch('api/clear-history', {
+                const clearHistoryUrl = window.location.protocol + '//' + window.location.host + '/api/clear-history';
+                const response = await fetch(clearHistoryUrl, {
                     method: 'POST'
                 });
                 const result = await response.json();
@@ -452,7 +473,8 @@
                 'Are you sure you want to stop monitoring this URL?',
                 async () => {
                     try {
-                        const response = await fetch(`api/stop-monitoring/${id}`, {
+                        const stopMonitoringUrl = window.location.protocol + '//' + window.location.host + `/api/stop-monitoring/${id}`;
+                        const response = await fetch(stopMonitoringUrl, {
                             method: 'POST'
                         });
                         const result = await response.json();

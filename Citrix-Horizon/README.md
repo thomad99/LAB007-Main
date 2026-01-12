@@ -180,7 +180,7 @@ Deploy the dashboard to Render web services for remote access from any device:
 1. Navigate to the `Web` folder
 2. Double-click `index.html` to open it in your default browser
 3. When prompted, click **"Load Audit Data"** button
-4. Navigate to the `Data` folder and select `citrix-audit-complete.json`
+4. Navigate to the `Data` folder and select `0-Citrix-audit-complete.json`
 5. The dashboard will display your data!
 
 **Note:** A sample data file (`Data\sample-citrix-audit-complete.json`) is included so you can test the dashboard immediately without running the collection scripts.
@@ -289,7 +289,7 @@ git push
 
 All data is saved to the `Data\` directory:
 
-- `citrix-audit-complete.json` - Complete audit data (used by dashboard)
+- `0-Citrix-audit-complete.json` - Complete audit data (used by dashboard)
 - `citrix-site-info.json` - Site information
 - `citrix-applications.json` - Applications data
 - `citrix-desktops.json` - Desktops data
@@ -348,7 +348,7 @@ The script now handles connection automatically based on version, but you can ma
 ### Dashboard Shows "Could not load audit data"
 
 1. Ensure data collection script has been run successfully
-2. Check that `Data\citrix-audit-complete.json` exists
+2. Check that `Data\0-Citrix-audit-complete.json` exists
 3. Use the "Load Audit Data" button to manually select the file
 4. If using a web server, verify the path is correct
 

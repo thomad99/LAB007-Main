@@ -26,6 +26,7 @@ function Get-Configuration {
             Roles = $true
             VMwareSpecs = $false  # Disabled by default since it requires VMware credentials
             VMwareFolders = $false  # Disabled by default since it requires VMware credentials
+            AppIcons = $true  # Enabled by default to export application icons
             Servers = $true
             DirectorOData = $true
         }

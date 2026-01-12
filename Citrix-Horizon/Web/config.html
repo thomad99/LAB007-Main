@@ -289,6 +289,13 @@
                             </div>
                         </label>
                         <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditAppIcons" name="auditAppIcons" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>App Icons</strong>
+                                <div style="font-size: 11px; color: #666;">Export Citrix application icons</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
                             <input type="checkbox" id="auditServers" name="auditServers" checked style="width: auto; margin-right: 8px;">
                             <div>
                                 <strong>Server Information</strong>
@@ -390,6 +397,7 @@
             document.getElementById('auditRoles').checked = config.auditComponents?.Roles !== false;
             document.getElementById('auditVMwareSpecs').checked = config.auditComponents?.VMwareSpecs || false;
             document.getElementById('auditVMwareFolders').checked = config.auditComponents?.VMwareFolders || false;
+            document.getElementById('auditAppIcons').checked = config.auditComponents?.AppIcons !== false;
             document.getElementById('auditServers').checked = config.auditComponents?.Servers !== false;
             document.getElementById('auditDirectorOData').checked = config.auditComponents?.DirectorOData !== false;
         }
@@ -418,6 +426,7 @@
                     Roles: document.getElementById('auditRoles').checked,
                     VMwareSpecs: document.getElementById('auditVMwareSpecs').checked,
                     VMwareFolders: document.getElementById('auditVMwareFolders').checked,
+                    AppIcons: document.getElementById('auditAppIcons').checked,
                     Servers: document.getElementById('auditServers').checked,
                     DirectorOData: document.getElementById('auditDirectorOData').checked
                 },

@@ -5,7 +5,7 @@
 # Last Modified: 260106:2300
 
 param(
-    [string]$OutputPath = ".\Data\citrix-audit-complete.json",
+    [string]$OutputPath = ".\Data\0-Citrix-audit-complete.json",
     [int]$UsageDaysBack = 30,
     [switch]$SkipServerSpecs = $false,
     [string]$CitrixVersion,
@@ -213,6 +213,19 @@ if (-not $connectionResult.Connected) {
 # Use the version from connection result (may be auto-discovered)
 $CitrixVersion = $connectionResult.Version
 $DDCName = $connectionResult.DDCName
+
+# Load Citrix modules/snap-ins
+Write-Host "Loading Citrix PowerShell modules/snap-ins..." -ForegroundColor Yellow
+try {
+    # Import the Load-CitrixModules module and call the function
+    Import-Module "$scriptPath\Load-CitrixModules.ps1" -Force -ErrorAction Stop
+    Load-CitrixModules -CitrixVersion $CitrixVersion
+    Write-Host "Citrix modules loaded successfully" -ForegroundColor Green
+}
+catch {
+    Write-Warning "Failed to load Citrix modules: $_"
+    Write-Warning "Policy collection may fail if Citrix modules are not available"
+}
 
 # Note: Config file is read-only - discovered values are used but not saved back
 
@@ -443,7 +456,7 @@ try {
 }
 
 try {
-    $policies = & "$scriptPath\7-Get-CitrixPolicies.ps1" -OutputPath (Join-Path $dataPath "citrix-policies.json") -CitrixVersion $CitrixVersion
+    $policies = & "$scriptPath\7-Get-CitrixPolicies.ps1" -OutputPath (Join-Path $dataPath "citrix-policies.json") -CitrixVersion $CitrixVersion -ExportPolicyTemplates
     if ($policies) {
         $auditData.NumberOfPolicies = $policies.TotalPolicies
         $auditData.Policies = $policies.Policies
@@ -650,7 +663,28 @@ if ($config.AuditComponents.VMwareFolders) {
     $vmwareFolders = $null
 }
 
-# 12. Collect Director OData (optional)
+# 12. Export Application Icons (optional)
+if ($config.AuditComponents.AppIcons) {
+    Write-Host "AppIcons: ENABLED - Application icons export enabled in config" -ForegroundColor Green
+    Write-Host "[AppIcons] Exporting Citrix application icons..." -ForegroundColor Yellow
+
+    try {
+        $appIcons = & "$scriptPath\23-Get-CitrixAppIcons.ps1" -OutputPath (Join-Path $dataPath "citrix-app-icons.json") -IconsZipPath (Join-Path $dataPath "citrix-app-icons.zip") -CitrixVersion $CitrixVersion
+        if ($appIcons) {
+            Write-Host "Application icons exported: $($appIcons.IconsExported) icons" -ForegroundColor Green
+        }
+        else {
+            Write-Warning "Application icons export returned no data"
+        }
+    }
+    catch {
+        Write-Warning "Application icons export failed: $_"
+    }
+} else {
+    Write-Host "[AppIcons] Skipping Application icons export (disabled in config)" -ForegroundColor Gray
+}
+
+# 13. Collect Director OData (optional)
 if ($config.AuditComponents.DirectorOData) {
     # Use DirectorServer parameter if provided, otherwise use DDCName, or default to localhost
     $directorServerToUse = $DirectorServer
@@ -715,7 +749,7 @@ $summary = @{
 $auditData.Summary = $summary
 
 # Save complete audit data
-$fullOutputPath = Join-Path $dataPath "citrix-audit-complete.json"
+$fullOutputPath = Join-Path $dataPath "0-Citrix-audit-complete.json"
 $auditData | ConvertTo-Json -Depth 10 | Out-File -FilePath $fullOutputPath -Encoding UTF8
 
 Write-Host ""

@@ -50,7 +50,7 @@ Click "Create Web Service" and Render will:
 ### Upload Audit Data
 
 1. Visit your Render URL
-2. Click "Choose JSON File" or drag and drop your `citrix-audit-complete.json`
+2. Click "Choose JSON File" or drag and drop your `0-Citrix-audit-complete.json`
 3. Click "Upload File"
 4. You'll be redirected to the dashboard
 

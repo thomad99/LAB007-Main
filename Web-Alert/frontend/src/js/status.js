@@ -12,12 +12,23 @@ window.onerror = function(msg, url, lineNo, columnNo, error) {
 async function fetchStatus() {
     try {
         console.log('Fetching status...');
-        const response = await fetch('api/status');
+        // Use absolute URL for better Safari iOS compatibility
+        const statusUrl = window.location.protocol + '//' + window.location.host + '/api/status';
+        console.log('Using status URL:', statusUrl);
+
+        const response = await fetch(statusUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            },
+            mode: 'cors',
+            credentials: 'same-origin'
+        });
         const data = await response.json();
         console.log('Status data:', data);
-        
+
         const monitoringList = document.getElementById('monitoringList');
-        
+
         if (data.length === 0) {
             monitoringList.innerHTML = '<p>No active monitoring tasks</p>';
             return;
@@ -25,8 +36,16 @@ async function fetchStatus() {
 
         // Fetch alert counts for each monitoring task
         const alertCounts = await Promise.all(
-            data.map(item => 
-                fetch(`api/alerts-history/${item.id}`)
+            data.map(item => {
+                const alertsUrl = window.location.protocol + '//' + window.location.host + `/api/alerts-history/${item.id}`;
+                return fetch(alertsUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    },
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                })
                     .then(res => res.json())
                     .then(alerts => ({
                         alertId: item.id,
@@ -35,8 +54,8 @@ async function fetchStatus() {
                     .catch(() => ({
                         alertId: item.id,
                         count: 0
-                    }))
-            )
+                    }));
+            })
         );
 
         monitoringList.innerHTML = data.map(item => {
@@ -88,7 +107,15 @@ async function fetchStatus() {
 // Add this test function
 async function testDatabaseConnection() {
     try {
-        const response = await fetch('api/health');
+        const healthUrl = window.location.protocol + '//' + window.location.host + '/api/health';
+        const response = await fetch(healthUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            },
+            mode: 'cors',
+            credentials: 'same-origin'
+        });
         const data = await response.json();
         console.log('Database health check:', data);
     } catch (error) {
@@ -104,7 +131,15 @@ setInterval(fetchStatus, 30000);
 // Add this function to view content
 async function viewContent(alertId) {
     try {
-        const response = await fetch(`api/content/${alertId}`);
+        const contentUrl = window.location.protocol + '//' + window.location.host + `/api/content/${alertId}`;
+        const response = await fetch(contentUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            },
+            mode: 'cors',
+            credentials: 'same-origin'
+        });
         const data = await response.json();
         
         const modal = document.createElement('div');
@@ -152,7 +187,15 @@ async function viewContent(alertId) {
 // Add this function to view debug info
 async function viewDebug(alertId) {
     try {
-        const response = await fetch(`api/debug/${alertId}`);
+        const debugUrl = window.location.protocol + '//' + window.location.host + `/api/debug/${alertId}`;
+        const response = await fetch(debugUrl, {
+            method: 'GET',
+            headers: {
+                'Accept': 'application/json'
+            },
+            mode: 'cors',
+            credentials: 'same-origin'
+        });
         const data = await response.json();
         
         const modal = document.createElement('div');

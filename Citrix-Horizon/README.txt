@@ -28,7 +28,7 @@ WHAT HAPPENS
 The audit will:
     - Check for and install missing dependencies (VMware PowerCLI, etc.)
     - Collect Citrix environment data
-    - Save results to: .\Data\citrix-audit-complete.json
+    - Save results to: .\Data\0-Citrix-audit-complete.json
     - You can then view the dashboard to see the results
 
 
@@ -39,7 +39,7 @@ After the audit completes:
     1. Navigate to the Web folder
     2. Double-click index.html
     3. Click "Load Audit Data" button
-    4. Select: Data\citrix-audit-complete.json
+    4. Select: Data\0-Citrix-audit-complete.json
 
 Or use Node.js web server (if configured):
     npm start

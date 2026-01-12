@@ -193,6 +193,7 @@ document.addEventListener('DOMContentLoaded', async function() {
                 Roles: document.getElementById('configAuditRoles').checked,
                 VMwareSpecs: document.getElementById('configAuditVMwareSpecs').checked,
                 VMwareFolders: document.getElementById('configAuditVMwareFolders').checked,
+                AppIcons: document.getElementById('configAuditAppIcons').checked,
                 Servers: document.getElementById('configAuditServers').checked,
                 DirectorOData: document.getElementById('configAuditDirectorOData').checked
             },
@@ -350,7 +351,14 @@ async function loadDefaultData() {
 function handleFileLoad(event) {
     const file = event.target.files[0];
     if (!file) return;
-    
+
+    // Check if file name matches 0-Citrix-audit*.json pattern
+    const fileNamePattern = /^0-Citrix-audit.*\.json$/i;
+    if (!fileNamePattern.test(file.name)) {
+        showError(`Invalid file selected. Please select a file matching the pattern "0-Citrix-audit*.json". Selected: ${file.name}`);
+        return;
+    }
+
     hideError();
     showLoading();
     
@@ -1247,6 +1255,7 @@ async function loadConfigIntoMainModal() {
             document.getElementById('configAuditRoles').checked = config.auditComponents?.Roles !== false;
             document.getElementById('configAuditVMwareSpecs').checked = config.auditComponents?.VMwareSpecs || false;
             document.getElementById('configAuditVMwareFolders').checked = config.auditComponents?.VMwareFolders || false;
+            document.getElementById('configAuditAppIcons').checked = config.auditComponents?.AppIcons !== false;
             document.getElementById('configAuditServers').checked = config.auditComponents?.Servers !== false;
             document.getElementById('configAuditDirectorOData').checked = config.auditComponents?.DirectorOData !== false;
         } else {
