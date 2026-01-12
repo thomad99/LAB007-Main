@@ -40,17 +40,6 @@ process.on('unhandledRejection', (reason, promise) => {
 app.use(cors());
 app.use(express.json());
 
-// Add request logging middleware at the very top to catch ALL requests
-app.use((req, res, next) => {
-    console.log(`[Web-Alert] ===== INCOMING REQUEST =====`);
-    console.log(`[Web-Alert] Method: ${req.method}`);
-    console.log(`[Web-Alert] Path: ${req.path}`);
-    console.log(`[Web-Alert] Original URL: ${req.originalUrl}`);
-    console.log(`[Web-Alert] Base URL: ${req.baseUrl}`);
-    console.log(`[Web-Alert] URL: ${req.url}`);
-    console.log(`[Web-Alert] ===========================`);
-    next();
-});
 
 // Store active monitoring tasks
 const monitoringTasks = new Map();
@@ -857,37 +846,6 @@ app.get('/health', (req, res) => {
     });
 });
 
-// Handle CORS preflight for test endpoint
-app.options('/api/test', (req, res) => {
-    console.log('[Web-Alert] OPTIONS /api/test (CORS preflight)');
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-    res.sendStatus(200);
-});
-
-// Add this simple test route (moved up to ensure it's not overridden)
-app.get('/api/test', (req, res) => {
-    console.log('[Web-Alert] GET /api/test endpoint called');
-    console.log('[Web-Alert] Request method:', req.method);
-    console.log('[Web-Alert] Request headers:', req.headers);
-    console.log('[Web-Alert] Request origin:', req.headers.origin);
-    console.log('[Web-Alert] Request host:', req.headers.host);
-
-    // Ensure CORS headers are set
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
-
-    const response = {
-        message: 'Test route working',
-        timestamp: new Date().toISOString(),
-        server: 'Web-Alert',
-        version: '1.0'
-    };
-    console.log('[Web-Alert] Sending response:', response);
-    res.json(response);
-});
 
 // API endpoint to start monitoring
 app.post('/api/monitor', async (req, res) => {
@@ -2304,26 +2262,27 @@ app.post('/api/test-sms', async (req, res) => {
 });
 
 // Catch-all for unmatched API routes (before static file serving)
-app.use((req, res, next) => {
-    // Only handle if it's an API route and hasn't been handled
-    if (req.path.startsWith('/api/')) {
-        console.error(`[Web-Alert] ===== 404 - UNMATCHED API ROUTE =====`);
-        console.error(`[Web-Alert] Method: ${req.method}`);
-        console.error(`[Web-Alert] Path: ${req.path}`);
-        console.error(`[Web-Alert] Original URL: ${req.originalUrl}`);
-        console.error(`[Web-Alert] Base URL: ${req.baseUrl}`);
-        console.error(`[Web-Alert] URL: ${req.url}`);
-        console.error(`[Web-Alert] =====================================`);
-        return res.status(404).json({ 
-            error: `API route not found: ${req.method} ${req.path}`,
-            originalUrl: req.originalUrl,
-            baseUrl: req.baseUrl,
-            path: req.path,
-            url: req.url
-        });
-    }
-    next();
-});
+// Temporarily disabled for debugging
+// app.use((req, res, next) => {
+//     // Only handle if it's an API route and hasn't been handled
+//     if (req.path.startsWith('/api/')) {
+//         console.error(`[Web-Alert] ===== 404 - UNMATCHED API ROUTE =====`);
+//         console.error(`[Web-Alert] Method: ${req.method}`);
+//         console.error(`[Web-Alert] Path: ${req.path}`);
+//         console.error(`[Web-Alert] Original URL: ${req.originalUrl}`);
+//         console.error(`[Web-Alert] Base URL: ${req.baseUrl}`);
+//         console.error(`[Web-Alert] URL: ${req.url}`);
+//         console.error(`[Web-Alert] =====================================`);
+//         return res.status(404).json({
+//             error: `API route not found: ${req.method} ${req.path}`,
+//             originalUrl: req.originalUrl,
+//             baseUrl: req.baseUrl,
+//             path: req.path,
+//             url: req.url
+//         });
+//     }
+//     next();
+// });
 
 // Static file serving - must come AFTER all API routes to avoid conflicts
 app.use(express.static(path.join(__dirname, '../frontend/public')));
