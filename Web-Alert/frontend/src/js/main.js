@@ -9,6 +9,12 @@ window.onerror = function(msg, url, lineNo, columnNo, error) {
     return false;
 };
 
+// Utility function to get correct API base path
+function getApiBaseUrl() {
+    const basePath = window.location.pathname.startsWith('/webalert') ? '/webalert' : '';
+    return window.location.protocol + '//' + window.location.host + basePath;
+}
+
 // Function to get URL parameters and pre-fill form (for mobile Safari compatibility)
 function prefillFormFromUrl() {
     const urlParams = new URLSearchParams(window.location.search);
@@ -79,8 +85,8 @@ document.getElementById('alertForm').addEventListener('submit', async (e) => {
 
         statusBox.innerHTML += '<p>📡 Connecting to server...</p>';
 
-        // Use absolute URL for better Safari iOS compatibility
-        const apiUrl = window.location.protocol + '//' + window.location.host + '/api/monitor';
+        // Use correct base path - detect if running under /webalert
+        const apiUrl = getApiBaseUrl() + '/api/monitor';
         console.log('Using API URL:', apiUrl);
         console.log('Fetch options:', {
             method: 'POST',

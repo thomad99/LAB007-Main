@@ -252,7 +252,8 @@
         // Check SMS service status on page load
         async function checkSMSStatus() {
             try {
-                const checkSmsUrl = window.location.protocol + '//' + window.location.host + '/api/check-sms';
+                const basePath = window.location.pathname.startsWith('/webalert') ? '/webalert' : '';
+                const checkSmsUrl = window.location.protocol + '//' + window.location.host + basePath + '/api/check-sms';
                 const response = await fetch(checkSmsUrl, {
                     method: 'GET',
                     headers: {
@@ -304,7 +305,8 @@
             resultBox.innerHTML = '<p>⏳ Sending test email...</p>';
             
             try {
-                const testEmailUrl = window.location.protocol + '//' + window.location.host + '/api/test-email';
+                const basePath = window.location.pathname.startsWith('/webalert') ? '/webalert' : '';
+                const testEmailUrl = window.location.protocol + '//' + window.location.host + basePath + '/api/test-email';
                 const response = await fetch(testEmailUrl, {
                     method: 'POST',
                     headers: {
@@ -349,7 +351,7 @@
             resultBox.innerHTML = '<p>⏳ Sending test SMS...</p>';
             
             try {
-                const testSmsUrl = window.location.protocol + '//' + window.location.host + '/api/test-sms';
+                const testSmsUrl = window.location.protocol + '//' + window.location.host + basePath + '/api/test-sms';
                 const response = await fetch(testSmsUrl, {
                     method: 'POST',
                     headers: {
@@ -402,7 +404,7 @@
             resultBox.innerHTML = '<p>⏳ Sending test SMS via gateway...</p>';
 
             try {
-                const testSmsGatewayUrl = window.location.protocol + '//' + window.location.host + '/api/test-sms-gateway';
+                const testSmsGatewayUrl = window.location.protocol + '//' + window.location.host + basePath + '/api/test-sms-gateway';
                 const response = await fetch(testSmsGatewayUrl, {
                     method: 'POST',
                     headers: {
@@ -503,7 +505,7 @@
             resultBox.innerHTML = '<p>⏳ Testing all carriers (this may take a minute)...</p>';
             
             try {
-                const testAllCarriersUrl = window.location.protocol + '//' + window.location.host + '/api/test-all-carriers';
+                const testAllCarriersUrl = window.location.protocol + '//' + window.location.host + basePath + '/api/test-all-carriers';
                 const response = await fetch(testAllCarriersUrl, {
                     method: 'POST',
                     headers: {

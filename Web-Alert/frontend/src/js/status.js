@@ -9,11 +9,17 @@ window.onerror = function(msg, url, lineNo, columnNo, error) {
     return false;
 };
 
+// Utility function to get correct API base path
+function getApiBaseUrl() {
+    const basePath = window.location.pathname.startsWith('/webalert') ? '/webalert' : '';
+    return window.location.protocol + '//' + window.location.host + basePath;
+}
+
 async function fetchStatus() {
     try {
         console.log('Fetching status...');
-        // Use absolute URL for better Safari iOS compatibility
-        const statusUrl = window.location.protocol + '//' + window.location.host + '/api/status';
+        // Use correct base path - detect if running under /webalert
+        const statusUrl = getApiBaseUrl() + '/api/status';
         console.log('Using status URL:', statusUrl);
 
         const response = await fetch(statusUrl, {
@@ -37,7 +43,7 @@ async function fetchStatus() {
         // Fetch alert counts for each monitoring task
         const alertCounts = await Promise.all(
             data.map(item => {
-                const alertsUrl = window.location.protocol + '//' + window.location.host + `/api/alerts-history/${item.id}`;
+                const alertsUrl = getApiBaseUrl() + `/api/alerts-history/${item.id}`;
                 return fetch(alertsUrl, {
                     method: 'GET',
                     headers: {
@@ -107,7 +113,7 @@ async function fetchStatus() {
 // Add this test function
 async function testDatabaseConnection() {
     try {
-        const healthUrl = window.location.protocol + '//' + window.location.host + '/api/health';
+        const healthUrl = getApiBaseUrl() + '/api/health';
         const response = await fetch(healthUrl, {
             method: 'GET',
             headers: {
@@ -131,7 +137,7 @@ setInterval(fetchStatus, 30000);
 // Add this function to view content
 async function viewContent(alertId) {
     try {
-        const contentUrl = window.location.protocol + '//' + window.location.host + `/api/content/${alertId}`;
+        const contentUrl = getApiBaseUrl() + `/api/content/${alertId}`;
         const response = await fetch(contentUrl, {
             method: 'GET',
             headers: {
@@ -187,7 +193,7 @@ async function viewContent(alertId) {
 // Add this function to view debug info
 async function viewDebug(alertId) {
     try {
-        const debugUrl = window.location.protocol + '//' + window.location.host + `/api/debug/${alertId}`;
+        const debugUrl = getApiBaseUrl() + `/api/debug/${alertId}`;
         const response = await fetch(debugUrl, {
             method: 'GET',
             headers: {
