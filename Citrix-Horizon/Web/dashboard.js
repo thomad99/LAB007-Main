@@ -178,8 +178,8 @@ document.addEventListener('DOMContentLoaded', async function() {
             ddcName: document.getElementById('configDdcName').value,
             usageDays: parseInt(document.getElementById('configUsageDays').value),
             vCenterServer: document.getElementById('configVCenterServer').value,
-            vCenterUsername: document.getElementById('configVCenterUsername').value,
-            vCenterPassword: document.getElementById('configVCenterPassword').value,
+
+
             masterImagePrefix: document.getElementById('configMasterImagePrefix').value,
             runPreReqCheck: document.getElementById('configRunPreReqCheck').checked,
             auditComponents: {
@@ -1241,8 +1241,8 @@ async function loadConfigIntoMainModal() {
 
             // Load VMware config
             document.getElementById('configVCenterServer').value = config.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
-            document.getElementById('configVCenterUsername').value = config.vCenterUsername || '';
-            document.getElementById('configVCenterPassword').value = config.vCenterPassword || '';
+
+
             document.getElementById('configMasterImagePrefix').value = config.masterImagePrefix || 'SHC-M-';
 
             // Load audit components
@@ -1304,6 +1304,8 @@ function showHorizonTask(taskName) {
         populateMasterImagesCloneList();
     } else if (taskName === 'addApplications') {
         populateApplicationsHZList();
+    } else if (taskName === 'createFarms') {
+        initializeCreateFarmsForm();
     }
 }
 
@@ -3046,3 +3048,167 @@ async function saveConfigToFile(config) {
     }
 }
 
+// Create Farms Functions
+function initializeCreateFarmsForm() {
+    // Add event listener for logoff disconnects dropdown
+    const logoffDisconnectsSelect = document.getElementById('logoffDisconnects');
+    const logoffMinutesInput = document.getElementById('logoffDisconnectsMinutes');
+
+    if (logoffDisconnectsSelect && logoffMinutesInput) {
+        logoffDisconnectsSelect.addEventListener('change', function() {
+            if (this.value === 'Custom') {
+                logoffMinutesInput.style.display = 'block';
+                logoffMinutesInput.required = true;
+            } else {
+                logoffMinutesInput.style.display = 'none';
+                logoffMinutesInput.required = false;
+                logoffMinutesInput.value = '';
+            }
+        });
+    }
+}
+
+function generateFarmScript() {
+    const formData = {
+        farmId: document.getElementById('farmId').value.trim(),
+        farmDescription: document.getElementById('farmDescription').value.trim(),
+        defaultProtocol: document.getElementById('defaultProtocol').value,
+        prelaunchTimeout: document.getElementById('prelaunchTimeout').value,
+        emptySessionTimeout: document.getElementById('emptySessionTimeout').value,
+        timeoutBehaviour: document.getElementById('timeoutBehaviour').value,
+        logoffDisconnects: document.getElementById('logoffDisconnects').value,
+        logoffDisconnectsMinutes: document.getElementById('logoffDisconnectsMinutes').value,
+        maxSessionsPerHost: document.getElementById('maxSessionsPerHost').value,
+        namingPattern: document.getElementById('namingPattern').value.trim(),
+        organizationalUnit: document.getElementById('organizationalUnit').value.trim(),
+        farmSizeMax: document.getElementById('farmSizeMax').value,
+        farmSizeMin: document.getElementById('farmSizeMin').value,
+        masterImage: document.getElementById('masterImage').value.trim()
+    };
+
+    // Validate required fields
+    if (!formData.farmId || !formData.farmDescription || !formData.maxSessionsPerHost ||
+        !formData.namingPattern || !formData.organizationalUnit || !formData.farmSizeMax ||
+        !formData.farmSizeMin || !formData.masterImage) {
+        alert('Please fill in all required fields.');
+        return;
+    }
+
+    // Validate custom logoff disconnects minutes if selected
+    if (formData.logoffDisconnects === 'Custom' && !formData.logoffDisconnectsMinutes) {
+        alert('Please specify the number of minutes for logoff disconnects.');
+        return;
+    }
+
+    // Generate PowerShell script
+    const script = generateFarmCreationScript(formData);
+
+    // Display the script
+    document.getElementById('farmScriptContent').value = script;
+    document.getElementById('farmScriptOutput').style.display = 'block';
+
+    // Scroll to the script output
+    document.getElementById('farmScriptOutput').scrollIntoView({ behavior: 'smooth' });
+}
+
+function generateFarmCreationScript(data) {
+    const logoffDisconnectsValue = data.logoffDisconnects === 'Custom' ?
+        data.logoffDisconnectsMinutes : '$null';
+
+    return `# VMware Horizon Farm Creation Script
+# Generated for Farm: ${data.farmId}
+# Description: ${data.farmDescription}
+
+# Import required modules
+Import-Module VMware.VimAutomation.HorizonView
+Import-Module VMware.VimAutomation.Core
+
+# Connect to vCenter Server (update with your credentials)
+$vcServer = "your-vcenter-server"
+$vcUsername = "your-username"
+$vcPassword = "your-password"
+
+Connect-VIServer -Server $vcServer -User $vcUsername -Password $vcPassword
+
+# Farm Configuration
+$FarmConfig = @{
+    FarmName = "${data.farmId}"
+    Description = "${data.farmDescription}"
+    Enabled = $true
+    DefaultProtocol = [VMware.Hv.Protocol]$data.defaultProtocol
+    PrelaunchTimeout = ${data.prelaunchTimeout}
+    EmptySessionTimeout = ${data.emptySessionTimeout}
+    TimeoutBehaviour = [VMware.Hv.TimeoutBehaviour]::${data.timeoutBehaviour}
+    LogoffDisconnectsSessions = ${logoffDisconnectsValue}
+    MaxSessionsPerHost = ${data.maxSessionsPerHost}
+    NamingPattern = "${data.namingPattern}"
+    OrganizationalUnit = "${data.organizationalUnit}"
+    FarmSizeMax = ${data.farmSizeMax}
+    FarmSizeMin = ${data.farmSizeMin}
+    MasterImage = "${data.masterImage}"
+}
+
+# Create the farm
+try {
+    Write-Host "Creating VMware Horizon Farm: ${data.farmId}" -ForegroundColor Green
+
+    # Create RDS farm using Horizon API
+    $farm = New-HVFarm -Name $FarmConfig.FarmName \\
+                       -Description $FarmConfig.Description \\
+                       -Enabled $FarmConfig.Enabled \\
+                       -DefaultProtocol $FarmConfig.DefaultProtocol \\
+                       -PrelaunchTimeout $FarmConfig.PrelaunchTimeout \\
+                       -EmptySessionTimeout $FarmConfig.EmptySessionTimeout \\
+                       -TimeoutBehaviour $FarmConfig.TimeoutBehaviour \\
+                       -LogoffDisconnectsSessions $FarmConfig.LogoffDisconnectsSessions \\
+                       -MaxSessionsPerHost $FarmConfig.MaxSessionsPerHost \\
+                       -NamingPattern $FarmConfig.NamingPattern \\
+                       -OrganizationalUnit $FarmConfig.OrganizationalUnit \\
+                       -FarmSizeMax $FarmConfig.FarmSizeMax \\
+                       -FarmSizeMin $FarmConfig.FarmSizeMin \\
+                       -MasterImage $FarmConfig.MasterImage
+
+    Write-Host "Farm created successfully!" -ForegroundColor Green
+    Write-Host "Farm ID: $($farm.Id)" -ForegroundColor Cyan
+    Write-Host "Farm Name: $($farm.Name)" -ForegroundColor Cyan
+
+} catch {
+    Write-Error "Failed to create farm: $_"
+    exit 1
+} finally {
+    # Disconnect from vCenter
+    Disconnect-VIServer -Server $vcServer -Confirm:$false
+}
+
+Write-Host "Farm creation script completed." -ForegroundColor Green`;
+}
+
+function copyFarmScript() {
+    const scriptContent = document.getElementById('farmScriptContent');
+    scriptContent.select();
+    document.execCommand('copy');
+
+    // Show feedback
+    const originalText = scriptContent.value;
+    scriptContent.value = "# Script copied to clipboard!\n" + originalText;
+    setTimeout(() => {
+        scriptContent.value = originalText;
+    }, 2000);
+}
+
+function downloadFarmScript() {
+    const scriptContent = document.getElementById('farmScriptContent').value;
+    const farmId = document.getElementById('farmId').value.trim() || 'horizon-farm';
+
+    const blob = new Blob([scriptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${farmId}-creation-script.ps1`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+
+    window.URL.revokeObjectURL(url);
+}

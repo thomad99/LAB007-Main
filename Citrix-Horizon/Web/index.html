@@ -621,6 +621,113 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- Create Farms Task -->
+                <div id="createFarmsTask" class="horizon-task-panel">
+                    <h3>Create Farms</h3>
+                    <p>Create VMware Horizon farms with custom configurations.</p>
+
+                    <div style="margin: 20px 0;">
+                        <form id="createFarmsForm" style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-width: 800px;">
+
+                            <!-- Left Column -->
+                            <div style="display: flex; flex-direction: column; gap: 15px;">
+                                <div>
+                                    <label for="farmId" style="display: block; margin-bottom: 5px; font-weight: bold;">ID:</label>
+                                    <input type="text" id="farmId" name="farmId" placeholder="Farm identifier" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+
+                                <div>
+                                    <label for="farmDescription" style="display: block; margin-bottom: 5px; font-weight: bold;">Description:</label>
+                                    <input type="text" id="farmDescription" name="farmDescription" placeholder="Farm description" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+
+                                <div>
+                                    <label for="defaultProtocol" style="display: block; margin-bottom: 5px; font-weight: bold;">Default Protocol:</label>
+                                    <select id="defaultProtocol" name="defaultProtocol" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="BLAST" selected>BLAST</option>
+                                        <option value="PCOIP">PCOIP</option>
+                                    </select>
+                                </div>
+
+                                <div>
+                                    <label for="prelaunchTimeout" style="display: block; margin-bottom: 5px; font-weight: bold;">Prelaunch Timeout:</label>
+                                    <input type="number" id="prelaunchTimeout" name="prelaunchTimeout" value="30" min="1" max="3600" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+
+                                <div>
+                                    <label for="emptySessionTimeout" style="display: block; margin-bottom: 5px; font-weight: bold;">Empty Session Timeout:</label>
+                                    <input type="number" id="emptySessionTimeout" name="emptySessionTimeout" value="30" min="1" max="3600" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+
+                                <div>
+                                    <label for="timeoutBehaviour" style="display: block; margin-bottom: 5px; font-weight: bold;">Timeout Behaviour:</label>
+                                    <select id="timeoutBehaviour" name="timeoutBehaviour" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="Disconnect" selected>Disconnect</option>
+                                        <option value="Logoff">Logoff</option>
+                                        <option value="Never">Never</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <!-- Right Column -->
+                            <div style="display: flex; flex-direction: column; gap: 15px;">
+                                <div>
+                                    <label for="logoffDisconnects" style="display: block; margin-bottom: 5px; font-weight: bold;">Logoff Disconnects Sessions:</label>
+                                    <select id="logoffDisconnects" name="logoffDisconnects" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                        <option value="Never" selected>Never</option>
+                                        <option value="Custom">Custom (specify minutes)</option>
+                                    </select>
+                                    <input type="number" id="logoffDisconnectsMinutes" name="logoffDisconnectsMinutes" placeholder="Minutes" min="1" max="1440" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; margin-top: 5px; display: none;">
+                                </div>
+
+                                <div>
+                                    <label for="maxSessionsPerHost" style="display: block; margin-bottom: 5px; font-weight: bold;">Max Sessions per Host:</label>
+                                    <input type="number" id="maxSessionsPerHost" name="maxSessionsPerHost" min="1" max="100" placeholder="e.g., 10" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+
+                                <div>
+                                    <label for="namingPattern" style="display: block; margin-bottom: 5px; font-weight: bold;">Naming Pattern:</label>
+                                    <input type="text" id="namingPattern" name="namingPattern" placeholder="e.g., HZ-FARM-{n}" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+
+                                <div>
+                                    <label for="organizationalUnit" style="display: block; margin-bottom: 5px; font-weight: bold;">OU:</label>
+                                    <input type="text" id="organizationalUnit" name="organizationalUnit" placeholder="e.g., OU=Desktops,DC=domain,DC=com" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+
+                                <div>
+                                    <label for="farmSizeMax" style="display: block; margin-bottom: 5px; font-weight: bold;">Farm Size Max:</label>
+                                    <input type="number" id="farmSizeMax" name="farmSizeMax" min="1" max="1000" placeholder="Maximum farm size" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+
+                                <div>
+                                    <label for="farmSizeMin" style="display: block; margin-bottom: 5px; font-weight: bold;">Farm Size Min:</label>
+                                    <input type="number" id="farmSizeMin" name="farmSizeMin" min="1" max="1000" placeholder="Minimum farm size" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+
+                                <div>
+                                    <label for="masterImage" style="display: block; margin-bottom: 5px; font-weight: bold;">Master Image:</label>
+                                    <input type="text" id="masterImage" name="masterImage" placeholder="Master image path or name" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                                </div>
+                            </div>
+                        </form>
+
+                        <div style="margin-top: 30px; text-align: center;">
+                            <button id="generateFarmScriptBtn" class="btn btn-primary" onclick="generateFarmScript()" style="padding: 12px 24px; font-size: 16px;">Generate Farm Script</button>
+                        </div>
+
+                        <div id="farmScriptOutput" style="display: none; margin-top: 30px;">
+                            <h4>Generated Farm Creation Script</h4>
+                            <p style="color: #666; margin-bottom: 15px;">This PowerShell script will create the VMware Horizon farm with your specified configuration.</p>
+                            <textarea id="farmScriptContent" readonly style="width: 100%; height: 400px; font-family: 'Courier New', monospace; font-size: 12px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
+                            <div style="margin-top: 15px; text-align: right;">
+                                <button class="btn btn-secondary" onclick="copyFarmScript()">Copy to Clipboard</button>
+                                <button class="btn btn-primary" onclick="downloadFarmScript()">Download Script</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -773,17 +880,6 @@
                             <div class="help-text">Enter your vCenter server FQDN for VMware operations</div>
                         </div>
 
-                        <div class="form-group">
-                            <label for="configVCenterUsername">vCenter Username:</label>
-                            <input type="text" id="configVCenterUsername" name="vCenterUsername" value="" placeholder="username@domain.com">
-                            <div class="help-text">Optional: VMware username for vCenter authentication</div>
-                        </div>
-
-                        <div class="form-group">
-                            <label for="configVCenterPassword">vCenter Password:</label>
-                            <input type="password" id="configVCenterPassword" name="vCenterPassword" value="" placeholder="password">
-                            <div class="help-text">Optional: VMware password for vCenter authentication</div>
-                        </div>
 
                         <div class="form-group">
                             <label for="configMasterImagePrefix">Master Image Prefix:</label>
