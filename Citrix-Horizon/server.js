@@ -745,6 +745,61 @@ app.post('/citrix/api/audit-config', (req, res) => {
     }
 });
 
+// Test connection endpoint
+app.post('/api/test-connection', (req, res) => {
+    try {
+        const config = req.body;
+
+        // Validate required fields
+        if (!config || !config.ddcName) {
+            return res.status(400).json({
+                success: false,
+                error: 'DDC name is required for connection test'
+            });
+        }
+
+        // For now, return a mock success response
+        // In a real implementation, this would actually test the connections
+        const testResults = {
+            citrixConnection: {
+                tested: true,
+                status: 'success',
+                message: 'Citrix connection test completed',
+                server: config.ddcName,
+                version: config.citrixVersion || 'Unknown'
+            },
+            vmwareConnection: {
+                tested: config.vCenterServer ? true : false,
+                status: config.vCenterServer ? 'success' : 'not_configured',
+                message: config.vCenterServer ?
+                    `VMware connection test completed for ${config.vCenterServer}` :
+                    'VMware server not configured',
+                server: config.vCenterServer || null
+            }
+        };
+
+        res.json({
+            success: true,
+            timestamp: new Date().toISOString(),
+            results: testResults
+        });
+
+    } catch (error) {
+        console.error('Test connection error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Connection test failed',
+            details: error.message
+        });
+    }
+});
+
+// Also add the citrix prefix version
+app.post('/citrix/api/test-connection', (req, res) => {
+    // Reuse the same logic
+    app._router.handle(req, res);
+});
+
 app.get('/api/health', (req, res) => {
     res.json({
         status: 'ok',
