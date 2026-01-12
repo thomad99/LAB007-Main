@@ -9,6 +9,45 @@ window.onerror = function(msg, url, lineNo, columnNo, error) {
     return false;
 };
 
+// Function to get URL parameters and pre-fill form (for mobile Safari compatibility)
+function prefillFormFromUrl() {
+    const urlParams = new URLSearchParams(window.location.search);
+
+    const websiteUrl = urlParams.get('websiteUrl');
+    const pollingInterval = urlParams.get('pollingInterval');
+    const duration = urlParams.get('duration');
+    const email = urlParams.get('email');
+
+    if (websiteUrl) {
+        document.getElementById('websiteUrl').value = decodeURIComponent(websiteUrl);
+        console.log('Pre-filled website URL from URL parameter:', websiteUrl);
+    }
+    if (pollingInterval) {
+        document.getElementById('pollingInterval').value = parseInt(pollingInterval) || 3;
+        console.log('Pre-filled polling interval from URL parameter:', pollingInterval);
+    }
+    if (duration) {
+        document.getElementById('duration').value = parseInt(duration) || 10;
+        console.log('Pre-filled duration from URL parameter:', duration);
+    }
+    if (email) {
+        document.getElementById('email').value = decodeURIComponent(email);
+        console.log('Pre-filled email from URL parameter:', email);
+    }
+
+    // Clear URL parameters after pre-filling to clean up the URL
+    if (websiteUrl || pollingInterval || duration || email) {
+        const newUrl = window.location.protocol + '//' + window.location.host + window.location.pathname;
+        window.history.replaceState({}, document.title, newUrl);
+        console.log('Cleared URL parameters from address bar');
+    }
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    prefillFormFromUrl();
+});
+
 document.getElementById('alertForm').addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -35,11 +74,23 @@ document.getElementById('alertForm').addEventListener('submit', async (e) => {
 
     try {
         console.log('Sending form data:', formData);
+        console.log('User Agent:', navigator.userAgent);
+        console.log('Is mobile Safari:', /Safari/i.test(navigator.userAgent) && /Mobile/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent));
+
         statusBox.innerHTML += '<p>📡 Connecting to server...</p>';
 
         // Use absolute URL for better Safari iOS compatibility
         const apiUrl = window.location.protocol + '//' + window.location.host + '/api/monitor';
         console.log('Using API URL:', apiUrl);
+        console.log('Fetch options:', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json'
+            },
+            mode: 'cors',
+            credentials: 'same-origin'
+        });
 
         const response = await fetch(apiUrl, {
             method: 'POST',
@@ -51,6 +102,9 @@ document.getElementById('alertForm').addEventListener('submit', async (e) => {
             credentials: 'same-origin',
             body: JSON.stringify(formData)
         });
+
+        console.log('Fetch response status:', response.status);
+        console.log('Fetch response headers:', Object.fromEntries(response.headers.entries()));
 
         statusBox.innerHTML += '<p>⌛ Processing response...</p>';
         
@@ -81,11 +135,26 @@ document.getElementById('alertForm').addEventListener('submit', async (e) => {
         }
     } catch (error) {
         console.error('Form submission error:', error);
+        console.error('Primary fetch submission failed:', error);
+
+        // Enhanced error reporting for mobile Safari debugging
+        const isMobileSafari = /Safari/i.test(navigator.userAgent) &&
+                              /Mobile/i.test(navigator.userAgent) &&
+                              !/Chrome/i.test(navigator.userAgent);
+
         statusBox.innerHTML = `
             <p>❌ Error occurred:</p>
             <p>${error.message}</p>
+            ${isMobileSafari ? '<p><small>📱 Mobile Safari detected - if this persists, try using a different browser.</small></p>' : ''}
             <p>Please try again or contact support if the problem persists.</p>
+            <p><button onclick="retrySubmission()" style="padding: 5px 10px; margin-top: 10px;">Retry Submission</button></p>
         `;
         document.getElementById('statusBox').classList.remove('status-active');
+
+        // Add retry function to window
+        window.retrySubmission = function() {
+            console.log('Retrying submission...');
+            document.getElementById('alertForm').dispatchEvent(new Event('submit'));
+        };
     }
 });

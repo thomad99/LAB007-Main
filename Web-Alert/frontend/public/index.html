@@ -229,6 +229,7 @@
                     <small class="text-muted">How long to monitor the website</small>
                 </div>
                 <button type="submit" class="btn btn-primary">Start Monitoring</button>
+                <button type="button" onclick="testConnectivity()" class="btn" style="background-color: #6c757d; color: white; margin-left: 10px;">Test Connection</button>
             </form>
             <div id="statusBox" class="status-box">
                 <h2>Monitoring Status</h2>
@@ -242,5 +243,34 @@
     
     <script src="src/js/utils.js"></script>
     <script src="src/js/main.js"></script>
+
+    <!-- Mobile Safari debugging -->
+    <script>
+        // Add a simple test to verify basic connectivity
+        window.testConnectivity = async function() {
+            try {
+                console.log('Testing basic connectivity...');
+                const testUrl = window.location.protocol + '//' + window.location.host + '/api/test';
+                const response = await fetch(testUrl, {
+                    method: 'GET',
+                    headers: { 'Accept': 'application/json' },
+                    mode: 'cors',
+                    credentials: 'same-origin'
+                });
+                const data = await response.json();
+                console.log('Connectivity test result:', data);
+                alert('✅ Connectivity test passed: ' + JSON.stringify(data));
+            } catch (error) {
+                console.error('Connectivity test failed:', error);
+                alert('❌ Connectivity test failed: ' + error.message);
+            }
+        };
+
+        // Auto-run connectivity test on mobile Safari
+        if (/Safari/i.test(navigator.userAgent) && /Mobile/i.test(navigator.userAgent) && !/Chrome/i.test(navigator.userAgent)) {
+            console.log('📱 Mobile Safari detected - running connectivity test...');
+            setTimeout(testConnectivity, 2000);
+        }
+    </script>
 </body>
 </html> 

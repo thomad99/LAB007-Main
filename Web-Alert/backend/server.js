@@ -722,7 +722,18 @@ setTimeout(() => {
 
 // Add specific routes for HTML files
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/public/index.html'));
+    // Check if this is a GET request with form parameters (likely from mobile Safari)
+    const { websiteUrl, pollingInterval, duration, email } = req.query;
+
+    if (websiteUrl || pollingInterval || duration || email) {
+        console.log('[Web-Alert] Mobile Safari GET request detected with form data:', req.query);
+
+        // Serve the HTML file, and let JavaScript handle pre-filling the form
+        res.sendFile(path.join(__dirname, '../frontend/public/index.html'));
+    } else {
+        // Normal request for the main page
+        res.sendFile(path.join(__dirname, '../frontend/public/index.html'));
+    }
 });
 
 app.get('/status.html', (req, res) => {
