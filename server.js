@@ -275,6 +275,22 @@ function setupWebAlertFallback() {
 
     // WallPrintLab - Static wall printing services
     app.use('/WallPrintLab', express.static(path.join(__dirname, 'WallPrintLab', 'public')));
+    app.get('/WallPrintLab', (req, res) => {
+        const indexPath = path.join(__dirname, 'WallPrintLab', 'public', 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            res.status(404).send('WallPrintLab index.html not found');
+        }
+    });
+    app.get('/WallPrintLab/', (req, res) => {
+        const indexPath = path.join(__dirname, 'WallPrintLab', 'public', 'index.html');
+        if (fs.existsSync(indexPath)) {
+            res.sendFile(indexPath);
+        } else {
+            res.status(404).send('WallPrintLab index.html not found');
+        }
+    });
     app.get('/webalert', (req, res) => {
         const indexPath = path.join(__dirname, 'Web-Alert', 'frontend', 'public', 'index.html');
         if (fs.existsSync(indexPath)) {
