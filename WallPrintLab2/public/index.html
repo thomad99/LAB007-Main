@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>WallPrint Lab | Custom Wall Murals & Logos – Sarasota, FL</title>
+  <meta name="description" content="WallPrint Lab in Sarasota, Florida specializes in direct-to-wall printing for custom murals, logos, and graphics for businesses and large homes. Transform your space with durable, high-quality prints."/>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Bebas+Neue&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4a6bff;     /* Vibrant blue */
+      --secondary: #ff6b6b;   /* Coral/orange */
+      --accent: #9b5de5;      /* Purple */
+      --light: #f0f4ff;
+      --dark: #1a1a2e;
+      --gradient: linear-gradient(135deg, #4a6bff, #9b5de5, #ff6b6b);
+    }
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: var(--light);
+      color: var(--dark);
+      line-height: 1.6;
+    }
+    header {
+      background: var(--gradient);
+      color: white;
+      padding: 2rem 5%;
+      position: fixed;
+      width: 100%;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.15);
+    }
+    nav {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    .logo {
+      font-size: 1.8rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 0.8rem;
+    }
+    .logo span:first-child {
+      font-size: 2.2rem;
+      background: white;
+      color: var(--primary);
+      padding: 0.3rem 0.6rem;
+      border-radius: 12px;
+      line-height: 1;
+    }
+    .nav-links {
+      display: flex;
+      gap: 2.5rem;
+      list-style: none;
+    }
+    .nav-links a {
+      color: white;
+      text-decoration: none;
+      font-weight: 500;
+      transition: 0.3s;
+    }
+    .nav-links a:hover { color: #fff; opacity: 0.8; transform: translateY(-2px); }
+    .hero {
+      height: 80vh;
+      min-height: 600px;
+      background: url('images/WallPrint LAB 1 Sarsota Florida.png') center top / cover no-repeat;
+      color: white;
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      text-align: center;
+      padding: 0 5% 2rem 5%;
+      position: relative;
+    }
+    .hero-content {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      width: 100%;
+      padding: 3rem 5% 5rem 5%;
+      background: linear-gradient(to top, rgba(0,0,0,0.9) 0%, rgba(0,0,0,0.6) 40%, rgba(0,0,0,0.3) 70%, transparent 100%);
+      text-align: center;
+    }
+    .hero::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      pointer-events: none;
+    }
+    .hero h1 {
+      font-family: 'Bebas Neue', cursive;
+      font-size: 3.8rem;
+      margin-bottom: 1.2rem;
+      text-shadow: 2px 2px 8px rgba(0,0,0,0.8);
+      color: white;
+    }
+    .hero p {
+      font-size: 1.4rem;
+      margin-bottom: 2.5rem;
+      max-width: 700px;
+      margin-left: auto;
+      margin-right: auto;
+      text-shadow: 1px 1px 4px rgba(0,0,0,0.8);
+      color: white;
+    }
+    .cta-btn {
+      background: white;
+      color: var(--primary);
+      padding: 1rem 2.5rem;
+      border-radius: 50px;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 1.2rem;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.2);
+      transition: all 0.4s;
+    }
+    .cta-btn:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 15px 35px rgba(0,0,0,0.25);
+    }
+    section {
+      padding: 8rem 5%;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+    h2 {
+      font-family: 'Bebas Neue', cursive;
+      text-align: center;
+      font-size: 3rem;
+      margin-bottom: 3rem;
+      color: var(--primary);
+    }
+    .services-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 2.5rem;
+    }
+    .portfolio-grid {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 2rem 0;
+    }
+    .portfolio-grid img {
+      max-width: 100%;
+      height: auto;
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    }
+    .card {
+      background: white;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+      transition: transform 0.4s, box-shadow 0.4s;
+    }
+    .card:hover {
+      transform: translateY(-12px);
+      box-shadow: 0 20px 50px rgba(74,107,255,0.2);
+    }
+    .card img {
+      width: 100%;
+      height: 220px;
+      object-fit: cover;
+    }
+    .card-content {
+      padding: 1.8rem;
+      text-align: center;
+    }
+    .card h3 {
+      color: var(--accent);
+      margin-bottom: 1rem;
+    }
+    .about {
+      background: linear-gradient(to bottom, #f0f4ff, white);
+    }
+    .contact {
+      background: var(--dark);
+      color: white;
+      text-align: center;
+    }
+    .contact a {
+      color: var(--secondary);
+      text-decoration: none;
+      font-weight: 600;
+    }
+    .contact-form {
+      max-width: 600px;
+      margin: 0 auto;
+      background: white;
+      color: var(--dark);
+      padding: 2rem;
+      border-radius: 16px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    }
+    .form-group {
+      margin-bottom: 1.5rem;
+      text-align: left;
+    }
+    .form-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: var(--primary);
+    }
+    .form-control {
+      width: 100%;
+      padding: 0.8rem;
+      border: 2px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-family: inherit;
+      transition: border-color 0.3s;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: var(--primary);
+    }
+    .form-control.textarea {
+      resize: vertical;
+      min-height: 120px;
+    }
+    .submit-btn {
+      background: var(--gradient);
+      color: white;
+      padding: 1rem 2rem;
+      border: none;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: transform 0.3s, box-shadow 0.3s;
+      width: 100%;
+    }
+    .submit-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(74,107,255,0.3);
+    }
+    .success-message {
+      background: #d4edda;
+      color: #155724;
+      padding: 1rem;
+      border-radius: 8px;
+      margin-top: 1rem;
+      display: none;
+    }
+    footer {
+      background: var(--gradient);
+      color: white;
+      text-align: center;
+      padding: 2rem;
+      font-size: 0.95rem;
+    }
+    @media (max-width: 768px) {
+      .hero {
+        height: 70vh;
+        min-height: 500px;
+        background-position: center center;
+      }
+      .hero h1 { font-size: 2.8rem; }
+      .hero-content {
+        padding: 2.5rem 5% 4rem 5%;
+      }
+      .logo img {
+        height: 80px !important;
+      }
+      .nav-links { gap: 1.5rem; font-size: 0.95rem; }
+      section { padding: 5rem 5%; }
+      .contact-form { padding: 1.5rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <nav>
+      <div class="logo">
+        <img src="images/WallPrint Logo White Trans.png" alt="WallPrint Lab Logo" style="height: 150px; width: auto;">
+      </div>
+      <ul class="nav-links">
+        <li><a href="#home">Home</a></li>
+        <li><a href="#services">Services</a></li>
+        <li><a href="#portfolio">Portfolio</a></li>
+        <li><a href="#pricing">Pricing</a></li>
+        <li><a href="#about">About</a></li>
+        <li><a href="#contact">Contact</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <section id="home" class="hero">
+    <div class="hero-content">
+      <h1>Transform Your Walls with Custom Murals & Logos</h1>
+      <p>We bring your vision to life with high-quality, durable direct-to-wall prints for businesses and large homes in Sarasota, Florida.</p>
+    </div>
+  </section>
+
+  <section id="services">
+    <h2>Our Services</h2>
+    <div class="services-grid">
+      <div class="card">
+        <img src="images/WallPrint LAB 1.jpg" alt="Custom Wall Mural">
+        <div class="card-content">
+          <h3>Custom Wall Murals</h3>
+          <p>Stunning, seamless artwork printed directly onto any wall surface.</p>
+        </div>
+      </div>
+      <div class="card">
+        <img src="images/SpiderMan Bedroom Mural Sarasota Florida.jpg" alt="SpiderMan Bedroom Mural">
+        <div class="card-content">
+          <h3>Home Accent Walls</h3>
+          <p>Personalized designs for living rooms, bedrooms, and feature walls in large homes.</p>
+        </div>
+      </div>
+      <div class="card">
+        <img src="images/Photo to mural Artwork.jpg" alt="Photo to Mural Artwork">
+        <div class="card-content">
+          <h3>Photo-to-Wall Transfers</h3>
+          <p>Turn family photos, artwork, or memories into breathtaking wall features.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="pricing" style="background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%); padding: 5rem 5%; text-align: center;">
+    <h2 style="color: var(--primary); margin-bottom: 2rem; font-family: 'Bebas Neue', cursive; font-size: 3rem;">Pricing</h2>
+    <div style="max-width: 800px; margin: 0 auto;">
+      <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h3 style="color: var(--primary); margin-bottom: 1rem;">Custom Wall Murals</h3>
+        <p style="font-size: 1.2rem; color: var(--dark); margin-bottom: 1rem;">Starting from $25 per square foot</p>
+        <p style="color: #666;">Includes design consultation, high-quality UV printing, and professional installation</p>
+      </div>
+      <div style="background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); margin-bottom: 2rem;">
+        <h3 style="color: var(--primary); margin-bottom: 1rem;">Home Accent Walls</h3>
+        <p style="font-size: 1.2rem; color: var(--dark); margin-bottom: 1rem;">Starting from $25 sqft</p>
+        <p style="color: #666;">Transform any room with custom accent wall designs and patterns</p>
+      </div>
+      <p style="font-style: italic; color: #666; margin-top: 2rem;">Prices may vary based on size, complexity, and location. Contact us for a custom quote!</p>
+    </div>
+  </section>
+
+  <section id="service-area" style="background: linear-gradient(135deg, #f0f4ff 0%, #e8f2ff 100%); padding: 5rem 5%; text-align: center;">
+    <h2 style="color: var(--primary); margin-bottom: 2rem; font-family: 'Bebas Neue', cursive; font-size: 3rem;">Service Area</h2>
+    <p style="font-size: 1.3rem; color: var(--dark); margin-bottom: 3rem; max-width: 600px; margin-left: auto; margin-right: auto;">
+      We proudly serve the following communities with our professional wall print mural services:
+    </p>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 2rem; max-width: 800px; margin: 0 auto;">
+      <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-size: 1.4rem;">Sarasota</h3>
+        <p style="color: #666; margin: 0;">Our headquarters and primary service area</p>
+      </div>
+      <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-size: 1.4rem;">Venice</h3>
+        <p style="color: #666; margin: 0;">Beautiful coastal community</p>
+      </div>
+      <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-size: 1.4rem;">Bradenton</h3>
+        <p style="color: #666; margin: 0;">Growing business district</p>
+      </div>
+      <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-size: 1.4rem;">Osprey</h3>
+        <p style="color: #666; margin: 0;">Upscale residential area</p>
+      </div>
+      <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-size: 1.4rem;">Nokomis</h3>
+        <p style="color: #666; margin: 0;">Charming beach community</p>
+      </div>
+      <div style="background: white; padding: 1.5rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
+        <h3 style="color: var(--primary); margin-bottom: 0.5rem; font-size: 1.4rem;">Tampa</h3>
+        <p style="color: #666; margin: 0;">Major metropolitan area</p>
+      </div>
+    </div>
+    <p style="font-style: italic; color: #666; margin-top: 3rem; font-size: 1.1rem;">
+      Don't see your area listed? Contact us to discuss service availability in your location.
+    </p>
+  </section>
+
+  <section id="about" class="about">
+    <h2>About WallPrint Lab</h2>
+    <p style="max-width:800px; margin:0 auto; text-align:center; font-size:1.2rem;">
+      Based in sunny Sarasota, Florida, WallPrint Lab uses state-of-the-art portable UV wall printing technology to create permanent, high-resolution murals and graphics directly on your walls—no stickers, no seams, no hassle.<br><br>
+      Perfect for offices, retail spaces, restaurants, gyms, and luxury homes. Durable, fade-resistant, and easy to clean—our prints last for years.
+    </p>
+  </section>
+
+  <section id="contact" class="contact">
+    <h2>Get Your Free Quote</h2>
+    <p style="font-size:1.3rem; margin-bottom:2rem;">
+      Ready to transform your space? Fill out the form below for a free consultation and quote!
+    </p>
+
+    <div class="contact-form">
+      <form id="quoteForm">
+        <div class="form-group">
+          <label for="name">Name *</label>
+          <input type="text" id="name" name="name" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="email">Email Address *</label>
+          <input type="email" id="email" name="email" class="form-control" required>
+        </div>
+
+        <div class="form-group">
+          <label for="phone">Phone</label>
+          <input type="tel" id="phone" name="phone" class="form-control">
+        </div>
+
+        <div class="form-group">
+          <label for="info">Project Information *</label>
+          <textarea id="info" name="info" class="form-control textarea" placeholder="Please describe your project - wall size, location, type of design, timeline, etc." required></textarea>
+        </div>
+
+        <button type="submit" class="submit-btn">Send Quote Request</button>
+      </form>
+
+      <div id="successMessage" class="success-message">
+        Thank you! Your quote request has been sent. We'll get back to you within 24 hours.
+      </div>
+    </div>
+
+    <div style="margin-top: 3rem;">
+      <p>
+        📍 Sarasota, Florida<br>
+        📧 <a href="mailto:info@lab007.ai">info@lab007.ai</a><br><br>
+        Follow us: <a href="#">Instagram</a> | <a href="#">Facebook</a>
+      </p>
+    </div>
+  </section>
+
+  <section id="portfolio">
+    <h2>Portfolio Highlights</h2>
+    <div class="portfolio-grid">
+      <img src="images/WallPrint Example Wall Mural Prints Designs.jpg" alt="WallPrint Lab Example Wall Mural Prints & Designs">
+    </div>
+  </section>
+
+  <footer>
+    © 2026 WallPrint Lab – Sarasota, FL | Transforming Walls, One Print at a Time.
+  </footer>
+
+  <script>
+    document.getElementById('quoteForm').addEventListener('submit', function(e) {
+      e.preventDefault();
+
+      // Get form data
+      const formData = {
+        name: document.getElementById('name').value,
+        email: document.getElementById('email').value,
+        phone: document.getElementById('phone').value || 'Not provided',
+        info: document.getElementById('info').value
+      };
+
+      // Create email content
+      const subject = encodeURIComponent('WallPrint Lab Quote Request from ' + formData.name);
+      const body = encodeURIComponent(
+        `New Quote Request from WallPrint Lab Website\n\n` +
+        `Name: ${formData.name}\n` +
+        `Email: ${formData.email}\n` +
+        `Phone: ${formData.phone}\n\n` +
+        `Project Information:\n${formData.info}\n\n` +
+        `---\nSent from WallPrint Lab website`
+      );
+
+      // Create mailto link
+      const mailtoLink = `mailto:info@lab007.ai?subject=${subject}&body=${body}`;
+
+      // Open email client
+      window.location.href = mailtoLink;
+
+      // Show success message
+      document.getElementById('successMessage').style.display = 'block';
+
+      // Reset form
+      this.reset();
+
+      // Hide success message after 5 seconds
+      setTimeout(() => {
+        document.getElementById('successMessage').style.display = 'none';
+      }, 5000);
+    });
+  </script>
+
+</body>
+</html>

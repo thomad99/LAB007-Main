@@ -1,0 +1,29 @@
+<svg width="400" height="300" viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="homeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#fff5f5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#fef3c7;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+
+  <!-- Home wall background -->
+  <rect width="400" height="300" fill="url(#homeGradient)"/>
+
+  <!-- Decorative floral pattern -->
+  <circle cx="100" cy="100" r="25" fill="#ff6b6b" opacity="0.8"/>
+  <circle cx="300" cy="200" r="20" fill="#9b5de5" opacity="0.8"/>
+  <circle cx="80" cy="200" r="15" fill="#4a6bff" opacity="0.8"/>
+  <circle cx="320" cy="100" r="18" fill="#ff6b6b" opacity="0.8"/>
+
+  <!-- Abstract home decor elements -->
+  <rect x="150" y="120" width="100" height="60" rx="8" fill="#ffffff" opacity="0.9" stroke="#ddd" stroke-width="2"/>
+  <text x="200" y="150" text-anchor="middle" fill="#1a1a2e" font-family="Arial, sans-serif" font-size="14" font-weight="bold">HOME</text>
+
+  <!-- Decorative lines -->
+  <line x1="50" y1="150" x2="350" y2="150" stroke="#9b5de5" stroke-width="2" opacity="0.6"/>
+  <line x1="200" y1="50" x2="200" y2="250" stroke="#4a6bff" stroke-width="2" opacity="0.6"/>
+
+  <!-- WallPrint Lab branding -->
+  <text x="200" y="250" text-anchor="middle" fill="#1a1a2e" font-family="Arial, sans-serif" font-size="16" font-weight="bold">WallPrint Lab</text>
+  <text x="200" y="270" text-anchor="middle" fill="#666" font-family="Arial, sans-serif" font-size="12">Home Accent Walls</text>
+</svg>
