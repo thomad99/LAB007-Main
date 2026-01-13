@@ -272,25 +272,6 @@ if (fs.existsSync(webAlertServerPath)) {
 function setupWebAlertFallback() {
     app.use('/webalert', express.static(path.join(__dirname, 'Web-Alert', 'frontend', 'public')));
     app.use('/webalert/src', express.static(path.join(__dirname, 'Web-Alert', 'frontend', 'src')));
-
-    // WallPrintLab - Static wall printing services
-    app.use('/WallPrintLab', express.static(path.join(__dirname, 'WallPrintLab', 'public')));
-    app.get('/WallPrintLab', (req, res) => {
-        const indexPath = path.join(__dirname, 'WallPrintLab', 'public', 'index.html');
-        if (fs.existsSync(indexPath)) {
-            res.sendFile(indexPath);
-        } else {
-            res.status(404).send('WallPrintLab index.html not found');
-        }
-    });
-    app.get('/WallPrintLab/', (req, res) => {
-        const indexPath = path.join(__dirname, 'WallPrintLab', 'public', 'index.html');
-        if (fs.existsSync(indexPath)) {
-            res.sendFile(indexPath);
-        } else {
-            res.status(404).send('WallPrintLab index.html not found');
-        }
-    });
     app.get('/webalert', (req, res) => {
         const indexPath = path.join(__dirname, 'Web-Alert', 'frontend', 'public', 'index.html');
         if (fs.existsSync(indexPath)) {
@@ -400,6 +381,25 @@ app.get('/dummypage', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'dummypage.html'));
 });
 
+// WallPrintLab - Static wall printing services
+app.use('/WallPrintLab', express.static(path.join(__dirname, 'WallPrintLab', 'public')));
+app.get('/WallPrintLab', (req, res) => {
+    const indexPath = path.join(__dirname, 'WallPrintLab', 'public', 'index.html');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.status(404).send('WallPrintLab index.html not found');
+    }
+});
+app.get('/WallPrintLab/', (req, res) => {
+    const indexPath = path.join(__dirname, 'WallPrintLab', 'public', 'index.html');
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.status(404).send('WallPrintLab index.html not found');
+    }
+});
+
 // Catch-all route for main landing page (must be last, only matches exact /)
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
@@ -420,6 +420,7 @@ app.listen(PORT, () => {
     console.log(`Citrix: http://localhost:${PORT}/citrix`);
     console.log(`VIN Value: http://localhost:${PORT}/vinvalue`);
     console.log(`Web Alert: http://localhost:${PORT}/webalert`);
+    console.log(`WallPrint Lab: http://localhost:${PORT}/WallPrintLab`);
     console.log(`========================================`);
     console.log(`Note: Browsers (Playwright/Puppeteer) are optional dependencies.`);
     console.log(`They will install on first use if needed.`);
