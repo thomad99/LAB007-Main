@@ -272,6 +272,9 @@ if (fs.existsSync(webAlertServerPath)) {
 function setupWebAlertFallback() {
     app.use('/webalert', express.static(path.join(__dirname, 'Web-Alert', 'frontend', 'public')));
     app.use('/webalert/src', express.static(path.join(__dirname, 'Web-Alert', 'frontend', 'src')));
+
+    // WallPrintLab - Static wall printing services
+    app.use('/WallPrintLab', express.static(path.join(__dirname, 'WallPrintLab', 'public')));
     app.get('/webalert', (req, res) => {
         const indexPath = path.join(__dirname, 'Web-Alert', 'frontend', 'public', 'index.html');
         if (fs.existsSync(indexPath)) {
