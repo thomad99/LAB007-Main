@@ -173,15 +173,31 @@ document.addEventListener('DOMContentLoaded', async function() {
     function handleConfigDownload() {
         console.log('handleConfigDownload called');
 
+        // Safely get form values with validation
+        const getElementValue = (id) => {
+            const element = document.getElementById(id);
+            return element ? element.value : '';
+        };
+
+        const getElementChecked = (id) => {
+            const element = document.getElementById(id);
+            return element ? element.checked : false;
+        };
+
+        const parseNumberSafely = (value, defaultValue = 30) => {
+            const parsed = parseInt(value);
+            return isNaN(parsed) ? defaultValue : Math.max(1, Math.min(365, parsed));
+        };
+
         const config = {
-            citrixVersion: document.getElementById('configCitrixVersion').value,
-            ddcName: document.getElementById('configDdcName').value,
-            usageDays: parseInt(document.getElementById('configUsageDays').value),
-            vCenterServer: document.getElementById('configVCenterServer').value,
-
-
-            masterImagePrefix: document.getElementById('configMasterImagePrefix').value,
-            runPreReqCheck: document.getElementById('configRunPreReqCheck').checked,
+            citrixVersion: getElementValue('configCitrixVersion'),
+            ddcName: getElementValue('configDdcName'),
+            usageDays: parseNumberSafely(getElementValue('configUsageDays')),
+            vCenterServer: getElementValue('configVCenterServer'),
+            vCenterUsername: getElementValue('configVCenterUsername'),
+            vCenterPassword: getElementValue('configVCenterPassword'),
+            masterImagePrefix: getElementValue('configMasterImagePrefix') || 'SHC-M-',
+            runPreReqCheck: getElementChecked('configRunPreReqCheck'),
             auditComponents: {
                 SiteInfo: document.getElementById('configAuditSiteInfo').checked,
                 Applications: document.getElementById('configAuditApplications').checked,
@@ -352,10 +368,13 @@ function handleFileLoad(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Check if file name matches 0-Citrix-audit*.json pattern
-    const fileNamePattern = /^0-Citrix-audit.*\.json$/i;
-    if (!fileNamePattern.test(file.name)) {
-        showError(`Invalid file selected. Please select a file matching the pattern "0-Citrix-audit*.json". Selected: ${file.name}`);
+    // Check if file name matches 0-Citrix-audit*.json pattern (case-insensitive)
+    const fileName = file.name || '';
+    const fileNameLower = fileName.toLowerCase();
+    const isValidFileName = fileNameLower.startsWith('0-citrix-audit') && fileNameLower.endsWith('.json');
+
+    if (!isValidFileName) {
+        showError(`Invalid file selected. Please select a file matching the pattern "0-Citrix-audit*.json". Selected: ${fileName}`);
         return;
     }
 
@@ -875,6 +894,87 @@ function closeConfigModal() {
     document.getElementById('configModal').style.display = 'none';
 }
 
+async function testConnection() {
+    const testBtn = document.getElementById('testConnectionBtn');
+    const originalText = testBtn.innerHTML;
+
+    // Show loading state
+    testBtn.innerHTML = '🔄 Testing...';
+    testBtn.disabled = true;
+
+    try {
+        // Collect form data with safe extraction
+        const getElementValue = (id) => {
+            const element = document.getElementById(id);
+            return element ? element.value : '';
+        };
+
+        const getElementChecked = (id) => {
+            const element = document.getElementById(id);
+            return element ? element.checked : false;
+        };
+
+        const parseNumberSafely = (value, defaultValue = 30) => {
+            const parsed = parseInt(value);
+            return isNaN(parsed) ? defaultValue : Math.max(1, Math.min(365, parsed));
+        };
+
+        const config = {
+            citrixVersion: getElementValue('configCitrixVersion'),
+            ddcName: getElementValue('configDdcName'),
+            usageDays: parseNumberSafely(getElementValue('configUsageDays')),
+            vCenterServer: getElementValue('configVCenterServer'),
+            vCenterUsername: getElementValue('configVCenterUsername'),
+            vCenterPassword: getElementValue('configVCenterPassword'),
+            masterImagePrefix: getElementValue('configMasterImagePrefix') || 'SHC-M-',
+            runPreReqCheck: getElementChecked('configRunPreReqCheck')
+        };
+
+        // Call test connection API
+        const response = await fetch('/citrix/api/test-connection', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(config)
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Show success message with results
+            let message = '✅ Connection test completed!\n\n';
+
+            if (result.results.citrixConnection.status === 'success') {
+                message += `• Citrix: ✅ Connected to ${result.results.citrixConnection.server}\n`;
+            } else {
+                message += `• Citrix: ❌ ${result.results.citrixConnection.message}\n`;
+            }
+
+            if (result.results.vmwareConnection.tested) {
+                if (result.results.vmwareConnection.status === 'success') {
+                    message += `• VMware: ✅ Connected to ${result.results.vmwareConnection.server}\n`;
+                } else {
+                    message += `• VMware: ❌ ${result.results.vmwareConnection.message}\n`;
+                }
+            } else {
+                message += `• VMware: ⚠️ Not configured\n`;
+            }
+
+            alert(message);
+        } else {
+            alert(`❌ Connection test failed: ${result.error}`);
+        }
+
+    } catch (error) {
+        console.error('Test connection error:', error);
+        alert(`❌ Connection test error: ${error.message}`);
+    } finally {
+        // Restore button state
+        testBtn.innerHTML = originalText;
+        testBtn.disabled = false;
+    }
+}
 
 // Folder Browser Functions
 let vmwareFolders = [];
@@ -1241,8 +1341,8 @@ async function loadConfigIntoMainModal() {
 
             // Load VMware config
             document.getElementById('configVCenterServer').value = config.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
-
-
+            document.getElementById('configVCenterUsername').value = config.vCenterUsername || '';
+            document.getElementById('configVCenterPassword').value = config.vCenterPassword || '';
             document.getElementById('configMasterImagePrefix').value = config.masterImagePrefix || 'SHC-M-';
 
             // Load audit components
@@ -1304,8 +1404,6 @@ function showHorizonTask(taskName) {
         populateMasterImagesCloneList();
     } else if (taskName === 'addApplications') {
         populateApplicationsHZList();
-    } else if (taskName === 'createFarms') {
-        initializeCreateFarmsForm();
     }
 }
 
@@ -3048,167 +3146,3 @@ async function saveConfigToFile(config) {
     }
 }
 
-// Create Farms Functions
-function initializeCreateFarmsForm() {
-    // Add event listener for logoff disconnects dropdown
-    const logoffDisconnectsSelect = document.getElementById('logoffDisconnects');
-    const logoffMinutesInput = document.getElementById('logoffDisconnectsMinutes');
-
-    if (logoffDisconnectsSelect && logoffMinutesInput) {
-        logoffDisconnectsSelect.addEventListener('change', function() {
-            if (this.value === 'Custom') {
-                logoffMinutesInput.style.display = 'block';
-                logoffMinutesInput.required = true;
-            } else {
-                logoffMinutesInput.style.display = 'none';
-                logoffMinutesInput.required = false;
-                logoffMinutesInput.value = '';
-            }
-        });
-    }
-}
-
-function generateFarmScript() {
-    const formData = {
-        farmId: document.getElementById('farmId').value.trim(),
-        farmDescription: document.getElementById('farmDescription').value.trim(),
-        defaultProtocol: document.getElementById('defaultProtocol').value,
-        prelaunchTimeout: document.getElementById('prelaunchTimeout').value,
-        emptySessionTimeout: document.getElementById('emptySessionTimeout').value,
-        timeoutBehaviour: document.getElementById('timeoutBehaviour').value,
-        logoffDisconnects: document.getElementById('logoffDisconnects').value,
-        logoffDisconnectsMinutes: document.getElementById('logoffDisconnectsMinutes').value,
-        maxSessionsPerHost: document.getElementById('maxSessionsPerHost').value,
-        namingPattern: document.getElementById('namingPattern').value.trim(),
-        organizationalUnit: document.getElementById('organizationalUnit').value.trim(),
-        farmSizeMax: document.getElementById('farmSizeMax').value,
-        farmSizeMin: document.getElementById('farmSizeMin').value,
-        masterImage: document.getElementById('masterImage').value.trim()
-    };
-
-    // Validate required fields
-    if (!formData.farmId || !formData.farmDescription || !formData.maxSessionsPerHost ||
-        !formData.namingPattern || !formData.organizationalUnit || !formData.farmSizeMax ||
-        !formData.farmSizeMin || !formData.masterImage) {
-        alert('Please fill in all required fields.');
-        return;
-    }
-
-    // Validate custom logoff disconnects minutes if selected
-    if (formData.logoffDisconnects === 'Custom' && !formData.logoffDisconnectsMinutes) {
-        alert('Please specify the number of minutes for logoff disconnects.');
-        return;
-    }
-
-    // Generate PowerShell script
-    const script = generateFarmCreationScript(formData);
-
-    // Display the script
-    document.getElementById('farmScriptContent').value = script;
-    document.getElementById('farmScriptOutput').style.display = 'block';
-
-    // Scroll to the script output
-    document.getElementById('farmScriptOutput').scrollIntoView({ behavior: 'smooth' });
-}
-
-function generateFarmCreationScript(data) {
-    const logoffDisconnectsValue = data.logoffDisconnects === 'Custom' ?
-        data.logoffDisconnectsMinutes : '$null';
-
-    return `# VMware Horizon Farm Creation Script
-# Generated for Farm: ${data.farmId}
-# Description: ${data.farmDescription}
-
-# Import required modules
-Import-Module VMware.VimAutomation.HorizonView
-Import-Module VMware.VimAutomation.Core
-
-# Connect to vCenter Server (update with your credentials)
-$vcServer = "your-vcenter-server"
-$vcUsername = "your-username"
-$vcPassword = "your-password"
-
-Connect-VIServer -Server $vcServer -User $vcUsername -Password $vcPassword
-
-# Farm Configuration
-$FarmConfig = @{
-    FarmName = "${data.farmId}"
-    Description = "${data.farmDescription}"
-    Enabled = $true
-    DefaultProtocol = [VMware.Hv.Protocol]$data.defaultProtocol
-    PrelaunchTimeout = ${data.prelaunchTimeout}
-    EmptySessionTimeout = ${data.emptySessionTimeout}
-    TimeoutBehaviour = [VMware.Hv.TimeoutBehaviour]::${data.timeoutBehaviour}
-    LogoffDisconnectsSessions = ${logoffDisconnectsValue}
-    MaxSessionsPerHost = ${data.maxSessionsPerHost}
-    NamingPattern = "${data.namingPattern}"
-    OrganizationalUnit = "${data.organizationalUnit}"
-    FarmSizeMax = ${data.farmSizeMax}
-    FarmSizeMin = ${data.farmSizeMin}
-    MasterImage = "${data.masterImage}"
-}
-
-# Create the farm
-try {
-    Write-Host "Creating VMware Horizon Farm: ${data.farmId}" -ForegroundColor Green
-
-    # Create RDS farm using Horizon API
-    $farm = New-HVFarm -Name $FarmConfig.FarmName \\
-                       -Description $FarmConfig.Description \\
-                       -Enabled $FarmConfig.Enabled \\
-                       -DefaultProtocol $FarmConfig.DefaultProtocol \\
-                       -PrelaunchTimeout $FarmConfig.PrelaunchTimeout \\
-                       -EmptySessionTimeout $FarmConfig.EmptySessionTimeout \\
-                       -TimeoutBehaviour $FarmConfig.TimeoutBehaviour \\
-                       -LogoffDisconnectsSessions $FarmConfig.LogoffDisconnectsSessions \\
-                       -MaxSessionsPerHost $FarmConfig.MaxSessionsPerHost \\
-                       -NamingPattern $FarmConfig.NamingPattern \\
-                       -OrganizationalUnit $FarmConfig.OrganizationalUnit \\
-                       -FarmSizeMax $FarmConfig.FarmSizeMax \\
-                       -FarmSizeMin $FarmConfig.FarmSizeMin \\
-                       -MasterImage $FarmConfig.MasterImage
-
-    Write-Host "Farm created successfully!" -ForegroundColor Green
-    Write-Host "Farm ID: $($farm.Id)" -ForegroundColor Cyan
-    Write-Host "Farm Name: $($farm.Name)" -ForegroundColor Cyan
-
-} catch {
-    Write-Error "Failed to create farm: $_"
-    exit 1
-} finally {
-    # Disconnect from vCenter
-    Disconnect-VIServer -Server $vcServer -Confirm:$false
-}
-
-Write-Host "Farm creation script completed." -ForegroundColor Green`;
-}
-
-function copyFarmScript() {
-    const scriptContent = document.getElementById('farmScriptContent');
-    scriptContent.select();
-    document.execCommand('copy');
-
-    // Show feedback
-    const originalText = scriptContent.value;
-    scriptContent.value = "# Script copied to clipboard!\n" + originalText;
-    setTimeout(() => {
-        scriptContent.value = originalText;
-    }, 2000);
-}
-
-function downloadFarmScript() {
-    const scriptContent = document.getElementById('farmScriptContent').value;
-    const farmId = document.getElementById('farmId').value.trim() || 'horizon-farm';
-
-    const blob = new Blob([scriptContent], { type: 'text/plain' });
-    const url = window.URL.createObjectURL(blob);
-
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${farmId}-creation-script.ps1`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-
-    window.URL.revokeObjectURL(url);
-}

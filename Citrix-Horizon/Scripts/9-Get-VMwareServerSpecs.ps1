@@ -1,9 +1,6 @@
 # Get-VMwareServerSpecs.ps1
 # Collects server specs (RAM, CPU, Disk) from VMware vCenter/ESXi
 # This data will be merged with Citrix server data
-# Author : LAB007.AI
-# Version: 1.0
-# Last Modified: 250127
 
 param(
     [string]$OutputPath = ".\Data\vmware-server-specs.json",

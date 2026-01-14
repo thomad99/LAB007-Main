@@ -1,32 +1,15 @@
 # Get-CitrixRoles.ps1
-# Extracts comprehensive Citrix management roles and administrator information
-# Author : LAB007.AI
-# Version: 2.0
-# Last Modified: 260107:1400
+# Extracts Citrix management roles and their assigned AD groups
 
 param(
     [string]$OutputPath = ".\Data\citrix-roles.json",
-    [string]$CitrixVersion = "1912",
-    [switch]$IncludeScopes = $true,
-    [switch]$IncludePermissions = $true
+    [string]$CitrixVersion = "1912"
 )
 
 # Ensure output directory exists
 $outputDir = Split-Path -Path $OutputPath -Parent
 if (-not (Test-Path -Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-}
-
-# Setup debug logging
-$debugFile = Join-Path $outputDir "debug8.txt"
-
-# Force delete existing debug file to ensure clean start
-if (Test-Path $debugFile) {
-    try {
-        Remove-Item $debugFile -Force -ErrorAction Stop
-    } catch {
-        Write-Warning "Could not delete existing debug file $debugFile : $_"
-    }
 }
 
 try {
@@ -36,69 +19,53 @@ try {
     $maxRecords = 10000
     
     Write-Host "Attempting to collect Citrix management roles..." -ForegroundColor Yellow
-    Write-Host "[DEBUG] Roles collection started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
-    Write-Host "[DEBUG] CitrixVersion: $CitrixVersion" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Roles collection started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] CitrixVersion: $CitrixVersion" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append -ErrorAction SilentlyContinue
     
     # Check what role commands are available
-    Write-Host "[DEBUG] Checking available role commands..." | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Checking available role commands..." | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
     $availableCommands = @()
-    $commandsToCheck = @(
-        'Get-AdminRole', 'Get-AdminAdministrator', 'Get-AdminRoleAssignment',
-        'Get-AdminScope', 'Get-AdminPermission', 'Get-AdminEffectiveAdministrator',
-        'Get-AdminTrustee', 'Get-AdminRight'
-    )
+    $commandsToCheck = @('Get-AdminRole', 'Get-AdminAdministrator', 'Get-AdminRoleAssignment', 'Get-AdminScope')
     foreach ($cmd in $commandsToCheck) {
         $cmdObj = Get-Command -Name $cmd -ErrorAction SilentlyContinue
         if ($cmdObj) {
             $availableCommands += $cmd
-            Write-Host "[DEBUG] Command available: $cmd" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+            Write-Host "[DEBUG] Command available: $cmd" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
         }
         else {
-            Write-Host "[DEBUG] Command NOT available: $cmd" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+            Write-Host "[DEBUG] Command NOT available: $cmd" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
         }
     }
-    Write-Host "[DEBUG] Available commands: $($availableCommands -join ', ')" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] Available commands: $($availableCommands -join ', ')" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
     
     # Try Get-AdminRole first (for roles)
     $roles = $null
     try {
-        Write-Host "[DEBUG] Attempting Get-AdminRole..." | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] Attempting Get-AdminRole..." | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
         if ($global:CitrixAdminAddress) {
-            Write-Host "[DEBUG] Calling Get-AdminRole with AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+            Write-Host "[DEBUG] Calling Get-AdminRole with AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
             $roles = Get-AdminRole -AdminAddress $global:CitrixAdminAddress -MaxRecordCount $maxRecords -ErrorAction Stop
         }
         else {
-            Write-Host "[DEBUG] Calling Get-AdminRole without AdminAddress" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+            Write-Host "[DEBUG] Calling Get-AdminRole without AdminAddress" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
             $roles = Get-AdminRole -MaxRecordCount $maxRecords -ErrorAction Stop
         }
         Write-Host "Successfully retrieved $($roles.Count) roles using Get-AdminRole" -ForegroundColor Green
-        Write-Host "[DEBUG] Get-AdminRole succeeded: Found $($roles.Count) roles" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] Get-AdminRole succeeded: Found $($roles.Count) roles" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
     }
     catch {
         $errorMsg = "Get-AdminRole failed: $_"
         Write-Warning $errorMsg
-        Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
-        Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+        Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
         $roles = @()
     }
     
-    # Initialize comprehensive role collection
-    $allRoleData = @{
-        Roles = @()
-        Administrators = @()
-        RoleAssignments = @()
-        Scopes = @()
-        Permissions = @()
-        EffectiveAdministrators = @()
-        CollectionMethod = ""
-        Errors = @()
-    }
-
     # Get administrators (users/groups assigned to roles)
     $administrators = $null
     try {
-        Write-Host "[DEBUG] Attempting Get-AdminAdministrator..." | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] Attempting Get-AdminAdministrator..." | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
         if ($global:CitrixAdminAddress) {
             $administrators = Get-AdminAdministrator -AdminAddress $global:CitrixAdminAddress -MaxRecordCount $maxRecords -ErrorAction Stop
         }
@@ -106,30 +73,13 @@ try {
             $administrators = Get-AdminAdministrator -MaxRecordCount $maxRecords -ErrorAction Stop
         }
         Write-Host "Successfully retrieved $($administrators.Count) administrators using Get-AdminAdministrator" -ForegroundColor Green
-        Write-Host "[DEBUG] Get-AdminAdministrator succeeded: Found $($administrators.Count) administrators" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
-
-        # Process administrators into structured format
-        $allRoleData.Administrators = $administrators | ForEach-Object {
-            @{
-                Name = $_.Name
-                Uid = $_.Uid
-                Enabled = $_.Enabled
-                Rights = $_.Rights
-                Scopes = $_.Scopes
-                Metadata = @{
-                    FullName = $_.FullName
-                    AccountType = if ($_.Name -match '^[^\\]+\\') { "Domain" } else { "Local" }
-                    Domain = if ($_.Name -match '^([^\\]+)\\') { $matches[1] } else { $null }
-                    AccountName = if ($_.Name -match '^[^\\]+\\(.+)$') { $matches[1] } else { $_.Name }
-                }
-            }
-        }
+        Write-Host "[DEBUG] Get-AdminAdministrator succeeded: Found $($administrators.Count) administrators" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
     }
     catch {
         $errorMsg = "Get-AdminAdministrator failed: $_"
         Write-Warning $errorMsg
-        Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
-        Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+        Write-Host "[DEBUG] ERROR: $errorMsg" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+        Write-Host "[DEBUG] Error details: $($_.Exception.Message)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
         $administrators = @()
     }
     
@@ -166,95 +116,6 @@ try {
     catch {
         Write-Warning "Get-AdminScope failed (this is optional): $_"
         $scopes = @()
-    }
-
-    # Get permissions if requested
-    if ($IncludePermissions) {
-        Write-Host "Collecting permissions information..." -ForegroundColor Cyan
-        try {
-            if ($availableCommands -contains 'Get-AdminPermission') {
-                $permissions = if ($global:CitrixAdminAddress) {
-                    Get-AdminPermission -AdminAddress $global:CitrixAdminAddress -MaxRecordCount $maxRecords -ErrorAction Stop
-                } else {
-                    Get-AdminPermission -MaxRecordCount $maxRecords -ErrorAction Stop
-                }
-                Write-Host "Found $($permissions.Count) permissions" -ForegroundColor Green
-                $allRoleData.Permissions = $permissions | ForEach-Object {
-                    @{
-                        RoleName = $_.RoleName
-                        ScopeName = $_.ScopeName
-                        TrusteeName = $_.TrusteeName
-                        Permission = $_.Permission
-                        Allowed = $_.Allowed
-                    }
-                }
-            }
-        }
-        catch {
-            Write-Warning "Failed to collect permissions: $_"
-            $allRoleData.Errors += "Permissions: $_"
-        }
-
-        # Get effective administrators
-        try {
-            if ($availableCommands -contains 'Get-AdminEffectiveAdministrator') {
-                $effectiveAdmins = if ($global:CitrixAdminAddress) {
-                    Get-AdminEffectiveAdministrator -AdminAddress $global:CitrixAdminAddress -MaxRecordCount $maxRecords -ErrorAction Stop
-                } else {
-                    Get-AdminEffectiveAdministrator -MaxRecordCount $maxRecords -ErrorAction Stop
-                }
-                Write-Host "Found $($effectiveAdmins.Count) effective administrators" -ForegroundColor Green
-                $allRoleData.EffectiveAdministrators = $effectiveAdmins | ForEach-Object {
-                    @{
-                        Name = $_.Name
-                        EffectiveRights = $_.EffectiveRights
-                        Scopes = $_.Scopes
-                        Metadata = @{
-                            AccountType = if ($_.Name -match '^[^\\]+\\') { "Domain" } else { "Local" }
-                        }
-                    }
-                }
-            }
-        }
-        catch {
-            Write-Warning "Failed to collect effective administrators: $_"
-            $allRoleData.Errors += "Effective Administrators: $_"
-        }
-    }
-
-    # Process scopes if collected
-    if ($scopes -and $IncludeScopes) {
-        Write-Host "Processing scope information..." -ForegroundColor Cyan
-        $allRoleData.Scopes = $scopes | ForEach-Object {
-            @{
-                Name = $_.Name
-                Uid = $_.Uid
-                Description = $_.Description
-                IsBuiltIn = $_.IsBuiltIn
-                IsAll = $_.IsAll
-                Metadata = @{
-                    CreatedDate = $_.CreatedDate
-                    ModifiedDate = $_.ModifiedDate
-                }
-            }
-        }
-    }
-
-    # Process roles
-    if ($roles) {
-        Write-Host "Processing role information..." -ForegroundColor Cyan
-        $allRoleData.Roles = $roles | ForEach-Object {
-            @{
-                Name = $_.Name
-                Uid = $_.Uid
-                Description = $_.Description
-                IsBuiltIn = $_.IsBuiltIn
-                Metadata = @{
-                    CreatedDate = $_.CreatedDate
-                    ModifiedDate = $_.ModifiedDate
-                }
-            }
-        }
     }
     
     # Build role data with assigned AD groups
@@ -459,58 +320,25 @@ try {
         }
     }
     
-    # Create comprehensive result with all collected data
-    $totalItems = $allRoleData.Roles.Count + $allRoleData.Administrators.Count + $allRoleData.Scopes.Count + $allRoleData.Permissions.Count
-
     $result = @{
-        Summary = @{
-            TotalRoles = $allRoleData.Roles.Count
-            TotalAdministrators = $allRoleData.Administrators.Count
-            TotalScopes = $allRoleData.Scopes.Count
-            TotalPermissions = $allRoleData.Permissions.Count
-            TotalEffectiveAdministrators = $allRoleData.EffectiveAdministrators.Count
-            TotalItems = $totalItems
-        }
-        Roles = @{
-            Count = $allRoleData.Roles.Count
-            Items = $allRoleData.Roles
-        }
-        Administrators = @{
-            Count = $allRoleData.Administrators.Count
-            Items = $allRoleData.Administrators
-        }
-        Scopes = @{
-            Count = $allRoleData.Scopes.Count
-            Items = $allRoleData.Scopes
-        }
-        Permissions = @{
-            Count = $allRoleData.Permissions.Count
-            Items = $allRoleData.Permissions
-        }
-        EffectiveAdministrators = @{
-            Count = $allRoleData.EffectiveAdministrators.Count
-            Items = $allRoleData.EffectiveAdministrators
-        }
-        CollectionMethods = @{
-            IncludeScopes = $IncludeScopes
-            IncludePermissions = $IncludePermissions
-        }
+        TotalRoles = $roleData.Count
+        Roles = $roleData
         CollectedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-        Errors = $allRoleData.Errors
+        Errors = @()
     }
-
-    Write-Host "[DEBUG] Preparing to save comprehensive role data. Total items: $totalItems" | Out-File -FilePath $debugFile -Append
+    
+    if ($roleData.Count -eq 0) {
+        $errorMsg = "No roles were collected. This may indicate insufficient permissions or the Citrix Admin SDK may not be available."
+        Write-Warning $errorMsg
+        $result.Errors += $errorMsg
+    }
+    
+    Write-Host "[DEBUG] Preparing to save role data. Total roles: $($roleData.Count)" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
     $result | ConvertTo-Json -Depth 10 | Out-File -FilePath $OutputPath -Encoding UTF8
-
-    Write-Host "Comprehensive role information collected successfully!" -ForegroundColor Green
-    Write-Host "  Roles: $($allRoleData.Roles.Count)" -ForegroundColor Cyan
-    Write-Host "  Administrators: $($allRoleData.Administrators.Count)" -ForegroundColor Cyan
-    Write-Host "  Scopes: $($allRoleData.Scopes.Count)" -ForegroundColor Cyan
-    Write-Host "  Permissions: $($allRoleData.Permissions.Count)" -ForegroundColor Cyan
-    Write-Host "  Effective Administrators: $($allRoleData.EffectiveAdministrators.Count)" -ForegroundColor Cyan
-    Write-Host "  Total: $totalItems items" -ForegroundColor Green
-    Write-Host "[DEBUG] Role data saved successfully to: $OutputPath" | Out-File -FilePath $debugFile -Append
-    Write-Host "[DEBUG] Script completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
+    
+    Write-Host "Roles collection complete: $($roleData.Count) roles found" -ForegroundColor Green
+    Write-Host "[DEBUG] Role data saved successfully to: $OutputPath" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
+    Write-Host "[DEBUG] Script completed at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
     return $result
 }
 catch {

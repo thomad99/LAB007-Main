@@ -1,8 +1,5 @@
 # Get-CitrixApplications.ps1
 # Extracts published applications information
-# Author : LAB007.AI
-# Version: 1.0
-# Last Modified: 250127
 
 param(
     [string]$OutputPath = ".\Data\citrix-applications.json",

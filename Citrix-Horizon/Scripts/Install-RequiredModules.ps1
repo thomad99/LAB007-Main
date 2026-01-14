@@ -1,9 +1,6 @@
 # Install-RequiredModules.ps1
 # Automatically installs missing Citrix and VMware PowerShell modules/SDKs
 # This script checks for required dependencies and installs them if missing
-# Author : LAB007.AI
-# Version: 1.2
-# Last Modified: 260105:2134
 
 param(
     [switch]$SkipCitrix = $false,
@@ -220,8 +217,7 @@ if (-not $SkipCitrix) {
     
     if ($missingModules.Count -gt 0) {
         Write-Host ""
-        $missingMods = $missingModules -join ', '
-        Write-Host "[Citrix] Missing modules: $missingMods" -ForegroundColor Yellow
+        Write-Host "[Citrix] Missing modules: $($missingModules -join ', ')" -ForegroundColor Yellow
         Write-Host "[Citrix] Citrix PowerShell SDK must be installed manually." -ForegroundColor Yellow
         Write-Host ""
         Write-Host "Installation:" -ForegroundColor Cyan
@@ -241,22 +237,9 @@ if (-not $SkipCitrix) {
                 foreach ($installer in $installers) {
                     Write-Host "[Citrix] Found installer: $($installer.Name)" -ForegroundColor Gray
                     
-                    # Check if modules are already available - only install if missing
-                    # If -Force is specified, reinstall even if modules exist
-                    $shouldInstall = $false
+                    # Check if this installer is already installed by checking if modules are available after this would install
+                    # For now, we'll install if Force is specified, otherwise skip if modules are already available
                     if ($Force) {
-                        $shouldInstall = $true
-                        Write-Host "[Citrix] Force flag set - will reinstall even if modules exist" -ForegroundColor Yellow
-                    }
-                    elseif ($missingModules.Count -gt 0) {
-                        # Only install if we have missing modules
-                        $shouldInstall = $true
-                    }
-                    else {
-                        Write-Host "[Citrix] All required modules are already available. Skipping $($installer.Name)" -ForegroundColor Gray
-                    }
-                    
-                    if ($shouldInstall) {
                         try {
                             Write-Host "[Citrix] Installing $($installer.Name)..." -ForegroundColor Yellow
                             
@@ -278,6 +261,9 @@ if (-not $SkipCitrix) {
                         catch {
                             Write-Warning "[Citrix] Failed to install $($installer.Name): $_"
                         }
+                    }
+                    else {
+                        Write-Host "[Citrix] Skipping $($installer.Name) - use -Force to reinstall" -ForegroundColor Gray
                     }
                 }
             }
@@ -314,30 +300,23 @@ if (-not $SkipVMware) {
     }
 }
 
-# Check Citrix - list each module individually
+# Check Citrix
 if (-not $SkipCitrix) {
-    Write-Host "[Citrix] Module Status:" -ForegroundColor Cyan
-    $finalMissingModules = @()
+    $allCitrixAvailable = $true
     foreach ($moduleName in $requiredCitrixModules) {
         $available = Test-ModuleAvailable -ModuleName $moduleName
-        if ($available) {
-            Write-Host "  ✓ $moduleName : Available" -ForegroundColor Green
-        }
-        else {
-            Write-Host "  ✗ $moduleName : Missing" -ForegroundColor Red
-            $finalMissingModules += $moduleName
+        if (-not $available) {
+            $allCitrixAvailable = $false
+            break
         }
     }
     
-    Write-Host ""
-    if ($finalMissingModules.Count -eq 0) {
-        Write-Host "[Citrix] All required modules are available!" -ForegroundColor Green
+    if ($allCitrixAvailable) {
+        Write-Host "[Citrix] All Citrix modules: Available" -ForegroundColor Green
     }
     else {
-        $missingList = $finalMissingModules -join ', '
-        Write-Host "[Citrix] Missing modules: $missingList" -ForegroundColor Red
+        Write-Host "[Citrix] Some Citrix modules: Missing" -ForegroundColor Red
         Write-Host "[Citrix] Please install Citrix PowerShell SDK manually" -ForegroundColor Yellow
-        Write-Host "[Citrix] Installation: Place Citrix SDK MSI installer files in .\Dependencies\Citrix" -ForegroundColor Gray
     }
 }
 
