@@ -55,12 +55,17 @@ const upload = multer({
 
 // Routes
 
-// Landing page
+// Dashboard as default landing page
 app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'Web', 'index.html'));
+});
+
+// Upload page (explicit)
+app.get('/upload', (req, res) => {
     res.sendFile(path.join(__dirname, 'Web', 'upload.html'));
 });
 
-// Dashboard page
+// Dashboard page (alias)
 app.get('/dashboard', (req, res) => {
     res.sendFile(path.join(__dirname, 'Web', 'index.html'));
 });
