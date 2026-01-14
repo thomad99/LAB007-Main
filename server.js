@@ -30,7 +30,21 @@ app.use((req, res, next) => {
         console.log(`[Main Server] URL: ${req.url}`);
         console.log(`[Main Server] ===========================`);
     }
+    // Tag responses so we can see in headers which service served them
+    res.setHeader('X-LAB007-Service', 'main-server');
     next();
+});
+
+// Debug endpoint to see which file would be served at /
+app.get('/__debug_default', (req, res) => {
+    const rootIndex = path.join(__dirname, 'public', 'index.html');
+    const exists = fs.existsSync(rootIndex);
+    res.json({
+        service: 'main-server',
+        cwd: process.cwd(),
+        rootIndex,
+        exists
+    });
 });
 
 // Email configuration for contact form
