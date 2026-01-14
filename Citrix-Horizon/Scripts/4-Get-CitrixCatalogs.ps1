@@ -1,8 +1,5 @@
 # Get-CitrixCatalogs.ps1
 # Extracts machine catalogs information
-# Author : LAB007.AI
-# Version: 1.0
-# Last Modified: 260106:2101
 
 param(
     [string]$OutputPath = ".\Data\citrix-catalogs.json",
@@ -13,18 +10,6 @@ param(
 $outputDir = Split-Path -Path $OutputPath -Parent
 if (-not (Test-Path -Path $outputDir)) {
     New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
-}
-
-# Setup debug logging
-$debugFile = Join-Path $outputDir "debug4.txt"
-
-# Force delete existing debug file to ensure clean start
-if (Test-Path $debugFile) {
-    try {
-        Remove-Item $debugFile -Force -ErrorAction Stop
-    } catch {
-        Write-Warning "Could not delete existing debug file $debugFile : $_"
-    }
 }
 
 try {
@@ -83,26 +68,26 @@ try {
                         $catalogInfo.MasterImagePath = $provScheme.MasterImagePath
                         # Split by backslash
                         $pathParts = $provScheme.MasterImagePath -split '\\'
-                        Write-Host "[DEBUG] Catalog $($catalog.Name): MasterImagePath split into $($pathParts.Count) parts: $($pathParts -join ' | ')" | Out-File -FilePath $debugFile -Append
+                        Write-Host "[DEBUG] Catalog $($catalog.Name): MasterImagePath split into $($pathParts.Count) parts: $($pathParts -join ' | ')" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
                         
                         if ($pathParts.Count -ge 4) {
                             # 4th part from left (index 3) is the VM name
                             $imageMachineName = $pathParts[3]
                             $catalogInfo.MasterImageName = $imageMachineName
                             $catalogInfo.MasterImageVM = $imageMachineName
-                            Write-Host "[DEBUG] Catalog $($catalog.Name): Extracted VM name (4th part): $imageMachineName" | Out-File -FilePath $debugFile -Append
+                            Write-Host "[DEBUG] Catalog $($catalog.Name): Extracted VM name (4th part): $imageMachineName" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
                         }
                         else {
-                            Write-Host "[DEBUG] Catalog $($catalog.Name): Path has less than 4 parts, cannot extract VM name" | Out-File -FilePath $debugFile -Append
+                            Write-Host "[DEBUG] Catalog $($catalog.Name): Path has less than 4 parts, cannot extract VM name" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
                         }
                         
                         if ($pathParts.Count -gt 4) {
                             # Last part is the latest snapshot name
                             $latestSnapshotName = $pathParts[-1]
-                            Write-Host "[DEBUG] Catalog $($catalog.Name): Extracted snapshot name (last part): $latestSnapshotName" | Out-File -FilePath $debugFile -Append
+                            Write-Host "[DEBUG] Catalog $($catalog.Name): Extracted snapshot name (last part): $latestSnapshotName" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
                         }
                         else {
-                            Write-Host "[DEBUG] Catalog $($catalog.Name): Path has 4 or fewer parts, no snapshot in path" | Out-File -FilePath $debugFile -Append
+                            Write-Host "[DEBUG] Catalog $($catalog.Name): Path has 4 or fewer parts, no snapshot in path" | Out-File -FilePath (Join-Path (Split-Path -Path $OutputPath -Parent) "debug.txt") -Append
                         }
                     }
                     elseif ($provScheme.MasterImageVM) {

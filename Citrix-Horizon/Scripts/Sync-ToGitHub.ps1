@@ -1,10 +1,5 @@
 # Sync-ToGitHub.ps1
 # Automates syncing local code to GitHub repository with enhanced security
-# Uses force push to ignore remote-only files (can be disabled with -NoForcePush)
-# Includes intelligent error handling for branch protection and permission issues
-# Author : LAB007.AI
-# Version: 1.3
-# Last Modified: 260106:2135
 
 param(
     [string]$CommitMessage = "",
@@ -12,8 +7,7 @@ param(
     [switch]$DryRun = $false,
     [switch]$UseSSH = $false,
     [string]$GitHubPAT = "",
-    [string]$Branch = "",
-    [switch]$NoForcePush = $false
+    [string]$Branch = ""
 )
 
 $ErrorActionPreference = "Continue"
@@ -27,13 +21,10 @@ $SensitivePatterns = @(
     "*secret*.json",
     "*credential*.json",
     "*token*.txt",
-    "LAB007-Config.JSON",
+    "lab007-config.json",
     "Data\*.json",
     "Data\*.zip",
-    "Data\debug.txt",
-    # Ignore uploaded/debug artifacts so they don't block pushes
-    "Debug\*",
-    "Citrix-Horizon\Debug\*"
+    "Data\debug.txt"
 )
 
 Write-Host "========================================" -ForegroundColor Cyan
@@ -154,9 +145,9 @@ if (-not $remoteUrl) {
     Write-Host "GitHub remote not configured. Adding remote..." -ForegroundColor Yellow
     
     if ($UseSSH) {
-        $repoUrl = "git@github.com:thomad99/LAB007-Main.git"
+        $repoUrl = "git@github.com:thomad99/CitrixtoHZ.git"
     } else {
-        $repoUrl = "https://github.com/thomad99/LAB007-Main.git"
+        $repoUrl = "https://github.com/thomad99/CitrixtoHZ.git"
     }
     
     git remote add origin $repoUrl
@@ -313,87 +304,26 @@ if ($Branch) {
     }
 }
 
-# Push strategy based on parameters
-if ($NoForcePush) {
-    Write-Host "Pushing to GitHub (normal mode - may fail if remote has extra files)..." -ForegroundColor Yellow
-    Write-Host "Branch: $currentBranch" -ForegroundColor Gray
-    Write-Host "Strategy: Normal push (use -NoForcePush:$false for force mode)" -ForegroundColor Gray
+# Push to GitHub
+Write-Host "Pushing to GitHub..." -ForegroundColor Yellow
+Write-Host "Branch: $currentBranch" -ForegroundColor Gray
 
-    # Normal push - may fail if remote has diverged
-    git push origin $currentBranch
+# Check if upstream is set
+$upstream = git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>$null
+if (-not $upstream) {
+    Write-Host "Setting upstream branch..." -ForegroundColor Gray
+    git push -u origin $currentBranch
 }
 else {
-    # Sync strategy: Force push local state, ignore remote files that don't exist locally
-    # This resolves issues where debug files exist on remote but not locally
-    Write-Host "Pushing to GitHub (force mode - ignores remote-only files)..." -ForegroundColor Yellow
-    Write-Host "Branch: $currentBranch" -ForegroundColor Gray
-    Write-Host "Strategy: Force push local changes (remote-only files ignored)" -ForegroundColor Gray
-
-    # First try force push
-    Write-Host "Attempting force push..." -ForegroundColor Gray
-    git push --force origin $currentBranch 2>&1
-
-    # Capture the error for analysis
-    $forcePushExitCode = $LASTEXITCODE
-    $forcePushError = $error[0]
-
-    # If force push fails, try alternative approaches
-    if ($forcePushExitCode -ne 0) {
-        Write-Host "Force push failed (exit code: $forcePushExitCode)." -ForegroundColor Yellow
-
-        # Check if it's a branch protection issue
-        if ($forcePushError -match "rejected.*fetch first" -or $forcePushError -match "non-fast-forward") {
-            Write-Host "This appears to be a branch protection or diverged branch issue." -ForegroundColor Yellow
-            Write-Host "Trying to sync with remote first..." -ForegroundColor Gray
-
-            # Try to pull and merge
-            git pull origin $currentBranch --allow-unrelated-histories 2>$null
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "Successfully merged remote changes. Retrying push..." -ForegroundColor Green
-                git push origin $currentBranch
-            } else {
-                Write-Host "Merge failed. Trying force push with lease..." -ForegroundColor Yellow
-                git push --force-with-lease origin $currentBranch 2>&1
-            }
-        } else {
-            Write-Host "Trying force push with lease as alternative..." -ForegroundColor Gray
-            git push --force-with-lease origin $currentBranch 2>&1
-        }
-
-        # If all force push attempts fail, provide manual options
-        if ($LASTEXITCODE -ne 0) {
-            Write-Host "All force push methods failed." -ForegroundColor Red
-            Write-Host "This is likely due to branch protection rules or permission restrictions." -ForegroundColor Red
-            Write-Host ""
-            Write-Host "Immediate solutions:" -ForegroundColor Yellow
-            Write-Host "  1. Use -NoForcePush: .\Sync-ToGitHub.ps1 -NoForcePush" -ForegroundColor White
-            Write-Host "  2. Push to a new branch: .\Sync-ToGitHub.ps1 -Branch 'feature-updates'" -ForegroundColor White
-            Write-Host ""
-            Write-Host "Manual resolution:" -ForegroundColor Yellow
-            Write-Host "  1. Check repository settings for branch protection on 'master/main'" -ForegroundColor White
-            Write-Host "  2. Verify you have admin/maintainer access to enable force pushes" -ForegroundColor White
-            Write-Host "  3. Temporarily disable branch protection if you have permission" -ForegroundColor White
-            Write-Host "  4. Push to a different branch without protection" -ForegroundColor White
-            Write-Host ""
-            Write-Host "Local resolution commands:" -ForegroundColor Cyan
-            Write-Host "  git pull origin $currentBranch --allow-unrelated-histories" -ForegroundColor Gray
-            Write-Host "  git push origin $currentBranch" -ForegroundColor Gray
-            exit 1
-        }
-    }
+    git push
 }
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Green
     Write-Host "Successfully synced to GitHub!" -ForegroundColor Green
-    Write-Host "Repository: https://github.com/thomad99/LAB007-Main" -ForegroundColor Cyan
+    Write-Host "Repository: https://github.com/thomad99/CitrixtoHZ" -ForegroundColor Cyan
     Write-Host "Branch: $currentBranch" -ForegroundColor Cyan
-    if ($NoForcePush) {
-        Write-Host "Strategy: Normal push" -ForegroundColor Gray
-    } else {
-        Write-Host "Strategy: Force push (remote-only files ignored)" -ForegroundColor Gray
-    }
     Write-Host "========================================" -ForegroundColor Green
 }
 else {
@@ -405,8 +335,8 @@ else {
     Write-Host "  3. Use SSH authentication: .\Sync-ToGitHub.ps1 -UseSSH" -ForegroundColor White
     Write-Host "  4. Use Personal Access Token: .\Sync-ToGitHub.ps1 -GitHubPAT 'your-token'" -ForegroundColor White
     Write-Host "  5. Set GITHUB_TOKEN environment variable for automatic PAT usage" -ForegroundColor White
-    Write-Host "  6. Disable force push if needed: .\Sync-ToGitHub.ps1 -NoForcePush" -ForegroundColor White
-    Write-Host "  7. The script uses force push mode by default - remote-only files are ignored" -ForegroundColor White
+    Write-Host "  6. If the repository has existing commits, you may need to pull first:" -ForegroundColor White
+    Write-Host "     git pull origin $currentBranch --allow-unrelated-histories" -ForegroundColor Gray
     exit 1
 }
 

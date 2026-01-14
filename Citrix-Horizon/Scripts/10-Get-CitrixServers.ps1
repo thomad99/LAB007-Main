@@ -1,7 +1,6 @@
 # Get-CitrixServers.ps1
 # Extracts server information including specs (RAM, CPU, Disk)
 # Uses VMware SDK as fallback if Citrix data unavailable
-# Last Modified: 260106:2140
 
 param(
     [string]$OutputPath = ".\Data\citrix-servers.json",
@@ -27,25 +26,16 @@ if (-not (Test-Path -Path $outputDir)) {
     Write-Host "[DEBUG] Created output directory: $outputDir" | Out-File -FilePath (Join-Path $outputDir "debug.txt") -Append
 }
 
-$debugFile = Join-Path $outputDir "debug10.txt"
-
-# Force delete existing debug file to ensure clean start
-if (Test-Path $debugFile) {
-    try {
-        Remove-Item $debugFile -Force -ErrorAction Stop
-    } catch {
-        Write-Warning "Could not delete existing debug file $debugFile : $_"
-    }
-}
+$debugFile = Join-Path $outputDir "debug.txt"
 
 try {
     # Note: Citrix modules/snap-ins must be loaded manually before running this script
     Write-Host "Collecting server information from Citrix..." -ForegroundColor Yellow
-    Write-Host "[DEBUG] Script started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append
-    Write-Host "[DEBUG] OutputPath: $OutputPath" | Out-File -FilePath $debugFile -Append
-    Write-Host "[DEBUG] OutputDir: $outputDir" | Out-File -FilePath $debugFile -Append
-    Write-Host "[DEBUG] AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append
-    Write-Host "[DEBUG] CitrixVersion: $CitrixVersion" | Out-File -FilePath $debugFile -Append
+    Write-Host "[DEBUG] Script started at $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] OutputPath: $OutputPath" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] OutputDir: $outputDir" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] AdminAddress: $global:CitrixAdminAddress" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
+    Write-Host "[DEBUG] CitrixVersion: $CitrixVersion" | Out-File -FilePath $debugFile -Append -ErrorAction SilentlyContinue
     
     # Check if VMware will be used as fallback
     if ($VMwareServer) {
@@ -158,7 +148,7 @@ try {
                         
                         if ($specsCollected) {
                             $serverInfo.SpecsSource = "CIM"
-                            Write-Host "  OK: Collected specs via CIM for $hostName" -ForegroundColor Green
+                            Write-Host "  ✓ Collected specs via CIM for $hostName" -ForegroundColor Green
                         }
                         
                         Remove-CimSession -CimSession $cimSession
@@ -221,7 +211,7 @@ try {
                                 # Disk (sum all virtual disks)
                                 $totalDiskGB = 0
                                 foreach ($disk in $vmConfig.Config.Hardware.Device) {
-                                    if ($disk.GetType().Name -eq 'VirtualDisk') {
+                                    if ($disk -is [VMware.Vim.VirtualDisk]) {
                                         $totalDiskGB += [math]::Round(($disk.CapacityInKB / 1MB), 2)
                                     }
                                 }
@@ -237,18 +227,18 @@ try {
                                 }
                                 
                                 $serverInfo.SpecsSource = "VMware"
-                                Write-Host "  OK: Successfully retrieved specs from VMware for $hostName (RAM: $($serverInfo.TotalRAM_GB)GB, CPU: $($serverInfo.CPUCount) vCPU, Disk: $($serverInfo.DiskTotalSize_GB)GB)" -ForegroundColor Green
+                                Write-Host "  ✓ Successfully retrieved specs from VMware for $hostName (RAM: $($serverInfo.TotalRAM_GB)GB, CPU: $($serverInfo.CPUCount) vCPU, Disk: $($serverInfo.DiskTotalSize_GB)GB)" -ForegroundColor Green
                             }
                             else {
-                                Write-Warning "  ERROR: VM not found in VMware for server $hostName (searched: $($searchNames -join ', '))"
+                                Write-Warning "  ✗ VM not found in VMware for server $hostName (searched: $($searchNames -join ', '))"
                             }
                         }
                         else {
-                            Write-Warning "  ERROR: VMware PowerCLI module not available for $hostName. Place VMware PowerCLI files in .\Dependencies\VMware\ and run Install-RequiredModules.ps1"
+                            Write-Warning "  ✗ VMware PowerCLI module not available for $hostName. Place VMware PowerCLI files in .\Dependencies\VMware\ and run Install-RequiredModules.ps1"
                         }
                     }
                     catch {
-                        Write-Warning "  ERROR: Could not retrieve specs from VMware for $hostName : $_"
+                        Write-Warning "  ✗ Could not retrieve specs from VMware for $hostName : $_"
                     }
                 }
                 
@@ -364,7 +354,7 @@ try {
 catch {
     # Ensure we have the debug file path
     if (-not $debugFile) {
-        $debugFile = Join-Path $outputDir "debug10.txt"
+        $debugFile = Join-Path $outputDir "debug.txt"
     }
     
     $errorMsg = "Failed to collect servers information: $_"

@@ -16,8 +16,7 @@ const TODO_ITEMS = [
     id: 'controllers',
     title: 'Controllers',
     details:
-      'Connection servers handle management (like DDCs) & brokering (like StoreFront). ' +
-      'There is no database component, each Controller keeps a local copy of the config that it replicates with other controllers in the POD. ' +
+      'Connection servers handle brokering (like StoreFront) and environment management (similar to Citrix DDCs). ' +
       'You need at least 2 connection servers; each can handle ~2000 concurrent users.'
   },
   {
@@ -83,8 +82,7 @@ const TODO_ITEMS = [
     title: 'Profiles',
     details:
       'FSLogix is the recommended profile solution. Install the agent in the image and configure a GPO for profile path. ' +
-      'Expect 2–5 GB per user unless tuned, so profile storage sizing and exclusions are important. ' +
-      'Horizon DEM also offer a basic profile solution. It uses a central file repository to store user profiles.'
+      'Expect 2–5 GB per user unless tuned, so profile storage sizing and exclusions are important.'
   },
   {
     id: 'citrix-upm',

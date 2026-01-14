@@ -1,18 +1,15 @@
 # Sync-ToGitHub.ps1
-# Automates syncing local Citrix-Horizon code to GitHub
-# Local files are MASTER - they overwrite remote
-# Extra files on GitHub will be pulled locally first
+# Automates syncing local code to GitHub repository
 
 param(
     [string]$CommitMessage = "",
-    [switch]$ForceLocal = $false
+    [switch]$Force = $false
 )
 
 $ErrorActionPreference = "Continue"
 
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "GitHub Sync - Citrix to Horizon Tool" -ForegroundColor Cyan
-Write-Host "Local files are MASTER" -ForegroundColor Green
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
 
@@ -42,65 +39,30 @@ if (-not $remoteUrl) {
     Write-Host "Remote added: https://github.com/thomad99/CitrixtoHZ.git" -ForegroundColor Green
 }
 
-Write-Host "Repository: https://github.com/thomad99/CitrixtoHZ" -ForegroundColor Gray
+Write-Host "Current remote: $remoteUrl" -ForegroundColor Gray
 Write-Host ""
 
-# Get current branch
-$currentBranch = git branch --show-current
-if (-not $currentBranch) {
-    $currentBranch = "master"
-    Write-Host "No current branch found. Using: $currentBranch" -ForegroundColor Yellow
-}
-
-# STEP 1: Pull from remote to get any extra files locally
-Write-Host "Step 1: Pulling from remote (to get extra files locally)..." -ForegroundColor Yellow
-git fetch origin 2>$null
-git pull origin $currentBranch --no-edit 2>$null
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Pull completed with notes (local changes take precedence)." -ForegroundColor Yellow
-    # Reset any conflicts to local state
-    git reset --hard HEAD 2>$null
-} else {
-    Write-Host "Pull completed successfully." -ForegroundColor Green
-}
-Write-Host ""
-
-# STEP 2: Check for local changes
-Write-Host "Step 2: Checking for local changes..." -ForegroundColor Yellow
+# Check git status
+Write-Host "Checking for changes..." -ForegroundColor Yellow
 $status = git status --porcelain
-
-if (-not $status -and -not $ForceLocal) {
-    Write-Host "No changes to commit." -ForegroundColor Green
-
-    # Check if we're ahead of remote
-    $aheadBehind = git rev-list --count --left-right "origin/$currentBranch...HEAD" 2>$null
-    if ($aheadBehind) {
-        $aheadCount = ($aheadBehind -split '\s+')[1]
-        if ($aheadCount -gt 0) {
-            Write-Host "Local is ahead by $aheadCount commits. Force pushing..." -ForegroundColor Yellow
-            git push origin $currentBranch --force-with-lease
-            if ($LASTEXITCODE -eq 0) {
-                Write-Host "Successfully pushed local commits!" -ForegroundColor Green
-            } else {
-                Write-Host "ERROR: Failed to push commits" -ForegroundColor Red
-                exit 1
-            }
-        } else {
-            Write-Host "Everything is synchronized!" -ForegroundColor Green
-        }
-    } else {
-        Write-Host "Everything is synchronized!" -ForegroundColor Green
-    }
+if (-not $status -and -not $Force) {
+    Write-Host "No changes to commit. Repository is up to date." -ForegroundColor Green
     exit 0
 }
 
 # Show what will be committed
-Write-Host "Local changes detected:" -ForegroundColor Yellow
-git status -s
+Write-Host "Files to be committed:" -ForegroundColor Cyan
+git status --short
 Write-Host ""
 
-# STEP 3: Stage all changes
-Write-Host "Step 3: Staging changes..." -ForegroundColor Yellow
+# Get commit message (auto-generate if not provided)
+if (-not $CommitMessage) {
+    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $CommitMessage = "Auto-sync: $timestamp"
+}
+
+# Add all changes
+Write-Host "Staging changes..." -ForegroundColor Yellow
 git add .
 if ($LASTEXITCODE -ne 0) {
     Write-Error "Failed to stage changes"
@@ -109,14 +71,8 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Changes staged successfully" -ForegroundColor Green
 Write-Host ""
 
-# STEP 4: Get commit message
-if (-not $CommitMessage) {
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $CommitMessage = "Auto-sync: $timestamp"
-}
-
-# STEP 5: Commit changes
-Write-Host "Step 4: Committing changes..." -ForegroundColor Yellow
+# Commit changes
+Write-Host "Committing changes..." -ForegroundColor Yellow
 Write-Host "Commit message: $CommitMessage" -ForegroundColor Gray
 git commit -m $CommitMessage
 if ($LASTEXITCODE -ne 0) {
@@ -135,35 +91,46 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Changes committed successfully" -ForegroundColor Green
 Write-Host ""
 
-# STEP 6: Force push to make local the master
-Write-Host "Step 5: Force pushing to GitHub (local is master)..." -ForegroundColor Yellow
+# Check current branch
+$currentBranch = git branch --show-current
+if (-not $currentBranch) {
+    # If no branch exists, create master branch
+    git checkout -b master
+    $currentBranch = "master"
+}
+
+# Push to GitHub
+Write-Host "Pushing to GitHub..." -ForegroundColor Yellow
 Write-Host "Branch: $currentBranch" -ForegroundColor Gray
 
-# Use force-with-lease for safety (prevents overwriting if someone else pushed)
-git push origin $currentBranch --force-with-lease
+# Check if upstream is set
+$upstream = git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>$null
+if (-not $upstream) {
+    Write-Host "Setting upstream branch..." -ForegroundColor Gray
+    git push -u origin $currentBranch
+}
+else {
+    git push
+}
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""
     Write-Host "========================================" -ForegroundColor Green
     Write-Host "Successfully synced to GitHub!" -ForegroundColor Green
-    Write-Host "========================================" -ForegroundColor Green
     Write-Host "Repository: https://github.com/thomad99/CitrixtoHZ" -ForegroundColor Cyan
-    Write-Host "Branch: $currentBranch" -ForegroundColor Cyan
-    Write-Host "Local files are now the master on GitHub!" -ForegroundColor Green
+    Write-Host "========================================" -ForegroundColor Green
 }
 else {
-    Write-Error "Failed to push to GitHub."
+    Write-Error "Failed to push to GitHub. Please check your credentials and network connection."
     Write-Host ""
     Write-Host "Troubleshooting:" -ForegroundColor Yellow
     Write-Host "  1. Ensure you have push access to the repository" -ForegroundColor White
     Write-Host "  2. Check your Git credentials (git config --global user.name and user.email)" -ForegroundColor White
     Write-Host "  3. You may need to authenticate with GitHub (Personal Access Token)" -ForegroundColor White
-    Write-Host "  4. Try manual force push: git push origin $currentBranch --force" -ForegroundColor Gray
-    Write-Host "  5. Check network connectivity" -ForegroundColor White
+    Write-Host "  4. If the repository has existing commits, you may need to pull first:" -ForegroundColor White
+    Write-Host "     git pull origin $currentBranch --allow-unrelated-histories" -ForegroundColor Gray
     exit 1
 }
 
 Write-Host ""
-Write-Host "Note: Any extra files from GitHub have been pulled locally." -ForegroundColor Gray
-Write-Host "Your local repository is now the authoritative source." -ForegroundColor Gray
 
