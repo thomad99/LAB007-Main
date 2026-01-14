@@ -514,7 +514,21 @@
                     <div id="cloneScriptSection" style="margin: 20px 0; display: none;">
                         <h4 style="margin-bottom: 15px;">Clone Destination Configuration</h4>
 
+                        <!-- VMware Folder Operations Toggle -->
                         <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
+                            <div style="display: flex; align-items: center; justify-content: space-between;">
+                                <div>
+                                    <h5 style="margin: 0 0 5px 0; font-weight: bold;">Enable VMware Folder Operations</h5>
+                                    <p style="margin: 0; color: #666; font-size: 14px;">When enabled, cloned VMs will be moved to specified folders. When disabled, only cloning will occur.</p>
+                                </div>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="enableVMwareFoldersToggle" checked>
+                                    <span class="toggle-slider"></span>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div id="vmwareFoldersSection" style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
                             <h4 style="margin-bottom: 10px;">Load VMware Folders List</h4>
                             <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Load VMware folder structure from a JSON file created by the VMware folders collection script to enable folder browsing.</p>
                             <button id="loadVMwareFoldersBtn" class="btn btn-secondary" onclick="loadVMwareFoldersFile()">Load VMware Folders JSON</button>
@@ -544,6 +558,7 @@
                                 <button id="browseSourceFoldersBtn" class="btn btn-secondary" style="padding: 8px 15px; opacity: 0.5; cursor: not-allowed;" disabled>Browse</button>
                             </div>
                             <p style="margin-top: 5px; color: #666; font-size: 12px;">Source move folder is configured in LAB007-Config.JSON. Use the Config tab to change folder settings.</p>
+                        </div>
                         </div>
 
                         <div style="text-align: right;">
