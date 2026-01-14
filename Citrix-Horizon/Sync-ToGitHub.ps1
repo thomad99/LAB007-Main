@@ -42,8 +42,9 @@ if (-not $remoteUrl) {
 Write-Host "Current remote: $remoteUrl" -ForegroundColor Gray
 Write-Host ""
 
-# Check git status
-Write-Host "Checking for changes..." -ForegroundColor Yellow
+# Strict local-over-remote: NO pull, local always wins
+# Check git status (no pull)
+Write-Host "Checking for changes (no pull)..." -ForegroundColor Yellow
 $status = git status --porcelain
 if (-not $status -and -not $Force) {
     Write-Host "No changes to commit. Repository is up to date." -ForegroundColor Green
@@ -99,19 +100,10 @@ if (-not $currentBranch) {
     $currentBranch = "master"
 }
 
-# Push to GitHub
-Write-Host "Pushing to GitHub..." -ForegroundColor Yellow
+# Push to GitHub (local is master)
+Write-Host "Pushing to GitHub (force-with-lease, local is master)..." -ForegroundColor Yellow
 Write-Host "Branch: $currentBranch" -ForegroundColor Gray
-
-# Check if upstream is set
-$upstream = git rev-parse --abbrev-ref --symbolic-full-name '@{u}' 2>$null
-if (-not $upstream) {
-    Write-Host "Setting upstream branch..." -ForegroundColor Gray
-    git push -u origin $currentBranch
-}
-else {
-    git push
-}
+git push origin $currentBranch --force-with-lease
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host ""

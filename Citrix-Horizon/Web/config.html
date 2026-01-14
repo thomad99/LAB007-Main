@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LAB007 Discovery Tools - Configuration</title>
-    <link rel="icon" type="image/png" href="/images/lab007%20Icon.PNG">
-    <link rel="shortcut icon" type="image/png" href="/images/lab007%20Icon.PNG">
-    <link rel="apple-touch-icon" href="/images/lab007%20Icon.PNG">
+    <link rel="icon" type="image/png" href="images/lab007%20Icon.PNG">
+    <link rel="shortcut icon" type="image/png" href="images/lab007%20Icon.PNG">
+    <link rel="apple-touch-icon" href="images/lab007%20Icon.PNG">
     <link rel="stylesheet" href="styles.css">
     <style>
         body {
@@ -51,7 +51,7 @@
             padding: 12px 15px;
             border: 2px solid var(--border-color);
             border-radius: 8px;
-            font-size: 1rem;
+            font-size: 1.125rem;
             transition: border-color 0.3s ease;
         }
 
@@ -147,8 +147,12 @@
                 <button class="close-btn" onclick="window.close(); if(!window.closed) { window.location.href='index.html'; }" title="Close">&times;</button>
             </div>
             <div style="text-align: center; margin-bottom: 30px;">
-                <img src="/images/LAB007-LOGO-TRANS.png" alt="Lab007 Logo" style="max-height: 300px; margin-bottom: 15px;">
+                <img src="images/LAB007-LOGO-TRANS.png" alt="Lab007 Logo" style="max-height: 300px; margin-bottom: 15px;">
                 <p class="subtitle" style="font-size: 1.5rem; margin-top: 20px;">Configuration</p>
+                <div style="background: #e3f2fd; border: 1px solid #2196f3; border-radius: 8px; padding: 15px; margin: 20px 0; max-width: 500px; margin-left: auto; margin-right: auto;">
+                    <strong>💡 Local Usage:</strong> Click "Save Config" to download the configuration file.<br>
+                    Save it to the same directory as your PowerShell scripts.
+                </div>
             </div>
 
             <form id="configForm">
@@ -181,121 +185,396 @@
 
                 <div class="form-group">
                     <label>
-                        <input type="checkbox" id="skipServerSpecs" name="skipServerSpecs" style="width: auto; margin-right: 8px;">
-                        Skip Server Specs Collection (faster execution)
+                        <input type="checkbox" id="runPreReqCheck" name="runPreReqCheck" checked style="width: auto; margin-right: 8px;">
+                        Run Pre-requisite Checks
                     </label>
-                    <div class="help-text">Check this to skip detailed server hardware information collection</div>
+                    <div class="help-text">Check this to run system pre-requisite checks before starting the audit</div>
                 </div>
 
-                <button type="submit" class="btn-submit" id="startAuditBtn">Start Audit</button>
+                <div class="form-group">
+                    <label for="vCenterServer">vCenter Server:</label>
+                    <input type="text" id="vCenterServer" name="vCenterServer" value="shcvcsacx01v.ccr.cchcs.org" placeholder="vCenter FQDN">
+                    <div class="help-text">Enter your vCenter server FQDN for VMware operations</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="vCenterUsername">vCenter Username:</label>
+                    <input type="text" id="vCenterUsername" name="vCenterUsername" value="" placeholder="username@domain.com">
+                    <div class="help-text">Optional: VMware username for vCenter authentication</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="vCenterPassword">vCenter Password:</label>
+                    <input type="password" id="vCenterPassword" name="vCenterPassword" value="" placeholder="password">
+                    <div class="help-text">Optional: VMware password for vCenter authentication</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="masterImagePrefix">Master Image Prefix:</label>
+                    <input type="text" id="masterImagePrefix" name="masterImagePrefix" value="SHC-M-" placeholder="e.g., SHC-M-">
+                    <div class="help-text">Prefix used to identify master images (images will be searched using: [Prefix]* pattern)</div>
+                </div>
+
+                <div class="form-group">
+                    <label for="auditComponents">Audit Components to Run:</label>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; margin-top: 10px;">
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditSiteInfo" name="auditSiteInfo" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Site Information</strong>
+                                <div style="font-size: 11px; color: #666;">Citrix site details & licensing</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditApplications" name="auditApplications" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Published Applications</strong>
+                                <div style="font-size: 11px; color: #666;">All published apps</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditDesktops" name="auditDesktops" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Published Desktops</strong>
+                                <div style="font-size: 11px; color: #666;">All published desktops</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditCatalogs" name="auditCatalogs" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Machine Catalogs</strong>
+                                <div style="font-size: 11px; color: #666;">Catalog configurations</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditDeliveryGroups" name="auditDeliveryGroups" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Delivery Groups</strong>
+                                <div style="font-size: 12px; color: #666;">Delivery group settings</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditUsageStats" name="auditUsageStats" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Usage Statistics</strong>
+                                <div style="font-size: 11px; color: #666;">Usage data & sessions</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditPolicies" name="auditPolicies" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Citrix Policies</strong>
+                                <div style="font-size: 11px; color: #666;">Policy configurations</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditRoles" name="auditRoles" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Management Roles</strong>
+                                <div style="font-size: 11px; color: #666;">Admin roles & permissions</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditVMwareSpecs" name="auditVMwareSpecs" style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>VMware Server Specs</strong>
+                                <div style="font-size: 11px; color: #666;">VMware VM specifications</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditVMwareFolders" name="auditVMwareFolders" style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>VMware Folder Structure</strong>
+                                <div style="font-size: 11px; color: #666;">VMware VM folder hierarchy</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditAppIcons" name="auditAppIcons" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>App Icons</strong>
+                                <div style="font-size: 11px; color: #666;">Export Citrix application icons</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditServers" name="auditServers" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Server Information</strong>
+                                <div style="font-size: 11px; color: #666;">Citrix server details</div>
+                            </div>
+                        </label>
+                        <label style="display: flex; align-items: center; padding: 8px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <input type="checkbox" id="auditDirectorOData" name="auditDirectorOData" checked style="width: auto; margin-right: 8px;">
+                            <div>
+                                <strong>Director OData</strong>
+                                <div style="font-size: 11px; color: #666;">Monitoring data from Director</div>
+                            </div>
+                        </label>
+                    </div>
+                    <div class="help-text" style="margin-top: 10px;">Select which audit components you want to run</div>
+                </div>
+
+                <!-- VMware Folder Configuration -->
+                <div class="config-section" id="vmwareFolderSection" style="display: none;">
+                    <h3>VMware Folder Configuration</h3>
+
+                    <div style="margin-bottom: 20px; padding: 15px; border: 1px solid var(--border-color); border-radius: 4px; background-color: #f8f9fa;">
+                        <h4 style="margin-bottom: 10px;">Load VMware Folders</h4>
+                        <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Upload the vmware-folders.json file generated by the VMware folder collection script.</p>
+                        <button id="loadConfigVMwareFoldersBtn" class="btn btn-secondary" onclick="loadConfigVMwareFoldersFile()">Load VMware Folders JSON</button>
+                        <input type="file" id="configVMwareFoldersFileInput" accept=".json" style="display: none;">
+                        <span id="configVMwareFoldersFileName" style="margin-left: 15px; color: #666;"></span>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label for="vmwareFolderSearch" style="display: block; margin-bottom: 8px; font-weight: bold;">Search Folders:</label>
+                        <input type="text" id="vmwareFolderSearch" placeholder="Type to filter folders..." style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid var(--border-color); border-radius: 4px;" onkeyup="filterVMwareFolders()">
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label for="cloneDestinationFolderSelect" style="display: block; margin-bottom: 8px; font-weight: bold;">VM Clone Destination Folder:</label>
+                        <select id="cloneDestinationFolderSelect" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <option value="">Select destination folder...</option>
+                        </select>
+                        <div style="margin-top: 5px; color: #666; font-size: 12px;">Folder where cloned VMs will be placed</div>
+                    </div>
+
+                    <div style="margin-bottom: 20px;">
+                        <label for="sourceMoveFolderSelect" style="display: block; margin-bottom: 8px; font-weight: bold;">Move Cloned VM Folder:</label>
+                        <select id="sourceMoveFolderSelect" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid var(--border-color); border-radius: 4px;">
+                            <option value="">Select source move folder...</option>
+                        </select>
+                        <div style="margin-top: 5px; color: #666; font-size: 12px;">Folder where source VMs will be moved after cloning (leave empty to disable)</div>
+                    </div>
+
+                    <div class="help-text" style="margin-top: 10px;">Configure VMware folder settings for VM cloning operations</div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="saveConfigBtn">⬇️ Download Config</button>
             </form>
 
             <div id="statusMessage" class="status-message"></div>
-
-            <div id="auditInstructions" style="margin-top: 30px; padding-top: 20px; border-top: 1px solid var(--border-color); text-align: center; display: none;">
-                <p style="color: #6c757d; font-size: 0.9rem; margin-bottom: 15px;">
-                    Configuration saved! Click the button below to start the audit:
-                </p>
-                <button id="runAuditBtn" class="btn-submit" style="width: auto; padding: 12px 30px; margin: 0;">
-                    Run PowerShell Audit Script
-                </button>
-                <p style="color: #6c757d; font-size: 0.85rem; margin-top: 15px;">
-                    Or manually run: <code style="background: #f8f9fa; padding: 2px 6px; border-radius: 3px;">.\Scripts\Collect-CitrixAuditData.ps1</code>
-                </p>
-            </div>
         </div>
     </div>
 
     <script>
-        // Load existing configuration if available
-        function loadExistingConfig() {
+        // Load existing configuration from server (if available)
+        async function loadExistingConfig() {
             try {
-                const config = localStorage.getItem('lab007Config');
-                if (config) {
-                    const parsed = JSON.parse(config);
-                    document.getElementById('citrixVersion').value = parsed.citrixVersion || '1912';
-                    document.getElementById('ddcName').value = parsed.ddcName || 'localhost';
-                    document.getElementById('usageDays').value = parsed.usageDays || 30;
-                    document.getElementById('skipServerSpecs').checked = parsed.skipServerSpecs || false;
+                const response = await fetch('/api/audit-config');
+                if (response.ok) {
+                    const config = await response.json();
+                    applyConfigToForm(config);
+                    console.log('Configuration loaded from server');
+                } else {
+                    console.log('Server available but config not found, using defaults');
                 }
             } catch (e) {
-                console.log('No existing config found');
+                // Server not available - this is expected when running locally
+                console.log('No server available - using default configuration');
             }
         }
 
-        // Save configuration and prepare audit
-        document.getElementById('configForm').addEventListener('submit', function(e) {
-            e.preventDefault();
+        function applyConfigToForm(config) {
+                    document.getElementById('citrixVersion').value = config.citrixVersion || '1912';
+                    document.getElementById('ddcName').value = config.ddcName || 'localhost';
+                    document.getElementById('usageDays').value = config.usageDays || 30;
+                    document.getElementById('vCenterServer').value = config.vCenterServer || 'shcvcsacx01v.ccr.cchcs.org';
+                    document.getElementById('vCenterUsername').value = config.vCenterUsername || '';
+                    document.getElementById('vCenterPassword').value = config.vCenterPassword || '';
+                    document.getElementById('masterImagePrefix').value = config.masterImagePrefix || 'SHC-M-';
+                    document.getElementById('runPreReqCheck').checked = config.runPreReqCheck !== false;
 
-            const config = {
+                    // VMware folder selections
+                    document.getElementById('cloneDestinationFolderSelect').value = config.cloneDestinationFolder || '';
+                    document.getElementById('sourceMoveFolderSelect').value = config.sourceMoveFolder || '';
+            document.getElementById('auditSiteInfo').checked = config.auditComponents?.SiteInfo !== false;
+            document.getElementById('auditApplications').checked = config.auditComponents?.Applications !== false;
+            document.getElementById('auditDesktops').checked = config.auditComponents?.Desktops !== false;
+            document.getElementById('auditCatalogs').checked = config.auditComponents?.Catalogs !== false;
+            document.getElementById('auditDeliveryGroups').checked = config.auditComponents?.DeliveryGroups !== false;
+            document.getElementById('auditUsageStats').checked = config.auditComponents?.UsageStats !== false;
+            document.getElementById('auditPolicies').checked = config.auditComponents?.Policies !== false;
+            document.getElementById('auditRoles').checked = config.auditComponents?.Roles !== false;
+            document.getElementById('auditVMwareSpecs').checked = config.auditComponents?.VMwareSpecs || false;
+            document.getElementById('auditVMwareFolders').checked = config.auditComponents?.VMwareFolders || false;
+            document.getElementById('auditAppIcons').checked = config.auditComponents?.AppIcons !== false;
+            document.getElementById('auditServers').checked = config.auditComponents?.Servers !== false;
+            document.getElementById('auditDirectorOData').checked = config.auditComponents?.DirectorOData !== false;
+        }
+
+        // Function to create config object
+        function createConfigObject() {
+            return {
                 citrixVersion: document.getElementById('citrixVersion').value,
                 ddcName: document.getElementById('ddcName').value,
                 usageDays: parseInt(document.getElementById('usageDays').value),
-                skipServerSpecs: document.getElementById('skipServerSpecs').checked,
+                vCenterServer: document.getElementById('vCenterServer').value,
+                vCenterUsername: document.getElementById('vCenterUsername').value,
+                vCenterPassword: document.getElementById('vCenterPassword').value,
+                masterImagePrefix: document.getElementById('masterImagePrefix').value,
+                runPreReqCheck: document.getElementById('runPreReqCheck').checked,
+                cloneDestinationFolder: document.getElementById('cloneDestinationFolderSelect').value,
+                sourceMoveFolder: document.getElementById('sourceMoveFolderSelect').value,
+                auditComponents: {
+                    SiteInfo: document.getElementById('auditSiteInfo').checked,
+                    Applications: document.getElementById('auditApplications').checked,
+                    Desktops: document.getElementById('auditDesktops').checked,
+                    Catalogs: document.getElementById('auditCatalogs').checked,
+                    DeliveryGroups: document.getElementById('auditDeliveryGroups').checked,
+                    UsageStats: document.getElementById('auditUsageStats').checked,
+                    Policies: document.getElementById('auditPolicies').checked,
+                    Roles: document.getElementById('auditRoles').checked,
+                    VMwareSpecs: document.getElementById('auditVMwareSpecs').checked,
+                    VMwareFolders: document.getElementById('auditVMwareFolders').checked,
+                    AppIcons: document.getElementById('auditAppIcons').checked,
+                    Servers: document.getElementById('auditServers').checked,
+                    DirectorOData: document.getElementById('auditDirectorOData').checked
+                },
                 savedAt: new Date().toISOString()
             };
+        }
 
-            // Save to localStorage
-            localStorage.setItem('lab007Config', JSON.stringify(config));
-
-            // Create downloadable JSON file
-            const configBlob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
-            const configUrl = URL.createObjectURL(configBlob);
-            const configLink = document.createElement('a');
-            configLink.href = configUrl;
-            configLink.download = 'lab007-config.json';
-            document.body.appendChild(configLink);
-            configLink.click();
-            document.body.removeChild(configLink);
-            URL.revokeObjectURL(configUrl);
-
-            // Create batch file to run PowerShell script
-            const batchContent = `@echo off
-cd /d "%~dp0"
-echo Starting LAB007 Discovery Tools Audit...
-echo.
-echo Configuration:
-echo   Version: ${config.citrixVersion}
-echo   DDC: ${config.ddcName}
-echo   Days: ${config.usageDays}
-echo.
-powershell.exe -ExecutionPolicy Bypass -File "Scripts\\Collect-CitrixAuditData.ps1" -CitrixVersion "${config.citrixVersion}" -DDCName "${config.ddcName}" -UsageDaysBack ${config.usageDays}${config.skipServerSpecs ? ' -SkipServerSpecs' : ''} -NonInteractive
-echo.
-echo Audit complete! Check the Data folder for results.
-pause`;
-
-            const batchBlob = new Blob([batchContent], { type: 'text/plain' });
-            const batchUrl = URL.createObjectURL(batchBlob);
-            const batchLink = document.createElement('a');
-            batchLink.href = batchUrl;
-            batchLink.download = 'Start-Audit.bat';
-            document.body.appendChild(batchLink);
-            batchLink.click();
-            document.body.removeChild(batchLink);
-            URL.revokeObjectURL(batchUrl);
-
-            // Show success message and instructions
+        // Function to show success message
+        function showConfigSuccessMessage(method) {
             const statusMsg = document.getElementById('statusMessage');
             statusMsg.className = 'status-message success';
             statusMsg.style.display = 'block';
-            statusMsg.innerHTML = 'Configuration saved! <strong>Start-Audit.bat</strong> file downloaded. Double-click it to start the audit.';
+            statusMsg.innerHTML = '<strong>Configuration file saved!</strong><br><br>' +
+                `File saved using: <strong>${method}</strong><br><br>` +
+                '<em>Ensure the file is located at:</em><br><code>Citrix-Horizon\\LAB007-Config.JSON</code><br>' +
+                '(same level as the Scripts folder, not inside it)';
 
-            // Show audit instructions
-            document.getElementById('auditInstructions').style.display = 'block';
-            document.getElementById('configForm').style.display = 'none';
-        });
+            setTimeout(() => {
+                statusMsg.style.display = 'none';
+            }, 10000);
+        }
 
-        // Run audit button handler
-        document.getElementById('runAuditBtn').addEventListener('click', function() {
-            // Try to open the batch file
-            const batchPath = 'Start-Audit.bat';
-            window.location.href = 'file:///' + window.location.pathname.replace(/\/[^/]*$/, '/') + batchPath;
-            
-            // Fallback: show instructions
-            const statusMsg = document.getElementById('statusMessage');
-            statusMsg.className = 'status-message success';
-            statusMsg.style.display = 'block';
-            statusMsg.innerHTML = 'Please double-click <strong>Start-Audit.bat</strong> in your project folder to start the audit.';
+        // VMware Folders Configuration
+        let configVMwareFoldersData = [];
+
+        function loadConfigVMwareFoldersFile() {
+            const fileInput = document.getElementById('configVMwareFoldersFileInput');
+            fileInput.click();
+        }
+
+        function handleConfigVMwareFoldersFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    configVMwareFoldersData = JSON.parse(e.target.result);
+                    document.getElementById('configVMwareFoldersFileName').textContent = `Loaded: ${file.name}`;
+
+                    // Show the VMware folder section
+                    document.getElementById('vmwareFolderSection').style.display = 'block';
+
+                    // Populate folder dropdowns
+                    populateVMwareFolderDropdowns();
+
+                    console.log(`Loaded ${configVMwareFoldersData.Folders ? configVMwareFoldersData.Folders.length : 0} VMware folders for config`);
+                } catch (error) {
+                    alert(`Error parsing JSON file: ${error.message}`);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function populateVMwareFolderDropdowns() {
+            const folders = configVMwareFoldersData.Folders || [];
+            const destSelect = document.getElementById('cloneDestinationFolderSelect');
+            const sourceSelect = document.getElementById('sourceMoveFolderSelect');
+
+            // Clear existing options
+            destSelect.innerHTML = '<option value="">Select destination folder...</option>';
+            sourceSelect.innerHTML = '<option value="">Select source move folder...</option>';
+
+            // Add folders to both dropdowns
+            folders.forEach(folder => {
+                const destOption = document.createElement('option');
+                destOption.value = folder.FullPath;
+                destOption.textContent = `${folder.FullPath} (${folder.VMCount || 0} VMs)`;
+                destSelect.appendChild(destOption);
+
+                const sourceOption = document.createElement('option');
+                sourceOption.value = folder.FullPath;
+                sourceOption.textContent = `${folder.FullPath} (${folder.VMCount || 0} VMs)`;
+                sourceSelect.appendChild(sourceOption);
+            });
+        }
+
+        function filterVMwareFolders() {
+            const searchTerm = document.getElementById('vmwareFolderSearch').value.toLowerCase();
+            const folders = configVMwareFoldersData.Folders || [];
+            const destSelect = document.getElementById('cloneDestinationFolderSelect');
+            const sourceSelect = document.getElementById('sourceMoveFolderSelect');
+
+            // Clear existing options
+            destSelect.innerHTML = '<option value="">Select destination folder...</option>';
+            sourceSelect.innerHTML = '<option value="">Select source move folder...</option>';
+
+            // Filter and add folders
+            const filteredFolders = folders.filter(folder =>
+                folder.FullPath.toLowerCase().includes(searchTerm) ||
+                (folder.Name && folder.Name.toLowerCase().includes(searchTerm))
+            );
+
+            filteredFolders.forEach(folder => {
+                const destOption = document.createElement('option');
+                destOption.value = folder.FullPath;
+                destOption.textContent = `${folder.FullPath} (${folder.VMCount || 0} VMs)`;
+                destSelect.appendChild(destOption);
+
+                const sourceOption = document.createElement('option');
+                sourceOption.value = folder.FullPath;
+                sourceOption.textContent = `${folder.FullPath} (${folder.VMCount || 0} VMs)`;
+                sourceSelect.appendChild(sourceOption);
+            });
+        }
+
+        // Event listener for VMware folders file input
+        document.getElementById('configVMwareFoldersFileInput').addEventListener('change', handleConfigVMwareFoldersFile);
+
+
+        // Download button - fallback for all browsers
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const config = createConfigObject();
+
+            try {
+                // Create downloadable JSON file
+                const configJson = JSON.stringify(config, null, 2);
+                const blob = new Blob([configJson], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+
+                // Create temporary download link
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'LAB007-Config.JSON';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+
+                // Clean up the URL object
+                URL.revokeObjectURL(url);
+
+                showConfigSuccessMessage('Download to browser folder');
+
+            } catch (error) {
+                console.error('Error creating config file:', error);
+
+                // Show error message
+                const statusMsg = document.getElementById('statusMessage');
+                statusMsg.className = 'status-message error';
+                statusMsg.style.display = 'block';
+                statusMsg.innerHTML = 'Failed to create configuration file. Please try again.';
+
+                setTimeout(() => {
+                    statusMsg.style.display = 'none';
+                }, 5000);
+            }
         });
 
         // Load config on page load
@@ -303,4 +582,3 @@ pause`;
     </script>
 </body>
 </html>
-

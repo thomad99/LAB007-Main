@@ -1,6 +1,6 @@
 # PowerShell script to sync LAB007-Main to GitHub
 # Local files are MASTER - they overwrite remote
-# Extra files on GitHub will be pulled locally first
+# Strict local-over-remote: NO pull, local always wins
 # Usage: .\sync-to-github.ps1 [-ForceLocal]
 
 param(
@@ -50,28 +50,8 @@ if (-not $remoteExists) {
     }
 }
 
-# STEP 1: Pull from remote to get any extra files locally
-Write-Host "Step 1: Pulling from remote (to get extra files locally)..." -ForegroundColor Yellow
-git fetch origin
-if ($LASTEXITCODE -ne 0) {
-    Write-Warning "Failed to fetch from remote. Continuing..."
-}
-
-# Try to pull, but don't fail if there are conflicts
-git pull origin $currentBranch --no-edit 2>$null
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "Pull had conflicts or issues. Local changes will take precedence." -ForegroundColor Yellow
-
-    # If pull failed, reset to local state and continue
-    git reset --hard HEAD
-    Write-Host "Reset to local state." -ForegroundColor Gray
-}
-
-Write-Host "Pull completed." -ForegroundColor Green
-Write-Host ""
-
-# STEP 2: Check for local changes
-Write-Host "Step 2: Checking for local changes..." -ForegroundColor Yellow
+# STEP 1: Check for local changes (no pull)
+Write-Host "Step 1: Checking for local changes (no pull)..." -ForegroundColor Yellow
 $status = git status --porcelain
 
 if ([string]::IsNullOrWhiteSpace($status) -and -not $ForceLocal) {
@@ -105,18 +85,18 @@ git status -s
 Write-Host ""
 
 # STEP 3: Stage all changes
-Write-Host "Step 3: Staging all changes..." -ForegroundColor Yellow
+Write-Host "Step 2: Staging all changes..." -ForegroundColor Yellow
 git add -A
 Write-Host "All changes staged." -ForegroundColor Green
 Write-Host ""
 
-# STEP 4: Create commit
+# STEP 3: Create commit
 $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 if (-not $CommitMessage) {
     $CommitMessage = "Auto-sync: $timestamp"
 }
 
-Write-Host "Step 4: Creating commit..." -ForegroundColor Yellow
+Write-Host "Step 3: Creating commit..." -ForegroundColor Yellow
 Write-Host "Commit message: $CommitMessage" -ForegroundColor Gray
 git commit -m $CommitMessage
 
@@ -136,8 +116,8 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Commit created successfully!" -ForegroundColor Green
 Write-Host ""
 
-# STEP 5: Force push to make local the master
-Write-Host "Step 5: Force pushing local changes (local is master)..." -ForegroundColor Yellow
+# STEP 4: Force push to make local the master
+Write-Host "Step 4: Force pushing local changes (local is master)..." -ForegroundColor Yellow
 Write-Host "This will overwrite remote with local changes." -ForegroundColor Cyan
 
 # Use force-with-lease for safety (won't overwrite if someone else pushed)

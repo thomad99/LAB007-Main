@@ -4,9 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LAB007 - Citrix Audit Dashboard</title>
-    <link rel="icon" type="image/png" href="/images/lab007%20Icon.PNG">
-    <link rel="shortcut icon" type="image/png" href="/images/lab007%20Icon.PNG">
-    <link rel="apple-touch-icon" href="/images/lab007%20Icon.PNG">
+    <link rel="icon" type="image/png" href="images/lab007%20Icon.PNG">
+    <link rel="shortcut icon" type="image/png" href="images/lab007%20Icon.PNG">
+    <link rel="apple-touch-icon" href="images/lab007%20Icon.PNG">
     <link rel="stylesheet" href="styles.css">
     <style>
         .upload-container {
@@ -109,7 +109,7 @@
     <div class="container">
         <header>
             <div class="header-content">
-                <img src="/images/LAB007-LOGO-TRANS.png" alt="Lab007 Logo" class="logo">
+                <img src="images/LAB007-LOGO-TRANS.png" alt="Lab007 Logo" class="logo">
                 <div class="header-title">
                     <p class="header-subtitle" style="font-size: 1.5rem; margin: 0;">Citrix Environment Audit Dashboard</p>
                 </div>
@@ -137,7 +137,7 @@
             <!-- Upload Section -->
             <div class="upload-section" id="uploadSection">
                 <h3>📤 Upload Audit Results</h3>
-                <p>Upload your <code>citrix-audit-complete.json</code> file to view the dashboard</p>
+                <p>Upload your <code>0-Citrix-audit-complete.json</code> file to view the dashboard</p>
                 <div class="file-input-wrapper">
                     <input type="file" id="fileInput" accept=".json" />
                     <label for="fileInput" class="file-input-button">Choose JSON File</label>
@@ -145,6 +145,22 @@
                 <p id="fileName" style="margin-top: 10px; color: #666;"></p>
                 <button id="uploadBtn" class="btn btn-primary" style="margin-top: 20px; display: none;">
                     Upload File
+                </button>
+            </div>
+
+            <!-- Debug Upload Section -->
+            <div class="upload-section" id="debugUploadSection" style="background: #fff3cd; border-color: #ffc107;">
+                <h3>🔧 Upload Debug ZIP File</h3>
+                <p>Upload your debug ZIP file (contains debug.txt and other diagnostic files) for troubleshooting</p>
+                <div class="file-input-wrapper">
+                    <input type="file" id="debugFileInput" accept=".zip" />
+                    <label for="debugFileInput" class="file-input-button" style="background: #ffc107; color: #000;">
+                        Choose Debug ZIP File
+                    </label>
+                </div>
+                <p id="debugFileName" style="margin-top: 10px; color: #666;"></p>
+                <button id="debugUploadBtn" class="btn btn-primary" style="margin-top: 20px; display: none; background: #ffc107; color: #000; border-color: #ffc107;">
+                    Upload Debug File
                 </button>
             </div>
 
@@ -157,12 +173,18 @@
                 <div id="filesListContent"></div>
             </div>
 
+            <!-- Debug Files List -->
+            <div class="file-list" id="debugFileList" style="display: none; margin-top: 20px;">
+                <h3 style="margin-bottom: 15px;">Uploaded Debug ZIP Files</h3>
+                <div id="debugFilesListContent"></div>
+            </div>
+
             <!-- Quick Links -->
             <div style="margin-top: 40px; text-align: center; padding-top: 20px; border-top: 1px solid #ddd;">
-                <a href="/dashboard" class="btn btn-secondary" style="text-decoration: none; display: inline-block; margin: 5px;">
+                <a href="/citrix/dashboard" class="btn btn-secondary" style="text-decoration: none; display: inline-block; margin: 5px;">
                     View Dashboard
                 </a>
-                <a href="/todo" class="btn btn-secondary" style="text-decoration: none; display: inline-block; margin: 5px;">
+                <a href="/citrix/todo" class="btn btn-secondary" style="text-decoration: none; display: inline-block; margin: 5px;">
                     To-Do Checklist
                 </a>
             </div>
@@ -178,8 +200,15 @@
         const downloadAuditFilesBtn = document.getElementById('downloadAuditFilesBtn');
         const fileList = document.getElementById('fileList');
         const filesListContent = document.getElementById('filesListContent');
+        const debugFileInput = document.getElementById('debugFileInput');
+        const debugUploadBtn = document.getElementById('debugUploadBtn');
+        const debugFileName = document.getElementById('debugFileName');
+        const debugUploadSection = document.getElementById('debugUploadSection');
+        const debugFileList = document.getElementById('debugFileList');
+        const debugFilesListContent = document.getElementById('debugFilesListContent');
 
         let selectedFile = null;
+        let selectedDebugFile = null;
 
         // File input change
         fileInput.addEventListener('change', (e) => {
@@ -226,7 +255,7 @@
 
             showStatus('Uploading file...', 'info');
 
-            fetch('/api/upload', {
+            fetch('/citrix/api/upload', {
                 method: 'POST',
                 body: formData
             })
@@ -235,8 +264,77 @@
                 if (data.success) {
                     showStatus('File uploaded successfully! Redirecting to dashboard...', 'success');
                     setTimeout(() => {
-                        window.location.href = '/dashboard';
+                        window.location.href = '/citrix/dashboard';
                     }, 1500);
+                } else {
+                    showStatus('Upload failed: ' + (data.error || 'Unknown error'), 'error');
+                }
+            })
+            .catch(error => {
+                showStatus('Upload error: ' + error.message, 'error');
+            });
+        });
+
+        // Debug file input change
+        debugFileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                selectedDebugFile = e.target.files[0];
+                debugFileName.textContent = `Selected: ${selectedDebugFile.name} (${formatFileSize(selectedDebugFile.size)})`;
+                debugUploadBtn.style.display = 'inline-block';
+            }
+        });
+
+        // Debug drag and drop
+        debugUploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            debugUploadSection.classList.add('drag-over');
+        });
+
+        debugUploadSection.addEventListener('dragleave', () => {
+            debugUploadSection.classList.remove('drag-over');
+        });
+
+        debugUploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            debugUploadSection.classList.remove('drag-over');
+            
+            if (e.dataTransfer.files.length > 0) {
+                const file = e.dataTransfer.files[0];
+                if (file.name.endsWith('.zip')) {
+                    debugFileInput.files = e.dataTransfer.files;
+                    selectedDebugFile = file;
+                    debugFileName.textContent = `Selected: ${file.name} (${formatFileSize(file.size)})`;
+                    debugUploadBtn.style.display = 'inline-block';
+                } else {
+                    showStatus('Please select a ZIP file', 'error');
+                }
+            }
+        });
+
+        // Debug upload button
+        debugUploadBtn.addEventListener('click', () => {
+            if (!selectedDebugFile) return;
+
+            const formData = new FormData();
+            formData.append('debugFile', selectedDebugFile);
+
+            showStatus('Uploading debug ZIP file...', 'info');
+
+            fetch('/citrix/api/upload-debug', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showStatus(`Debug ZIP uploaded successfully! File: ${data.file.filename}`, 'success');
+                    // Reset form
+                    selectedDebugFile = null;
+                    debugFileInput.value = '';
+                    debugFileName.textContent = '';
+                    debugUploadBtn.style.display = 'none';
+                    // Reload debug files list
+                    loadDebugFileList();
                 } else {
                     showStatus('Upload failed: ' + (data.error || 'Unknown error'), 'error');
                 }
@@ -248,12 +346,12 @@
 
         // Download audit files
         downloadAuditFilesBtn.addEventListener('click', () => {
-            window.location.href = '/api/download-audit-files';
+            window.location.href = '/citrix/api/download-audit-files';
         });
 
         // Load file list
         function loadFileList() {
-            fetch('/api/files')
+            fetch('/citrix/api/files')
                 .then(response => response.json())
                 .then(data => {
                     if (data.files && data.files.length > 0) {
@@ -265,10 +363,10 @@
                                     <div class="file-size">${formatFileSize(file.size)} - ${new Date(file.uploadedAt).toLocaleString()}</div>
                                 </div>
                                 <div>
-                                    <a href="/api/download/${file.filename}" class="btn btn-secondary" style="text-decoration: none; padding: 5px 15px; font-size: 0.9em;">
+                                    <a href="/citrix/api/download/${file.filename}" class="btn btn-secondary" style="text-decoration: none; padding: 5px 15px; font-size: 0.9em;">
                                         Download
                                     </a>
-                                    <a href="/dashboard?file=${file.filename}" class="btn btn-primary" style="text-decoration: none; padding: 5px 15px; font-size: 0.9em; margin-left: 5px;">
+                                    <a href="/citrix/dashboard?file=${file.filename}" class="btn btn-primary" style="text-decoration: none; padding: 5px 15px; font-size: 0.9em; margin-left: 5px;">
                                         View
                                     </a>
                                 </div>
@@ -295,9 +393,36 @@
             return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
         }
 
+        // Load debug file list
+        function loadDebugFileList() {
+            fetch('/citrix/api/debug-files')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.files && data.files.length > 0) {
+                        debugFileList.style.display = 'block';
+                        debugFilesListContent.innerHTML = data.files.map(file => `
+                            <div class="file-item">
+                                <div>
+                                    <div class="file-name">${file.filename}</div>
+                                    <div class="file-size">${formatFileSize(file.size)} - ${new Date(file.uploadedAt).toLocaleString()}</div>
+                                </div>
+                                <div>
+                                    <a href="/citrix/uploads/debug/${file.filename}" class="btn btn-secondary" style="text-decoration: none; padding: 5px 15px; font-size: 0.9em; background: #ffc107; color: #000; border-color: #ffc107;">
+                                        Download
+                                    </a>
+                                </div>
+                            </div>
+                        `).join('');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading debug file list:', error);
+                });
+        }
+
         // Load file list on page load
         loadFileList();
+        loadDebugFileList();
     </script>
 </body>
 </html>
-
