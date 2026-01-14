@@ -513,36 +513,52 @@
                     <div id="cloneScriptSection" style="margin: 20px 0; display: none;">
                         <h4 style="margin-bottom: 15px;">Clone Destination Configuration</h4>
 
+                        <!-- VMware Folder Operations Toggle -->
                         <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
-                            <h4 style="margin-bottom: 10px;">Load VMware Folders List</h4>
-                            <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Load VMware folder structure from a JSON file created by the VMware folders collection script to enable folder browsing.</p>
-                            <button id="loadVMwareFoldersBtn" class="btn btn-secondary" onclick="loadVMwareFoldersFile()">Load VMware Folders JSON</button>
-                            <input type="file" id="vmwareFoldersFileInput" accept=".json" style="display: none;">
-                            <span id="vmwareFoldersFileName" style="margin-left: 15px; color: #666;"></span>
-                        </div>
-
-                        <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
-                            <label for="cloneDestinationFolder" style="display: block; margin-bottom: 8px; font-weight: bold;">VMware Destination Folder:</label>
-                            <div style="display: flex; gap: 10px; align-items: center;">
-                                <input type="text" id="cloneDestinationFolder" placeholder="Configured from LAB007-Config.JSON" style="flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; background-color: #f5f5f5;" readonly>
-                                <button id="browseCloneFoldersBtn" class="btn btn-secondary" style="padding: 8px 15px; opacity: 0.5; cursor: not-allowed;" disabled>Browse</button>
-                            </div>
-                            <p style="margin-top: 5px; color: #666; font-size: 12px;">Destination folder is configured in LAB007-Config.JSON. Use the Config tab to change folder settings.</p>
-                        </div>
-
-                        <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
-                            <label style="display: block; margin-bottom: 8px; font-weight: bold;">Source VM Move Options:</label>
-                            <div style="display: flex; align-items: center; gap: 15px;">
-                                <label style="display: flex; align-items: center; cursor: pointer;">
-                                    <input type="checkbox" id="moveSourceAfterClone" style="margin-right: 8px;">
-                                    Move source VMs to folder after cloning
+                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                                <div style="flex: 1; min-width: 240px;">
+                                    <h5 style="margin: 0 0 5px 0; font-weight: bold;">Change VMware Folders (On / Off)</h5>
+                                    <p style="margin: 0; color: #666; font-size: 14px;">Default OFF. When OFF, no VMware folder changes are made.</p>
+                                </div>
+                                <label class="toggle-switch" aria-label="Change VMware Folders">
+                                    <input type="checkbox" id="enableVMwareFoldersToggle">
+                                    <span class="toggle-slider"></span>
                                 </label>
                             </div>
-                            <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
-                                <input type="text" id="sourceMoveFolder" placeholder="Configured from LAB007-Config.JSON" style="flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; background-color: #f5f5f5;" readonly>
-                                <button id="browseSourceFoldersBtn" class="btn btn-secondary" style="padding: 8px 15px; opacity: 0.5; cursor: not-allowed;" disabled>Browse</button>
+                        </div>
+
+                        <div id="vmwareFoldersSection" style="display: none;">
+                            <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
+                                <h4 style="margin-bottom: 10px;">Load VMware Folders List</h4>
+                                <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Load VMware folder structure from a JSON file created by the VMware folders collection script to enable folder browsing.</p>
+                                <button id="loadVMwareFoldersBtn" class="btn btn-secondary" onclick="loadVMwareFoldersFile()">Load VMware Folders JSON</button>
+                                <input type="file" id="vmwareFoldersFileInput" accept=".json" style="display: none;">
+                                <span id="vmwareFoldersFileName" style="margin-left: 15px; color: #666;"></span>
                             </div>
-                            <p style="margin-top: 5px; color: #666; font-size: 12px;">Source move folder is configured in LAB007-Config.JSON. Use the Config tab to change folder settings.</p>
+
+                            <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
+                                <label for="cloneDestinationFolder" style="display: block; margin-bottom: 8px; font-weight: bold;">VMware Destination Folder:</label>
+                                <div style="display: flex; gap: 10px; align-items: center;">
+                                    <input type="text" id="cloneDestinationFolder" placeholder="Configured from LAB007-Config.JSON" style="flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; background-color: #f5f5f5;" readonly>
+                                    <button id="browseCloneFoldersBtn" class="btn btn-secondary" style="padding: 8px 15px; opacity: 0.5; cursor: not-allowed;" disabled>Browse</button>
+                                </div>
+                                <p style="margin-top: 5px; color: #666; font-size: 12px;">Destination folder is configured in LAB007-Config.JSON. Use the Config tab to change folder settings.</p>
+                            </div>
+
+                            <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
+                                <label style="display: block; margin-bottom: 8px; font-weight: bold;">Source VM Move Options:</label>
+                                <div style="display: flex; align-items: center; gap: 15px;">
+                                    <label style="display: flex; align-items: center; cursor: pointer;">
+                                        <input type="checkbox" id="moveSourceAfterClone" style="margin-right: 8px;">
+                                        Move source VMs to folder after cloning
+                                    </label>
+                                </div>
+                                <div style="margin-top: 10px; display: flex; gap: 10px; align-items: center;">
+                                    <input type="text" id="sourceMoveFolder" placeholder="Configured from LAB007-Config.JSON" style="flex: 1; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px; background-color: #f5f5f5;" readonly>
+                                    <button id="browseSourceFoldersBtn" class="btn btn-secondary" style="padding: 8px 15px; opacity: 0.5; cursor: not-allowed;" disabled>Browse</button>
+                                </div>
+                                <p style="margin-top: 5px; color: #666; font-size: 12px;">Source move folder is configured in LAB007-Config.JSON. Use the Config tab to change folder settings.</p>
+                            </div>
                         </div>
 
                         <div style="text-align: right;">
@@ -913,3 +929,7 @@
     <script src="dashboard.js"></script>
 </body>
 </html>
+
+
+
+
