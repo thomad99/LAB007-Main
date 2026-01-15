@@ -23,6 +23,7 @@ let goldenSunImages = [];
 let goldenSunSelectedImages = new Set();
 let goldenSunActiveTab = 'search';
 let goldenSunFileOptions = [];
+const GOLDEN_SUN_DEFAULT_VCENTER = 'shcvcsacx01v.ccr.cchcs.org';
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async function() {
@@ -143,6 +144,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     const gsPicker = document.getElementById('goldenSunFilePicker');
     if (gsPicker) {
         gsPicker.addEventListener('change', handleGoldenSunFilePick);
+    }
+
+    // Pre-fill GoldenSun vCenter if empty
+    const gsVcInput = document.getElementById('goldenSunSearchVCenter');
+    if (gsVcInput && !gsVcInput.value) {
+        gsVcInput.value = GOLDEN_SUN_DEFAULT_VCENTER;
     }
 
     // GoldenSun VMware toggle
@@ -1941,6 +1948,10 @@ function generateCloneScript(selectedImages, destinationFolder, moveSourceAfterC
     scriptLines.push('            Write-Host "  [ERROR] VM not found: $originalVMName" -ForegroundColor Red');
     scriptLines.push('            continue');
     scriptLines.push('        }');
+    scriptLines.push('        if ($sourceVM.PowerState -ne "PoweredOff") {');
+    scriptLines.push('            Write-Warning "  VM $originalVMName is $($sourceVM.PowerState). Skipping clone until it is powered off."');
+    scriptLines.push('            continue');
+    scriptLines.push('        }');
     scriptLines.push('        ');
     scriptLines.push('        # Get VM host and datastore information');
     scriptLines.push('        Write-Host "  [DEBUG] Getting VM host information..." -ForegroundColor DarkGray');
@@ -2184,6 +2195,12 @@ function showGoldenSunModal() {
     // Load current environment images
     const envSelect = document.getElementById('goldenSunEnvSelect');
     goldenSunCurrentEnv = envSelect?.value || 'Prod';
+    // Ensure vCenter prefilled
+    const gsVcInput = document.getElementById('goldenSunSearchVCenter');
+    if (gsVcInput && !gsVcInput.value) {
+        gsVcInput.value = GOLDEN_SUN_DEFAULT_VCENTER;
+    }
+
     goldenSunActiveTab = 'search';
     showGoldenSunTab(goldenSunActiveTab);
     fetchGoldenSunFileList().then(() => reloadGoldenSunImages());
@@ -2530,7 +2547,8 @@ function downloadGoldenSunScript() {
 
 function generateGoldenSunSearchScript() {
     const group = (document.getElementById('goldenSunSearchGroup')?.value || '').trim();
-    const vcenter = (document.getElementById('goldenSunSearchVCenter')?.value || '').trim();
+    let vcenter = (document.getElementById('goldenSunSearchVCenter')?.value || '').trim();
+    if (!vcenter) vcenter = GOLDEN_SUN_DEFAULT_VCENTER;
     const vmText = (document.getElementById('goldenSunSearchVMs')?.value || '').trim();
 
     if (!group) {
@@ -2552,11 +2570,11 @@ function generateGoldenSunSearchScript() {
     scriptLines.push('Import-Module VMware.PowerCLI -ErrorAction SilentlyContinue');
     scriptLines.push('$ErrorActionPreference = "Stop"');
     scriptLines.push('');
-    scriptLines.push(`# Ensure connection to vCenter (${vcenter || 'prompted'})`);
+    scriptLines.push(`# Ensure connection to vCenter (${vcenter || GOLDEN_SUN_DEFAULT_VCENTER})`);
     scriptLines.push('$viserver = Get-VIServer -ErrorAction SilentlyContinue');
     scriptLines.push('if (-not $viserver) {');
-    scriptLines.push(`    $vc = "${vcenter || ''}"`);
-    scriptLines.push('    if (-not $vc) { $vc = Read-Host "Enter vCenter server" }');
+    scriptLines.push(`    $vc = "${vcenter || GOLDEN_SUN_DEFAULT_VCENTER}"`);
+    scriptLines.push(`    if (-not $vc) { $vc = "${GOLDEN_SUN_DEFAULT_VCENTER}"; }`);
     scriptLines.push('    $cred = Get-Credential -Message "Enter vCenter credentials"');
     scriptLines.push('    Connect-VIServer -Server $vc -Credential $cred | Out-Null');
     scriptLines.push('}');
