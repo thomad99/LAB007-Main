@@ -18,6 +18,12 @@ let currentCatalogs = [];
 let currentPolicies = [];
 let currentRoles = [];
 
+// GoldenSun (Prod/Test clone helper)
+let goldenSunImages = [];
+let goldenSunSelectedImages = new Set();
+let goldenSunActiveTab = 'search';
+let goldenSunFileOptions = [];
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async function() {
     console.log('=== DOMContentLoaded fired ===');
@@ -93,6 +99,71 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
         console.log('Horizon Tasks event listener attached');
     }
+
+    // GoldenSun button
+    const goldenSunBtn = document.getElementById('goldenSunBtn');
+    if (goldenSunBtn) {
+        goldenSunBtn.addEventListener('click', () => {
+            showGoldenSunModal();
+        });
+    }
+
+    // GoldenSun environment selector
+    const goldenSunEnvSelect = document.getElementById('goldenSunEnvSelect');
+    if (goldenSunEnvSelect) {
+        goldenSunEnvSelect.addEventListener('change', () => {
+            goldenSunCurrentEnv = goldenSunEnvSelect.value || 'Prod';
+            reloadGoldenSunImages();
+        });
+    }
+
+    // GoldenSun file select refresh
+    window.fetchGoldenSunFileList = fetchGoldenSunFileList;
+    window.openGoldenSunFileDialog = openGoldenSunFileDialog;
+
+    // GoldenSun tabs
+    window.showGoldenSunTab = function(tab) {
+        goldenSunActiveTab = tab;
+        const clonePanel = document.getElementById('goldenSunClonePanel');
+        const searchPanel = document.getElementById('goldenSunSearchPanel');
+        const tabClone = document.getElementById('goldenSunTabClone');
+        const tabSearch = document.getElementById('goldenSunTabSearch');
+        if (clonePanel) clonePanel.style.display = tab === 'clone' ? 'block' : 'none';
+        if (searchPanel) searchPanel.style.display = tab === 'search' ? 'block' : 'none';
+        if (tabClone) tabClone.classList.toggle('active', tab === 'clone');
+        if (tabSearch) tabSearch.classList.toggle('active', tab === 'search');
+    };
+
+    // GoldenSun search generate
+    window.generateGoldenSunSearchScript = generateGoldenSunSearchScript;
+    window.copyGoldenSunSearchScript = copyGoldenSunSearchScript;
+    window.downloadGoldenSunSearchScript = downloadGoldenSunSearchScript;
+
+    // GoldenSun file picker
+    const gsPicker = document.getElementById('goldenSunFilePicker');
+    if (gsPicker) {
+        gsPicker.addEventListener('change', handleGoldenSunFilePick);
+    }
+
+    // GoldenSun VMware toggle
+    const goldenSunVmwareToggle = document.getElementById('goldenSunVmwareToggle');
+    if (goldenSunVmwareToggle) {
+        goldenSunVmwareToggle.addEventListener('change', handleGoldenSunVmToggle);
+    }
+
+    // GoldenSun move-source toggle
+    const goldenSunMoveSource = document.getElementById('goldenSunMoveSource');
+    if (goldenSunMoveSource) {
+        goldenSunMoveSource.addEventListener('change', handleGoldenSunMoveSourceToggle);
+    }
+
+    // Close GoldenSun modal when clicking outside
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('goldenSunModal');
+        if (modal && event.target === modal) {
+            closeGoldenSunModal();
+        }
+    });
 
     // Debug ZIP upload functionality
     const uploadDebugBtn = document.getElementById('uploadDebugBtn');
@@ -379,19 +450,35 @@ function handleFileLoad(event) {
     const file = event.target.files[0];
     if (!file) return;
 
-    // Check if file name matches 0-Citrix-audit*.json pattern (case-insensitive)
     const fileName = file.name || '';
     const fileNameLower = fileName.toLowerCase();
-    const isValidFileName = fileNameLower.startsWith('0-citrix-audit') && fileNameLower.endsWith('.json');
-
-    if (!isValidFileName) {
-        showError(`Invalid file selected. Please select a file matching the pattern "0-Citrix-audit*.json". Selected: ${fileName}`);
-        return;
-    }
+    const isJson = fileNameLower.endsWith('.json');
+    const isZip = fileNameLower.endsWith('.zip');
+    const isValidJsonName = fileNameLower.startsWith('0-citrix-audit') && isJson;
 
     hideError();
     showLoading();
-    
+
+    if (isZip) {
+        parseCitrixExportZip(file)
+            .then(data => {
+                auditData = data;
+                displayDashboard(auditData);
+            })
+            .catch(err => {
+                console.error('ZIP parse error:', err);
+                showError('Error parsing ZIP file: ' + err.message);
+                hideDashboard();
+            });
+        return;
+    }
+
+    if (!isValidJsonName) {
+        showError(`Invalid file selected. Please select "0-Citrix-audit*.json" or a Citrix export ZIP. Selected: ${fileName}`);
+        hideDashboard();
+        return;
+    }
+
     const reader = new FileReader();
     reader.onload = function(e) {
         try {
@@ -469,6 +556,197 @@ function uploadDebugFile(file) {
             loadingText.textContent = 'Awaiting your command';
         }
     });
+}
+
+// Parse Citrix export ZIP (YAML bundle) into dashboard-friendly JSON
+async function parseCitrixExportZip(file) {
+    if (typeof JSZip === 'undefined' || typeof jsyaml === 'undefined') {
+        throw new Error('Missing JSZip or js-yaml libraries');
+    }
+
+    const arrayBuffer = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const entries = Object.keys(zip.files || {});
+
+    const readYaml = async (candidateName) => {
+        const match = entries.find(e => e.toLowerCase().endsWith(candidateName.toLowerCase()));
+        if (!match) return null;
+        const text = await zip.file(match).async('string');
+        try {
+            return jsyaml.load(text) || null;
+        } catch (err) {
+            console.warn(`YAML parse failed for ${match}:`, err);
+            return null;
+        }
+    };
+
+    const mc = await readYaml('MachineCatalog.yml');
+    const dg = await readYaml('DeliveryGroup.yml');
+    const app = await readYaml('Application.yml');
+    const host = await readYaml('HostConnection.yml');
+    const site = await readYaml('SiteSettings.yml');
+    const gp = await readYaml('GroupPolicy.yml');
+    const adminAdmins = await readYaml('AdminAdministrator.yml');
+    const adminRoles = await readYaml('AdminRole.yml');
+    const adminScopes = await readYaml('AdminScope.yml');
+    const metaSource = mc?.MetaData || dg?.MetaData || app?.MetaData || host?.MetaData;
+
+    const machineCatalogs = mc?.MachineCatalogData || [];
+    const deliveryGroups = dg?.DeliveryGroupData || [];
+    const applications = app?.ApplicationData || [];
+
+    // Catalogs
+    const catalogs = machineCatalogs.map(cat => {
+        const machines = cat.Machines || [];
+        return {
+            Name: cat.Name || 'Unknown Catalog',
+            AllocationType: cat.AllocationType || '',
+            ProvisioningType: cat.ProvisioningType || '',
+            SessionSupport: cat.SessionSupport || '',
+            TotalCount: machines.length,
+            AvailableCount: machines.length,
+            InUseCount: 0,
+            PersistUserChanges: (cat.PersistUserChanges || '').toLowerCase().includes('on'),
+        };
+    });
+
+    // Servers (flatten machines from catalogs)
+    const servers = [];
+    machineCatalogs.forEach(cat => {
+        (cat.Machines || []).forEach(machine => {
+            servers.push({
+                Name: machine.Name || machine.DnsName || 'Unknown',
+                PowerState: 'Unknown',
+                RegistrationState: 'Unknown',
+                TotalRAM_GB: undefined,
+                CPUCores: undefined,
+                CPULogicalProcessors: undefined,
+                DiskTotalSize_GB: undefined,
+                DiskFreeSpace_GB: undefined,
+                OSVersion: '',
+                DesktopGroup: cat.Name || '',
+                SpecsSource: 'None'
+            });
+        });
+    });
+
+    // Delivery groups
+    const deliveryGroupList = deliveryGroups.map(g => ({
+        Name: g.Name || 'Unknown',
+        DesktopKind: g.DesktopKind || '',
+        SessionSupport: g.SessionSupport || '',
+        TotalMachines: g.Machines?.length || 0,
+        AvailableCount: g.Machines?.length || 0,
+        InUseCount: 0,
+        TotalApplications: g.Applications?.length || 0,
+        RestartSchedule: g.RestartSchedule || '',
+        RestartScheduleEnabled: !!g.RestartSchedule,
+        InMaintenanceMode: !!g.MaintenanceMode,
+        Enabled: g.Enabled !== false
+    }));
+
+    // Applications
+    const apps = applications.map(a => ({
+        Name: a.Name || 'Unknown',
+        ApplicationName: a.ApplicationName || a.Name || '',
+        PublishedName: a.PublishedName || a.ApplicationName || a.Name || '',
+        DesktopGroup: a.DeliveryGroups?.[0]?.Name || '',
+        CommandLineExecutable: a.CommandLineExecutable || '',
+        CommandLineArguments: a.CommandLineArguments || '',
+        Enabled: a.Enabled !== false,
+        Description: a.Description || ''
+    }));
+
+    // Policies
+    const policies = (gp?.GroupPolicyData || []).map((p, idx) => ({
+        Name: p.Name || `Policy ${idx + 1}`,
+        Enabled: p.Enabled !== false,
+        Filters: p.Filter || p.Filters || [],
+        SettingsCount: Array.isArray(p.Settings) ? p.Settings.length : (p.Settings ? Object.keys(p.Settings).length : 0)
+    }));
+
+    // Admin roles and assignments
+    const rolesRaw = adminRoles?.AdminRoleData || [];
+    const adminsRaw = adminAdmins?.AdminAdministratorData || [];
+    const scopesRaw = adminScopes?.AdminScopeData || [];
+
+    const roleAssignmentsMap = new Map(); // role -> {users:Set, scopes:Set}
+    adminsRaw.forEach(admin => {
+        const user = admin.User || 'Unknown';
+        (admin.Rights || []).forEach(r => {
+            const roleName = r.Role || 'Unknown';
+            const scopeName = r.Scope || 'All';
+            if (!roleAssignmentsMap.has(roleName)) {
+                roleAssignmentsMap.set(roleName, { users: new Set(), scopes: new Set() });
+            }
+            const entry = roleAssignmentsMap.get(roleName);
+            entry.users.add(user);
+            entry.scopes.add(scopeName);
+        });
+    });
+
+    const scopeMap = new Map();
+    scopesRaw.forEach(s => {
+        scopeMap.set(s.Name || 'Scope', s.ScopedObjects || []);
+    });
+
+    const roles = rolesRaw.map(r => {
+        const assignment = roleAssignmentsMap.get(r.Name) || { users: new Set(), scopes: new Set() };
+        const scopeObjs = Array.from(assignment.scopes).map(s => ({ Name: s }));
+        const scopedFromMap = scopeMap.get(r.Name);
+        if (scopedFromMap) {
+            scopedFromMap.forEach(obj => scopeObjs.push({ Name: obj.Name || obj }));
+        }
+        return {
+            Name: r.Name || 'Unknown Role',
+            Description: r.Description || '',
+            IsBuiltIn: false,
+            AssignedUsers: Array.from(assignment.users),
+            AssignedADGroups: [], // not distinguished in export
+            Scopes: scopeObjs,
+            Permissions: r.Permissions || []
+        };
+    });
+
+    // Summary counts
+    const summary = {
+        SiteName: metaSource?.SiteName || 'Unknown',
+        TotalPublishedApplications: apps.length,
+        TotalPublishedDesktops: 0,
+        MaxConcurrentUsers_30Days: 0,
+        LicenseType: metaSource?.LicenseType || 'Unknown',
+        ControllerCount: metaSource?.ControllerVersion ? 1 : 0,
+        NumberOfCatalogs: catalogs.length,
+        NumberOfDeliveryGroups: deliveryGroupList.length,
+        UniqueUserConnections_30Days: 0,
+        TotalNumberOfServers: servers.length,
+        TotalUniqueMasterImages: 0,
+        TotalStoreFrontStores: 0
+    };
+
+    return {
+        summary,
+        SiteName: summary.SiteName,
+        TotalPublishedApplications: summary.TotalPublishedApplications,
+        TotalPublishedDesktops: summary.TotalPublishedDesktops,
+        MaxConcurrentUsers_30Days: summary.MaxConcurrentUsers_30Days,
+        LicenseType: summary.LicenseType,
+        ControllerCount: summary.ControllerCount,
+        NumberOfCatalogs: summary.NumberOfCatalogs,
+        NumberOfDeliveryGroups: summary.NumberOfDeliveryGroups,
+        UniqueUserConnections_30Days: summary.UniqueUserConnections_30Days,
+        TotalNumberOfServers: summary.TotalNumberOfServers,
+        TotalUniqueMasterImages: summary.TotalUniqueMasterImages,
+        TotalStoreFrontStores: summary.TotalStoreFrontStores,
+        Servers: servers,
+        Applications: apps,
+        DeliveryGroups: deliveryGroupList,
+        Catalogs: catalogs,
+        Policies: policies,
+        Roles: roles,
+        Desktops: [],
+        StoreFront: site?.SiteData ? site.SiteData : {}
+    };
 }
 
 // Display dashboard with data
@@ -1513,19 +1791,19 @@ function generateCloneScript(selectedImages, destinationFolder, moveSourceAfterC
         '# Connect to vCenter',
         '# Connect-VIServer -Server <vCenterServer> -User <Username> -Password <Password>',
         '',
-        '# Function to generate new VM name with incremented version',
+        '# Function to generate new VM name with incremented version (uses uppercase V)',
         'function Get-NewVMName {',
         '    param([string]$OriginalName)',
         '    ',
-        '    # Check if name ends with v followed by digits',
-        '    if ($OriginalName -match \'(.+)v(\\d+)$\') {',
+        '    # Check if name ends with V (or v) followed by digits, case-insensitive',
+        '    if ($OriginalName -match \'(.+)[Vv](\\d+)$\') {',
         '        $baseName = $matches[1]',
         '        $version = [int]$matches[2]',
         '        $newVersion = $version + 1',
-        '        return "$baseName$newVersion"',
+        '        return "$baseName" + "V$newVersion"',
         '    } else {',
-        '        # No version found, add v2',
-        '        return "$OriginalName" + "v2"',
+        '        # No version found, add V2',
+        '        return "$OriginalName" + "V2"',
         '    }',
         '}',
         '',
@@ -1871,6 +2149,485 @@ function downloadCloneScript() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'Clone-Images.ps1';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// -------------------------------
+// GoldenSun Clone Tool (Prod/Test)
+// -------------------------------
+
+function showGoldenSunModal() {
+    const modal = document.getElementById('goldenSunModal');
+    if (modal) {
+        modal.style.display = 'block';
+    }
+
+    // Reset toggles/sections
+    const vmToggle = document.getElementById('goldenSunVmwareToggle');
+    const vmSection = document.getElementById('goldenSunVmwareSection');
+    const moveSource = document.getElementById('goldenSunMoveSource');
+    const sourceFolder = document.getElementById('goldenSunSourceFolder');
+
+    if (vmToggle && vmSection) {
+        vmToggle.checked = false;
+        vmSection.style.display = 'none';
+    }
+    if (moveSource && sourceFolder) {
+        moveSource.checked = false;
+        sourceFolder.disabled = true;
+        sourceFolder.style.opacity = '0.6';
+    }
+
+    // Load current environment images
+    const envSelect = document.getElementById('goldenSunEnvSelect');
+    goldenSunCurrentEnv = envSelect?.value || 'Prod';
+    goldenSunActiveTab = 'search';
+    showGoldenSunTab(goldenSunActiveTab);
+    fetchGoldenSunFileList().then(() => reloadGoldenSunImages());
+}
+
+function closeGoldenSunModal() {
+    const modal = document.getElementById('goldenSunModal');
+    if (modal) {
+        modal.style.display = 'none';
+    }
+}
+
+function handleGoldenSunVmToggle() {
+    const vmToggle = document.getElementById('goldenSunVmwareToggle');
+    const vmSection = document.getElementById('goldenSunVmwareSection');
+    const moveSource = document.getElementById('goldenSunMoveSource');
+    const sourceFolder = document.getElementById('goldenSunSourceFolder');
+
+    const enabled = vmToggle?.checked;
+    if (vmSection) vmSection.style.display = enabled ? 'block' : 'none';
+
+    if (!enabled && moveSource && sourceFolder) {
+        moveSource.checked = false;
+        sourceFolder.disabled = true;
+        sourceFolder.style.opacity = '0.6';
+    }
+}
+
+function handleGoldenSunMoveSourceToggle() {
+    const moveSource = document.getElementById('goldenSunMoveSource');
+    const sourceFolder = document.getElementById('goldenSunSourceFolder');
+    const enabled = moveSource?.checked;
+    if (sourceFolder) {
+        sourceFolder.disabled = !enabled;
+        sourceFolder.style.opacity = enabled ? '1' : '0.6';
+    }
+}
+
+function reloadGoldenSunImages() {
+    loadGoldenSunImages();
+}
+
+function openGoldenSunFileDialog() {
+    const picker = document.getElementById('goldenSunFilePicker');
+    if (picker) {
+        picker.value = '';
+        picker.click();
+    }
+}
+
+function handleGoldenSunFilePick(event) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const lower = file.name.toLowerCase();
+    if (!lower.includes('master-images') || !lower.endsWith('.json')) {
+        alert('Please select a file matching *-Master-Images.json');
+        return;
+    }
+
+    const statusEl = document.getElementById('goldenSunStatus');
+    if (statusEl) statusEl.textContent = `Loading ${file.name}...`;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const obj = JSON.parse(e.target.result);
+            ingestGoldenSunJson(obj, file.name);
+        } catch (err) {
+            alert('Error parsing JSON: ' + err.message);
+        }
+    };
+    reader.readAsText(file);
+}
+
+function ingestGoldenSunJson(obj, fileName) {
+    const statusEl = document.getElementById('goldenSunStatus');
+    const imagesSection = document.getElementById('goldenSunImagesSection');
+    const cloneSection = document.getElementById('goldenSunCloneSection');
+    const scriptOutput = document.getElementById('goldenSunScriptOutput');
+
+    let images = [];
+    if (Array.isArray(obj)) images = obj;
+    else if (Array.isArray(obj.MasterImages)) images = obj.MasterImages;
+    else if (Array.isArray(obj.masterImages)) images = obj.masterImages;
+    else if (Array.isArray(obj.Images)) images = obj.Images;
+    else if (Array.isArray(obj.images)) images = obj.images;
+
+    goldenSunImages = images.map(normalizeGoldenSunImage).filter(img => !!img.Name);
+    goldenSunSelectedImages.clear();
+
+    if (statusEl) statusEl.textContent = goldenSunImages.length
+        ? `Loaded ${goldenSunImages.length} image(s) from ${fileName}`
+        : `No master images found in ${fileName}`;
+
+    if (goldenSunImages.length) {
+        if (imagesSection) imagesSection.style.display = 'block';
+        if (cloneSection) cloneSection.style.display = 'block';
+    } else {
+        if (imagesSection) imagesSection.style.display = 'none';
+        if (cloneSection) cloneSection.style.display = 'none';
+    }
+    if (scriptOutput) scriptOutput.style.display = 'none';
+
+    renderGoldenSunImages();
+}
+
+async function fetchGoldenSunFileList() {
+    const sel = document.getElementById('goldenSunFileSelect');
+    const statusEl = document.getElementById('goldenSunStatus');
+    const defaults = ['Prod_Images.json', 'Test_Images.json'];
+
+    if (!sel) return defaults;
+
+    try {
+        const res = await fetch('/citrix/api/master-image-files');
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        const data = await res.json();
+        const files = Array.isArray(data.files) ? data.files : [];
+        const all = Array.from(new Set([...defaults, ...files]));
+        goldenSunFileOptions = all;
+        sel.innerHTML = '';
+        all.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f;
+            opt.textContent = f;
+            sel.appendChild(opt);
+        });
+        if (statusEl) statusEl.textContent = `Found ${all.length} file(s).`;
+        if (all.length > 0) {
+            sel.value = all[0];
+        }
+        return all;
+    } catch (err) {
+        console.warn('Could not fetch master image files:', err);
+        goldenSunFileOptions = defaults;
+        sel.innerHTML = '';
+        defaults.forEach(f => {
+            const opt = document.createElement('option');
+            opt.value = f;
+            opt.textContent = f;
+            sel.appendChild(opt);
+        });
+        if (defaults.length > 0) {
+            sel.value = defaults[0];
+        }
+        if (statusEl) statusEl.textContent = defaults.length ? 'Using default file list.' : 'No master image files found.';
+        return defaults;
+    }
+}
+
+async function loadGoldenSunImages() {
+    const statusEl = document.getElementById('goldenSunStatus');
+    const imagesSection = document.getElementById('goldenSunImagesSection');
+    const cloneSection = document.getElementById('goldenSunCloneSection');
+
+    if (statusEl) statusEl.textContent = `Loading master list...`;
+    if (imagesSection) imagesSection.style.display = 'none';
+    if (cloneSection) cloneSection.style.display = 'none';
+
+    const fileSelect = document.getElementById('goldenSunFileSelect');
+    const selectedFile = (fileSelect?.value || '').trim();
+    if (!selectedFile) {
+        if (statusEl) statusEl.textContent = 'No master image files found.';
+        return;
+    }
+    const fileName = selectedFile;
+    const pathsToTry = [
+        `/citrix/${fileName}`,
+        `/${fileName}`,
+        fileName,
+        `./${fileName}`
+    ];
+
+    let data = null;
+    for (const p of pathsToTry) {
+        try {
+            const res = await fetch(p, { cache: 'no-cache' });
+            if (res.ok) {
+                data = await res.json();
+                break;
+            }
+        } catch (err) {
+            console.warn('GoldenSun fetch failed for', p, err.message || err);
+        }
+    }
+
+    if (!data) {
+        if (statusEl) statusEl.textContent = `Could not load ${fileName}. Place it next to index.html.`;
+        return;
+    }
+
+    let images = [];
+    if (Array.isArray(data)) {
+        images = data;
+    } else if (Array.isArray(data.MasterImages)) {
+        images = data.MasterImages;
+    } else if (Array.isArray(data.Images)) {
+        images = data.Images;
+    } else if (Array.isArray(data.images)) {
+        images = data.images;
+    } else if (Array.isArray(data.masterImages)) {
+        images = data.masterImages;
+    }
+
+    goldenSunImages = images.map(normalizeGoldenSunImage).filter(img => !!img.Name);
+    goldenSunSelectedImages.clear();
+
+    if (statusEl) {
+        statusEl.textContent = `Loaded ${goldenSunImages.length} image(s) from ${fileName}`;
+    }
+
+    renderGoldenSunImages();
+
+    if (imagesSection) imagesSection.style.display = goldenSunImages.length ? 'block' : 'none';
+    if (cloneSection) cloneSection.style.display = goldenSunImages.length ? 'block' : 'none';
+    const scriptOutput = document.getElementById('goldenSunScriptOutput');
+    if (scriptOutput) scriptOutput.style.display = 'none';
+}
+
+function normalizeGoldenSunImage(image) {
+    if (!image) return { Name: 'Unknown', Cluster: 'Unknown', Host: 'Unknown', Datastore: 'Unknown' };
+    if (typeof image === 'string') {
+        return { Name: image, Cluster: 'Unknown', Host: 'Unknown', Datastore: 'Unknown' };
+    }
+    return {
+        Name: image.Name || image.VMName || image.vmName || image.Image || image.Master || image.ImageMachineName || 'Unknown',
+        Cluster: image.Cluster || image.ClusterName || image.HostingUnitName || 'Unknown',
+        Host: image.Host || image.HostName || 'Unknown',
+        Datastore: image.Datastore || image.DatastoreName || 'Unknown'
+    };
+}
+
+function renderGoldenSunImages() {
+    const container = document.getElementById('goldenSunImagesList');
+    if (!container) return;
+
+    if (!goldenSunImages.length) {
+        container.innerHTML = '<p style="color: #666;">No images found. Ensure the JSON file exists.</p>';
+        return;
+    }
+
+    let html = `<p style="margin-bottom: 10px; color: #666;">Found ${goldenSunImages.length} master image(s) for ${goldenSunCurrentEnv}.</p>`;
+
+    goldenSunImages.forEach((img, index) => {
+        const isChecked = goldenSunSelectedImages.has(img.Name) ? 'checked' : '';
+        const safeName = img.Name ? img.Name.replace(/'/g, "\\'") : `img-${index}`;
+
+        html += `
+            <div style="border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 8px; background: #fff;">
+                <label style="display: flex; align-items: flex-start; cursor: pointer;">
+                    <input type="checkbox" style="margin-right: 10px; margin-top: 2px;" ${isChecked}
+                           onchange="toggleGoldenSunImage('${safeName}')">
+                    <div style="flex: 1;">
+                        <strong>${escapeHtml(img.Name || 'Unknown')}</strong>
+                        <div style="font-size: 12px; color: #666; margin-top: 2px;">
+                            Cluster: ${escapeHtml(img.Cluster || 'Unknown')} | Host: ${escapeHtml(img.Host || 'Unknown')} | Datastore: ${escapeHtml(img.Datastore || 'Unknown')}
+                        </div>
+                    </div>
+                </label>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+}
+
+function toggleGoldenSunImage(name) {
+    if (goldenSunSelectedImages.has(name)) {
+        goldenSunSelectedImages.delete(name);
+    } else {
+        goldenSunSelectedImages.add(name);
+    }
+}
+
+function goldenSunSelectAll() {
+    goldenSunImages.forEach(img => {
+        if (img.Name) goldenSunSelectedImages.add(img.Name);
+    });
+    renderGoldenSunImages();
+}
+
+function goldenSunDeselectAll() {
+    goldenSunSelectedImages.clear();
+    renderGoldenSunImages();
+}
+
+function generateGoldenSunCloneScript() {
+    if (goldenSunSelectedImages.size === 0) {
+        alert('Please select at least one master image to clone.');
+        return;
+    }
+
+    const selectedImages = goldenSunImages.filter(img => goldenSunSelectedImages.has(img.Name));
+
+    const enableVMwareFolders = document.getElementById('goldenSunVmwareToggle')?.checked || false;
+    const destinationFolder = enableVMwareFolders ? document.getElementById('goldenSunDestinationFolder').value.trim() : '';
+    const moveSourceAfterClone = enableVMwareFolders ? document.getElementById('goldenSunMoveSource').checked : false;
+    const sourceMoveFolder = enableVMwareFolders ? document.getElementById('goldenSunSourceFolder').value.trim() : '';
+
+    if (enableVMwareFolders) {
+        if (!destinationFolder) {
+            alert('Please specify a destination folder for the cloned VMs.');
+            return;
+        }
+
+        if (moveSourceAfterClone && !sourceMoveFolder) {
+            alert('Please specify a folder to move source VMs to.');
+            return;
+        }
+    }
+
+    const script = generateCloneScript(selectedImages, destinationFolder, moveSourceAfterClone, sourceMoveFolder, enableVMwareFolders);
+
+    const output = document.getElementById('goldenSunScriptContent');
+    if (output) {
+        output.value = script;
+    }
+    const wrapper = document.getElementById('goldenSunScriptOutput');
+    if (wrapper) {
+        wrapper.style.display = 'block';
+        wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function copyGoldenSunScript() {
+    const scriptTextArea = document.getElementById('goldenSunScriptContent');
+    if (!scriptTextArea) return;
+    scriptTextArea.select();
+    document.execCommand('copy');
+}
+
+function downloadGoldenSunScript() {
+    const scriptContent = document.getElementById('goldenSunScriptContent')?.value || '';
+    const blob = new Blob([scriptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'GoldenSun-Clone.ps1';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+function generateGoldenSunSearchScript() {
+    const group = (document.getElementById('goldenSunSearchGroup')?.value || '').trim();
+    const vcenter = (document.getElementById('goldenSunSearchVCenter')?.value || '').trim();
+    const vmText = (document.getElementById('goldenSunSearchVMs')?.value || '').trim();
+
+    if (!group) {
+        alert('Please enter a group name.');
+        return;
+    }
+
+    const vmNames = vmText
+        ? vmText.split(';').map(v => v.trim()).filter(Boolean)
+        : [];
+
+    const outputFile = `${group}-Master-Images.json`;
+    const scriptLines = [];
+    scriptLines.push(`# GoldenSun Master Image Discovery`);
+    scriptLines.push(`# Group: ${group}`);
+    scriptLines.push(`# Output: ${outputFile}`);
+    scriptLines.push(`# Generated: ${new Date().toISOString()}`);
+    scriptLines.push('');
+    scriptLines.push('Import-Module VMware.PowerCLI -ErrorAction SilentlyContinue');
+    scriptLines.push('$ErrorActionPreference = "Stop"');
+    scriptLines.push('');
+    scriptLines.push(`# Ensure connection to vCenter (${vcenter || 'prompted'})`);
+    scriptLines.push('$viserver = Get-VIServer -ErrorAction SilentlyContinue');
+    scriptLines.push('if (-not $viserver) {');
+    scriptLines.push(`    $vc = "${vcenter || ''}"`);
+    scriptLines.push('    if (-not $vc) { $vc = Read-Host "Enter vCenter server" }');
+    scriptLines.push('    $cred = Get-Credential -Message "Enter vCenter credentials"');
+    scriptLines.push('    Connect-VIServer -Server $vc -Credential $cred | Out-Null');
+    scriptLines.push('}');
+    scriptLines.push('');
+    scriptLines.push('# Build VM name list');
+    if (vmNames.length) {
+        const joined = vmNames.map(n => `"${n}"`).join(', ');
+        scriptLines.push(`$vmNames = @(${joined})`);
+    } else {
+        scriptLines.push('$vmNames = Read-Host "Enter master VM names separated by semicolons"');
+        scriptLines.push('$vmNames = $vmNames -split ";" | ForEach-Object { $_.Trim() } | Where-Object { $_ }');
+    }
+    scriptLines.push('');
+    scriptLines.push('$results = @()');
+    scriptLines.push('foreach ($name in $vmNames) {');
+    scriptLines.push('    Write-Host "Collecting VM: $name" -ForegroundColor Cyan');
+    scriptLines.push('    $vm = Get-VM -Name $name -ErrorAction SilentlyContinue');
+    scriptLines.push('    if (-not $vm) {');
+    scriptLines.push('        Write-Warning "VM not found: $name"');
+    scriptLines.push('        continue');
+    scriptLines.push('    }');
+    scriptLines.push('    $view = $vm | Get-View');
+    scriptLines.push('    $cluster = ($vm | Get-Cluster | Select-Object -First 1).Name');
+    scriptLines.push('    $host = ($vm | Get-VMHost | Select-Object -First 1).Name');
+    scriptLines.push('    $ds = ($vm | Get-Datastore | Select-Object -First 1).Name');
+    scriptLines.push('    $snap = ($vm | Get-Snapshot | Sort-Object -Property Created -Descending | Select-Object -First 1).Name');
+    scriptLines.push('    $item = [PSCustomObject]@{');
+    scriptLines.push('        Name = $vm.Name');
+    scriptLines.push('        Cluster = $cluster');
+    scriptLines.push('        Host = $host');
+    scriptLines.push('        Datastore = $ds');
+    scriptLines.push('        NumCPU = $vm.NumCpu');
+    scriptLines.push('        MemoryGB = [math]::Round($vm.MemoryGB,2)');
+    scriptLines.push('        ProvisionedSpaceGB = [math]::Round($vm.ProvisionedSpaceGB,2)');
+    scriptLines.push('        LatestSnapshotName = $snap');
+    scriptLines.push('    }');
+    scriptLines.push('    $results += $item');
+    scriptLines.push('}');
+    scriptLines.push('');
+    scriptLines.push('$output = [PSCustomObject]@{');
+    scriptLines.push(`    vCenterServer = "${vcenter || ''}"`);
+    scriptLines.push(`    GroupName = "${group}"`);
+    scriptLines.push('    MasterImages = $results');
+    scriptLines.push('}');
+    scriptLines.push('$output | ConvertTo-Json -Depth 8 | Out-File -FilePath "' + outputFile.replace(/"/g,'\\"') + '" -Encoding UTF8');
+    scriptLines.push('Write-Host "Saved master images to ' + outputFile + '" -ForegroundColor Green');
+
+    const script = scriptLines.join('\n');
+    const out = document.getElementById('goldenSunSearchScriptContent');
+    if (out) out.value = script;
+    const wrap = document.getElementById('goldenSunSearchScriptOutput');
+    if (wrap) {
+        wrap.style.display = 'block';
+        wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+function copyGoldenSunSearchScript() {
+    const area = document.getElementById('goldenSunSearchScriptContent');
+    if (!area) return;
+    area.select();
+    document.execCommand('copy');
+}
+
+function downloadGoldenSunSearchScript() {
+    const scriptContent = document.getElementById('goldenSunSearchScriptContent')?.value || '';
+    const blob = new Blob([scriptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'GoldenSun-Master-Search.ps1';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

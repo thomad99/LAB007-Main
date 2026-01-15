@@ -110,6 +110,40 @@ app.post('/api/upload', upload.single('jsonFile'), (req, res) => {
     }
 });
 
+// List master image JSON files
+app.get('/api/master-image-files', (req, res) => {
+    try {
+        // Scan multiple known locations
+        const dirsToScan = [
+            __dirname, // Citrix-Horizon root
+            path.join(__dirname, 'Web'),
+            path.join(__dirname, 'Web', 'Data'),
+            path.join(__dirname, 'Data')
+        ];
+
+        const candidates = [];
+
+        const addMatches = (dir) => {
+            if (!fs.existsSync(dir)) return;
+            const files = fs.readdirSync(dir);
+            files.forEach(f => {
+                const lower = f.toLowerCase();
+                if (lower.endsWith('-master-images.json') || f === 'Prod_Images.json' || f === 'Test_Images.json') {
+                    candidates.push(f);
+                }
+            });
+        };
+
+        dirsToScan.forEach(addMatches);
+
+        const unique = Array.from(new Set(candidates));
+        res.json({ files: unique });
+    } catch (err) {
+        console.error('Error listing master image files:', err);
+        res.status(500).json({ error: 'Unable to list master image files' });
+    }
+});
+
 // Get list of uploaded files
 app.get('/api/files', (req, res) => {
     try {

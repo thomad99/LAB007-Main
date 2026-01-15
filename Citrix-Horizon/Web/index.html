@@ -11,6 +11,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 </head>
 <body>
     <div class="container">
@@ -27,8 +29,8 @@
             <div class="refresh-controls" style="z-index: 9999; position: relative;">
                 <a href="/citrix/api/download-audit-files" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Download Tools</a>
                 <div class="file-input-wrapper" style="display: inline-block; position: relative;">
-                    <button id="loadFileBtn" class="btn btn-primary" style="z-index: 10000;" title="Load 0-Citrix-audit*.json files">Load Audit Data</button>
-                    <input type="file" id="fileInput" accept=".json" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+                    <button id="loadFileBtn" class="btn btn-primary" style="z-index: 10000;" title="Load 0-Citrix-audit*.json or Citrix export ZIP files">Load Audit Data</button>
+                    <input type="file" id="fileInput" accept=".json,.zip" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
                 </div>
                 <button id="configBtn" class="btn btn-secondary" style="display: flex; align-items: center; gap: 6px;">
                     <img src="images/lab007 Icon.PNG" alt="LAB007" style="height: 16px; width: 16px; object-fit: contain;">
@@ -38,6 +40,7 @@
                     <button id="uploadDebugBtn" class="btn btn-secondary" style="background: #ffc107; color: #000; border-color: #ffc107; z-index: 10000;">Upload Debug ZIP</button>
                     <input type="file" id="debugFileInput" accept=".zip" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
                 </div>
+                <button id="goldenSunBtn" class="btn btn-secondary" style="background: #28a745; border-color: #28a745;">GoldenSun</button>
                 <button id="horizonTasksBtn" class="btn btn-primary">HZ Tasks</button>
                 <button onclick="window.location.href='todo.html'" class="btn btn-secondary" style="background: #17a2b8; border-color: #17a2b8;">📋 ToDo List</button>
             </div>
@@ -634,6 +637,125 @@
                             <button class="btn btn-secondary" onclick="copyAppCommands()">Copy Commands</button>
                             <button class="btn btn-secondary" onclick="downloadAppCommands()">Download Script</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal for GoldenSun Tools -->
+    <div id="goldenSunModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 95%; width: 95%; margin-top: 120px;">
+            <span class="modal-close" onclick="closeGoldenSunModal()">&times;</span>
+            <h2>GoldenSun - Master Images</h2>
+            <p style="color: #666;">Use this section to manage cloning of master images. Group names create files named &lt;Group&gt;-Master-Images.json.</p>
+
+            <div style="border-bottom: 2px solid #ddd; margin-bottom: 20px; display: flex; gap: 10px; justify-content: flex-start;">
+                <button class="task-tab active" id="goldenSunTabSearch" onclick="showGoldenSunTab('search')">Build Master List</button>
+                <button class="task-tab" id="goldenSunTabClone" onclick="showGoldenSunTab('clone')">Clone Master Images</button>
+            </div>
+
+            <!-- Clone Tab -->
+            <div id="goldenSunClonePanel" class="horizon-task-panel active" style="display: block;">
+                <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 15px 0;">
+                    <label for="goldenSunFileSelect" style="font-weight: 600;">Master List File:</label>
+                    <select id="goldenSunFileSelect" class="form-control" style="width: 280px;"></select>
+                    <button class="btn btn-secondary" onclick="fetchGoldenSunFileList()">Refresh List</button>
+                    <button class="btn btn-secondary" onclick="openGoldenSunFileDialog()">Load Images</button>
+                    <input type="file" id="goldenSunFilePicker" accept=".json" style="display: none;">
+                    <span id="goldenSunStatus" style="color: #666;"></span>
+                </div>
+
+            <div id="goldenSunImagesSection" style="margin: 20px 0; display: none;">
+                <div style="margin-bottom: 10px;">
+                <button class="btn btn-sm" onclick="goldenSunSelectAll()">Select All</button>
+                <button class="btn btn-sm" onclick="goldenSunDeselectAll()">Deselect All</button>
+                </div>
+                <div id="goldenSunImagesList" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background-color: #f8f9fa;">
+                    <p>Loading images...</p>
+                </div>
+            </div>
+
+            <div id="goldenSunCloneSection" style="margin: 20px 0; display: none;">
+                <h4 style="margin-bottom: 15px;">Clone Destination Configuration</h4>
+
+                <!-- VMware Folder Operations Toggle -->
+                <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                        <div style="flex: 1; min-width: 240px;">
+                            <h5 style="margin: 0 0 5px 0; font-weight: bold;">Change VMware Folders (On / Off)</h5>
+                            <p style="margin: 0; color: #666; font-size: 14px;">Default OFF. When OFF, no VMware folder changes are made.</p>
+                        </div>
+                        <label class="toggle-switch" aria-label="GoldenSun Change VMware Folders">
+                            <input type="checkbox" id="goldenSunVmwareToggle">
+                            <span class="toggle-slider"></span>
+                        </label>
+                    </div>
+                </div>
+
+                <div id="goldenSunVmwareSection" style="display: none;">
+                    <div style="margin-bottom: 15px;">
+                        <label for="goldenSunDestinationFolder" style="display: block; margin-bottom: 6px; font-weight: bold;">VMware Destination Folder:</label>
+                        <input type="text" id="goldenSunDestinationFolder" placeholder="/vm/prod/goldensun" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+                    </div>
+                    <div style="margin-bottom: 15px;">
+                        <label style="display: block; margin-bottom: 6px; font-weight: bold;">Source VM Move Options:</label>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px;">
+                            <input type="checkbox" id="goldenSunMoveSource">
+                            Move source VMs to folder after cloning
+                        </label>
+                        <input type="text" id="goldenSunSourceFolder" placeholder="/vm/archive/goldensun" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;" disabled>
+                    </div>
+                </div>
+
+                <div style="text-align: right;">
+                    <button class="btn btn-primary" onclick="generateGoldenSunCloneScript()">Create Script</button>
+                </div>
+            </div>
+
+            <div id="goldenSunScriptOutput" style="display: none; margin-top: 20px;">
+                <h4>Generated Script:</h4>
+                <textarea id="goldenSunScriptContent" readonly style="width: 100%; height: 320px; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
+                <div style="margin-top: 10px; text-align: right;">
+                    <button class="btn btn-secondary" onclick="copyGoldenSunScript()">Copy Script</button>
+                    <button class="btn btn-secondary" onclick="downloadGoldenSunScript()">Download Script</button>
+                </div>
+            </div>
+            </div>
+
+            <!-- Search / Build Tab -->
+            <div id="goldenSunSearchPanel" class="horizon-task-panel" style="display: none;">
+                <h3>Build Master Image List</h3>
+                <p style="color: #666;"></p>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
+                    <div>
+                        <label for="goldenSunSearchVCenter" style="display: block; font-weight: 600; margin-bottom: 6px;">vCenter Server</label>
+                        <input type="text" id="goldenSunSearchVCenter" placeholder="vcenter.domain.local" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <small style="color: #666;">Script prompts for credentials if not connected.</small>
+                    </div>
+                    <div>
+                        <label for="goldenSunSearchGroup" style="display: block; font-weight: 600; margin-bottom: 6px;">Group Name</label>
+                        <input type="text" id="goldenSunSearchGroup" placeholder="e.g., ProdApps" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                        <small style="color: #666;">Used in output file name: &lt;Group&gt;-Master-Images.json</small>
+                    </div>
+                </div>
+
+                <div style="margin: 15px 0;">
+                    <label for="goldenSunSearchVMs" style="display: block; font-weight: 600; margin-bottom: 6px;">Master VM Names (semicolon delimited)</label>
+                    <textarea id="goldenSunSearchVMs" placeholder="vm1; vm2; vm3" style="width: 100%; height: 110px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
+                </div>
+
+                <div style="text-align: right; margin-top: 10px;">
+                    <button class="btn btn-primary" onclick="generateGoldenSunSearchScript()">Generate Search Script</button>
+                </div>
+
+                <div id="goldenSunSearchScriptOutput" style="display: none; margin-top: 20px;">
+                    <h4>Generated Search Script:</h4>
+                    <textarea id="goldenSunSearchScriptContent" readonly style="width: 100%; height: 320px; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
+                    <div style="margin-top: 10px; text-align: right;">
+                        <button class="btn btn-secondary" onclick="copyGoldenSunSearchScript()">Copy Script</button>
+                        <button class="btn btn-secondary" onclick="downloadGoldenSunSearchScript()">Download Script</button>
                     </div>
                 </div>
             </div>
