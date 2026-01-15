@@ -12,6 +12,10 @@ const emailService = require('./services/emailService');
 const smsService = require('./services/smsService');
 
 const app = express();
+// Boot diagnostics
+console.log('BOOT:', __filename);
+console.log('DIR :', __dirname);
+console.log('CWD :', process.cwd());
 
 // Add more detailed logging
 console.log('Starting server...');

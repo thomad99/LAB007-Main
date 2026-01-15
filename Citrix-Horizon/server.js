@@ -11,6 +11,11 @@ const cors = require('cors');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Boot diagnostics
+console.log('BOOT:', __filename);
+console.log('DIR :', __dirname);
+console.log('CWD :', process.cwd());
+
 // Enable CORS
 app.use(cors());
 

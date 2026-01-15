@@ -10,6 +10,11 @@ const nodemailer = require('nodemailer');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Boot diagnostics
+console.log('BOOT:', __filename);
+console.log('DIR :', __dirname);
+console.log('CWD :', process.cwd());
+
 // Middleware
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));

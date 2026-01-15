@@ -26,6 +26,11 @@ if (process.env.SENDGRID_API_KEY) {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Boot diagnostics
+console.log('BOOT:', __filename);
+console.log('DIR :', __dirname);
+console.log('CWD :', process.cwd());
+
 // Store uploaded files temporarily (fileId -> filePath)
 const uploadedFiles = new Map();
 

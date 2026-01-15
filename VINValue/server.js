@@ -33,6 +33,11 @@ const DEFAULT_ZIP = process.env.WEBUYZIPCODE || '34238';
 const { execFile } = require('child_process');
 const fs = require('fs');
 
+// Boot diagnostics
+console.log('BOOT:', __filename);
+console.log('DIR :', __dirname);
+console.log('CWD :', process.cwd());
+
 app.use(cors({
   origin: ['http://localhost:3000', 'https://chat.openai.com', 'https://*.openai.com'],
   credentials: true
