@@ -2574,9 +2574,13 @@ function generateGoldenSunSearchScript() {
     scriptLines.push('$viserver = Get-VIServer -ErrorAction SilentlyContinue');
     scriptLines.push('if (-not $viserver) {');
     scriptLines.push(`    $vc = "${vcenter || GOLDEN_SUN_DEFAULT_VCENTER}"`);
-    scriptLines.push(`    if (-not $vc) { $vc = "${GOLDEN_SUN_DEFAULT_VCENTER}"; }`);
+    scriptLines.push(`    if ([string]::IsNullOrWhiteSpace($vc)) { $vc = "${GOLDEN_SUN_DEFAULT_VCENTER}"; }`);
+    scriptLines.push('    if ([string]::IsNullOrWhiteSpace($vc)) {');
+    scriptLines.push('        $vc = Read-Host "Enter vCenter server (cannot be blank)"');
+    scriptLines.push('    }');
+    scriptLines.push('    if ([string]::IsNullOrWhiteSpace($vc)) { throw "vCenter server is required."; }');
     scriptLines.push('    $cred = Get-Credential -Message "Enter vCenter credentials"');
-    scriptLines.push('    Connect-VIServer -Server $vc -Credential $cred | Out-Null');
+    scriptLines.push('    Connect-VIServer -Server $vc -Credential $cred -ErrorAction Stop | Out-Null');
     scriptLines.push('}');
     scriptLines.push('');
     scriptLines.push('# Build VM name list');
