@@ -8,6 +8,13 @@ const fs = require('fs');
 const nodemailer = require('nodemailer');
 
 const app = express();
+
+// Debug: log which server file is running and from where
+console.log('=== LAB007 Main Server ===');
+console.log('Loaded server.js from:', __filename);
+console.log('Process cwd:', process.cwd());
+console.log('PORT:', PORT);
+console.log('==========================');
 const PORT = process.env.PORT || 3000;
 
 // Middleware
