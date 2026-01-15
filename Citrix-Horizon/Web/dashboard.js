@@ -2602,13 +2602,13 @@ function generateGoldenSunSearchScript() {
     scriptLines.push('    }');
     scriptLines.push('    $view = $vm | Get-View');
     scriptLines.push('    $cluster = ($vm | Get-Cluster | Select-Object -First 1).Name');
-    scriptLines.push('    $host = ($vm | Get-VMHost | Select-Object -First 1).Name');
+    scriptLines.push('    $vmHostName = ($vm | Get-VMHost | Select-Object -First 1).Name');
     scriptLines.push('    $ds = ($vm | Get-Datastore | Select-Object -First 1).Name');
     scriptLines.push('    $snap = ($vm | Get-Snapshot | Sort-Object -Property Created -Descending | Select-Object -First 1).Name');
     scriptLines.push('    $item = [PSCustomObject]@{');
     scriptLines.push('        Name = $vm.Name');
     scriptLines.push('        Cluster = $cluster');
-    scriptLines.push('        Host = $host');
+    scriptLines.push('        Host = $vmHostName');
     scriptLines.push('        Datastore = $ds');
     scriptLines.push('        NumCPU = $vm.NumCpu');
     scriptLines.push('        MemoryGB = [math]::Round($vm.MemoryGB,2)');
