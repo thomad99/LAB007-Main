@@ -406,6 +406,21 @@ app.get('/', (req, res) => {
 // This must come AFTER the catch-all route and AFTER all project apps
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Fallback: for any GET without extension that isn't a known project prefix, serve landing page
+app.get('*', (req, res, next) => {
+    // Skip if request has an extension (likely asset) or matches project prefixes
+    const hasExt = path.extname(req.path) !== '';
+    const prefixes = ['/citrix', '/3dprint', '/vinvalue', '/webalert', '/status.html', '/contact', '/api/'];
+    const isProject = prefixes.some(p => req.path.startsWith(p));
+    if (hasExt || isProject) return next();
+
+    const indexPath = path.join(__dirname, 'public', 'index.html');
+    if (fs.existsSync(indexPath)) {
+        return res.sendFile(indexPath);
+    }
+    return res.status(404).send('Not found');
+});
+
 // Start server
 app.listen(PORT, () => {
     console.log(`========================================`);
