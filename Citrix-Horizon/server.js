@@ -311,10 +311,14 @@ app.get('/api/health', (req, res) => {
     });
 });
 
-// Start server
-app.listen(PORT, () => {
-    console.log(`Citrix Audit Dashboard server running on port ${PORT}`);
-    console.log(`Access the dashboard at: http://localhost:${PORT}`);
-    console.log(`Upload files at: http://localhost:${PORT}/`);
-});
+// Start server only if run directly (not when required as a sub-app)
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Citrix Audit Dashboard server running on port ${PORT}`);
+        console.log(`Access the dashboard at: http://localhost:${PORT}`);
+        console.log(`Upload files at: http://localhost:${PORT}/`);
+    });
+}
 
+// Export the app so it can be mounted by the root server
+module.exports = app;
