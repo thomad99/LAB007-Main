@@ -24,6 +24,7 @@ let goldenSunSelectedImages = new Set();
 let goldenSunActiveTab = 'search';
 let goldenSunFileOptions = [];
 const GOLDEN_SUN_DEFAULT_VCENTER = 'shcvcsacx01v.ccr.cchcs.org';
+const HZ_ADMIN_DEFAULT_BASE = 'https://horizon.steward.org';
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async function() {
@@ -150,6 +151,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     const gsVcInput = document.getElementById('goldenSunSearchVCenter');
     if (gsVcInput && !gsVcInput.value) {
         gsVcInput.value = GOLDEN_SUN_DEFAULT_VCENTER;
+    }
+
+    // Prefill Admin Horizon base if empty
+    const adminBaseInput = document.getElementById('adminHorizonBase');
+    if (adminBaseInput && !adminBaseInput.value) {
+        adminBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
     }
 
     // GoldenSun VMware toggle
@@ -1692,14 +1699,15 @@ function showHorizonTask(taskName) {
     
     // Task-specific initialization
     if (taskName === 'cloneMasterImage') {
-        // Load master images if available
         loadCloneMasterImages();
     } else if (taskName === 'masterImageSearch') {
-        // No special initialization needed for master image search
+        // no-op
     } else if (taskName === 'cloneMasterImage') {
         populateMasterImagesCloneList();
     } else if (taskName === 'addApplications') {
         populateApplicationsHZList();
+    } else if (taskName === 'adminTasks') {
+        // no-op for now
     }
 }
 
@@ -2630,6 +2638,129 @@ function generateGoldenSunSearchScript() {
         wrap.style.display = 'block';
         wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
+}
+
+// -------------------------------
+// Horizon Admin REST Scripts
+// -------------------------------
+function generateHorizonAdminScript(action) {
+    const baseInput = document.getElementById('adminHorizonBase');
+    let baseUrl = baseInput ? (baseInput.value || '').trim() : '';
+    if (!baseUrl) baseUrl = HZ_ADMIN_DEFAULT_BASE;
+    if (!/^https?:\/\//i.test(baseUrl)) {
+        baseUrl = 'https://' + baseUrl;
+    }
+    if (!baseUrl.toLowerCase().includes('/rest')) {
+        baseUrl = baseUrl.replace(/\/+$/,'') + '/rest';
+    }
+    const scripts = {
+        farms: {
+            name: 'FARM Data',
+            endpoint: '/monitor/farms', // placeholder; update per API docs
+            outfile: 'horizon-farms.json',
+            desc: 'List all farms'
+        },
+        desktops: {
+            name: 'Desktops',
+            endpoint: '/monitor/desktop-pools', // placeholder; update per API docs
+            outfile: 'horizon-desktop-pools.json',
+            desc: 'List all desktop pools'
+        },
+        restarts: {
+            name: 'Restarts',
+            endpoint: '/config/farms/scheduled-updates', // placeholder; update per API docs
+            outfile: 'horizon-farm-restarts.json',
+            desc: 'Scheduled image updates per farm'
+        },
+        clones: {
+            name: 'Clones',
+            endpoint: '/monitor/tasks', // placeholder; update per API docs
+            outfile: 'horizon-clone-status.json',
+            desc: 'Clone progress for pools/farms'
+        }
+    };
+
+    const cfg = scripts[action];
+    if (!cfg) {
+        alert('Unknown admin action');
+        return;
+    }
+
+    const scriptLines = [];
+    scriptLines.push(`# Horizon Admin - ${cfg.name}`);
+    scriptLines.push(`# ${cfg.desc}`);
+    scriptLines.push(`# Endpoint: ${cfg.endpoint} (verify in Omnissa docs)`);
+    scriptLines.push('');
+    scriptLines.push('Import-Module VMware.PowerCLI -ErrorAction SilentlyContinue');
+    scriptLines.push('try { Import-Module powershell-yaml -ErrorAction SilentlyContinue } catch {}');
+    scriptLines.push('$ErrorActionPreference = "Stop"');
+    scriptLines.push('');
+    scriptLines.push('$baseUrl = "' + baseUrl + '"');
+    scriptLines.push('$endpoint = "' + cfg.endpoint + '"');
+    scriptLines.push('$outJson = "' + cfg.outfile + '"');
+    scriptLines.push('$outYaml = [System.IO.Path]::ChangeExtension($outJson, ".yaml")');
+    scriptLines.push('');
+    scriptLines.push('# --- Auth ---');
+    scriptLines.push('$cred = Get-Credential -Message "Enter Horizon credentials (REST)"');
+    scriptLines.push('$pair = "$($cred.UserName):$($cred.GetNetworkCredential().Password)"');
+    scriptLines.push('$bytes = [System.Text.Encoding]::UTF8.GetBytes($pair)');
+    scriptLines.push('$basic = [Convert]::ToBase64String($bytes)');
+    scriptLines.push('$headers = @{');
+    scriptLines.push("    'Authorization' = \"Basic $basic\";");
+    scriptLines.push("    'Accept'        = 'application/json';");
+    scriptLines.push("    'Content-Type'  = 'application/json'");
+    scriptLines.push('}');
+    scriptLines.push('');
+    scriptLines.push('# --- Call ---');
+    scriptLines.push('$uri = "$baseUrl$endpoint"');
+    scriptLines.push('Write-Host "Calling $uri ..." -ForegroundColor Cyan');
+    scriptLines.push('$response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers -ErrorAction Stop');
+    scriptLines.push('');
+    scriptLines.push('# --- Output ---');
+    scriptLines.push('$json = $response | ConvertTo-Json -Depth 6');
+    scriptLines.push('$json | Out-File -FilePath $outJson -Encoding UTF8');
+    scriptLines.push('Write-Host "Saved JSON to $outJson" -ForegroundColor Green');
+    scriptLines.push('');
+    scriptLines.push('if (Get-Command ConvertTo-Yaml -ErrorAction SilentlyContinue) {');
+    scriptLines.push('    try {');
+    scriptLines.push('        $yaml = $response | ConvertTo-Yaml');
+    scriptLines.push('        $yaml | Out-File -FilePath $outYaml -Encoding UTF8');
+    scriptLines.push('        Write-Host "Saved YAML to $outYaml" -ForegroundColor Green');
+    scriptLines.push('    } catch {');
+    scriptLines.push('        Write-Warning "Could not save YAML: $($_.Exception.Message)"');
+    scriptLines.push('    }');
+    scriptLines.push('} else {');
+    scriptLines.push('    Write-Warning "powershell-yaml module not available; skipping YAML output."');
+    scriptLines.push('}');
+    scriptLines.push('');
+    scriptLines.push('Write-Host "Response preview:" -ForegroundColor Yellow');
+    scriptLines.push('$response');
+    scriptLines.push('');
+    scriptLines.push('# TODO: validate endpoint paths against Omnissa Horizon REST docs.');
+
+    const script = scriptLines.join('\n');
+    const out = document.getElementById('adminScriptContent');
+    if (out) out.value = script;
+}
+
+function copyAdminScript() {
+    const area = document.getElementById('adminScriptContent');
+    if (!area) return;
+    area.select();
+    document.execCommand('copy');
+}
+
+function downloadAdminScript() {
+    const scriptContent = document.getElementById('adminScriptContent')?.value || '';
+    const blob = new Blob([scriptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Horizon-Admin.ps1';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
 }
 
 function copyGoldenSunSearchScript() {

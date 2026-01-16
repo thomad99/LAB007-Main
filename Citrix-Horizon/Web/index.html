@@ -26,23 +26,40 @@
                     </p>
                 </div>
             </div>
-            <div class="refresh-controls" style="z-index: 9999; position: relative;">
-                <a href="/citrix/api/download-audit-files" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Download Tools</a>
-                <div class="file-input-wrapper" style="display: inline-block; position: relative;">
-                    <button id="loadFileBtn" class="btn btn-primary" style="z-index: 10000;" title="Load 0-Citrix-audit*.json or Citrix export ZIP files">Load Audit Data</button>
-                    <input type="file" id="fileInput" accept=".json,.zip" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+            <div class="refresh-controls" style="z-index: 9999; position: relative; display: flex; flex-wrap: wrap; gap: 6px; justify-content: space-between; align-items: flex-start; width: 100%; padding: 0 6px; font-size: 13px;">
+                <div style="display: flex; flex-direction: column; gap: 3px; min-width: 260px; align-items: stretch; flex: 1;">
+                    <div style="text-align: center; color: #dcdcdc; letter-spacing: 2px; font-weight: 600;">Discover</div>
+                    <div style="border: 2px solid #dcdcdc; border-radius: 10px; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; background: rgba(255,255,255,0.04);">
+                    <a href="/citrix/api/download-audit-files" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Download Tools</a>
+                    <div class="file-input-wrapper" style="display: inline-block; position: relative;">
+                        <button id="loadFileBtn" class="btn btn-primary" style="z-index: 10000;" title="Load 0-Citrix-audit*.json or Citrix export ZIP files">Load Audit</button>
+                        <input type="file" id="fileInput" accept=".json,.zip" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+                    </div>
+                    <button id="configBtn" class="btn btn-secondary" style="display: flex; align-items: center; gap: 6px;">
+                        <img src="images/lab007 Icon.PNG" alt="LAB007" style="height: 16px; width: 16px; object-fit: contain;">
+                        Config
+                    </button>
+                    </div>
                 </div>
-                <button id="configBtn" class="btn btn-secondary" style="display: flex; align-items: center; gap: 6px;">
-                    <img src="images/lab007 Icon.PNG" alt="LAB007" style="height: 16px; width: 16px; object-fit: contain;">
-                    Config
-                </button>
-                <div class="file-input-wrapper" style="display: inline-block; position: relative;">
-                    <button id="uploadDebugBtn" class="btn btn-secondary" style="background: #ffc107; color: #000; border-color: #ffc107; z-index: 10000;">Upload Debug ZIP</button>
-                    <input type="file" id="debugFileInput" accept=".zip" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+
+                <div style="display: flex; flex-direction: column; gap: 3px; min-width: 200px; align-items: stretch; flex: 1;">
+                    <div style="text-align: center; color: #dcdcdc; letter-spacing: 2px; font-weight: 600;">Build</div>
+                    <div style="border: 2px solid #dcdcdc; border-radius: 10px; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; background: rgba(255,255,255,0.04);">
+                        <button onclick="window.location.href='todo.html'" class="btn btn-secondary" style="background: #17a2b8; border-color: #17a2b8;">Build</button>
+                    </div>
                 </div>
-                <button id="goldenSunBtn" class="btn btn-secondary" style="background: #28a745; border-color: #28a745;">GoldenSun</button>
-                <button id="horizonTasksBtn" class="btn btn-primary">HZ Tasks</button>
-                <button onclick="window.location.href='todo.html'" class="btn btn-secondary" style="background: #17a2b8; border-color: #17a2b8;">📋 ToDo List</button>
+
+                <div style="display: flex; flex-direction: column; gap: 3px; min-width: 260px; align-items: stretch; flex: 1;">
+                    <div style="text-align: center; color: #dcdcdc; letter-spacing: 2px; font-weight: 600;">Manage</div>
+                    <div style="border: 2px solid #dcdcdc; border-radius: 10px; padding: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; justify-content: center; background: rgba(255,255,255,0.04);">
+                    <button id="goldenSunBtn" class="btn btn-secondary" style="background: #28a745; border-color: #28a2b8;">GoldenSun</button>
+                    <button id="horizonTasksBtn" class="btn btn-primary">HZ Tasks</button>
+                    <div class="file-input-wrapper" style="display: inline-block; position: relative;">
+                        <button id="uploadDebugBtn" class="btn btn-secondary" style="background: #ffc107; color: #000; border-color: #ffc107; z-index: 10000;">Upload Debugs</button>
+                        <input type="file" id="debugFileInput" accept=".zip" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
+                    </div>
+                    </div>
+                </div>
             </div>
         </header>
 
@@ -488,6 +505,7 @@
                     <button class="task-tab active" onclick="showHorizonTask('masterImageSearch')">Master Image Search</button>
                     <button class="task-tab" onclick="showHorizonTask('cloneMasterImage')">Clone Master Image</button>
                     <button class="task-tab" onclick="showHorizonTask('addApplications')">Add Applications to HZ</button>
+                    <button class="task-tab" onclick="showHorizonTask('adminTasks')">Admin</button>
                     <!-- More tasks can be added here -->
                 </div>
                 
@@ -636,6 +654,36 @@
                         <div style="margin-top: 10px; text-align: right;">
                             <button class="btn btn-secondary" onclick="copyAppCommands()">Copy Commands</button>
                             <button class="btn btn-secondary" onclick="downloadAppCommands()">Download Script</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Admin Tasks -->
+                <div id="adminTasksTask" class="horizon-task-panel">
+                    <h3>Admin (Horizon REST)</h3>
+                    <p style="color: #666;">Generate PowerShell scripts that authenticate and call Horizon REST APIs, then save results to JSON/YAML and print to screen.</p>
+
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin: 10px 0 15px 0;">
+                        <div>
+                            <label for="adminHorizonBase" style="font-weight: 600;">Horizon Controller Address</label>
+                            <input type="text" id="adminHorizonBase" value="https://horizon.steward.org" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <small style="color: #666;">Used for all Admin scripts (REST base URL)</small>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 20px 0;">
+                        <button class="btn btn-secondary" onclick="generateHorizonAdminScript('farms')">FARM Data</button>
+                        <button class="btn btn-secondary" onclick="generateHorizonAdminScript('desktops')">Desktops</button>
+                        <button class="btn btn-secondary" onclick="generateHorizonAdminScript('restarts')">Restarts</button>
+                        <button class="btn btn-secondary" onclick="generateHorizonAdminScript('clones')">Clones</button>
+                    </div>
+
+                    <div id="adminScriptOutput" style="margin-top: 10px;">
+                        <h4>Generated Script:</h4>
+                        <textarea id="adminScriptContent" readonly style="width: 100%; height: 380px; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
+                        <div style="margin-top: 10px; text-align: right;">
+                            <button class="btn btn-secondary" onclick="copyAdminScript()">Copy Script</button>
+                            <button class="btn btn-secondary" onclick="downloadAdminScript()">Download Script</button>
                         </div>
                     </div>
                 </div>
