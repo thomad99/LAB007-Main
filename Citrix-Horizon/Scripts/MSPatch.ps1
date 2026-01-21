@@ -190,6 +190,25 @@ $UpdateScript = {
 
     $ErrorActionPreference = "Stop"
 
+    function Ensure-WuauservRunning {
+        $svc = Get-Service -Name wuauserv -ErrorAction SilentlyContinue
+        if (-not $svc) { throw "Windows Update service (wuauserv) not found." }
+
+        # If disabled, set to Automatic
+        if ($svc.StartType -eq 'Disabled') {
+            Set-Service -Name wuauserv -StartupType Automatic -ErrorAction Stop
+        }
+
+        # If not running, start it
+        if ($svc.Status -ne 'Running') {
+            try {
+                Start-Service -Name wuauserv -ErrorAction Stop
+            } catch {
+                throw "Failed to start Windows Update service (wuauserv): $($_.Exception.Message)"
+            }
+        }
+    }
+
     function Get-LatestHotfixInfo {
         $hotfixes = Get-HotFix | Sort-Object InstalledOn -Descending
         $hf = $hotfixes | Select-Object -First 1
@@ -218,6 +237,9 @@ $UpdateScript = {
         throw "PSWindowsUpdate module not found on this server. Copy it into C:\Program Files\WindowsPowerShell\Modules\PSWindowsUpdate\"
     }
     Import-Module PSWindowsUpdate -Force
+
+    # Ensure Windows Update service is enabled and running
+    Ensure-WuauservRunning
 
     $before = Get-LatestHotfixInfo
 
