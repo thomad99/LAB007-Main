@@ -2199,7 +2199,7 @@ function generateCloneScript(selectedImages, destinationFolder, moveSourceAfterC
     scriptLines.push('                                Write-Host "  [PATCH] mspatch.ps1 completed for $baseComputerName" -ForegroundColor Green');
     scriptLines.push('                            }');
     scriptLines.push('                            catch {');
-    scriptLines.push('                                Write-Warning "  [PATCH] mspatch.ps1 failed for $baseComputerName: $($_.Exception.Message)"');
+    scriptLines.push('                                Write-Warning "  [PATCH] mspatch.ps1 failed for ${baseComputerName}: $($_.Exception.Message)"');
     scriptLines.push('                            }');
     scriptLines.push('                        } else {');
     scriptLines.push('                            Write-Warning "  [PATCH] mspatch.ps1 not found in current directory. Skipping patch step."');
