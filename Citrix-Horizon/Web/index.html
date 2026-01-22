@@ -721,11 +721,9 @@
             <div id="goldenSunClonePanel" class="horizon-task-panel active" style="display: block;">
                 <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 15px 0;">
                     <label for="goldenSunFileSelect" style="font-weight: 600;">Master List File:</label>
-                    <select id="goldenSunFileSelect" class="form-control" style="width: 280px;"></select>
-                    <button class="btn btn-secondary" onclick="fetchGoldenSunFileList()">Refresh List</button>
                     <button class="btn btn-secondary" onclick="openGoldenSunFileDialog()">Load Images</button>
                     <input type="file" id="goldenSunFilePicker" accept=".json" style="display: none;">
-                    <span id="goldenSunStatus" style="color: #666;"></span>
+                    <span id="goldenSunStatus" style="color: #666;">Load a Master Images JSON to begin.</span>
                 </div>
 
             <div id="goldenSunImagesSection" style="margin: 20px 0; display: none;">

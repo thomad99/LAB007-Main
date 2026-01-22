@@ -23,6 +23,16 @@ param(
     [Parameter(Mandatory=$false)]
     [System.Management.Automation.PSCredential]$Credential,
 
+# WinRM / transport
+[Parameter(Mandatory=$false)]
+[ValidateSet('Default','Negotiate','Kerberos','Basic','Credssp')]
+[string]$WinRMAuthentication = 'Negotiate',
+
+[switch]$UseSSL,
+
+# Add target to TrustedHosts temporarily (for workgroup/local admin)
+[switch]$AddToTrustedHosts,
+
     # Reboot / readiness timing (WinRM only)
     [int]$TimeoutSeconds = 3600,     # total wait time after each reboot (default 60 min)
     [int]$PollSeconds    = 30,       # poll interval for WinRM checks (default 30s)
@@ -66,21 +76,13 @@ function Send-TeamsAdaptiveCard {
         [string]$Computer = $env:COMPUTERNAME
     )
 
-    # Small emoji for quick scanning
-    $emoji = switch ($Level) {
-        "success" { "✅" }
-        "warning" { "⚠️" }
-        "error"   { "❌" }
-        default   { "ℹ️" }
-    }
-
     $payload = @{
         type    = "AdaptiveCard"
         version = "1.4"
         body    = @(
             @{
                 type   = "TextBlock"
-                text   = "$emoji $Title"
+                text   = $Title
                 wrap   = $true
                 weight = "Bolder"
                 size   = "Medium"
@@ -116,10 +118,27 @@ function Wait-ForWinRMReboot {
         [Parameter(Mandatory)] [System.Management.Automation.PSCredential]$Credential,
         [int]$TimeoutSeconds = 3600,
         [int]$PollSeconds = 30,
-        [int]$OfflineWaitSeconds = 300
+        [int]$OfflineWaitSeconds = 300,
+        [string]$Auth = "Negotiate",
+        [switch]$UseSSL
     )
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+
+    $testParams = @{
+        ComputerName = $ComputerName
+        ErrorAction  = 'Stop'
+        Authentication = $Auth
+    }
+    if ($UseSSL) { $testParams.UseSSL = $true }
+
+    $invokeParams = @{
+        ComputerName  = $ComputerName
+        Credential    = $Credential
+        ErrorAction   = 'Stop'
+        Authentication = $Auth
+    }
+    if ($UseSSL) { $invokeParams.UseSSL = $true }
 
     Write-Host ("[{0}] [{1}] Waiting for WinRM to DROP (reboot start)..." -f (Get-Date), $ComputerName) -ForegroundColor Cyan
 
@@ -129,7 +148,7 @@ function Wait-ForWinRMReboot {
 
     while ((Get-Date) -lt $offlineDeadline) {
         try {
-            Test-WSMan -ComputerName $ComputerName -ErrorAction Stop | Out-Null
+            Test-WSMan @testParams | Out-Null
             Start-Sleep -Seconds $PollSeconds
         } catch {
             $sawOffline = $true
@@ -147,7 +166,7 @@ function Wait-ForWinRMReboot {
     # Phase B: wait for WinRM to return
     while ((Get-Date) -lt $deadline) {
         try {
-            Test-WSMan -ComputerName $ComputerName -ErrorAction Stop | Out-Null
+            Test-WSMan @testParams | Out-Null
             break
         } catch {
             Start-Sleep -Seconds $PollSeconds
@@ -163,7 +182,7 @@ function Wait-ForWinRMReboot {
     # Phase C: wait for a real remote command to succeed (auth + services ready)
     while ((Get-Date) -lt $deadline) {
         try {
-            $null = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock { 1 } -ErrorAction Stop
+            $null = Invoke-Command @invokeParams -ScriptBlock { 1 }
             Write-Host ("[{0}] [{1}] Remoting is stable." -f (Get-Date), $ComputerName) -ForegroundColor Green
             return $true
         } catch {
@@ -179,6 +198,58 @@ if (-not $Credential) {
 }
 
 # -------------------------------
+# TrustedHosts handling (optional, for workgroup/local admin)
+# -------------------------------
+$initialTrustedHosts = $null
+$addedTrustedHost = $false
+if ($AddToTrustedHosts) {
+    try {
+        $initialTrustedHosts = (Get-Item WSMan:\localhost\Client\TrustedHosts -ErrorAction Stop).Value
+        $hostList = @()
+        if ($initialTrustedHosts -and $initialTrustedHosts.Trim()) {
+            $hostList = $initialTrustedHosts.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
+        }
+        if ($hostList -notcontains $ComputerName -and $hostList -notcontains '*') {
+            $hostList += $ComputerName
+            $newValue = ($hostList -join ',')
+            Set-Item WSMan:\localhost\Client\TrustedHosts -Value $newValue -Force -ErrorAction Stop | Out-Null
+            $addedTrustedHost = $true
+            Write-Host "TrustedHosts updated to include $ComputerName" -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Warning "Failed to update TrustedHosts: $($_.Exception.Message)"
+    }
+}
+
+# Common WinRM parameter sets
+$invokeCommon = @{
+    ComputerName   = $ComputerName
+    Credential     = $Credential
+    Authentication = $WinRMAuthentication
+}
+if ($UseSSL) { $invokeCommon.UseSSL = $true }
+
+# Quick connectivity preflight to give a helpful hint for firewall scope issues
+$wsCheck = @{
+    ComputerName  = $ComputerName
+    Authentication = $WinRMAuthentication
+    ErrorAction   = 'Stop'
+}
+if ($UseSSL)    { $wsCheck.UseSSL    = $true }
+if ($Credential){ $wsCheck.Credential = $Credential }
+try {
+    Test-WSMan @wsCheck | Out-Null
+}
+catch {
+    $msg = $_.Exception.Message
+    Write-Warning "WinRM pre-check failed for $ComputerName : $msg"
+    Write-Host  "If this is a firewall scope issue, on the target run:" -ForegroundColor Yellow
+    Write-Host  "  Set-NetFirewallRule -Name \"WINRM-HTTP-In-TCP\" -Enabled True -Profile Any -Action Allow -RemoteAddress Any" -ForegroundColor Yellow
+    Write-Host  "Or enable HTTPS/5986 and rerun with -UseSSL." -ForegroundColor Yellow
+    throw
+}
+
+# -------------------------------
 # Remote update logic
 # -------------------------------
 
@@ -190,7 +261,7 @@ $UpdateScript = {
 
     $ErrorActionPreference = "Stop"
 
-    function Ensure-WuauservRunning {
+    function Start-WuauservIfNeeded {
         $svc = Get-Service -Name wuauserv -ErrorAction SilentlyContinue
         if (-not $svc) { throw "Windows Update service (wuauserv) not found." }
 
@@ -239,7 +310,7 @@ $UpdateScript = {
     Import-Module PSWindowsUpdate -Force
 
     # Ensure Windows Update service is enabled and running
-    Ensure-WuauservRunning
+    Start-WuauservIfNeeded
 
     $before = Get-LatestHotfixInfo
 
@@ -327,7 +398,7 @@ try {
         -Level "info" `
         -Computer $env:COMPUTERNAME
 
-    $scan = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock $UpdateScript -ArgumentList $false,$false
+    $scan = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $false,$false
     $scan | Format-List
 
     if ($scan.Action -eq "NoUpdates") {
@@ -354,7 +425,7 @@ try {
     $rebootCount = 0
 
     do {
-        $result = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock $UpdateScript -ArgumentList $true,$false
+        $result = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $true,$false
         $result | Format-List
 
         if ($result.Action -eq "Installed") {
@@ -380,7 +451,7 @@ try {
             Restart-Computer -ComputerName $ComputerName -Credential $Credential -Force
 
             Write-Host ("[{0}] Waiting for reboot to complete (WinRM + stable remoting)..." -f (Get-Date)) -ForegroundColor Cyan
-            Wait-ForWinRMReboot -ComputerName $ComputerName -Credential $Credential -TimeoutSeconds $TimeoutSeconds -PollSeconds $PollSeconds -OfflineWaitSeconds $OfflineWaitSeconds
+            Wait-ForWinRMReboot -ComputerName $ComputerName -Credential $Credential -TimeoutSeconds $TimeoutSeconds -PollSeconds $PollSeconds -OfflineWaitSeconds $OfflineWaitSeconds -Auth $WinRMAuthentication -UseSSL:$UseSSL
 
             $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
                 -Title "Back online" `
@@ -394,7 +465,7 @@ try {
     Write-Host ("[{0}] Install/reboot loop complete. Reboots performed: {1}" -f (Get-Date), $rebootCount) -ForegroundColor Green
 
     # Final scan safety check (only shutdown if truly NoUpdates now)
-    $finalScan = Invoke-Command -ComputerName $ComputerName -Credential $Credential -ScriptBlock $UpdateScript -ArgumentList $false,$false
+    $finalScan = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $false,$false
     $finalScan | Format-List
 
     if ($finalScan.Action -ne "NoUpdates") {
@@ -444,4 +515,14 @@ catch {
         -Computer $env:COMPUTERNAME
 
     throw
+}
+finally {
+if ($addedTrustedHost -and $null -ne $initialTrustedHosts) {
+        try {
+            Set-Item WSMan:\localhost\Client\TrustedHosts -Value $initialTrustedHosts -Force -ErrorAction Stop | Out-Null
+            Write-Host "TrustedHosts restored to previous value." -ForegroundColor Yellow
+        } catch {
+            Write-Warning "Failed to restore TrustedHosts: $($_.Exception.Message)"
+        }
+    }
 }
