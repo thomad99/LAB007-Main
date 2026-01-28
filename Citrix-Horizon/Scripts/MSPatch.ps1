@@ -265,15 +265,25 @@ $UpdateScript = {
         $svc = Get-Service -Name wuauserv -ErrorAction SilentlyContinue
         if (-not $svc) { throw "Windows Update service (wuauserv) not found." }
 
-        # If disabled, set to Automatic
-        if ($svc.StartType -eq 'Disabled') {
+        # Ensure Automatic start
+        if ($svc.StartType -ne 'Automatic') {
             Set-Service -Name wuauserv -StartupType Automatic -ErrorAction Stop
         }
 
-        # If not running, start it
+        # If not running, start it and wait until running (or timeout)
         if ($svc.Status -ne 'Running') {
             try {
                 Start-Service -Name wuauserv -ErrorAction Stop
+                $waited = 0
+                while ($waited -lt 30) {
+                    $svc = Get-Service -Name wuauserv -ErrorAction SilentlyContinue
+                    if ($svc.Status -eq 'Running') { break }
+                    Start-Sleep -Seconds 1
+                    $waited++
+                }
+                if ($svc.Status -ne 'Running') {
+                    throw "wuauserv did not reach Running state after 30s."
+                }
             } catch {
                 throw "Failed to start Windows Update service (wuauserv): $($_.Exception.Message)"
             }
