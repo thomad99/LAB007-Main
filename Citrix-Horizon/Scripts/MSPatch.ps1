@@ -59,7 +59,7 @@ $ProgressPreference = 'SilentlyContinue'
 # Teams Workflow Webhook URL
 # -------------------------------
 # Treat this URL like a password.
-$TeamsWorkflowUrl = "https://defaultfc73d64856fc4b0e90ec2979f75718.47.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/55ba1216b80344cfad5fefd2a72c5b1e/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=WzE6ujq_myIh12se_OYnbLRJYFxbPvDpzjrXd4J3S4g"
+$TeamsWorkflowUrl = "https://default47eb93f93c37419cae4e37c50e7d1d.c0.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/72ca894639d14c8fae484f6db87527b2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=M38KwWz-oLmqc6joZdCgC54BfzjQCYsghHAEvMmW198"
 
 # -------------------------------
 # Helpers
