@@ -11,7 +11,8 @@ const router = express.Router();
 const DATA_DIR = process.env.AIMAIL_DATA_DIR || path.join(__dirname, 'aimail-data');
 const STORE_PATH = path.join(DATA_DIR, 'aimail-store.json');
 
-const IMAP_HOST = process.env.IMAP_MAIL_SERVER;
+// Accept common typo IMPAP_ for convenience
+const IMAP_HOST = process.env.IMAP_MAIL_SERVER || process.env.IMPAP_MAIL_SERVER;
 const IMAP_PORT = parseInt(process.env.IMAP_MAIL_PORT || '993', 10);
 const IMAP_SECURE = (process.env.IMAP_MAIL_SECURE || 'true').toLowerCase() !== 'false';
 const IMAP_USER = process.env.MY_EMAIL_ADDRESS;
