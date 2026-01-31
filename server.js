@@ -386,6 +386,11 @@ app.get('/dummypage', (req, res) => {
 res.sendFile(path.join(__dirname, 'public', 'dummypage.html'));
 });
 
+// AIMAIL landing
+app.get('/aimail', (req, res) => {
+res.sendFile(path.join(__dirname, 'public', 'aimail.html'));
+});
+
 // Catch-all route for main landing page (must be last, only matches exact /)
 app.get('/', (req, res) => {
 res.sendFile(path.join(__dirname, 'public', 'index.html'));
