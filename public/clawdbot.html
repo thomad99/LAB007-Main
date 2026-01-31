@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAB007 - Clawdbot Runner</title>
+    <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
+    <link rel="shortcut icon" type="image/png" href="/images/lab007 Icon.PNG">
+    <link rel="apple-touch-icon" href="/images/lab007 Icon.PNG">
+    <style>
+        :root {
+            --primary: #0a66c2;
+            --accent: #d4af37;
+            --bg: #f7f9fc;
+            --card: #ffffff;
+            --text: #222;
+            --muted: #556;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+        header {
+            padding: 24px;
+            background: var(--card);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        .brand img {
+            width: 48px;
+            height: 48px;
+            object-fit: contain;
+        }
+        .brand h1 {
+            margin: 0;
+            font-size: 1.25rem;
+            letter-spacing: 0.02em;
+        }
+        main {
+            max-width: 1200px;
+            margin: 24px auto 48px;
+            padding: 0 20px;
+        }
+        .card {
+            background: var(--card);
+            border-radius: 14px;
+            box-shadow: 0 6px 22px rgba(0,0,0,0.06);
+            padding: 20px;
+            margin-bottom: 18px;
+        }
+        .section-title {
+            margin: 0 0 12px;
+            font-size: 1.1rem;
+            color: var(--muted);
+            letter-spacing: 0.01em;
+        }
+        label {
+            display: block;
+            margin: 12px 0 6px;
+            font-weight: 600;
+            color: var(--muted);
+        }
+        input, textarea, select, button {
+            width: 100%;
+            font: inherit;
+        }
+        textarea {
+            min-height: 160px;
+            padding: 12px;
+            border-radius: 10px;
+            border: 1px solid #d8deea;
+            background: #fbfcff;
+            resize: vertical;
+        }
+        input {
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid #d8deea;
+            background: #fbfcff;
+        }
+        button {
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 14px;
+            padding: 12px 16px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.08s ease, box-shadow 0.12s ease;
+        }
+        button:hover { box-shadow: 0 6px 18px rgba(10, 102, 194, 0.35); }
+        button:active { transform: translateY(1px); }
+        .row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 12px;
+        }
+        .status {
+            font-size: 0.95rem;
+            color: var(--muted);
+            margin-top: 8px;
+        }
+        pre {
+            background: #0e1117;
+            color: #e8eaed;
+            padding: 14px;
+            border-radius: 10px;
+            overflow: auto;
+            font-size: 0.92rem;
+            line-height: 1.4;
+            max-height: 360px;
+        }
+        .hint {
+            font-size: 0.9rem;
+            color: var(--muted);
+            margin-top: 6px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">
+            <img src="/images/lab007-trans.PNG" alt="LAB007">
+            <div>
+                <h1>Clawdbot Runner</h1>
+                <div class="hint">Trigger Clawdbot tasks from the main LAB007 site.</div>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <div class="card">
+            <h2 class="section-title">Run Clawdbot</h2>
+            <div class="row">
+                <div>
+                    <label for="clawEndpoint">Endpoint URL</label>
+                    <input id="clawEndpoint" type="text" placeholder="https://your-clawdbot-endpoint/run" value="">
+                    <div class="hint">Set to your Clawdbot HTTP endpoint. This page does not store it.</div>
+                </div>
+                <div>
+                    <label for="clawApiKey">API Key (optional)</label>
+                    <input id="clawApiKey" type="password" placeholder="Bearer/secret token if required">
+                </div>
+            </div>
+
+            <label for="clawPrompt">Task / Prompt</label>
+            <textarea id="clawPrompt" placeholder="Describe what you want Clawdbot to do..."></textarea>
+
+            <button id="runClaw">Run Clawdbot</button>
+            <div id="status" class="status">Idle</div>
+        </div>
+
+        <div class="card">
+            <h2 class="section-title">Output</h2>
+            <pre id="output">Waiting for run...</pre>
+        </div>
+    </main>
+
+    <script>
+        (function() {
+            const btn = document.getElementById('runClaw');
+            const statusEl = document.getElementById('status');
+            const outputEl = document.getElementById('output');
+
+            async function runClawdbot() {
+                const endpoint = document.getElementById('clawEndpoint').value.trim();
+                const apiKey = document.getElementById('clawApiKey').value.trim();
+                const prompt = document.getElementById('clawPrompt').value.trim();
+
+                if (!endpoint) {
+                    alert('Please provide the Clawdbot endpoint URL.');
+                    return;
+                }
+                if (!prompt) {
+                    alert('Please enter a prompt/task.');
+                    return;
+                }
+
+                statusEl.textContent = 'Running...';
+                outputEl.textContent = 'Request sent...';
+
+                const headers = { 'Content-Type': 'application/json' };
+                if (apiKey) headers['Authorization'] = apiKey;
+
+                const payload = { prompt };
+
+                try {
+                    const res = await fetch(endpoint, {
+                        method: 'POST',
+                        headers,
+                        body: JSON.stringify(payload)
+                    });
+                    const text = await res.text();
+                    outputEl.textContent = text || '(no response body)';
+                    statusEl.textContent = `Done (HTTP ${res.status})`;
+                } catch (err) {
+                    statusEl.textContent = 'Error';
+                    outputEl.textContent = 'Request failed: ' + err.message;
+                }
+            }
+
+            btn.addEventListener('click', runClawdbot);
+        })();
+    </script>
+</body>
+</html>

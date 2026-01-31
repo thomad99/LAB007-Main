@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAB007 AIMAIL</title>
+    <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
+    <link rel="shortcut icon" type="image/png" href="/images/lab007 Icon.PNG">
+    <link rel="apple-touch-icon" href="/images/lab007 Icon.PNG">
+    <style>
+        :root {
+            --primary: #0a66c2;
+            --accent: #d4af37;
+            --bg: #f5f7fb;
+            --card: #ffffff;
+            --muted: #5a6270;
+            --border: #d8deea;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: var(--bg);
+            color: #1f2933;
+        }
+        header {
+            background: var(--card);
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        header img { width: 40px; height: 40px; object-fit: contain; }
+        header h1 { margin: 0; font-size: 1.2rem; letter-spacing: 0.02em; }
+        main { max-width: 1200px; margin: 18px auto 48px; padding: 0 16px; display: grid; grid-template-columns: 320px 1fr; gap: 14px; }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+            padding: 14px;
+        }
+        .section-title { margin: 0 0 10px; font-size: 1rem; color: var(--muted); }
+        .input, textarea, select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #fbfcff;
+            font: inherit;
+        }
+        textarea { min-height: 96px; }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.08s ease, box-shadow 0.12s ease;
+        }
+        .btn.secondary { background: #e5e7eb; color: #111; }
+        .btn:hover { box-shadow: 0 6px 18px rgba(10,102,194,0.25); }
+        .btn:active { transform: translateY(1px); }
+        .list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
+        .sender-item {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #fff;
+            cursor: pointer;
+            transition: border 0.1s ease, box-shadow 0.1s ease;
+        }
+        .sender-item:hover { border-color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.04); }
+        .sender-meta { display: flex; align-items: center; gap: 10px; }
+        .logo {
+            width: 38px;
+            height: 38px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid var(--border);
+        }
+        .badge { padding: 2px 8px; border-radius: 999px; font-size: 0.8rem; }
+        .badge.junk { background: #fee2e2; color: #991b1b; }
+        .badge.ok { background: #e0f2fe; color: #075985; }
+        .thread-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+        .thread-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+        }
+        .bubble {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            background: #fdfdfd;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        .bubble .meta {
+            font-size: 0.85rem;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+        .bubble .actions {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            display: flex;
+            gap: 6px;
+        }
+        .favorite { color: #f59e0b; cursor: pointer; }
+        .search-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
+        .pill { padding: 6px 10px; border-radius: 999px; border: 1px solid var(--border); background: #fff; cursor: pointer; }
+        .pill.active { border-color: var(--primary); color: var(--primary); }
+        .status { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
+        .flex { display: flex; gap: 8px; }
+        @media (max-width: 960px) {
+            main { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="/images/lab007 Icon.PNG" alt="LAB007">
+        <div>
+            <h1>AIMAIL – Inbox Channels</h1>
+            <div style="color: var(--muted); font-size: 0.9rem;">Email-to-channel view with junk control, search, and favorites.</div>
+        </div>
+    </header>
+
+    <main>
+        <section class="card">
+            <h2 class="section-title">Channels</h2>
+            <div class="search-row">
+                <input id="senderSearch" class="input" placeholder="Search senders..." />
+                <button class="btn secondary" id="resetFilters">Reset</button>
+            </div>
+            <ul class="list" id="senderList"></ul>
+            <div class="status" id="senderStatus">Loaded sample data. Backend wiring TBD.</div>
+        </section>
+
+        <section class="card">
+            <div class="thread-header">
+                <img id="threadLogo" class="logo" src="/images/lab007 Icon.PNG" alt="logo">
+                <div>
+                    <div id="threadName" style="font-weight:700;">Select a sender</div>
+                    <div id="threadMeta" class="status">Unread: 0 · Total: 0</div>
+                </div>
+            </div>
+
+            <div class="thread-controls">
+                <input id="threadSearch" class="input" placeholder="Search in this thread...">
+                <button class="btn secondary" id="sortBtn">Sort: Newest</button>
+                <button class="btn secondary" id="favFilterBtn">Show: All</button>
+            </div>
+
+            <div class="search-row">
+                <input id="llmQuery" class="input" placeholder="LLM smart search (trip to New York...)">
+                <button class="btn" id="llmRun">LLM Search</button>
+            </div>
+            <div class="status" id="llmStatus">LLM search will use your OpenAI key (backend needed).</div>
+
+            <div id="threadEmails"></div>
+        </section>
+    </main>
+
+    <section class="card" style="max-width:1200px;margin:0 auto 48px;padding:14px;">
+        <h2 class="section-title">Admin (branding, junk, search)</h2>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
+            <div class="status" id="adminTotals">Emails: 0 (unread 0)</div>
+            <div class="flex" style="flex-wrap:wrap;gap:6px;align-items:center;">
+                <button class="btn secondary" id="testConnection">Test mail connection</button>
+                <span class="status" id="connectionStatus">Not tested</span>
+            </div>
+        </div>
+        <div class="flex" style="flex-wrap:wrap;">
+            <div style="flex:1; min-width:260px;">
+                <label>Display name</label>
+                <input id="adminDisplay" class="input" placeholder="Friendly channel name">
+                <label style="margin-top:10px;">Logo URL</label>
+                <input id="adminLogo" class="input" placeholder="https://...png">
+                <label style="margin-top:10px;">Junk status</label>
+                <select id="adminJunk" class="input">
+                    <option value="false">Not junk</option>
+                    <option value="true">Junk</option>
+                </select>
+                <button class="btn" id="adminSave">Save channel</button>
+            </div>
+            <div style="flex:1; min-width:260px;">
+                <label>Global text search</label>
+                <input id="adminSearch" class="input" placeholder="Search all messages...">
+                <label style="margin-top:10px;">LLM search prompt</label>
+                <textarea id="adminLLMSearch" placeholder="Ask in natural language..."></textarea>
+                <button class="btn secondary" id="adminSearchBtn">Search</button>
+            </div>
+        </div>
+        <div class="status" id="adminStatus">Select a channel above to edit. Read/unread counts update when you view messages (does not alter server unread state).</div>
+    </section>
+
+    <script>
+        // Simple in-memory demo data; backend wiring required for real mail sync.
+        const defaultLogo = '/images/lab007 Icon.PNG';
+        const data = {
+            senders: [
+                {
+                    id: 'esys@sailingclub.com',
+                    display: 'lab007/esys',
+                    domain: 'sailingclub.com',
+                    logo: defaultLogo,
+                    junk: false,
+                    unread: 2,
+                    emails: [
+                        { id:'m1', subject:'Regatta update', date:'2025-01-18 10:12', body:'We sail at 0900. Briefing attached.', favorite:false, unread:true },
+                        { id:'m2', subject:'Fees due', date:'2025-01-10 08:30', body:'Membership fees are due by end of month.', favorite:true, unread:false }
+                    ]
+                },
+                {
+                    id: 'alerts@bank.com',
+                    display: 'e-bank.com',
+                    domain: 'bank.com',
+                    logo: defaultLogo,
+                    junk: false,
+                    unread: 0,
+                    emails: [
+                        { id:'b1', subject:'Statement ready', date:'2025-01-20 07:02', body:'Your December statement is ready.', favorite:false, unread:false }
+                    ]
+                },
+                {
+                    id: 'promo@shop.com',
+                    display: 'e-shop.com',
+                    domain: 'shop.com',
+                    logo: defaultLogo,
+                    junk: true,
+                    unread: 5,
+                    emails: [
+                        { id:'s1', subject:'Sale 70% off', date:'2025-01-22 12:00', body:'Big sale today only.', favorite:false, unread:true }
+                    ]
+                }
+            ]
+        };
+
+        let currentSender = null;
+        let sortNewest = true;
+        let favOnly = false;
+
+        const senderList = document.getElementById('senderList');
+        const senderSearch = document.getElementById('senderSearch');
+        const senderStatus = document.getElementById('senderStatus');
+        const threadName = document.getElementById('threadName');
+        const threadMeta = document.getElementById('threadMeta');
+        const threadLogo = document.getElementById('threadLogo');
+        const threadEmails = document.getElementById('threadEmails');
+        const threadSearch = document.getElementById('threadSearch');
+        const sortBtn = document.getElementById('sortBtn');
+        const favFilterBtn = document.getElementById('favFilterBtn');
+        const llmRun = document.getElementById('llmRun');
+        const llmQuery = document.getElementById('llmQuery');
+        const llmStatus = document.getElementById('llmStatus');
+        const adminDisplay = document.getElementById('adminDisplay');
+        const adminLogo = document.getElementById('adminLogo');
+        const adminJunk = document.getElementById('adminJunk');
+        const adminSave = document.getElementById('adminSave');
+        const adminSearch = document.getElementById('adminSearch');
+        const adminLLMSearch = document.getElementById('adminLLMSearch');
+        const adminSearchBtn = document.getElementById('adminSearchBtn');
+        const adminStatus = document.getElementById('adminStatus');
+        const resetFilters = document.getElementById('resetFilters');
+        const adminTotals = document.getElementById('adminTotals');
+        const testConnection = document.getElementById('testConnection');
+        const connectionStatus = document.getElementById('connectionStatus');
+
+        function updateTotals() {
+            let total = 0, unread = 0;
+            data.senders.forEach(s => {
+                total += s.emails.length;
+                unread += s.emails.filter(e => e.unread).length;
+            });
+            adminTotals.textContent = `Emails: ${total} (unread ${unread})`;
+        }
+
+        function renderSenders() {
+            const q = senderSearch.value.toLowerCase();
+            senderList.innerHTML = '';
+            data.senders
+                .filter(s => !q || s.id.toLowerCase().includes(q) || s.display.toLowerCase().includes(q) || s.domain.toLowerCase().includes(q))
+                .forEach(s => {
+                    const li = document.createElement('li');
+                    li.className = 'sender-item';
+                    li.onclick = () => selectSender(s.id);
+                    const unread = s.emails.filter(e => e.unread).length;
+                    li.innerHTML = `
+                        <div class="sender-meta">
+                            <img class="logo" src="${s.logo || defaultLogo}" alt="">
+                            <div>
+                                <div style="font-weight:700;">${s.display || s.domain || s.id}</div>
+                                <div style="color:var(--muted);font-size:0.9rem;">${s.id}</div>
+                            </div>
+                        </div>
+                        <div style="text-align:right;">
+                            <div class="badge ${s.junk ? 'junk' : 'ok'}">${s.junk ? 'Junk' : 'OK'}</div>
+                            <div style="font-size:0.85rem;color:var(--muted);">Unread: ${unread}</div>
+                        </div>
+                    `;
+                    senderList.appendChild(li);
+                });
+            senderStatus.textContent = `${data.senders.length} channel(s) loaded.`;
+            updateTotals();
+        }
+
+        function selectSender(id) {
+            currentSender = data.senders.find(s => s.id === id);
+            if (!currentSender) return;
+            threadName.textContent = currentSender.display || currentSender.domain || currentSender.id;
+            const unread = currentSender.emails.filter(e => e.unread).length;
+            threadMeta.textContent = `Unread: ${unread} · Total: ${currentSender.emails.length} · Junk: ${currentSender.junk ? 'Yes' : 'No'}`;
+            threadLogo.src = currentSender.logo || defaultLogo;
+            adminDisplay.value = currentSender.display || '';
+            adminLogo.value = currentSender.logo || '';
+            adminJunk.value = currentSender.junk ? 'true' : 'false';
+            renderEmails();
+        }
+
+        function renderEmails() {
+            if (!currentSender) {
+                threadEmails.innerHTML = '<div class="status">Select a sender to view messages.</div>';
+                return;
+            }
+            const q = threadSearch.value.toLowerCase();
+            let list = [...currentSender.emails];
+            if (favOnly) list = list.filter(e => e.favorite);
+            if (q) list = list.filter(e => (e.subject + e.body).toLowerCase().includes(q));
+            list.sort((a,b) => sortNewest ? new Date(b.date) - new Date(a.date) : new Date(a.date) - new Date(b.date));
+            threadEmails.innerHTML = '';
+            list.forEach(e => {
+                const div = document.createElement('div');
+                div.className = 'bubble';
+                div.innerHTML = `
+                    <div class="meta">${e.subject || '(no subject)'} — ${e.date} — ${e.unread ? 'Unread' : 'Read'}</div>
+                    <div class="actions">
+                        <span class="favorite" title="Favorite">${e.favorite ? '★' : '☆'}</span>
+                        <span style="cursor:pointer;color:#b91c1c;" title="Delete">🗑</span>
+                    </div>
+                    <div>${e.body || '(empty)'}</div>
+                `;
+                const [fav, del] = div.querySelectorAll('.actions span');
+                fav.onclick = (ev) => { ev.stopPropagation(); e.favorite = !e.favorite; renderEmails(); };
+                del.onclick = (ev) => { ev.stopPropagation(); currentSender.emails = currentSender.emails.filter(x => x.id !== e.id); renderEmails(); };
+                div.onclick = () => {
+                    if (e.unread) { e.unread = false; selectSender(currentSender.id); }
+                };
+                threadEmails.appendChild(div);
+            });
+            if (list.length === 0) threadEmails.innerHTML = '<div class="status">No messages match these filters.</div>';
+            updateTotals();
+        }
+
+        // Admin actions
+        adminSave.onclick = () => {
+            if (!currentSender) { adminStatus.textContent = 'Select a channel first.'; return; }
+            currentSender.display = adminDisplay.value || `e-${currentSender.domain}`;
+            currentSender.logo = adminLogo.value || defaultLogo;
+            currentSender.junk = adminJunk.value === 'true';
+            adminStatus.textContent = 'Saved (in-memory demo). Wire backend to persist.';
+            renderSenders();
+            selectSender(currentSender.id);
+        };
+
+        adminSearchBtn.onclick = () => {
+            const q = adminSearch.value.toLowerCase();
+            let count = 0;
+            data.senders.forEach(s => s.emails.forEach(e => { if ((e.subject + e.body).toLowerCase().includes(q)) count++; }));
+            adminStatus.textContent = `Text search matches: ${count} message(s). LLM search pending backend.`;
+        };
+
+        testConnection.onclick = async () => {
+            connectionStatus.textContent = 'Testing...';
+            try {
+                const res = await fetch('/api/aimail/test-connection', { method: 'POST' });
+                const txt = await res.text();
+                if (res.ok) {
+                    connectionStatus.textContent = txt || 'Connection OK';
+                } else {
+                    connectionStatus.textContent = `Test failed (HTTP ${res.status}): ${txt || 'no body'}`;
+                }
+            } catch (err) {
+                connectionStatus.textContent = `Test failed: ${err.message}`;
+            }
+        };
+
+        llmRun.onclick = () => {
+            const q = llmQuery.value.trim();
+            if (!q) { llmStatus.textContent = 'Enter a query first.'; return; }
+            llmStatus.textContent = 'LLM search would run server-side with your OpenAI key. (Not wired yet.)';
+        };
+
+        // Filters
+        threadSearch.oninput = renderEmails;
+        senderSearch.oninput = renderSenders;
+        sortBtn.onclick = () => { sortNewest = !sortNewest; sortBtn.textContent = `Sort: ${sortNewest ? 'Newest' : 'Oldest'}`; renderEmails(); };
+        favFilterBtn.onclick = () => { favOnly = !favOnly; favFilterBtn.textContent = `Show: ${favOnly ? 'Favorites' : 'All'}`; renderEmails(); };
+        resetFilters.onclick = () => { senderSearch.value=''; renderSenders(); };
+
+        // Init
+        renderSenders();
+        updateTotals();
+    </script>
+</body>
+</html>
