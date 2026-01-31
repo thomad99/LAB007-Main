@@ -5,19 +5,27 @@ const express = require('express');
 const cron = require('node-cron');
 const { ImapFlow } = require('imapflow');
 const { simpleParser } = require('mailparser');
+const fetch = require('node-fetch');
 
 const router = express.Router();
 
 const DATA_DIR = process.env.AIMAIL_DATA_DIR || path.join(__dirname, 'aimail-data');
 const STORE_PATH = path.join(DATA_DIR, 'aimail-store.json');
 
-// Accept common typo IMPAP_ for convenience
-const IMAP_HOST = process.env.IMAP_MAIL_SERVER || process.env.IMPAP_MAIL_SERVER;
-const IMAP_PORT = parseInt(process.env.IMAP_MAIL_PORT || '993', 10);
-const IMAP_SECURE = (process.env.IMAP_MAIL_SECURE || 'true').toLowerCase() !== 'false';
-const IMAP_USER = process.env.MY_EMAIL_ADDRESS;
-const IMAP_PASS = process.env.MY_EMAIL_PASSWORD;
 const POLL_SECONDS = parseInt(process.env.AIMAIL_POLL_SECONDS || '600', 10); // default 10 min
+
+function getImapConfig() {
+  const host = process.env.IMAP_MAIL_SERVER || process.env.IMPAP_MAIL_SERVER;
+  const user = process.env.MY_EMAIL_ADDRESS;
+  const pass = process.env.MY_EMAIL_PASSWORD;
+  const port = parseInt(process.env.IMAP_MAIL_PORT || '993', 10);
+  const secure = (process.env.IMAP_MAIL_SECURE || 'true').toLowerCase() !== 'false';
+  const missing = [];
+  if (!host) missing.push('IMAP_MAIL_SERVER');
+  if (!user) missing.push('MY_EMAIL_ADDRESS');
+  if (!pass) missing.push('MY_EMAIL_PASSWORD');
+  return { host, user, pass, port, secure, missing };
+}
 
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
@@ -83,15 +91,16 @@ function upsertMessage({ fromAddress, subject, date, body, messageId, unread }) 
 }
 
 async function fetchMailboxOnce() {
-  if (!IMAP_HOST || !IMAP_USER || !IMAP_PASS) {
-    console.warn('AIMAIL: IMAP env vars missing; skipping fetch.');
+  const cfg = getImapConfig();
+  if (cfg.missing.length) {
+    console.warn('AIMAIL: IMAP env vars missing; skipping fetch. Missing:', cfg.missing.join(', '));
     return;
   }
   const client = new ImapFlow({
-    host: IMAP_HOST,
-    port: IMAP_PORT,
-    secure: IMAP_SECURE,
-    auth: { user: IMAP_USER, pass: IMAP_PASS }
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.secure,
+    auth: { user: cfg.user, pass: cfg.pass }
   });
   try {
     await client.connect();
@@ -134,12 +143,17 @@ async function fetchMailboxOnce() {
 }
 
 async function testConnection() {
-  if (!IMAP_HOST || !IMAP_USER || !IMAP_PASS) throw new Error('IMAP env vars missing');
+  const cfg = getImapConfig();
+  if (cfg.missing.length) {
+    const err = new Error('IMAP env vars missing');
+    err.missing = cfg.missing;
+    throw err;
+  }
   const client = new ImapFlow({
-    host: IMAP_HOST,
-    port: IMAP_PORT,
-    secure: IMAP_SECURE,
-    auth: { user: IMAP_USER, pass: IMAP_PASS }
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.secure,
+    auth: { user: cfg.user, pass: cfg.pass }
   });
   try {
     await client.connect();
@@ -153,6 +167,67 @@ async function testConnection() {
   } finally {
     try { await client.logout(); } catch (_) {}
   }
+}
+
+async function runLlmSearch({ query, senderId }) {
+  const apiKey = process.env.OPENAI_API_KEY;
+  if (!apiKey) throw new Error('OPENAI_API_KEY not set');
+  if (!query) throw new Error('Query is required');
+
+  // Collect messages for context
+  let messages = [];
+  if (senderId) {
+    const sender = store.senders[normalizeSenderId(senderId)];
+    if (sender) messages = sender.emails || [];
+  } else {
+    // global: flatten all emails
+    Object.values(store.senders).forEach(s => {
+      (s.emails || []).forEach(e => messages.push({ ...e, senderId: s.id, senderDisplay: s.display }));
+    });
+  }
+
+  // Sort newest first and limit to reduce token size
+  messages = messages.sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 50);
+
+  const contextText = messages.map(m => {
+    const fromLine = m.senderDisplay || m.senderId || '';
+    return `From: ${fromLine}\nDate: ${m.date}\nSubject: ${m.subject}\nBody: ${m.body}\n---`;
+  }).join('\n');
+
+  const prompt = `
+You are an assistant helping search email context. Answer based only on the email snippets below.
+User query: "${query}"
+Provide a concise answer and include any dates/companies/locations you find. If uncertain, say so.
+
+Emails:
+${contextText}
+`;
+
+  const body = {
+    model: process.env.OPENAI_MODEL || 'gpt-4o-mini',
+    messages: [
+      { role: 'system', content: 'You summarize and search over provided emails. Do not invent facts.' },
+      { role: 'user', content: prompt }
+    ],
+    max_tokens: 400,
+    temperature: 0.2
+  };
+
+  const res = await fetch('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`OpenAI error HTTP ${res.status}: ${text}`);
+  }
+  const json = await res.json();
+  const answer = json.choices?.[0]?.message?.content || '(no answer)';
+  return { answer, used: messages.length };
 }
 
 // API routes
@@ -227,6 +302,16 @@ router.post('/test-connection', async (_req, res) => {
   try {
     const info = await testConnection();
     res.json({ ok: true, ...info });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message, missing: err.missing || [] });
+  }
+});
+
+router.post('/llm-search', async (req, res) => {
+  try {
+    const { query, senderId } = req.body || {};
+    const result = await runLlmSearch({ query, senderId });
+    res.json({ ok: true, ...result });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
   }

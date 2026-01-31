@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AIMAIL Thread</title>
+    <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
+    <link rel="shortcut icon" type="image/png" href="/images/lab007 Icon.PNG">
+    <link rel="apple-touch-icon" href="/images/lab007 Icon.PNG">
+    <style>
+        :root {
+            --primary: #0a66c2;
+            --bg: #f5f7fb;
+            --card: #ffffff;
+            --border: #d8deea;
+            --muted: #5a6270;
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+            background: var(--bg);
+            color: #1f2933;
+        }
+        header {
+            padding: 16px 20px;
+            background: var(--card);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.06);
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        header img { width: 40px; height: 40px; object-fit: contain; }
+        header h1 { margin: 0; font-size: 1.1rem; letter-spacing: 0.02em; }
+        main {
+            max-width: 1100px;
+            margin: 18px auto 48px;
+            padding: 0 16px;
+        }
+        .card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
+            padding: 14px;
+        }
+        .thread-controls {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin: 10px 0;
+        }
+        .input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #fbfcff;
+            font: inherit;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            padding: 10px 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+        }
+        .btn.secondary { background: #e5e7eb; color: #111; }
+        .bubble {
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 12px;
+            background: #fdfdfd;
+            margin-bottom: 10px;
+            position: relative;
+        }
+        .meta { font-size: 0.9rem; color: var(--muted); margin-bottom: 6px; }
+        .actions {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            display: flex;
+            gap: 6px;
+        }
+        .favorite { color: #f59e0b; cursor: pointer; }
+        .status { color: var(--muted); margin: 6px 0; }
+    </style>
+</head>
+<body>
+    <header>
+        <img src="/images/lab007 Icon.PNG" alt="LAB007">
+        <div>
+            <h1 id="title">AIMAIL Thread</h1>
+            <div id="subtitle" style="color:var(--muted);font-size:0.9rem;">Loading...</div>
+        </div>
+    </header>
+
+    <main>
+        <div class="card">
+            <div class="thread-controls">
+                <input id="threadSearch" class="input" placeholder="Search in this thread...">
+                <button class="btn secondary" id="sortBtn">Sort: Newest</button>
+                <button class="btn secondary" id="favFilterBtn">Show: All</button>
+            </div>
+            <div id="threadEmails"></div>
+            <div id="status" class="status"></div>
+        </div>
+    </main>
+
+    <script>
+        const params = new URLSearchParams(window.location.search);
+        const senderId = params.get('sender');
+        const threadEmails = document.getElementById('threadEmails');
+        const threadSearch = document.getElementById('threadSearch');
+        const sortBtn = document.getElementById('sortBtn');
+        const favFilterBtn = document.getElementById('favFilterBtn');
+        const titleEl = document.getElementById('title');
+        const subtitleEl = document.getElementById('subtitle');
+        const statusEl = document.getElementById('status');
+
+        let currentSender = null;
+        let sortNewest = true;
+        let favOnly = false;
+
+        async function loadThread() {
+            if (!senderId) {
+                statusEl.textContent = 'No sender specified.';
+                return;
+            }
+            statusEl.textContent = 'Loading...';
+            try {
+                const res = await fetch(`/api/aimail/channel/${encodeURIComponent(senderId)}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                currentSender = await res.json();
+                titleEl.textContent = currentSender.display || currentSender.domain || currentSender.id;
+                subtitleEl.textContent = `${currentSender.emails?.length || 0} messages`;
+                render();
+                statusEl.textContent = '';
+            } catch (err) {
+                statusEl.textContent = 'Failed to load thread: ' + err.message;
+            }
+        }
+
+        function render() {
+            if (!currentSender) return;
+            const q = threadSearch.value.toLowerCase();
+            let list = [...(currentSender.emails || [])];
+            if (favOnly) list = list.filter(e => e.favorite);
+            if (q) list = list.filter(e => (e.subject + e.body).toLowerCase().includes(q));
+            list.sort((a,b) => sortNewest ? new Date(b.date) - new Date(a.date) : new Date(a.date) - new Date(b.date));
+            threadEmails.innerHTML = '';
+            list.forEach(e => {
+                const div = document.createElement('div');
+                div.className = 'bubble';
+                div.innerHTML = `
+                    <div class="meta">${e.subject || '(no subject)'} — ${e.date} — ${e.unread ? 'Unread' : 'Read'}</div>
+                    <div class="actions">
+                        <span class="favorite" title="Favorite">${e.favorite ? '★' : '☆'}</span>
+                        <span style="cursor:pointer;color:#b91c1c;" title="Delete">🗑</span>
+                    </div>
+                    <div>${e.body || '(empty)'}</div>
+                `;
+                const [fav, del] = div.querySelectorAll('.actions span');
+                fav.onclick = async (ev) => {
+                    ev.stopPropagation();
+                    e.favorite = !e.favorite;
+                    render();
+                    try { await fetch(`/api/aimail/channel/${encodeURIComponent(currentSender.id)}/favorite/${encodeURIComponent(e.id)}`, { method: 'POST' }); } catch {}
+                };
+                del.onclick = async (ev) => {
+                    ev.stopPropagation();
+                    currentSender.emails = currentSender.emails.filter(x => x.id !== e.id);
+                    render();
+                    try { await fetch(`/api/aimail/channel/${encodeURIComponent(currentSender.id)}/delete/${encodeURIComponent(e.id)}`, { method: 'POST' }); } catch {}
+                };
+                div.onclick = async () => {
+                    if (e.unread) {
+                        e.unread = false;
+                        render();
+                        try { await fetch(`/api/aimail/channel/${encodeURIComponent(currentSender.id)}/mark-read/${encodeURIComponent(e.id)}`, { method: 'POST' }); } catch {}
+                    }
+                };
+                threadEmails.appendChild(div);
+            });
+            if (list.length === 0) threadEmails.innerHTML = '<div class="status">No messages match these filters.</div>';
+        }
+
+        threadSearch.oninput = render;
+        sortBtn.onclick = () => { sortNewest = !sortNewest; sortBtn.textContent = `Sort: ${sortNewest ? 'Newest' : 'Oldest'}`; render(); };
+        favFilterBtn.onclick = () => { favOnly = !favOnly; favFilterBtn.textContent = `Show: ${favOnly ? 'Favorites' : 'All'}`; render(); };
+
+        loadThread();
+    </script>
+</body>
+</html>

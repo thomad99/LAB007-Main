@@ -170,6 +170,7 @@
                 <input id="threadSearch" class="input" placeholder="Search in this thread...">
                 <button class="btn secondary" id="sortBtn">Sort: Newest</button>
                 <button class="btn secondary" id="favFilterBtn">Show: All</button>
+                <button class="btn secondary" id="fullPageBtn" title="Open this thread full screen">Full page</button>
             </div>
 
             <div class="search-row">
@@ -234,6 +235,7 @@
         const threadSearch = document.getElementById('threadSearch');
         const sortBtn = document.getElementById('sortBtn');
         const favFilterBtn = document.getElementById('favFilterBtn');
+        const fullPageBtn = document.getElementById('fullPageBtn');
         const llmRun = document.getElementById('llmRun');
         const llmQuery = document.getElementById('llmQuery');
         const llmStatus = document.getElementById('llmStatus');
@@ -420,7 +422,24 @@
         llmRun.onclick = () => {
             const q = llmQuery.value.trim();
             if (!q) { llmStatus.textContent = 'Enter a query first.'; return; }
-            llmStatus.textContent = 'LLM search would run server-side with your OpenAI key. (Not wired yet.)';
+            if (!currentSender) { llmStatus.textContent = 'Select a sender first.'; return; }
+            llmStatus.textContent = 'Running LLM search...';
+            fetch('/api/aimail/llm-search', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ query: q, senderId: currentSender.id })
+            })
+            .then(r => r.json())
+            .then(json => {
+                if (json.ok) {
+                    llmStatus.textContent = `LLM result (used ${json.used || 0} msgs): ${json.answer}`;
+                } else {
+                    llmStatus.textContent = `LLM failed: ${json.error || 'unknown error'}`;
+                }
+            })
+            .catch(err => {
+                llmStatus.textContent = 'LLM failed: ' + err.message;
+            });
         };
 
         // Filters
@@ -429,6 +448,13 @@
         sortBtn.onclick = () => { sortNewest = !sortNewest; sortBtn.textContent = `Sort: ${sortNewest ? 'Newest' : 'Oldest'}`; renderEmails(); };
         favFilterBtn.onclick = () => { favOnly = !favOnly; favFilterBtn.textContent = `Show: ${favOnly ? 'Favorites' : 'All'}`; renderEmails(); };
         resetFilters.onclick = () => { senderSearch.value=''; renderSenders(); };
+        fullPageBtn.onclick = () => {
+            if (!currentSender) {
+                alert('Select a sender first.');
+                return;
+            }
+            window.open(`/aimail-thread.html?sender=${encodeURIComponent(currentSender.id)}`, '_blank');
+        };
 
         // Init
         loadChannels();
