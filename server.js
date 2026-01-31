@@ -6,6 +6,7 @@ const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
+const { router: aimailRouter } = require('./aimail');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -385,6 +386,9 @@ note: 'API routes need to be integrated. See INTEGRATION_NOTES.md'
 app.get('/dummypage', (req, res) => {
 res.sendFile(path.join(__dirname, 'public', 'dummypage.html'));
 });
+
+// AIMAIL API
+app.use('/api/aimail', aimailRouter);
 
 // AIMAIL landing
 app.get('/aimail', (req, res) => {

@@ -218,44 +218,7 @@
     <script>
         // Simple in-memory demo data; backend wiring required for real mail sync.
         const defaultLogo = '/images/lab007 Icon.PNG';
-        const data = {
-            senders: [
-                {
-                    id: 'esys@sailingclub.com',
-                    display: 'lab007/esys',
-                    domain: 'sailingclub.com',
-                    logo: defaultLogo,
-                    junk: false,
-                    unread: 2,
-                    emails: [
-                        { id:'m1', subject:'Regatta update', date:'2025-01-18 10:12', body:'We sail at 0900. Briefing attached.', favorite:false, unread:true },
-                        { id:'m2', subject:'Fees due', date:'2025-01-10 08:30', body:'Membership fees are due by end of month.', favorite:true, unread:false }
-                    ]
-                },
-                {
-                    id: 'alerts@bank.com',
-                    display: 'e-bank.com',
-                    domain: 'bank.com',
-                    logo: defaultLogo,
-                    junk: false,
-                    unread: 0,
-                    emails: [
-                        { id:'b1', subject:'Statement ready', date:'2025-01-20 07:02', body:'Your December statement is ready.', favorite:false, unread:false }
-                    ]
-                },
-                {
-                    id: 'promo@shop.com',
-                    display: 'e-shop.com',
-                    domain: 'shop.com',
-                    logo: defaultLogo,
-                    junk: true,
-                    unread: 5,
-                    emails: [
-                        { id:'s1', subject:'Sale 70% off', date:'2025-01-22 12:00', body:'Big sale today only.', favorite:false, unread:true }
-                    ]
-                }
-            ]
-        };
+        const data = { senders: [] };
 
         let currentSender = null;
         let sortNewest = true;
@@ -287,11 +250,42 @@
         const testConnection = document.getElementById('testConnection');
         const connectionStatus = document.getElementById('connectionStatus');
 
+        async function loadChannels() {
+            try {
+                const res = await fetch('/api/aimail/channels');
+                const json = await res.json();
+                data.senders = json.channels || [];
+                renderSenders();
+            } catch (err) {
+                senderStatus.textContent = 'Failed to load channels: ' + err.message;
+            }
+        }
+
+        async function loadChannel(id) {
+            try {
+                const res = await fetch(`/api/aimail/channel/${encodeURIComponent(id)}`);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                const json = await res.json();
+                const existing = data.senders.find(s => s.id === id);
+                if (existing) {
+                    existing.emails = json.emails || [];
+                    existing.display = json.display;
+                    existing.domain = json.domain;
+                    existing.logo = json.logo;
+                    existing.junk = json.junk;
+                }
+                renderEmails();
+                updateTotals();
+            } catch (err) {
+                threadEmails.innerHTML = `<div class="status">Failed to load thread: ${err.message}</div>`;
+            }
+        }
+
         function updateTotals() {
             let total = 0, unread = 0;
             data.senders.forEach(s => {
-                total += s.emails.length;
-                unread += s.emails.filter(e => e.unread).length;
+                total += (s.emails || []).length;
+                unread += (s.emails || []).filter(e => e.unread).length;
             });
             adminTotals.textContent = `Emails: ${total} (unread ${unread})`;
         }
@@ -300,12 +294,12 @@
             const q = senderSearch.value.toLowerCase();
             senderList.innerHTML = '';
             data.senders
-                .filter(s => !q || s.id.toLowerCase().includes(q) || s.display.toLowerCase().includes(q) || s.domain.toLowerCase().includes(q))
+                .filter(s => !q || s.id.toLowerCase().includes(q) || (s.display || '').toLowerCase().includes(q) || (s.domain || '').toLowerCase().includes(q))
                 .forEach(s => {
                     const li = document.createElement('li');
                     li.className = 'sender-item';
                     li.onclick = () => selectSender(s.id);
-                    const unread = s.emails.filter(e => e.unread).length;
+                    const unread = (s.emails || []).filter(e => e.unread).length;
                     li.innerHTML = `
                         <div class="sender-meta">
                             <img class="logo" src="${s.logo || defaultLogo}" alt="">
@@ -328,14 +322,16 @@
         function selectSender(id) {
             currentSender = data.senders.find(s => s.id === id);
             if (!currentSender) return;
+            if (!currentSender.emails) currentSender.emails = [];
             threadName.textContent = currentSender.display || currentSender.domain || currentSender.id;
-            const unread = currentSender.emails.filter(e => e.unread).length;
+            const unread = (currentSender.emails || []).filter(e => e.unread).length;
             threadMeta.textContent = `Unread: ${unread} · Total: ${currentSender.emails.length} · Junk: ${currentSender.junk ? 'Yes' : 'No'}`;
             threadLogo.src = currentSender.logo || defaultLogo;
             adminDisplay.value = currentSender.display || '';
             adminLogo.value = currentSender.logo || '';
             adminJunk.value = currentSender.junk ? 'true' : 'false';
             renderEmails();
+            loadChannel(id);
         }
 
         function renderEmails() {
@@ -344,7 +340,7 @@
                 return;
             }
             const q = threadSearch.value.toLowerCase();
-            let list = [...currentSender.emails];
+            let list = [...(currentSender.emails || [])];
             if (favOnly) list = list.filter(e => e.favorite);
             if (q) list = list.filter(e => (e.subject + e.body).toLowerCase().includes(q));
             list.sort((a,b) => sortNewest ? new Date(b.date) - new Date(a.date) : new Date(a.date) - new Date(b.date));
@@ -362,7 +358,14 @@
                 `;
                 const [fav, del] = div.querySelectorAll('.actions span');
                 fav.onclick = (ev) => { ev.stopPropagation(); e.favorite = !e.favorite; renderEmails(); };
-                del.onclick = (ev) => { ev.stopPropagation(); currentSender.emails = currentSender.emails.filter(x => x.id !== e.id); renderEmails(); };
+                del.onclick = async (ev) => {
+                    ev.stopPropagation();
+                    currentSender.emails = currentSender.emails.filter(x => x.id !== e.id);
+                    renderEmails();
+                    try {
+                        await fetch(`/api/aimail/channel/${encodeURIComponent(currentSender.id)}/delete/${encodeURIComponent(e.id)}`, { method: 'POST' });
+                    } catch {}
+                };
                 div.onclick = () => {
                     if (e.unread) { e.unread = false; selectSender(currentSender.id); }
                 };
@@ -381,6 +384,15 @@
             adminStatus.textContent = 'Saved (in-memory demo). Wire backend to persist.';
             renderSenders();
             selectSender(currentSender.id);
+            fetch(`/api/aimail/channel/${encodeURIComponent(currentSender.id)}/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    display: currentSender.display,
+                    logo: currentSender.logo,
+                    junk: currentSender.junk
+                })
+            }).catch(() => {});
         };
 
         adminSearchBtn.onclick = () => {
@@ -419,7 +431,7 @@
         resetFilters.onclick = () => { senderSearch.value=''; renderSenders(); };
 
         // Init
-        renderSenders();
+        loadChannels();
         updateTotals();
     </script>
 </body>
