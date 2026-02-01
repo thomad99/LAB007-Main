@@ -36,13 +36,13 @@
         }
         header img { width: 40px; height: 40px; object-fit: contain; }
         header h1 { margin: 0; font-size: 1.2rem; letter-spacing: 0.02em; }
-        main { max-width: 1200px; margin: 18px auto 48px; padding: 0 16px; display: grid; grid-template-columns: 320px 1fr; gap: 14px; }
+        main { max-width: 1200px; margin: 12px auto 36px; padding: 0 12px; display: grid; grid-template-columns: 280px 1fr; gap: 10px; }
         .card {
             background: var(--card);
             border: 1px solid var(--border);
             border-radius: 12px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.05);
-            padding: 14px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.04);
+            padding: 12px;
         }
         .section-title { margin: 0 0 10px; font-size: 1rem; color: var(--muted); }
         .input, textarea, select {
@@ -95,11 +95,31 @@
         .badge.junk { background: #fee2e2; color: #991b1b; }
         .badge.ok { background: #e0f2fe; color: #075985; }
         .star { color: #f59e0b; font-size: 1.1rem; }
+        .channels-wrap { max-height: calc(100vh - 190px); overflow-y: auto; padding-right: 4px; }
         .thread-header {
             display: flex;
             align-items: center;
             gap: 12px;
             margin-bottom: 12px;
+        }
+        .thread-title-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .thread-title-row input {
+            font-size: 1.05rem;
+            font-weight: 700;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 8px;
+            min-width: 220px;
+        }
+        .thread-action-badges {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
         }
         .thread-controls {
             display: flex;
@@ -107,14 +127,14 @@
             flex-wrap: wrap;
             margin-bottom: 10px;
         }
+        .thread-body { display: flex; flex-direction: column; gap: 10px; }
         .bubble {
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 12px;
-            background: #fdfdfd;
-            margin-bottom: 10px;
             position: relative;
-            max-width: 82%;
+            padding: 12px 14px;
+            border-radius: 14px;
+            max-width: 72%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border: 1px solid var(--border);
         }
         .bubble.them { margin-right: auto; background: #fdfdfd; }
         .bubble.me { margin-left: auto; background: #e8f2ff; border-color: #c7dbff; }
@@ -157,16 +177,26 @@
                 <input id="senderSearch" class="input" placeholder="Search senders..." />
                 <button class="btn secondary" id="resetFilters">Reset</button>
                 <button class="btn secondary" id="favChannelFilterBtn">Show: All</button>
+                <button class="btn secondary" id="channelSortBtn">Sort: Recent</button>
             </div>
-            <ul class="list" id="senderList"></ul>
-            <div class="status" id="senderStatus">Loaded sample data. Backend wiring TBD.</div>
+            <div class="channels-wrap">
+                <ul class="list" id="senderList"></ul>
+            </div>
+            <div class="status" id="senderStatus"></div>
         </section>
 
         <section class="card">
             <div class="thread-header">
                 <img id="threadLogo" class="logo" src="/images/lab007 Icon.PNG" alt="logo">
-                <div>
-                    <div id="threadName" style="font-weight:700;">Select a sender</div>
+                <div style="flex:1; min-width:240px;">
+                    <div class="thread-title-row">
+                        <input id="threadNameInput" value="Select a sender">
+                        <button class="btn secondary" id="uploadLogoBtn" title="Change logo">Upload logo</button>
+                    </div>
+                    <div class="thread-action-badges" style="margin-top:6px;">
+                        <button class="btn secondary" id="junkToggleBtn" title="Mark/Unmark as junk">Junk: No</button>
+                        <button class="btn secondary" id="favChannelBtn" title="Favorite this channel">☆ Channel</button>
+                    </div>
                     <div id="threadMeta" class="status">Unread: 0 · Total: 0</div>
                 </div>
             </div>
@@ -175,7 +205,6 @@
                 <input id="threadSearch" class="input" placeholder="Search in this thread...">
                 <button class="btn secondary" id="sortBtn">Sort: Newest</button>
                 <button class="btn secondary" id="favFilterBtn">Show: All</button>
-                <button class="btn secondary" id="favChannelBtn" title="Favorite this channel">☆ Channel</button>
                 <button class="btn secondary" id="fullPageBtn" title="Open this thread full screen">Full page</button>
             </div>
 
@@ -227,11 +256,12 @@
         let sortNewest = true;
         let favOnly = false;
         let showFavChannelsOnly = false;
+        let channelSortMode = 'recent'; // 'recent' or 'alpha'
 
         const senderList = document.getElementById('senderList');
         const senderSearch = document.getElementById('senderSearch');
         const senderStatus = document.getElementById('senderStatus');
-        const threadName = document.getElementById('threadName');
+        const threadNameInput = document.getElementById('threadNameInput');
         const threadMeta = document.getElementById('threadMeta');
         const threadLogo = document.getElementById('threadLogo');
         const threadEmails = document.getElementById('threadEmails');
@@ -254,6 +284,9 @@
         const adminTotals = document.getElementById('adminTotals');
         const favChannelFilterBtn = document.getElementById('favChannelFilterBtn');
         const favChannelBtn = document.getElementById('favChannelBtn');
+        const channelSortBtn = document.getElementById('channelSortBtn');
+        const junkToggleBtn = document.getElementById('junkToggleBtn');
+        const uploadLogoBtn = document.getElementById('uploadLogoBtn');
 
         async function loadChannels() {
             try {
@@ -303,6 +336,11 @@
             senderList.innerHTML = '';
             [...data.senders]
                 .sort((a, b) => {
+                    if (channelSortMode === 'alpha') {
+                        const an = (a.display || a.id || '').toLowerCase();
+                        const bn = (b.display || b.id || '').toLowerCase();
+                        return an.localeCompare(bn);
+                    }
                     const da = a.lastDate || 0;
                     const db = b.lastDate || 0;
                     return db - da;
@@ -339,13 +377,14 @@
             currentSender = data.senders.find(s => s.id === id);
             if (!currentSender) return;
             if (!currentSender.emails) currentSender.emails = [];
-            threadName.textContent = currentSender.display || currentSender.domain || currentSender.id;
+            threadNameInput.value = currentSender.display || currentSender.domain || currentSender.id;
             const unread = (currentSender.emails || []).filter(e => e.unread).length;
             threadMeta.textContent = `Unread: ${unread} · Total: ${currentSender.emails.length} · Junk: ${currentSender.junk ? 'Yes' : 'No'}`;
             threadLogo.src = currentSender.logo || defaultLogo;
             adminDisplay.value = currentSender.display || '';
             adminLogo.value = currentSender.logo || '';
             adminJunk.value = currentSender.junk ? 'true' : 'false';
+            junkToggleBtn.textContent = `Junk: ${currentSender.junk ? 'Yes' : 'No'}`;
             favChannelBtn.textContent = currentSender.favorite ? '★ Channel' : '☆ Channel';
             renderEmails();
             loadChannel(id);
@@ -370,6 +409,7 @@
             if (q) list = list.filter(e => (e.subject + e.body).toLowerCase().includes(q));
             list.sort((a,b) => sortNewest ? new Date(b.date) - new Date(a.date) : new Date(a.date) - new Date(b.date));
             threadEmails.innerHTML = '';
+            threadEmails.className = 'thread-body';
             list.forEach(e => {
                 const div = document.createElement('div');
                 div.className = `bubble ${e.isMine ? 'me' : 'them'}`;
@@ -457,6 +497,11 @@
         favFilterBtn.onclick = () => { favOnly = !favOnly; favFilterBtn.textContent = `Show: ${favOnly ? 'Favorites' : 'All'}`; renderEmails(); };
         resetFilters.onclick = () => { senderSearch.value=''; renderSenders(); };
         favChannelFilterBtn.onclick = () => { showFavChannelsOnly = !showFavChannelsOnly; favChannelFilterBtn.textContent = `Show: ${showFavChannelsOnly ? 'Favorites' : 'All'}`; renderSenders(); };
+        channelSortBtn.onclick = () => {
+            channelSortMode = channelSortMode === 'recent' ? 'alpha' : 'recent';
+            channelSortBtn.textContent = `Sort: ${channelSortMode === 'recent' ? 'Recent' : 'A-Z'}`;
+            renderSenders();
+        };
         fullPageBtn.onclick = () => {
             if (!currentSender) {
                 alert('Select a sender first.');
@@ -475,6 +520,72 @@
             }).catch(() => {});
             renderSenders();
         };
+
+        junkToggleBtn.onclick = () => {
+            if (!currentSender) { alert('Select a sender first.'); return; }
+            currentSender.junk = !currentSender.junk;
+            junkToggleBtn.textContent = `Junk: ${currentSender.junk ? 'Yes' : 'No'}`;
+            adminJunk.value = currentSender.junk ? 'true' : 'false';
+            fetch(`/api/aimail/channel/${encodeURIComponent(currentSender.id)}/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ junk: currentSender.junk })
+            }).catch(() => {});
+            renderSenders();
+        };
+
+        threadNameInput.addEventListener('change', () => {
+            if (!currentSender) return;
+            currentSender.display = threadNameInput.value || currentSender.id;
+            adminDisplay.value = currentSender.display;
+            fetch(`/api/aimail/channel/${encodeURIComponent(currentSender.id)}/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ display: currentSender.display, logo: currentSender.logo, junk: currentSender.junk, favorite: currentSender.favorite })
+            }).catch(() => {});
+            renderSenders();
+        });
+
+        // Logo upload
+        const logoInput = document.createElement('input');
+        logoInput.type = 'file';
+        logoInput.accept = 'image/*';
+        logoInput.style.display = 'none';
+        document.body.appendChild(logoInput);
+        logoInput.addEventListener('change', async (e) => {
+            if (!currentSender) { alert('Select a channel first.'); logoInput.value=''; return; }
+            const file = e.target.files?.[0];
+            if (!file) return;
+            const form = new FormData();
+            form.append('file', file);
+            try {
+                const res = await fetch(`/api/aimail/channel/${encodeURIComponent(currentSender.id)}/logo`, {
+                    method: 'POST',
+                    body: form
+                });
+                const json = await res.json();
+                if (json.ok && json.url) {
+                    currentSender.logo = json.url;
+                    adminLogo.value = json.url;
+                    renderSenders();
+                    selectSender(currentSender.id);
+                } else {
+                    alert('Upload failed: ' + (json.error || 'Unknown error'));
+                }
+            } catch (err) {
+                alert('Upload failed: ' + err.message);
+            } finally {
+                logoInput.value = '';
+            }
+        });
+
+        const logoUploadBtn = document.createElement('button');
+        logoUploadBtn.className = 'btn secondary';
+        logoUploadBtn.type = 'button';
+        logoUploadBtn.textContent = 'Upload logo';
+        adminLogo.parentElement.appendChild(document.createElement('div')).appendChild(logoUploadBtn);
+        logoUploadBtn.style.marginTop = '8px';
+        logoUploadBtn.onclick = () => logoInput.click();
 
         // Init
         loadChannels();

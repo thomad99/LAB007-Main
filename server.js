@@ -389,6 +389,7 @@ res.sendFile(path.join(__dirname, 'public', 'dummypage.html'));
 
 // AIMAIL API
 app.use('/api/aimail', aimailRouter);
+app.use('/aimail-logos', express.static(path.join(__dirname, 'aimail-data', 'logos')));
 
 // AIMAIL landing
 app.get('/aimail', (req, res) => {

@@ -74,14 +74,15 @@
             cursor: pointer;
         }
         .btn.secondary { background: #e5e7eb; color: #111; }
+        .thread-body { display: flex; flex-direction: column; gap: 10px; }
         .bubble {
             border: 1px solid var(--border);
-            border-radius: 12px;
-            padding: 12px;
+            border-radius: 14px;
+            padding: 12px 14px;
             background: #fdfdfd;
-            margin-bottom: 10px;
             position: relative;
-            max-width: 82%;
+            max-width: 72%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
         }
         .bubble.them { margin-right: auto; background: #fdfdfd; }
         .bubble.me { margin-left: auto; background: #e8f2ff; border-color: #c7dbff; }
@@ -168,6 +169,7 @@
             if (q) list = list.filter(e => (e.subject + e.body).toLowerCase().includes(q));
             list.sort((a,b) => sortNewest ? new Date(b.date) - new Date(a.date) : new Date(a.date) - new Date(b.date));
             threadEmails.innerHTML = '';
+            threadEmails.className = 'thread-body';
             list.forEach(e => {
                 const div = document.createElement('div');
                 div.className = `bubble ${e.isMine ? 'me' : 'them'}`;

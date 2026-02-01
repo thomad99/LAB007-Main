@@ -6,11 +6,13 @@ const cron = require('node-cron');
 const { ImapFlow } = require('imapflow');
 const { simpleParser } = require('mailparser');
 const fetch = require('node-fetch');
+const multer = require('multer');
 
 const router = express.Router();
 
 const DATA_DIR = process.env.AIMAIL_DATA_DIR || path.join(__dirname, 'aimail-data');
 const STORE_PATH = path.join(DATA_DIR, 'aimail-store.json');
+const LOGO_DIR = path.join(DATA_DIR, 'logos');
 const SELF_ADDR = (process.env.MY_EMAIL_ADDRESS || '').toLowerCase();
 
 const POLL_SECONDS = parseInt(process.env.AIMAIL_POLL_SECONDS || '600', 10); // default 10 min
@@ -71,6 +73,21 @@ async function authWithFallback(cfg) {
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
+if (!fs.existsSync(LOGO_DIR)) {
+  fs.mkdirSync(LOGO_DIR, { recursive: true });
+}
+
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (_req, _file, cb) => cb(null, LOGO_DIR),
+    filename: (req, file, cb) => {
+      const id = (req.params.id || 'logo').replace(/[^a-z0-9._-]+/gi, '_').toLowerCase();
+      const ext = path.extname(file.originalname || '').toLowerCase() || '.png';
+      cb(null, `${id}-${Date.now()}${ext}`);
+    }
+  }),
+  limits: { fileSize: 2 * 1024 * 1024 } // 2MB
+});
 
 let store = {
   senders: {}
@@ -369,6 +386,22 @@ router.post('/channel/:id/config', (req, res) => {
    if (typeof req.body.favorite === 'boolean') sender.favorite = req.body.favorite;
   saveStore();
   res.json({ ok: true, sender });
+});
+
+// Upload channel logo
+router.post('/channel/:id/logo', upload.single('file'), (req, res) => {
+  try {
+    const id = normalizeSenderId(req.params.id);
+    const sender = store.senders[id];
+    if (!sender) return res.status(404).json({ error: 'Not found' });
+    if (!req.file) return res.status(400).json({ error: 'No file' });
+    const url = `/aimail-logos/${req.file.filename}`;
+    sender.logo = url;
+    saveStore();
+    res.json({ ok: true, url });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
 router.post('/test-connection', async (req, res) => {
