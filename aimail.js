@@ -14,15 +14,18 @@ const STORE_PATH = path.join(DATA_DIR, 'aimail-store.json');
 
 const POLL_SECONDS = parseInt(process.env.AIMAIL_POLL_SECONDS || '600', 10); // default 10 min
 
-function getImapConfig() {
-  const host = process.env.IMAP_MAIL_SERVER
+function getImapConfig(override = {}) {
+  const host = override.host
+    || process.env.IMAP_MAIL_SERVER
     || process.env.IMAP_EMAIL_SERVER     // user-provided variant
     || process.env.IMPAP_MAIL_SERVER;    // common typo
-  const user = process.env.MY_EMAIL_ADDRESS;
-  const pass = process.env.MY_EMAIL_PASSWORD;
-  const port = parseInt(process.env.IMAP_MAIL_PORT || '993', 10);
-  const secure = (process.env.IMAP_MAIL_SECURE || 'true').toLowerCase() !== 'false';
-  const authMethod = (process.env.IMAP_AUTH_METHOD || 'LOGIN').toUpperCase(); // LOGIN by default
+  const user = override.user || process.env.MY_EMAIL_ADDRESS;
+  const pass = override.pass || process.env.MY_EMAIL_PASSWORD;
+  const port = parseInt(override.port || process.env.IMAP_MAIL_PORT || '993', 10);
+  const secure = typeof override.secure === 'boolean'
+    ? override.secure
+    : (process.env.IMAP_MAIL_SECURE || 'true').toLowerCase() !== 'false';
+  const authMethod = (override.authMethod || process.env.IMAP_AUTH_METHOD || 'LOGIN').toUpperCase(); // preferred, but we will always try LOGIN first
   const missing = [];
   if (!host) missing.push('IMAP_MAIL_SERVER');
   if (!user) missing.push('MY_EMAIL_ADDRESS');
@@ -40,11 +43,10 @@ function buildClient(cfg, method) {
 }
 
 async function authWithFallback(cfg) {
-  const methods = [];
+  // Force trying LOGIN first, then PLAIN. If user provided something else, try that last.
+  const methods = ['LOGIN', 'PLAIN'];
   const preferred = cfg.authMethod || 'LOGIN';
-  methods.push(preferred);
-  if (!methods.includes('LOGIN')) methods.push('LOGIN');
-  if (!methods.includes('PLAIN')) methods.push('PLAIN');
+  if (!methods.includes(preferred)) methods.push(preferred);
 
   let lastErr;
   for (const m of methods) {
@@ -175,8 +177,8 @@ async function fetchMailboxOnce() {
   }
 }
 
-async function testConnection() {
-  const cfg = getImapConfig();
+async function testConnection(override = {}) {
+  const cfg = getImapConfig(override);
   if (cfg.missing.length) {
     const err = new Error('IMAP env vars missing');
     err.missing = cfg.missing;
@@ -326,9 +328,9 @@ router.post('/channel/:id/config', (req, res) => {
   res.json({ ok: true, sender });
 });
 
-router.post('/test-connection', async (_req, res) => {
+router.post('/test-connection', async (req, res) => {
   try {
-    const info = await testConnection();
+    const info = await testConnection(req.body || {});
     res.json({ ok: true, ...info });
   } catch (err) {
     const details = {

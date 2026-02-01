@@ -192,6 +192,28 @@
                 <span class="status" id="connectionStatus">Not tested</span>
             </div>
         </div>
+        <div class="flex" style="flex-wrap:wrap;gap:10px;margin-bottom:10px;">
+            <div style="flex:1; min-width:200px;">
+                <label>Mail server</label>
+                <input id="mailServer" class="input" placeholder="imap.ionos.com">
+            </div>
+            <div style="flex:1; min-width:200px;">
+                <label>Username</label>
+                <input id="mailUser" class="input" placeholder="email@domain.com">
+            </div>
+            <div style="flex:1; min-width:200px;">
+                <label>Password</label>
+                <input id="mailPass" class="input" type="password" placeholder="App password">
+            </div>
+            <div style="flex:0 0 100px; min-width:100px;">
+                <label>Port</label>
+                <input id="mailPort" class="input" placeholder="993">
+            </div>
+            <div style="flex:0 0 120px; min-width:120px;display:flex;align-items:center;gap:6px;margin-top:24px;">
+                <input id="mailSecure" type="checkbox" checked>
+                <label for="mailSecure" style="margin:0;">SSL/TLS</label>
+            </div>
+        </div>
         <div class="flex" style="flex-wrap:wrap;">
             <div style="flex:1; min-width:260px;">
                 <label>Display name</label>
@@ -251,6 +273,11 @@
         const adminTotals = document.getElementById('adminTotals');
         const testConnection = document.getElementById('testConnection');
         const connectionStatus = document.getElementById('connectionStatus');
+        const mailServer = document.getElementById('mailServer');
+        const mailUser = document.getElementById('mailUser');
+        const mailPass = document.getElementById('mailPass');
+        const mailPort = document.getElementById('mailPort');
+        const mailSecure = document.getElementById('mailSecure');
 
         async function loadChannels() {
             try {
@@ -407,7 +434,18 @@
         testConnection.onclick = async () => {
             connectionStatus.textContent = 'Testing...';
             try {
-                const res = await fetch('/api/aimail/test-connection', { method: 'POST' });
+                const payload = {
+                    host: mailServer.value.trim() || undefined,
+                    user: mailUser.value.trim() || undefined,
+                    pass: mailPass.value || undefined,
+                    port: mailPort.value.trim() || undefined,
+                    secure: mailSecure.checked
+                };
+                const res = await fetch('/api/aimail/test-connection', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
                 const txt = await res.text();
                 if (res.ok) {
                     connectionStatus.textContent = txt || 'Connection OK';
