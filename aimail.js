@@ -14,7 +14,7 @@ const DATA_DIR = process.env.AIMAIL_DATA_DIR || path.join(__dirname, 'aimail-dat
 const STORE_PATH = path.join(DATA_DIR, 'aimail-store.json');
 const LOGO_DIR = path.join(DATA_DIR, 'logos');
 const SELF_ADDR = (process.env.MY_EMAIL_ADDRESS || '').toLowerCase();
-const MAX_MESSAGES = parseInt(process.env.AIMAIL_MAX_MESSAGES || '500', 10); // cap number of messages to store
+const MAX_MESSAGES = parseInt(process.env.AIMAIL_MAX_MESSAGES || '500', 10); // cap number of messages per channel
 const BODY_MAX_CHARS = parseInt(process.env.AIMAIL_BODY_MAX_CHARS || '50000', 10); // cap body length per message
 
 const POLL_SECONDS = parseInt(process.env.AIMAIL_POLL_SECONDS || '600', 10); // default 10 min
@@ -124,12 +124,12 @@ function defaultDisplay(address) {
 
 function upsertMessage({ fromAddress, subject, date, body, messageId, unread, imapUid }) {
   if (!fromAddress || !messageId) return;
-  const id = normalizeSenderId(fromAddress);
-  if (!store.senders[id]) {
-    const domain = (fromAddress.split('@')[1] || '').toLowerCase();
-    store.senders[id] = {
-      id,
-      display: defaultDisplay(fromAddress),
+  const domain = (fromAddress.split('@')[1] || '').toLowerCase();
+  const channelId = domain || normalizeSenderId(fromAddress);
+  if (!store.senders[channelId]) {
+    store.senders[channelId] = {
+      id: channelId,
+      display: domain ? `e-${domain}` : defaultDisplay(fromAddress),
       domain,
       logo: '/images/lab007 Icon.PNG',
       junk: false,
@@ -137,7 +137,7 @@ function upsertMessage({ fromAddress, subject, date, body, messageId, unread, im
       emails: []
     };
   }
-  const sender = store.senders[id];
+  const sender = store.senders[channelId];
   const exists = sender.emails.find(e => e.messageId === messageId);
   if (exists) return;
   sender.emails.push({
@@ -153,6 +153,11 @@ function upsertMessage({ fromAddress, subject, date, body, messageId, unread, im
     favorite: false,
     unread: unread === true
   });
+  // keep latest messages only
+  sender.emails.sort((a, b) => new Date(b.date) - new Date(a.date));
+  if (sender.emails.length > MAX_MESSAGES) {
+    sender.emails = sender.emails.slice(0, MAX_MESSAGES);
+  }
 }
 
 async function fetchMailboxOnce() {
