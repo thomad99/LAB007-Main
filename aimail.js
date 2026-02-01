@@ -22,11 +22,12 @@ function getImapConfig() {
   const pass = process.env.MY_EMAIL_PASSWORD;
   const port = parseInt(process.env.IMAP_MAIL_PORT || '993', 10);
   const secure = (process.env.IMAP_MAIL_SECURE || 'true').toLowerCase() !== 'false';
+  const authMethod = (process.env.IMAP_AUTH_METHOD || 'LOGIN').toUpperCase(); // LOGIN by default
   const missing = [];
   if (!host) missing.push('IMAP_MAIL_SERVER');
   if (!user) missing.push('MY_EMAIL_ADDRESS');
   if (!pass) missing.push('MY_EMAIL_PASSWORD');
-  return { host, user, pass, port, secure, missing };
+  return { host, user, pass, port, secure, authMethod, missing };
 }
 
 if (!fs.existsSync(DATA_DIR)) {
@@ -102,7 +103,7 @@ async function fetchMailboxOnce() {
     host: cfg.host,
     port: cfg.port,
     secure: cfg.secure,
-    auth: { user: cfg.user, pass: cfg.pass }
+    auth: { user: cfg.user, pass: cfg.pass, method: cfg.authMethod }
   });
   try {
     await client.connect();
@@ -155,7 +156,7 @@ async function testConnection() {
     host: cfg.host,
     port: cfg.port,
     secure: cfg.secure,
-    auth: { user: cfg.user, pass: cfg.pass }
+    auth: { user: cfg.user, pass: cfg.pass, method: cfg.authMethod }
   });
   try {
     await client.connect();
@@ -305,7 +306,15 @@ router.post('/test-connection', async (_req, res) => {
     const info = await testConnection();
     res.json({ ok: true, ...info });
   } catch (err) {
-    res.status(500).json({ ok: false, error: err.message, missing: err.missing || [] });
+    const details = {
+      ok: false,
+      error: err.message,
+      missing: err.missing || []
+    };
+    if (err.code) details.code = err.code;
+    if (err.command) details.command = err.command;
+    if (err.response) details.response = err.response;
+    res.status(500).json(details);
   }
 });
 
