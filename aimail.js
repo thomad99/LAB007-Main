@@ -14,6 +14,8 @@ const DATA_DIR = process.env.AIMAIL_DATA_DIR || path.join(__dirname, 'aimail-dat
 const STORE_PATH = path.join(DATA_DIR, 'aimail-store.json');
 const LOGO_DIR = path.join(DATA_DIR, 'logos');
 const SELF_ADDR = (process.env.MY_EMAIL_ADDRESS || '').toLowerCase();
+const MAX_MESSAGES = parseInt(process.env.AIMAIL_MAX_MESSAGES || '500', 10); // cap number of messages to store
+const BODY_MAX_CHARS = parseInt(process.env.AIMAIL_BODY_MAX_CHARS || '50000', 10); // cap body length per message
 
 const POLL_SECONDS = parseInt(process.env.AIMAIL_POLL_SECONDS || '600', 10); // default 10 min
 
@@ -120,7 +122,7 @@ function defaultDisplay(address) {
   return domain ? `e-${domain}` : address;
 }
 
-function upsertMessage({ fromAddress, subject, date, body, messageId, unread }) {
+function upsertMessage({ fromAddress, subject, date, body, messageId, unread, imapUid }) {
   if (!fromAddress || !messageId) return;
   const id = normalizeSenderId(fromAddress);
   if (!store.senders[id]) {
@@ -147,7 +149,7 @@ function upsertMessage({ fromAddress, subject, date, body, messageId, unread }) 
     date: date ? new Date(date).toISOString() : new Date().toISOString(),
     body: body || '',
     mailbox: 'INBOX',
-    imapUid: null,
+    imapUid: imapUid || null,
     favorite: false,
     unread: unread === true
   });
@@ -166,6 +168,7 @@ async function fetchMailboxOnce() {
     try {
       // Limit to recent N to avoid huge first sync; adjust as needed
       const seq = '*:1';
+      let count = 0;
       for await (let msg of client.fetch(seq, { envelope: true, flags: true, internalDate: true, source: true }, { uid: true })) {
         const fromAddress = msg.envelope?.from?.[0]?.address || '';
         const subject = msg.envelope?.subject || '';
@@ -178,6 +181,7 @@ async function fetchMailboxOnce() {
         } catch (e) {
           bodyText = '';
         }
+        if (bodyText.length > BODY_MAX_CHARS) bodyText = bodyText.slice(0, BODY_MAX_CHARS) + '…';
         const msgId = msg.envelope?.messageId || `uid-${msg.uid}`;
         upsertMessage({
           fromAddress,
@@ -188,6 +192,8 @@ async function fetchMailboxOnce() {
           unread,
           imapUid: msg.uid || null
         });
+        count += 1;
+        if (count >= MAX_MESSAGES) break;
       }
     } finally {
       lock.release();

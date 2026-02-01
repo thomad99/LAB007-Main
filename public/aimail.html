@@ -124,13 +124,14 @@
         .bubble {
             position: relative;
             padding: 12px 14px;
-            border-radius: 14px;
-            max-width: 72%;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            border-radius: 16px;
+            max-width: 75%;
+            box-shadow: 0 6px 14px rgba(0,0,0,0.06);
             border: 1px solid var(--border);
+            background: linear-gradient(135deg, #f9fbff 0%, #eef2ff 100%);
         }
-        .bubble.them { margin-right: auto; background: #fdfdfd; }
-        .bubble.me { margin-left: auto; background: #e8f2ff; border-color: #c7dbff; }
+        .bubble.them { margin-right: auto; background: linear-gradient(135deg, #f9fbff 0%, #eef2ff 100%); border-color: #cfd8ff; }
+        .bubble.me { margin-left: auto; background: linear-gradient(135deg, #e9fff4 0%, #d8f5eb 100%); border-color: #bdeed5; }
         .bubble .meta {
             font-size: 0.85rem;
             color: var(--muted);
@@ -149,12 +150,15 @@
         .pill.active { border-color: var(--primary); color: var(--primary); }
         .status { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
         .flex { display: flex; gap: 8px; }
+        .mobile-hide { display: none !important; }
+        .mobile-back { display: none; }
         @media (max-width: 960px) {
             main { grid-template-columns: 1fr; }
             .thread-title-row { flex: 1 1 100%; }
             .thread-action-badges { width: 100%; }
             .thread-header { gap: 8px; }
             .channels-wrap { max-height: none; }
+            .mobile-back { display: inline-flex; }
         }
     </style>
 </head>
@@ -168,7 +172,7 @@
     </header>
 
     <main>
-        <section class="card">
+        <section class="card" id="channelsCard">
             <h2 class="section-title">Channels</h2>
             <div class="search-row">
                 <input id="senderSearch" class="input" placeholder="Search senders..." />
@@ -182,8 +186,9 @@
             <div class="status" id="senderStatus"></div>
         </section>
 
-        <section class="card">
+        <section class="card" id="threadCard">
             <div class="thread-header">
+                <button class="btn secondary mobile-back" id="backToChannels">← Back</button>
                 <img id="threadLogo" class="logo" src="/images/lab007 Icon.PNG" alt="logo">
                 <div style="flex:1; min-width:240px;">
                     <div class="thread-title-row">
@@ -254,6 +259,8 @@
         let favOnly = false;
         let showFavChannelsOnly = false;
         let channelSortMode = 'recent'; // 'recent' or 'alpha'
+        let mobileMode = window.innerWidth <= 960;
+        let showingChannel = false;
 
         const senderList = document.getElementById('senderList');
         const senderSearch = document.getElementById('senderSearch');
@@ -284,6 +291,9 @@
         const channelSortBtn = document.getElementById('channelSortBtn');
         const junkToggleBtn = document.getElementById('junkToggleBtn');
         const uploadLogoBtn = document.getElementById('uploadLogoBtn');
+        const channelsCard = document.getElementById('channelsCard');
+        const threadCard = document.getElementById('threadCard');
+        const backToChannels = document.getElementById('backToChannels');
 
         async function loadChannels() {
             try {
@@ -385,6 +395,10 @@
             favChannelBtn.textContent = currentSender.favorite ? '★ Channel' : '☆ Channel';
             renderEmails();
             loadChannel(id);
+            if (mobileMode) {
+                showingChannel = true;
+                applyMobileLayout();
+            }
         }
 
         function renderEmails() {
@@ -584,9 +598,34 @@
         logoUploadBtn.style.marginTop = '8px';
         logoUploadBtn.onclick = () => logoInput.click();
 
+        function applyMobileLayout() {
+            mobileMode = window.innerWidth <= 960;
+            const hideChannels = mobileMode && showingChannel;
+            const hideThread = mobileMode && !showingChannel;
+            channelsCard.classList.toggle('mobile-hide', hideChannels);
+            threadCard.classList.toggle('mobile-hide', hideThread);
+            backToChannels.style.display = hideThread ? 'inline-flex' : (mobileMode ? 'inline-flex' : 'none');
+            if (!mobileMode) {
+                showingChannel = false;
+                channelsCard.classList.remove('mobile-hide');
+                threadCard.classList.remove('mobile-hide');
+                backToChannels.style.display = 'none';
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            applyMobileLayout();
+        });
+
+        backToChannels.onclick = () => {
+            showingChannel = false;
+            applyMobileLayout();
+        };
+
         // Init
         loadChannels();
         updateTotals();
+        applyMobileLayout();
     </script>
 </body>
 </html>
