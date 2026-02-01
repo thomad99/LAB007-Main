@@ -30,6 +30,41 @@ function getImapConfig() {
   return { host, user, pass, port, secure, authMethod, missing };
 }
 
+function buildClient(cfg, method) {
+  return new ImapFlow({
+    host: cfg.host,
+    port: cfg.port,
+    secure: cfg.secure,
+    auth: { user: cfg.user, pass: cfg.pass, method }
+  });
+}
+
+async function authWithFallback(cfg) {
+  const methods = [];
+  const preferred = cfg.authMethod || 'LOGIN';
+  methods.push(preferred);
+  if (!methods.includes('LOGIN')) methods.push('LOGIN');
+  if (!methods.includes('PLAIN')) methods.push('PLAIN');
+
+  let lastErr;
+  for (const m of methods) {
+    const client = buildClient(cfg, m);
+    try {
+      await client.connect();
+      return { client, method: m };
+    } catch (err) {
+      lastErr = err;
+      try { await client.logout(); } catch (_) {}
+      if (err.authenticationFailed) {
+        continue; // try next method
+      } else {
+        break; // non-auth error, break
+      }
+    }
+  }
+  throw lastErr || new Error('Authentication failed');
+}
+
 if (!fs.existsSync(DATA_DIR)) {
   fs.mkdirSync(DATA_DIR, { recursive: true });
 }
@@ -99,14 +134,9 @@ async function fetchMailboxOnce() {
     console.warn('AIMAIL: IMAP env vars missing; skipping fetch. Missing:', cfg.missing.join(', '));
     return;
   }
-  const client = new ImapFlow({
-    host: cfg.host,
-    port: cfg.port,
-    secure: cfg.secure,
-    auth: { user: cfg.user, pass: cfg.pass, method: cfg.authMethod }
-  });
+  let client, methodUsed;
   try {
-    await client.connect();
+    ({ client, method: methodUsed } = await authWithFallback(cfg));
     let lock = await client.getMailboxLock('INBOX');
     try {
       // Limit to recent N to avoid huge first sync; adjust as needed
@@ -137,11 +167,11 @@ async function fetchMailboxOnce() {
       lock.release();
     }
     saveStore();
-    console.log('AIMAIL: fetch complete.');
+    console.log(`AIMAIL: fetch complete (auth method ${methodUsed}).`);
   } catch (err) {
     console.warn('AIMAIL: IMAP fetch failed:', err.message);
   } finally {
-    try { await client.logout(); } catch (_) {}
+    try { if (client) await client.logout(); } catch (_) {}
   }
 }
 
@@ -152,23 +182,18 @@ async function testConnection() {
     err.missing = cfg.missing;
     throw err;
   }
-  const client = new ImapFlow({
-    host: cfg.host,
-    port: cfg.port,
-    secure: cfg.secure,
-    auth: { user: cfg.user, pass: cfg.pass, method: cfg.authMethod }
-  });
+  let client, methodUsed;
   try {
-    await client.connect();
+    ({ client, method: methodUsed } = await authWithFallback(cfg));
     let lock = await client.getMailboxLock('INBOX');
     try {
       const status = await client.status('INBOX', { messages: true, unseen: true });
-      return { messages: status.messages || 0, unseen: status.unseen || 0 };
+      return { messages: status.messages || 0, unseen: status.unseen || 0, method: methodUsed };
     } finally {
       lock.release();
     }
   } finally {
-    try { await client.logout(); } catch (_) {}
+    try { if (client) await client.logout(); } catch (_) {}
   }
 }
 
