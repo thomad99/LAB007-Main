@@ -200,6 +200,7 @@
                         </div>
                     </div>
                     <div id="threadMeta" class="status">Unread: 0 · Total: 0</div>
+                    <div id="threadFetchStatus" class="status"></div>
                 </div>
             </div>
 
@@ -267,6 +268,7 @@
         const senderStatus = document.getElementById('senderStatus');
         const threadNameInput = document.getElementById('threadNameInput');
         const threadMeta = document.getElementById('threadMeta');
+        const threadFetchStatus = document.getElementById('threadFetchStatus');
         const threadLogo = document.getElementById('threadLogo');
         const threadEmails = document.getElementById('threadEmails');
         const threadSearch = document.getElementById('threadSearch');
@@ -310,6 +312,7 @@
 
         async function loadChannel(id, forceFetch = false) {
             try {
+                threadFetchStatus.textContent = forceFetch ? '⏳ Fetching messages...' : '';
                 const res = await fetch(`/api/aimail/channel/${encodeURIComponent(id)}${forceFetch ? '/fetch' : ''}`);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json = await res.json();
@@ -326,8 +329,10 @@
                 }
                 renderEmails();
                 updateTotals();
+                threadFetchStatus.textContent = `Loaded ${existing?.emails?.length || json.emails?.length || 0} messages.`;
             } catch (err) {
                 threadEmails.innerHTML = `<div class="status">Failed to load thread: ${err.message}</div>`;
+                threadFetchStatus.textContent = 'Fetch failed.';
             }
         }
 
@@ -367,13 +372,12 @@
                             <div>
                                 <div style="font-weight:700;">${s.display || s.domain || s.id}</div>
                                 <div style="color:var(--muted);font-size:0.9rem;">${s.id}</div>
+                                <div style="margin-top:4px;font-size:0.9rem;color:var(--muted);">Unread: ${unread} · Total: ${total}</div>
                             </div>
                         </div>
                         <div style="text-align:right;">
                             <div class="star">${s.favorite ? '★' : '☆'}</div>
                             <div class="badge ${s.junk ? 'junk' : 'ok'}">${s.junk ? 'Junk' : 'OK'}</div>
-                            <div style="font-size:0.85rem;color:var(--muted);">Unread: ${unread}</div>
-                            <div style="font-size:0.85rem;color:var(--muted);">Total: ${total}</div>
                         </div>
                     `;
                     senderList.appendChild(li);
