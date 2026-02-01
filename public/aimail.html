@@ -96,31 +96,24 @@
         .badge.ok { background: #e0f2fe; color: #075985; }
         .star { color: #f59e0b; font-size: 1.1rem; }
         .channels-wrap { max-height: calc(100vh - 190px); overflow-y: auto; padding-right: 4px; }
-        .thread-header {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 12px;
-        }
-        .thread-title-row {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            flex-wrap: wrap;
-        }
+        .thread-header { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .thread-title-row { display: flex; align-items: center; gap: 8px; flex: 1 1 260px; min-width: 240px; }
         .thread-title-row input {
             font-size: 1.05rem;
             font-weight: 700;
             border: 1px solid var(--border);
             border-radius: 8px;
             padding: 6px 8px;
-            min-width: 220px;
+            min-width: 180px;
+            flex: 1;
         }
         .thread-action-badges {
             display: flex;
             gap: 6px;
             flex-wrap: wrap;
+            align-items: center;
         }
+        .thread-action-badges .btn { min-height: 34px; }
         .thread-controls {
             display: flex;
             gap: 8px;
@@ -158,6 +151,10 @@
         .flex { display: flex; gap: 8px; }
         @media (max-width: 960px) {
             main { grid-template-columns: 1fr; }
+            .thread-title-row { flex: 1 1 100%; }
+            .thread-action-badges { width: 100%; }
+            .thread-header { gap: 8px; }
+            .channels-wrap { max-height: none; }
         }
     </style>
 </head>
@@ -191,11 +188,11 @@
                 <div style="flex:1; min-width:240px;">
                     <div class="thread-title-row">
                         <input id="threadNameInput" value="Select a sender">
-                        <button class="btn secondary" id="uploadLogoBtn" title="Change logo">Upload logo</button>
-                    </div>
-                    <div class="thread-action-badges" style="margin-top:6px;">
-                        <button class="btn secondary" id="junkToggleBtn" title="Mark/Unmark as junk">Junk: No</button>
-                        <button class="btn secondary" id="favChannelBtn" title="Favorite this channel">☆ Channel</button>
+                        <div class="thread-action-badges">
+                            <button class="btn secondary" id="junkToggleBtn" title="Mark/Unmark as junk">Junk: No</button>
+                            <button class="btn secondary" id="favChannelBtn" title="Favorite this channel">☆ Channel</button>
+                            <button class="btn secondary" id="uploadLogoBtn" title="Change logo">Upload logo</button>
+                        </div>
                     </div>
                     <div id="threadMeta" class="status">Unread: 0 · Total: 0</div>
                 </div>
