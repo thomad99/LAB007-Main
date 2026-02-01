@@ -17,7 +17,8 @@ const SELF_ADDR = (process.env.MY_EMAIL_ADDRESS || '').toLowerCase();
 const MAX_MESSAGES = parseInt(process.env.AIMAIL_MAX_MESSAGES || '5000', 10); // higher cap to avoid truncation
 const MAX_FETCH_PER_CHANNEL = parseInt(process.env.AIMAIL_FETCH_MAX_PER_CHANNEL || '5000', 10);
 const MAX_SENDER_SCAN = parseInt(process.env.AIMAIL_SENDER_SCAN_MAX || '2000', 10); // envelope scan cap
-const SCAN_RECENT = parseInt(process.env.AIMAIL_SCAN_RECENT || '10', 10); // only the last N messages for sender discovery
+const DISCOVERY_UIDS = parseInt(process.env.AIMAIL_DISCOVERY_UIDS || '200', 10); // how many recent UIDs to inspect
+const DISCOVERY_TOP = parseInt(process.env.AIMAIL_DISCOVERY_TOP || '10', 10); // top N unique senders to list
 const BODY_MAX_CHARS = parseInt(process.env.AIMAIL_BODY_MAX_CHARS || '50000', 10); // cap body length per message
 
 const POLL_SECONDS = parseInt(process.env.AIMAIL_POLL_SECONDS || '600', 10); // default 10 min
@@ -272,16 +273,21 @@ async function scanSendersEnvelope() {
   if (cfg.missing.length) throw new Error('IMAP env vars missing');
   const client = (await authWithFallback(cfg)).client;
   const counts = {};
+  const order = [];
   try {
     let lock = await client.getMailboxLock('INBOX');
     try {
-      // get last N UIDs for discovery
+      // get last N UIDs for discovery (newest last)
       const allUids = await client.search({ all: true });
-      const slice = (allUids || []).slice(-SCAN_RECENT);
-      for await (let msg of client.fetch(slice, { envelope: true }, { uid: true })) {
+      const slice = (allUids || []).slice(-DISCOVERY_UIDS);
+      // iterate newest first
+      const rev = [...slice].reverse();
+      for await (let msg of client.fetch(rev, { envelope: true }, { uid: true })) {
         const fromAddress = msg.envelope?.from?.[0]?.address || '';
         const emailId = normalizeSenderId(fromAddress);
         counts[emailId] = (counts[emailId] || 0) + 1;
+        if (!order.includes(emailId)) order.push(emailId);
+        if (order.length >= DISCOVERY_TOP) break;
       }
     } finally {
       lock.release();
@@ -289,8 +295,9 @@ async function scanSendersEnvelope() {
   } finally {
     try { await client.logout(); } catch (_) {}
   }
-  // merge into store metadata
-  Object.entries(counts).forEach(([id, total]) => {
+  // merge into store metadata (respect order)
+  order.forEach((id) => {
+    const total = counts[id] || 0;
     if (!store.senders[id]) {
       store.senders[id] = {
         id,
