@@ -297,18 +297,20 @@
 
         async function loadChannels() {
             try {
-                const res = await fetch('/api/aimail/channels');
+                senderStatus.textContent = 'Loading channels...';
+                const res = await fetch('/api/aimail/channels/refresh');
                 const json = await res.json();
                 data.senders = json.channels || [];
                 renderSenders();
+                senderStatus.textContent = `${data.senders.length} channel(s) loaded.`;
             } catch (err) {
                 senderStatus.textContent = 'Failed to load channels: ' + err.message;
             }
         }
 
-        async function loadChannel(id) {
+        async function loadChannel(id, forceFetch = false) {
             try {
-                const res = await fetch(`/api/aimail/channel/${encodeURIComponent(id)}`);
+                const res = await fetch(`/api/aimail/channel/${encodeURIComponent(id)}${forceFetch ? '/fetch' : ''}`);
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const json = await res.json();
                 const existing = data.senders.find(s => s.id === id);
@@ -318,9 +320,9 @@
                     existing.domain = json.domain;
                     existing.logo = json.logo;
                     existing.junk = json.junk;
-                    if (existing.emails.length) {
-                        existing.lastDate = Math.max(...existing.emails.map(e => new Date(e.date || 0).getTime()));
-                    }
+                    existing.favorite = json.favorite;
+                    existing.lastDate = json.lastDate || (existing.emails.length ? Math.max(...existing.emails.map(e => new Date(e.date || 0).getTime())) : null);
+                    existing.total = json.total || existing.emails.length;
                 }
                 renderEmails();
                 updateTotals();
@@ -394,7 +396,7 @@
             junkToggleBtn.textContent = `Junk: ${currentSender.junk ? 'Yes' : 'No'}`;
             favChannelBtn.textContent = currentSender.favorite ? '★ Channel' : '☆ Channel';
             renderEmails();
-            loadChannel(id);
+            loadChannel(id, true);
             if (mobileMode) {
                 showingChannel = true;
                 applyMobileLayout();

@@ -15,6 +15,8 @@ const STORE_PATH = path.join(DATA_DIR, 'aimail-store.json');
 const LOGO_DIR = path.join(DATA_DIR, 'logos');
 const SELF_ADDR = (process.env.MY_EMAIL_ADDRESS || '').toLowerCase();
 const MAX_MESSAGES = parseInt(process.env.AIMAIL_MAX_MESSAGES || '500', 10); // cap number of messages per channel
+const MAX_FETCH_PER_CHANNEL = parseInt(process.env.AIMAIL_FETCH_MAX_PER_CHANNEL || '200', 10);
+const MAX_SENDER_SCAN = parseInt(process.env.AIMAIL_SENDER_SCAN_MAX || '2000', 10); // how many messages to scan for sender list
 const BODY_MAX_CHARS = parseInt(process.env.AIMAIL_BODY_MAX_CHARS || '50000', 10); // cap body length per message
 
 const POLL_SECONDS = parseInt(process.env.AIMAIL_POLL_SECONDS || '600', 10); // default 10 min
@@ -212,6 +214,113 @@ async function fetchMailboxOnce() {
   }
 }
 
+async function fetchMessagesForSender(domainOrId) {
+  const cfg = getImapConfig();
+  if (cfg.missing.length) throw new Error('IMAP env vars missing');
+  const client = (await authWithFallback(cfg)).client;
+  const target = domainOrId.toLowerCase();
+  const criteria = [['FROM', target]];
+  const messages = [];
+  try {
+    let lock = await client.getMailboxLock('INBOX');
+    try {
+      const uids = await client.search(criteria);
+      const limited = (uids || []).slice(-MAX_FETCH_PER_CHANNEL);
+      for await (let msg of client.fetch(limited, { envelope: true, flags: true, internalDate: true, source: true }, { uid: true })) {
+        const fromAddress = msg.envelope?.from?.[0]?.address || '';
+        const subject = msg.envelope?.subject || '';
+        const date = msg.internalDate || new Date();
+        const unread = !msg.flags?.has('\\Seen');
+        let bodyText = '';
+        try {
+          const parsed = await simpleParser(msg.source);
+          bodyText = parsed.text || parsed.html || '';
+        } catch (e) {
+          bodyText = '';
+        }
+        if (bodyText.length > BODY_MAX_CHARS) bodyText = bodyText.slice(0, BODY_MAX_CHARS) + '…';
+        const msgId = msg.envelope?.messageId || `uid-${msg.uid}`;
+        messages.push({
+          id: msgId,
+          messageId: msgId,
+          from: fromAddress,
+          isMine: SELF_ADDR && fromAddress.toLowerCase() === SELF_ADDR,
+          subject: subject || '(no subject)',
+          date: date ? new Date(date).toISOString() : new Date().toISOString(),
+          body: bodyText || '',
+          mailbox: 'INBOX',
+          imapUid: msg.uid || null,
+          favorite: false,
+          unread
+        });
+      }
+    } finally {
+      lock.release();
+    }
+  } finally {
+    try { await client.logout(); } catch (_) {}
+  }
+  messages.sort((a, b) => new Date(b.date) - new Date(a.date));
+  return messages;
+}
+
+async function scanSendersEnvelope() {
+  const cfg = getImapConfig();
+  if (cfg.missing.length) throw new Error('IMAP env vars missing');
+  const client = (await authWithFallback(cfg)).client;
+  const counts = {};
+  try {
+    let lock = await client.getMailboxLock('INBOX');
+    try {
+      let scanned = 0;
+      for await (let msg of client.fetch('*:1', { envelope: true }, { uid: true })) {
+        const fromAddress = msg.envelope?.from?.[0]?.address || '';
+        const domain = (fromAddress.split('@')[1] || '').toLowerCase();
+        const channelId = domain || normalizeSenderId(fromAddress);
+        counts[channelId] = (counts[channelId] || 0) + 1;
+        scanned += 1;
+        if (scanned >= MAX_SENDER_SCAN) break;
+      }
+    } finally {
+      lock.release();
+    }
+  } finally {
+    try { await client.logout(); } catch (_) {}
+  }
+  // merge into store metadata
+  Object.entries(counts).forEach(([id, total]) => {
+    if (!store.senders[id]) {
+      store.senders[id] = {
+        id,
+        display: `e-${id}`,
+        domain: id,
+        logo: '/images/lab007 Icon.PNG',
+        junk: false,
+        favorite: false,
+        emails: []
+      };
+    }
+    store.senders[id].total = total;
+    // update lastDate to keep sort usable
+    const sender = store.senders[id];
+    sender.lastDate = sender.emails.length
+      ? Math.max(...sender.emails.map(e => new Date(e.date || 0).getTime()))
+      : null;
+  });
+  saveStore();
+  return Object.values(store.senders).map(s => ({
+    id: s.id,
+    display: s.display,
+    domain: s.domain,
+    logo: s.logo,
+    junk: s.junk,
+    favorite: !!s.favorite,
+    unread: (s.emails || []).filter(e => e.unread).length,
+    total: s.total || (s.emails ? s.emails.length : 0),
+    lastDate: s.lastDate || null
+  }));
+}
+
 async function testConnection(override = {}) {
   const cfg = getImapConfig(override);
   if (cfg.missing.length) {
@@ -299,7 +408,7 @@ ${contextText}
 router.get('/channels', (req, res) => {
   const channels = Object.values(store.senders).map(s => {
     const unread = s.emails.filter(e => e.unread).length;
-    const lastDate = s.emails.length ? Math.max(...s.emails.map(e => new Date(e.date || 0).getTime())) : null;
+    const lastDate = s.emails.length ? Math.max(...s.emails.map(e => new Date(e.date || 0).getTime())) : (s.lastDate || null);
     return {
       id: s.id,
       display: s.display,
@@ -308,11 +417,21 @@ router.get('/channels', (req, res) => {
       junk: s.junk,
       favorite: !!s.favorite,
       unread,
-      total: s.emails.length,
+      total: s.total || s.emails.length,
       lastDate
     };
   });
   res.json({ channels });
+});
+
+// Refresh channel list by scanning envelopes only
+router.get('/channels/refresh', async (_req, res) => {
+  try {
+    const channels = await scanSendersEnvelope();
+    res.json({ channels });
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
 router.get('/channel/:id', (req, res) => {
@@ -320,6 +439,32 @@ router.get('/channel/:id', (req, res) => {
   const sender = store.senders[id];
   if (!sender) return res.status(404).json({ error: 'Not found' });
   res.json(sender);
+});
+
+// Fetch messages on-demand for a channel (by domain/id)
+router.get('/channel/:id/fetch', async (req, res) => {
+  const id = normalizeSenderId(req.params.id);
+  try {
+    const messages = await fetchMessagesForSender(id);
+    if (!store.senders[id]) {
+      store.senders[id] = {
+        id,
+        display: `e-${id}`,
+        domain: id,
+        logo: '/images/lab007 Icon.PNG',
+        junk: false,
+        favorite: false,
+        emails: []
+      };
+    }
+    store.senders[id].emails = messages;
+    store.senders[id].total = messages.length;
+    store.senders[id].lastDate = messages.length ? Math.max(...messages.map(e => new Date(e.date || 0).getTime())) : null;
+    saveStore();
+    res.json(store.senders[id]);
+  } catch (err) {
+    res.status(500).json({ ok: false, error: err.message });
+  }
 });
 
 router.post('/channel/:id/delete/:messageId', (req, res) => {
