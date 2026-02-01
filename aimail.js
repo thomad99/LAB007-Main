@@ -14,9 +14,10 @@ const DATA_DIR = process.env.AIMAIL_DATA_DIR || path.join(__dirname, 'aimail-dat
 const STORE_PATH = path.join(DATA_DIR, 'aimail-store.json');
 const LOGO_DIR = path.join(DATA_DIR, 'logos');
 const SELF_ADDR = (process.env.MY_EMAIL_ADDRESS || '').toLowerCase();
-const MAX_MESSAGES = parseInt(process.env.AIMAIL_MAX_MESSAGES || '500', 10); // cap number of messages per channel
+const MAX_MESSAGES = parseInt(process.env.AIMAIL_MAX_MESSAGES || '500', 10); // cap number of messages per channel kept in memory/store
 const MAX_FETCH_PER_CHANNEL = parseInt(process.env.AIMAIL_FETCH_MAX_PER_CHANNEL || '200', 10);
-const MAX_SENDER_SCAN = parseInt(process.env.AIMAIL_SENDER_SCAN_MAX || '2000', 10); // how many messages to scan for sender list
+const MAX_SENDER_SCAN = parseInt(process.env.AIMAIL_SENDER_SCAN_MAX || '2000', 10); // envelope scan cap
+const SCAN_RECENT = parseInt(process.env.AIMAIL_SCAN_RECENT || '50', 10); // how many recent messages to seed channels
 const BODY_MAX_CHARS = parseInt(process.env.AIMAIL_BODY_MAX_CHARS || '50000', 10); // cap body length per message
 
 const POLL_SECONDS = parseInt(process.env.AIMAIL_POLL_SECONDS || '600', 10); // default 10 min
@@ -126,20 +127,22 @@ function defaultDisplay(address) {
 
 function upsertMessage({ fromAddress, subject, date, body, messageId, unread, imapUid }) {
   if (!fromAddress || !messageId) return;
+  const emailId = normalizeSenderId(fromAddress);
   const domain = (fromAddress.split('@')[1] || '').toLowerCase();
-  const channelId = domain || normalizeSenderId(fromAddress);
-  if (!store.senders[channelId]) {
-    store.senders[channelId] = {
-      id: channelId,
-      display: domain ? `e-${domain}` : defaultDisplay(fromAddress),
+  if (!store.senders[emailId]) {
+    store.senders[emailId] = {
+      id: emailId,
+      display: fromAddress,
       domain,
       logo: '/images/lab007 Icon.PNG',
       junk: false,
       favorite: false,
-      emails: []
+      emails: [],
+      total: 0,
+      lastDate: null
     };
   }
-  const sender = store.senders[channelId];
+  const sender = store.senders[emailId];
   const exists = sender.emails.find(e => e.messageId === messageId);
   if (exists) return;
   sender.emails.push({
@@ -155,8 +158,9 @@ function upsertMessage({ fromAddress, subject, date, body, messageId, unread, im
     favorite: false,
     unread: unread === true
   });
-  // keep latest messages only
   sender.emails.sort((a, b) => new Date(b.date) - new Date(a.date));
+  sender.total = Math.max(sender.total || 0, sender.emails.length);
+  sender.lastDate = sender.emails.length ? new Date(sender.emails[0].date).getTime() : sender.lastDate;
   if (sender.emails.length > MAX_MESSAGES) {
     sender.emails = sender.emails.slice(0, MAX_MESSAGES);
   }
