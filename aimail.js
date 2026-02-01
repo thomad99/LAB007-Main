@@ -11,6 +11,7 @@ const router = express.Router();
 
 const DATA_DIR = process.env.AIMAIL_DATA_DIR || path.join(__dirname, 'aimail-data');
 const STORE_PATH = path.join(DATA_DIR, 'aimail-store.json');
+const SELF_ADDR = (process.env.MY_EMAIL_ADDRESS || '').toLowerCase();
 
 const POLL_SECONDS = parseInt(process.env.AIMAIL_POLL_SECONDS || '600', 10); // default 10 min
 
@@ -113,6 +114,7 @@ function upsertMessage({ fromAddress, subject, date, body, messageId, unread }) 
       domain,
       logo: '/images/lab007 Icon.PNG',
       junk: false,
+      favorite: false,
       emails: []
     };
   }
@@ -122,9 +124,13 @@ function upsertMessage({ fromAddress, subject, date, body, messageId, unread }) 
   sender.emails.push({
     id: messageId,
     messageId,
+    from: fromAddress,
+    isMine: SELF_ADDR && fromAddress.toLowerCase() === SELF_ADDR,
     subject: subject || '(no subject)',
     date: date ? new Date(date).toISOString() : new Date().toISOString(),
     body: body || '',
+    mailbox: 'INBOX',
+    imapUid: null,
     favorite: false,
     unread: unread === true
   });
@@ -162,7 +168,8 @@ async function fetchMailboxOnce() {
           date,
           body: bodyText,
           messageId: msgId,
-          unread
+          unread,
+          imapUid: msg.uid || null
         });
       }
     } finally {
@@ -264,14 +271,17 @@ ${contextText}
 router.get('/channels', (req, res) => {
   const channels = Object.values(store.senders).map(s => {
     const unread = s.emails.filter(e => e.unread).length;
+    const lastDate = s.emails.length ? Math.max(...s.emails.map(e => new Date(e.date || 0).getTime())) : null;
     return {
       id: s.id,
       display: s.display,
       domain: s.domain,
       logo: s.logo,
       junk: s.junk,
+      favorite: !!s.favorite,
       unread,
-      total: s.emails.length
+      total: s.emails.length,
+      lastDate
     };
   });
   res.json({ channels });
@@ -288,8 +298,40 @@ router.post('/channel/:id/delete/:messageId', (req, res) => {
   const id = normalizeSenderId(req.params.id);
   const sender = store.senders[id];
   if (!sender) return res.status(404).json({ error: 'Not found' });
-  sender.emails = sender.emails.filter(e => e.id !== req.params.messageId);
+  const msgId = req.params.messageId;
+  const msg = sender.emails.find(e => e.id === msgId);
+  // Remove from store regardless
+  sender.emails = sender.emails.filter(e => e.id !== msgId);
   saveStore();
+
+  // Fire-and-forget IMAP delete
+  (async () => {
+    if (!msg) return;
+    const cfg = getImapConfig();
+    if (cfg.missing.length) return;
+    let client, methodUsed;
+    try {
+      ({ client, method: methodUsed } = await authWithFallback(cfg));
+      let lock = await client.getMailboxLock(msg.mailbox || 'INBOX');
+      try {
+        if (msg.imapUid) {
+          await client.messageDelete(msg.imapUid, { uid: true });
+        } else if (msg.messageId) {
+          const uids = await client.search({ header: { 'message-id': msg.messageId } });
+          if (uids && uids.length) {
+            await client.messageDelete(uids, { uid: true });
+          }
+        }
+      } finally {
+        lock.release();
+      }
+    } catch (err) {
+      console.warn('AIMAIL: IMAP delete failed:', err.message);
+    } finally {
+      try { if (client) await client.logout(); } catch (_) {}
+    }
+  })();
+
   res.json({ ok: true });
 });
 
@@ -324,6 +366,7 @@ router.post('/channel/:id/config', (req, res) => {
   sender.display = req.body.display || sender.display;
   sender.logo = req.body.logo || sender.logo;
   if (typeof req.body.junk === 'boolean') sender.junk = req.body.junk;
+   if (typeof req.body.favorite === 'boolean') sender.favorite = req.body.favorite;
   saveStore();
   res.json({ ok: true, sender });
 });

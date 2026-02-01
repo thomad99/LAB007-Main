@@ -81,7 +81,10 @@
             background: #fdfdfd;
             margin-bottom: 10px;
             position: relative;
+            max-width: 82%;
         }
+        .bubble.them { margin-right: auto; background: #fdfdfd; }
+        .bubble.me { margin-left: auto; background: #e8f2ff; border-color: #c7dbff; }
         .meta { font-size: 0.9rem; color: var(--muted); margin-bottom: 6px; }
         .actions {
             position: absolute;
@@ -151,6 +154,14 @@
 
         function render() {
             if (!currentSender) return;
+            const renderBody = (text) => {
+                if (!text) return '(empty)';
+                const esc = text
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+                return esc.replace(/\r?\n/g, '<br>');
+            };
             const q = threadSearch.value.toLowerCase();
             let list = [...(currentSender.emails || [])];
             if (favOnly) list = list.filter(e => e.favorite);
@@ -159,14 +170,14 @@
             threadEmails.innerHTML = '';
             list.forEach(e => {
                 const div = document.createElement('div');
-                div.className = 'bubble';
+                div.className = `bubble ${e.isMine ? 'me' : 'them'}`;
                 div.innerHTML = `
                     <div class="meta">${e.subject || '(no subject)'} — ${e.date} — ${e.unread ? 'Unread' : 'Read'}</div>
                     <div class="actions">
                         <span class="favorite" title="Favorite">${e.favorite ? '★' : '☆'}</span>
                         <span style="cursor:pointer;color:#b91c1c;" title="Delete">🗑</span>
                     </div>
-                    <div>${e.body || '(empty)'}</div>
+                    <div>${renderBody(e.body)}</div>
                 `;
                 const [fav, del] = div.querySelectorAll('.actions span');
                 fav.onclick = async (ev) => {

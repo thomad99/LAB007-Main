@@ -94,6 +94,7 @@
         .badge { padding: 2px 8px; border-radius: 999px; font-size: 0.8rem; }
         .badge.junk { background: #fee2e2; color: #991b1b; }
         .badge.ok { background: #e0f2fe; color: #075985; }
+        .star { color: #f59e0b; font-size: 1.1rem; }
         .thread-header {
             display: flex;
             align-items: center;
@@ -113,7 +114,10 @@
             background: #fdfdfd;
             margin-bottom: 10px;
             position: relative;
+            max-width: 82%;
         }
+        .bubble.them { margin-right: auto; background: #fdfdfd; }
+        .bubble.me { margin-left: auto; background: #e8f2ff; border-color: #c7dbff; }
         .bubble .meta {
             font-size: 0.85rem;
             color: var(--muted);
@@ -152,6 +156,7 @@
             <div class="search-row">
                 <input id="senderSearch" class="input" placeholder="Search senders..." />
                 <button class="btn secondary" id="resetFilters">Reset</button>
+                <button class="btn secondary" id="favChannelFilterBtn">Show: All</button>
             </div>
             <ul class="list" id="senderList"></ul>
             <div class="status" id="senderStatus">Loaded sample data. Backend wiring TBD.</div>
@@ -170,6 +175,7 @@
                 <input id="threadSearch" class="input" placeholder="Search in this thread...">
                 <button class="btn secondary" id="sortBtn">Sort: Newest</button>
                 <button class="btn secondary" id="favFilterBtn">Show: All</button>
+                <button class="btn secondary" id="favChannelBtn" title="Favorite this channel">☆ Channel</button>
                 <button class="btn secondary" id="fullPageBtn" title="Open this thread full screen">Full page</button>
             </div>
 
@@ -187,32 +193,6 @@
         <h2 class="section-title">Admin (branding, junk, search)</h2>
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;">
             <div class="status" id="adminTotals">Emails: 0 (unread 0)</div>
-            <div class="flex" style="flex-wrap:wrap;gap:6px;align-items:center;">
-                <button class="btn secondary" id="testConnection">Test mail connection</button>
-                <span class="status" id="connectionStatus">Not tested</span>
-            </div>
-        </div>
-        <div class="flex" style="flex-wrap:wrap;gap:10px;margin-bottom:10px;">
-            <div style="flex:1; min-width:200px;">
-                <label>Mail server</label>
-                <input id="mailServer" class="input" placeholder="imap.ionos.com">
-            </div>
-            <div style="flex:1; min-width:200px;">
-                <label>Username</label>
-                <input id="mailUser" class="input" placeholder="email@domain.com">
-            </div>
-            <div style="flex:1; min-width:200px;">
-                <label>Password</label>
-                <input id="mailPass" class="input" type="password" placeholder="App password">
-            </div>
-            <div style="flex:0 0 100px; min-width:100px;">
-                <label>Port</label>
-                <input id="mailPort" class="input" placeholder="993">
-            </div>
-            <div style="flex:0 0 120px; min-width:120px;display:flex;align-items:center;gap:6px;margin-top:24px;">
-                <input id="mailSecure" type="checkbox" checked>
-                <label for="mailSecure" style="margin:0;">SSL/TLS</label>
-            </div>
         </div>
         <div class="flex" style="flex-wrap:wrap;">
             <div style="flex:1; min-width:260px;">
@@ -246,6 +226,7 @@
         let currentSender = null;
         let sortNewest = true;
         let favOnly = false;
+        let showFavChannelsOnly = false;
 
         const senderList = document.getElementById('senderList');
         const senderSearch = document.getElementById('senderSearch');
@@ -271,13 +252,8 @@
         const adminStatus = document.getElementById('adminStatus');
         const resetFilters = document.getElementById('resetFilters');
         const adminTotals = document.getElementById('adminTotals');
-        const testConnection = document.getElementById('testConnection');
-        const connectionStatus = document.getElementById('connectionStatus');
-        const mailServer = document.getElementById('mailServer');
-        const mailUser = document.getElementById('mailUser');
-        const mailPass = document.getElementById('mailPass');
-        const mailPort = document.getElementById('mailPort');
-        const mailSecure = document.getElementById('mailSecure');
+        const favChannelFilterBtn = document.getElementById('favChannelFilterBtn');
+        const favChannelBtn = document.getElementById('favChannelBtn');
 
         async function loadChannels() {
             try {
@@ -302,6 +278,9 @@
                     existing.domain = json.domain;
                     existing.logo = json.logo;
                     existing.junk = json.junk;
+                    if (existing.emails.length) {
+                        existing.lastDate = Math.max(...existing.emails.map(e => new Date(e.date || 0).getTime()));
+                    }
                 }
                 renderEmails();
                 updateTotals();
@@ -322,13 +301,19 @@
         function renderSenders() {
             const q = senderSearch.value.toLowerCase();
             senderList.innerHTML = '';
-            data.senders
-                .filter(s => !q || s.id.toLowerCase().includes(q) || (s.display || '').toLowerCase().includes(q) || (s.domain || '').toLowerCase().includes(q))
+            [...data.senders]
+                .sort((a, b) => {
+                    const da = a.lastDate || 0;
+                    const db = b.lastDate || 0;
+                    return db - da;
+                })
+                .filter(s => (!showFavChannelsOnly || s.favorite) && (!q || s.id.toLowerCase().includes(q) || (s.display || '').toLowerCase().includes(q) || (s.domain || '').toLowerCase().includes(q)))
                 .forEach(s => {
                     const li = document.createElement('li');
                     li.className = 'sender-item';
                     li.onclick = () => selectSender(s.id);
                     const unread = (s.emails || []).filter(e => e.unread).length;
+                    const total = (s.emails || []).length;
                     li.innerHTML = `
                         <div class="sender-meta">
                             <img class="logo" src="${s.logo || defaultLogo}" alt="">
@@ -338,8 +323,10 @@
                             </div>
                         </div>
                         <div style="text-align:right;">
+                            <div class="star">${s.favorite ? '★' : '☆'}</div>
                             <div class="badge ${s.junk ? 'junk' : 'ok'}">${s.junk ? 'Junk' : 'OK'}</div>
                             <div style="font-size:0.85rem;color:var(--muted);">Unread: ${unread}</div>
+                            <div style="font-size:0.85rem;color:var(--muted);">Total: ${total}</div>
                         </div>
                     `;
                     senderList.appendChild(li);
@@ -359,6 +346,7 @@
             adminDisplay.value = currentSender.display || '';
             adminLogo.value = currentSender.logo || '';
             adminJunk.value = currentSender.junk ? 'true' : 'false';
+            favChannelBtn.textContent = currentSender.favorite ? '★ Channel' : '☆ Channel';
             renderEmails();
             loadChannel(id);
         }
@@ -368,6 +356,14 @@
                 threadEmails.innerHTML = '<div class="status">Select a sender to view messages.</div>';
                 return;
             }
+            const renderBody = (text) => {
+                if (!text) return '(empty)';
+                const esc = text
+                    .replace(/&/g, '&amp;')
+                    .replace(/</g, '&lt;')
+                    .replace(/>/g, '&gt;');
+                return esc.replace(/\r?\n/g, '<br>');
+            };
             const q = threadSearch.value.toLowerCase();
             let list = [...(currentSender.emails || [])];
             if (favOnly) list = list.filter(e => e.favorite);
@@ -376,14 +372,14 @@
             threadEmails.innerHTML = '';
             list.forEach(e => {
                 const div = document.createElement('div');
-                div.className = 'bubble';
+                div.className = `bubble ${e.isMine ? 'me' : 'them'}`;
                 div.innerHTML = `
                     <div class="meta">${e.subject || '(no subject)'} — ${e.date} — ${e.unread ? 'Unread' : 'Read'}</div>
                     <div class="actions">
                         <span class="favorite" title="Favorite">${e.favorite ? '★' : '☆'}</span>
                         <span style="cursor:pointer;color:#b91c1c;" title="Delete">🗑</span>
                     </div>
-                    <div>${e.body || '(empty)'}</div>
+                    <div>${renderBody(e.body)}</div>
                 `;
                 const [fav, del] = div.querySelectorAll('.actions span');
                 fav.onclick = (ev) => { ev.stopPropagation(); e.favorite = !e.favorite; renderEmails(); };
@@ -431,32 +427,6 @@
             adminStatus.textContent = `Text search matches: ${count} message(s). LLM search pending backend.`;
         };
 
-        testConnection.onclick = async () => {
-            connectionStatus.textContent = 'Testing...';
-            try {
-                const payload = {
-                    host: mailServer.value.trim() || undefined,
-                    user: mailUser.value.trim() || undefined,
-                    pass: mailPass.value || undefined,
-                    port: mailPort.value.trim() || undefined,
-                    secure: mailSecure.checked
-                };
-                const res = await fetch('/api/aimail/test-connection', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload)
-                });
-                const txt = await res.text();
-                if (res.ok) {
-                    connectionStatus.textContent = txt || 'Connection OK';
-                } else {
-                    connectionStatus.textContent = `Test failed (HTTP ${res.status}): ${txt || 'no body'}`;
-                }
-            } catch (err) {
-                connectionStatus.textContent = `Test failed: ${err.message}`;
-            }
-        };
-
         llmRun.onclick = () => {
             const q = llmQuery.value.trim();
             if (!q) { llmStatus.textContent = 'Enter a query first.'; return; }
@@ -486,12 +456,24 @@
         sortBtn.onclick = () => { sortNewest = !sortNewest; sortBtn.textContent = `Sort: ${sortNewest ? 'Newest' : 'Oldest'}`; renderEmails(); };
         favFilterBtn.onclick = () => { favOnly = !favOnly; favFilterBtn.textContent = `Show: ${favOnly ? 'Favorites' : 'All'}`; renderEmails(); };
         resetFilters.onclick = () => { senderSearch.value=''; renderSenders(); };
+        favChannelFilterBtn.onclick = () => { showFavChannelsOnly = !showFavChannelsOnly; favChannelFilterBtn.textContent = `Show: ${showFavChannelsOnly ? 'Favorites' : 'All'}`; renderSenders(); };
         fullPageBtn.onclick = () => {
             if (!currentSender) {
                 alert('Select a sender first.');
                 return;
             }
             window.open(`/aimail-thread.html?sender=${encodeURIComponent(currentSender.id)}`, '_blank');
+        };
+        favChannelBtn.onclick = () => {
+            if (!currentSender) { alert('Select a sender first.'); return; }
+            currentSender.favorite = !currentSender.favorite;
+            favChannelBtn.textContent = currentSender.favorite ? '★ Channel' : '☆ Channel';
+            fetch(`/api/aimail/channel/${encodeURIComponent(currentSender.id)}/config`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ favorite: currentSender.favorite })
+            }).catch(() => {});
+            renderSenders();
         };
 
         // Init
