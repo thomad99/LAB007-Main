@@ -14,10 +14,10 @@ const DATA_DIR = process.env.AIMAIL_DATA_DIR || path.join(__dirname, 'aimail-dat
 const STORE_PATH = path.join(DATA_DIR, 'aimail-store.json');
 const LOGO_DIR = path.join(DATA_DIR, 'logos');
 const SELF_ADDR = (process.env.MY_EMAIL_ADDRESS || '').toLowerCase();
-const MAX_MESSAGES = parseInt(process.env.AIMAIL_MAX_MESSAGES || '500', 10); // cap number of messages per channel kept in memory/store
-const MAX_FETCH_PER_CHANNEL = parseInt(process.env.AIMAIL_FETCH_MAX_PER_CHANNEL || '200', 10);
+const MAX_MESSAGES = parseInt(process.env.AIMAIL_MAX_MESSAGES || '5000', 10); // higher cap to avoid truncation
+const MAX_FETCH_PER_CHANNEL = parseInt(process.env.AIMAIL_FETCH_MAX_PER_CHANNEL || '5000', 10);
 const MAX_SENDER_SCAN = parseInt(process.env.AIMAIL_SENDER_SCAN_MAX || '2000', 10); // envelope scan cap
-const SCAN_RECENT = parseInt(process.env.AIMAIL_SCAN_RECENT || '50', 10); // how many recent messages to seed channels
+const SCAN_RECENT = parseInt(process.env.AIMAIL_SCAN_RECENT || '10', 10); // only the last N messages for sender discovery
 const BODY_MAX_CHARS = parseInt(process.env.AIMAIL_BODY_MAX_CHARS || '50000', 10); // cap body length per message
 
 const POLL_SECONDS = parseInt(process.env.AIMAIL_POLL_SECONDS || '600', 10); // default 10 min
@@ -177,7 +177,6 @@ async function fetchMailboxOnce() {
     ({ client, method: methodUsed } = await authWithFallback(cfg));
     let lock = await client.getMailboxLock('INBOX');
     try {
-      // Limit to recent N to avoid huge first sync; adjust as needed
       const seq = '*:1';
       let count = 0;
       for await (let msg of client.fetch(seq, { envelope: true, flags: true, internalDate: true, source: true }, { uid: true })) {
@@ -204,7 +203,7 @@ async function fetchMailboxOnce() {
           imapUid: msg.uid || null
         });
         count += 1;
-        if (count >= MAX_MESSAGES) break;
+        if (count >= SCAN_RECENT) break;
       }
     } finally {
       lock.release();
@@ -229,7 +228,7 @@ async function fetchMessagesForSender(domainOrId) {
     let lock = await client.getMailboxLock('INBOX');
     try {
       const uids = await client.search(criteria);
-      const limited = (uids || []).slice(-MAX_FETCH_PER_CHANNEL);
+      const limited = MAX_FETCH_PER_CHANNEL > 0 ? (uids || []).slice(-MAX_FETCH_PER_CHANNEL) : (uids || []);
       for await (let msg of client.fetch(limited, { envelope: true, flags: true, internalDate: true, source: true }, { uid: true })) {
         const fromAddress = msg.envelope?.from?.[0]?.address || '';
         const subject = msg.envelope?.subject || '';
@@ -276,14 +275,13 @@ async function scanSendersEnvelope() {
   try {
     let lock = await client.getMailboxLock('INBOX');
     try {
-      let scanned = 0;
-      for await (let msg of client.fetch('*:1', { envelope: true }, { uid: true })) {
+      // get last N UIDs for discovery
+      const allUids = await client.search({ all: true });
+      const slice = (allUids || []).slice(-SCAN_RECENT);
+      for await (let msg of client.fetch(slice, { envelope: true }, { uid: true })) {
         const fromAddress = msg.envelope?.from?.[0]?.address || '';
-        const domain = (fromAddress.split('@')[1] || '').toLowerCase();
-        const channelId = domain || normalizeSenderId(fromAddress);
-        counts[channelId] = (counts[channelId] || 0) + 1;
-        scanned += 1;
-        if (scanned >= MAX_SENDER_SCAN) break;
+        const emailId = normalizeSenderId(fromAddress);
+        counts[emailId] = (counts[emailId] || 0) + 1;
       }
     } finally {
       lock.release();
@@ -296,8 +294,8 @@ async function scanSendersEnvelope() {
     if (!store.senders[id]) {
       store.senders[id] = {
         id,
-        display: `e-${id}`,
-        domain: id,
+        display: id,
+        domain: (id.split('@')[1] || '').toLowerCase(),
         logo: '/images/lab007 Icon.PNG',
         junk: false,
         favorite: false,

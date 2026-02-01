@@ -150,6 +150,8 @@
         .pill.active { border-color: var(--primary); color: var(--primary); }
         .status { color: var(--muted); font-size: 0.9rem; margin-top: 6px; }
         .flex { display: flex; gap: 8px; }
+        .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid #c3d0e8; border-top-color: #0a66c2; border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: text-bottom; margin-right: 6px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
         .mobile-hide { display: none !important; }
         .mobile-back { display: none; }
         @media (max-width: 960px) {
@@ -299,7 +301,7 @@
 
         async function loadChannels() {
             try {
-                senderStatus.textContent = 'Loading channels...';
+                senderStatus.innerHTML = '<span class="spinner"></span>Loading channels...';
                 const res = await fetch('/api/aimail/channels/refresh');
                 const json = await res.json();
                 data.senders = json.channels || [];
