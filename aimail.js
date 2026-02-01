@@ -15,7 +15,9 @@ const STORE_PATH = path.join(DATA_DIR, 'aimail-store.json');
 const POLL_SECONDS = parseInt(process.env.AIMAIL_POLL_SECONDS || '600', 10); // default 10 min
 
 function getImapConfig() {
-  const host = process.env.IMAP_MAIL_SERVER || process.env.IMPAP_MAIL_SERVER;
+  const host = process.env.IMAP_MAIL_SERVER
+    || process.env.IMAP_EMAIL_SERVER     // user-provided variant
+    || process.env.IMPAP_MAIL_SERVER;    // common typo
   const user = process.env.MY_EMAIL_ADDRESS;
   const pass = process.env.MY_EMAIL_PASSWORD;
   const port = parseInt(process.env.IMAP_MAIL_PORT || '993', 10);
