@@ -17,6 +17,7 @@ const SELF_ADDR = (process.env.MY_EMAIL_ADDRESS || '').toLowerCase();
 const MAX_MESSAGES = parseInt(process.env.AIMAIL_MAX_MESSAGES || `${Number.MAX_SAFE_INTEGER}`, 10);
 const MAX_FETCH_PER_CHANNEL = parseInt(process.env.AIMAIL_FETCH_MAX_PER_CHANNEL || `${Number.MAX_SAFE_INTEGER}`, 10);
 const MAX_SENDER_SCAN = parseInt(process.env.AIMAIL_SENDER_SCAN_MAX || `${Number.MAX_SAFE_INTEGER}`, 10);
+const SCAN_RECENT = parseInt(process.env.AIMAIL_SCAN_RECENT || '200', 10);
 const EMAIL_TOSCAN = (process.env.EMAIL_TOSCAN || '')
   .split(',')
   .map(s => s.trim().toLowerCase())
