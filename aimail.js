@@ -170,6 +170,18 @@ function upsertMessage({ fromAddress, subject, date, body, messageId, unread, im
   }
 }
 
+function envelopeMatchesTarget(env, target) {
+  const t = (target || '').toLowerCase();
+  if (!t) return false;
+  const addrs = [
+    ...(env.from || []),
+    ...(env.to || []),
+    ...(env.cc || []),
+    ...(env.bcc || [])
+  ].map(a => (a.address || '').toLowerCase());
+  return addrs.includes(t);
+}
+
 async function fetchMailboxOnce() {
   const cfg = getImapConfig();
   if (cfg.missing.length) {
@@ -229,6 +241,35 @@ async function fetchMessagesForSender(domainOrId) {
   if (!target) throw new Error('Empty target email');
   if (EMAIL_TOSCAN.length && !EMAIL_TOSCAN.includes(target)) throw new Error('Target not in EMAIL_TOSCAN allowlist');
   const messages = [];
+  const pushMessage = async (msg) => {
+    const fromAddress = msg.envelope?.from?.[0]?.address || '';
+    const subject = msg.envelope?.subject || '';
+    const date = msg.internalDate || new Date();
+    const unread = !msg.flags?.has('\\Seen');
+    let bodyText = '';
+    try {
+      const parsed = await simpleParser(msg.source);
+      bodyText = parsed.text || parsed.html || '';
+    } catch (e) {
+      bodyText = '';
+    }
+    if (bodyText.length > BODY_MAX_CHARS) bodyText = bodyText.slice(0, BODY_MAX_CHARS) + '…';
+    const msgId = msg.envelope?.messageId || `uid-${msg.uid}`;
+    messages.push({
+      id: msgId,
+      messageId: msgId,
+      from: fromAddress,
+      isMine: SELF_ADDR && fromAddress.toLowerCase() === SELF_ADDR,
+      subject: subject || '(no subject)',
+      date: date ? new Date(date).toISOString() : new Date().toISOString(),
+      body: bodyText || '',
+      mailbox: 'INBOX',
+      imapUid: msg.uid || null,
+      favorite: false,
+      unread
+    });
+  };
+
   try {
     let lock = await client.getMailboxLock('INBOX');
     try {
@@ -236,37 +277,24 @@ async function fetchMessagesForSender(domainOrId) {
       const uidsFrom = await client.search({ from: target }).catch(() => []);
       const uidsTo = await client.search({ to: target }).catch(() => []);
       const uidsCc = await client.search({ cc: target }).catch(() => []);
-      const uids = Array.from(new Set([...(uidsFrom || []), ...(uidsTo || []), ...(uidsCc || [])]));
+      let uids = Array.from(new Set([...(uidsFrom || []), ...(uidsTo || []), ...(uidsCc || [])]));
+
+      // Fallback: if none found, search all and filter envelope locally
+      if (!uids.length) {
+        const all = await client.search({ all: true }).catch(() => []);
+        uids = all;
+      }
+
       const limited = MAX_FETCH_PER_CHANNEL && MAX_FETCH_PER_CHANNEL !== Number.MAX_SAFE_INTEGER
         ? (uids || []).slice(-MAX_FETCH_PER_CHANNEL)
         : (uids || []);
-      for await (let msg of client.fetch(limited, { envelope: true, flags: true, internalDate: true, source: true }, { uid: true })) {
-        const fromAddress = msg.envelope?.from?.[0]?.address || '';
-        const subject = msg.envelope?.subject || '';
-        const date = msg.internalDate || new Date();
-        const unread = !msg.flags?.has('\\Seen');
-        let bodyText = '';
-        try {
-          const parsed = await simpleParser(msg.source);
-          bodyText = parsed.text || parsed.html || '';
-        } catch (e) {
-          bodyText = '';
+      const chunkSize = 200;
+      for (let i = 0; i < limited.length; i += chunkSize) {
+        const chunk = limited.slice(i, i + chunkSize);
+        for await (let msg of client.fetch(chunk, { envelope: true, flags: true, internalDate: true, source: true }, { uid: true })) {
+          if (!envelopeMatchesTarget(msg.envelope || {}, target)) continue;
+          await pushMessage(msg);
         }
-        if (bodyText.length > BODY_MAX_CHARS) bodyText = bodyText.slice(0, BODY_MAX_CHARS) + '…';
-        const msgId = msg.envelope?.messageId || `uid-${msg.uid}`;
-        messages.push({
-          id: msgId,
-          messageId: msgId,
-          from: fromAddress,
-          isMine: SELF_ADDR && fromAddress.toLowerCase() === SELF_ADDR,
-          subject: subject || '(no subject)',
-          date: date ? new Date(date).toISOString() : new Date().toISOString(),
-          body: bodyText || '',
-          mailbox: 'INBOX',
-          imapUid: msg.uid || null,
-          favorite: false,
-          unread
-        });
       }
     } finally {
       lock.release();
