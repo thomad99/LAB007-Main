@@ -15,7 +15,7 @@ const STORE_PATH = path.join(DATA_DIR, 'aimail-store.json');
 const LOGO_DIR = path.join(DATA_DIR, 'logos');
 const SELF_ADDR = (process.env.MY_EMAIL_ADDRESS || '').toLowerCase();
 const MAX_MESSAGES = parseInt(process.env.AIMAIL_MAX_MESSAGES || `${Number.MAX_SAFE_INTEGER}`, 10);
-const MAX_FETCH_PER_CHANNEL = parseInt(process.env.AIMAIL_FETCH_MAX_PER_CHANNEL || `${Number.MAX_SAFE_INTEGER}`, 10);
+const MAX_FETCH_PER_CHANNEL = parseInt(process.env.AIMAIL_FETCH_MAX_PER_CHANNEL || '2000', 10);
 const MAX_SENDER_SCAN = parseInt(process.env.AIMAIL_SENDER_SCAN_MAX || `${Number.MAX_SAFE_INTEGER}`, 10);
 const SCAN_RECENT = parseInt(process.env.AIMAIL_SCAN_RECENT || '200', 10);
 const EMAIL_TOSCAN = (process.env.EMAIL_TOSCAN || '')
@@ -50,7 +50,8 @@ function buildClient(cfg, method) {
     host: cfg.host,
     port: cfg.port,
     secure: cfg.secure,
-    auth: { user: cfg.user, pass: cfg.pass, method }
+    auth: { user: cfg.user, pass: cfg.pass, method },
+    socketTimeout: 60000
   });
 }
 
@@ -273,22 +274,14 @@ async function fetchMessagesForSender(domainOrId) {
   try {
     let lock = await client.getMailboxLock('INBOX');
     try {
-      // Do three searches and union results to avoid IMAP OR syntax issues
       const uidsFrom = await client.search({ from: target }).catch(() => []);
       const uidsTo = await client.search({ to: target }).catch(() => []);
       const uidsCc = await client.search({ cc: target }).catch(() => []);
-      let uids = Array.from(new Set([...(uidsFrom || []), ...(uidsTo || []), ...(uidsCc || [])]));
-
-      // Fallback: if none found, search all and filter envelope locally
-      if (!uids.length) {
-        const all = await client.search({ all: true }).catch(() => []);
-        uids = all;
-      }
-
+      const uids = Array.from(new Set([...(uidsFrom || []), ...(uidsTo || []), ...(uidsCc || [])]));
       const limited = MAX_FETCH_PER_CHANNEL && MAX_FETCH_PER_CHANNEL !== Number.MAX_SAFE_INTEGER
         ? (uids || []).slice(-MAX_FETCH_PER_CHANNEL)
         : (uids || []);
-      const chunkSize = 200;
+      const chunkSize = 20;
       for (let i = 0; i < limited.length; i += chunkSize) {
         const chunk = limited.slice(i, i + chunkSize);
         for await (let msg of client.fetch(chunk, { envelope: true, flags: true, internalDate: true, source: true }, { uid: true })) {
@@ -309,26 +302,30 @@ async function fetchMessagesForSender(domainOrId) {
 async function scanSendersEnvelope() {
   const cfg = getImapConfig();
   if (cfg.missing.length) throw new Error('IMAP env vars missing');
-  const client = (await authWithFallback(cfg)).client;
   const counts = {};
   const order = [...EMAIL_TOSCAN];
-  try {
-    let lock = await client.getMailboxLock('INBOX');
+  // If allowlist is provided, just seed those; skip IMAP scan to reduce load/timeouts
+  if (EMAIL_TOSCAN.length > 0) {
+    order.forEach((id) => { counts[id] = 0; });
+  } else {
+    const client = (await authWithFallback(cfg)).client;
     try {
-      const allUids = await client.search({ all: true });
-      const slice = (allUids || []).slice(-MAX_SENDER_SCAN);
-      for await (let msg of client.fetch(slice, { envelope: true }, { uid: true })) {
-        const fromAddress = msg.envelope?.from?.[0]?.address || '';
-        const emailId = normalizeSenderId(fromAddress);
-        if (EMAIL_TOSCAN.length && !EMAIL_TOSCAN.includes(emailId)) continue;
-        counts[emailId] = (counts[emailId] || 0) + 1;
-        if (!order.includes(emailId)) order.push(emailId);
+      let lock = await client.getMailboxLock('INBOX');
+      try {
+        const allUids = await client.search({ all: true });
+        const slice = (allUids || []).slice(-MAX_SENDER_SCAN);
+        for await (let msg of client.fetch(slice, { envelope: true }, { uid: true })) {
+          const fromAddress = msg.envelope?.from?.[0]?.address || '';
+          const emailId = normalizeSenderId(fromAddress);
+          counts[emailId] = (counts[emailId] || 0) + 1;
+          if (!order.includes(emailId)) order.push(emailId);
+        }
+      } finally {
+        lock.release();
       }
     } finally {
-      lock.release();
+      try { await client.logout(); } catch (_) {}
     }
-  } finally {
-    try { await client.logout(); } catch (_) {}
   }
   // merge into store metadata (respect order)
   order.forEach((id) => {
@@ -345,7 +342,6 @@ async function scanSendersEnvelope() {
       };
     }
     store.senders[id].total = total;
-    // update lastDate to keep sort usable
     const sender = store.senders[id];
     sender.lastDate = sender.emails.length
       ? Math.max(...sender.emails.map(e => new Date(e.date || 0).getTime()))
