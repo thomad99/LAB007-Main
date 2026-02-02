@@ -225,12 +225,16 @@ async function fetchMessagesForSender(domainOrId) {
   if (cfg.missing.length) throw new Error('IMAP env vars missing');
   const client = (await authWithFallback(cfg)).client;
   const target = domainOrId.toLowerCase();
-  const criteria = [['FROM', target]];
   const messages = [];
   try {
     let lock = await client.getMailboxLock('INBOX');
     try {
-      const uids = await client.search(criteria);
+      if (!target) throw new Error('Empty target email');
+      // Do three searches and union results to avoid IMAP OR syntax issues
+      const uidsFrom = await client.search(['FROM', target]);
+      const uidsTo = await client.search(['TO', target]);
+      const uidsCc = await client.search(['CC', target]);
+      const uids = Array.from(new Set([...(uidsFrom || []), ...(uidsTo || []), ...(uidsCc || [])]));
       const limited = MAX_FETCH_PER_CHANNEL && MAX_FETCH_PER_CHANNEL !== Number.MAX_SAFE_INTEGER
         ? (uids || []).slice(-MAX_FETCH_PER_CHANNEL)
         : (uids || []);
