@@ -224,16 +224,17 @@ async function fetchMessagesForSender(domainOrId) {
   const cfg = getImapConfig();
   if (cfg.missing.length) throw new Error('IMAP env vars missing');
   const client = (await authWithFallback(cfg)).client;
-  const target = domainOrId.toLowerCase();
+  const target = (domainOrId || '').toLowerCase().trim();
+  if (!target) throw new Error('Empty target email');
+  if (EMAIL_TOSCAN.length && !EMAIL_TOSCAN.includes(target)) throw new Error('Target not in EMAIL_TOSCAN allowlist');
   const messages = [];
   try {
     let lock = await client.getMailboxLock('INBOX');
     try {
-      if (!target) throw new Error('Empty target email');
       // Do three searches and union results to avoid IMAP OR syntax issues
-      const uidsFrom = await client.search(['FROM', target]);
-      const uidsTo = await client.search(['TO', target]);
-      const uidsCc = await client.search(['CC', target]);
+      const uidsFrom = await client.search({ from: target }).catch(() => []);
+      const uidsTo = await client.search({ to: target }).catch(() => []);
+      const uidsCc = await client.search({ cc: target }).catch(() => []);
       const uids = Array.from(new Set([...(uidsFrom || []), ...(uidsTo || []), ...(uidsCc || [])]));
       const limited = MAX_FETCH_PER_CHANNEL && MAX_FETCH_PER_CHANNEL !== Number.MAX_SAFE_INTEGER
         ? (uids || []).slice(-MAX_FETCH_PER_CHANNEL)
