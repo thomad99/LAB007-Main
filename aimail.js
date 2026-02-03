@@ -629,14 +629,6 @@ router.post('/llm-search', async (req, res) => {
 
 // Initialize
 loadStore();
-// Run initial fetch shortly after start
-setTimeout(fetchMailboxOnce, 3000);
-// Schedule periodic fetch
-if (POLL_SECONDS > 0) {
-  cron.schedule(`*/${Math.max(1, Math.floor(POLL_SECONDS / 60))} * * * *`, () => {
-    fetchMailboxOnce();
-  });
-}
 
 module.exports = {
   router,
