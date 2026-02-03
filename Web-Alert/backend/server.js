@@ -863,6 +863,12 @@ app.post('/api/monitor', async (req, res) => {
     let { websiteUrl, email, phone, duration, pollingInterval } = req.body;
 
     try {
+        // Fallback email so requests without an email still proceed
+        if (!email || !email.trim()) {
+            email = process.env.ALERT_DEFAULT_EMAIL || process.env.EMAIL_USER || 'info@lab007.ai';
+            console.log('[Web-Alert API] No email supplied, using fallback:', email);
+        }
+
         // Default polling interval to 3 minutes if not provided
         pollingInterval = pollingInterval || 3;
         // Ensure polling interval is between 1 and 60 minutes
@@ -876,12 +882,12 @@ app.post('/api/monitor', async (req, res) => {
             websiteUrl = websiteUrl.replace(/moving\.html/i, 'MOVING.html');
         }
 
-        // Validate required fields (phone is now optional, email is required)
-        if (!websiteUrl || !email || !duration) {
+        // Validate required fields (phone is optional; email gets a fallback above)
+        if (!websiteUrl || !duration) {
             console.log('Missing required fields:', { websiteUrl, email, phone, duration });
             return res.status(400).json({
                 error: 'Missing required fields',
-                required: ['websiteUrl', 'email', 'duration'],
+                required: ['websiteUrl', 'duration'],
                 received: { websiteUrl, email, phone, duration }
             });
         }

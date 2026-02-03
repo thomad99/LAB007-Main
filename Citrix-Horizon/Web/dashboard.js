@@ -2440,6 +2440,7 @@ function ingestGoldenSunJson(obj, fileName) {
     if (scriptOutput) scriptOutput.style.display = 'none';
 
     renderGoldenSunImages();
+    renderGoldenSunReport();
 }
 
 async function fetchGoldenSunFileList() {
@@ -2607,6 +2608,16 @@ function renderGoldenSunImages() {
     container.innerHTML = html;
 }
 
+function formatGoldenSunTimestamp(ts) {
+    if (!ts) return '';
+    const d = new Date(ts);
+    if (Number.isNaN(d.getTime())) return ts;
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const yy = String(d.getFullYear()).slice(-2);
+    return `${mm}${dd}${yy}`;
+}
+
 function setGoldenSunReportSort(mode) {
     goldenSunReportSort = mode;
     renderGoldenSunReport();
@@ -2644,12 +2655,20 @@ function renderGoldenSunReport() {
 
     if (status) status.textContent = `${rows.length} image(s) loaded. Sorted by ${goldenSunReportSort === 'date' ? 'Snapshot Date' : 'Name'}.`;
 
-    let html = '';
+    let html = `
+    <div style="display:grid;grid-template-columns:2fr 1.5fr 1fr;font-weight:700;border-bottom:1px solid #ddd;padding:6px 4px;margin-bottom:6px;">
+        <div>Image Name</div>
+        <div>Snapshot Name</div>
+        <div>Snapshot Timestamp</div>
+    </div>
+    `;
     rows.forEach(img => {
+        const ts = formatGoldenSunTimestamp(img.LatestSnapshotTimestamp);
         html += `
-        <div style="border:1px solid #ddd; border-radius:4px; padding:10px; margin-bottom:8px; background:#fff;">
-            <div style="font-weight:700;">${escapeHtml(img.Name || 'Unknown')}</div>
-            <div style="font-size:12px; color:#555;">Snapshot: ${escapeHtml(img.LatestSnapshotName || 'N/A')} ${img.LatestSnapshotTimestamp ? ' @ ' + escapeHtml(img.LatestSnapshotTimestamp) : ''}</div>
+        <div style="display:grid;grid-template-columns:2fr 1.5fr 1fr;gap:6px;border:1px solid #ddd;border-radius:4px;padding:8px;margin-bottom:6px;background:#fff;align-items:center;">
+            <div style="font-weight:600;overflow-wrap:anywhere;">${escapeHtml(img.Name || 'Unknown')}</div>
+            <div style="color:#555;overflow-wrap:anywhere;">${escapeHtml(img.LatestSnapshotName || 'N/A')}</div>
+            <div style="color:#333;">${ts ? escapeHtml(ts) : 'N/A'}</div>
         </div>
         `;
     });
