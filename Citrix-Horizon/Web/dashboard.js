@@ -20,6 +20,7 @@ let currentRoles = [];
 
 // GoldenSun (Prod/Test clone helper)
 let goldenSunImages = [];
+let goldenSunReportSort = 'name';
 let goldenSunSelectedImages = new Set();
 let goldenSunActiveTab = 'search';
 let goldenSunFileOptions = [];
@@ -134,12 +135,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         goldenSunActiveTab = tab;
         const clonePanel = document.getElementById('goldenSunClonePanel');
         const searchPanel = document.getElementById('goldenSunSearchPanel');
+        const reportPanel = document.getElementById('goldenSunReportPanel');
         const tabClone = document.getElementById('goldenSunTabClone');
         const tabSearch = document.getElementById('goldenSunTabSearch');
+        const tabReport = document.getElementById('goldenSunTabReport');
         if (clonePanel) clonePanel.style.display = tab === 'clone' ? 'block' : 'none';
         if (searchPanel) searchPanel.style.display = tab === 'search' ? 'block' : 'none';
+        if (reportPanel) reportPanel.style.display = tab === 'report' ? 'block' : 'none';
         if (tabClone) tabClone.classList.toggle('active', tab === 'clone');
         if (tabSearch) tabSearch.classList.toggle('active', tab === 'search');
+        if (tabReport) tabReport.classList.toggle('active', tab === 'report');
+        if (tab === 'report') renderGoldenSunReport();
     };
 
     // GoldenSun search generate
@@ -2558,7 +2564,9 @@ function normalizeGoldenSunImage(image) {
         Name: image.Name || image.VMName || image.vmName || image.Image || image.Master || image.ImageMachineName || 'Unknown',
         Cluster: image.Cluster || image.ClusterName || image.HostingUnitName || 'Unknown',
         Host: image.Host || image.HostName || 'Unknown',
-        Datastore: image.Datastore || image.DatastoreName || 'Unknown'
+        Datastore: image.Datastore || image.DatastoreName || 'Unknown',
+        LatestSnapshotName: image.LatestSnapshotName || image.Snapshot || image.SnapshotName || '',
+        LatestSnapshotTimestamp: image.LatestSnapshotTimestamp || image.SnapshotTimestamp || image.SnapshotCreated || image.SnapshotDate || ''
     };
 }
 
@@ -2587,6 +2595,9 @@ function renderGoldenSunImages() {
                         <div style="font-size: 12px; color: #666; margin-top: 2px;">
                             Cluster: ${escapeHtml(img.Cluster || 'Unknown')} | Host: ${escapeHtml(img.Host || 'Unknown')} | Datastore: ${escapeHtml(img.Datastore || 'Unknown')}
                         </div>
+                        <div style="font-size: 12px; color: #555; margin-top: 2px;">
+                            Snapshot: ${escapeHtml(img.LatestSnapshotName || 'N/A')}${img.LatestSnapshotTimestamp ? ' @ ' + escapeHtml(img.LatestSnapshotTimestamp) : ''}
+                        </div>
                     </div>
                 </label>
             </div>
@@ -2594,6 +2605,55 @@ function renderGoldenSunImages() {
     });
 
     container.innerHTML = html;
+}
+
+function setGoldenSunReportSort(mode) {
+    goldenSunReportSort = mode;
+    renderGoldenSunReport();
+}
+
+function renderGoldenSunReport() {
+    const container = document.getElementById('goldenSunReportList');
+    const status = document.getElementById('goldenSunReportStatus');
+    if (!container) return;
+    if (!goldenSunImages.length) {
+        container.innerHTML = '<p style="color:#666;">Load a Master Images JSON first.</p>';
+        if (status) status.textContent = '';
+        return;
+    }
+
+    const map = new Map();
+    goldenSunImages.forEach(img => {
+        const key = img.Name || 'Unknown';
+        if (!map.has(key)) {
+            map.set(key, img);
+        } else {
+            const existing = map.get(key);
+            const tNew = new Date(img.LatestSnapshotTimestamp || 0).getTime();
+            const tOld = new Date(existing.LatestSnapshotTimestamp || 0).getTime();
+            if (tNew > tOld) map.set(key, img);
+        }
+    });
+
+    let rows = Array.from(map.values());
+    if (goldenSunReportSort === 'date') {
+        rows.sort((a, b) => new Date(b.LatestSnapshotTimestamp || 0) - new Date(a.LatestSnapshotTimestamp || 0));
+    } else {
+        rows.sort((a, b) => (a.Name || '').localeCompare(b.Name || ''));
+    }
+
+    if (status) status.textContent = `${rows.length} image(s) loaded. Sorted by ${goldenSunReportSort === 'date' ? 'Snapshot Date' : 'Name'}.`;
+
+    let html = '';
+    rows.forEach(img => {
+        html += `
+        <div style="border:1px solid #ddd; border-radius:4px; padding:10px; margin-bottom:8px; background:#fff;">
+            <div style="font-weight:700;">${escapeHtml(img.Name || 'Unknown')}</div>
+            <div style="font-size:12px; color:#555;">Snapshot: ${escapeHtml(img.LatestSnapshotName || 'N/A')} ${img.LatestSnapshotTimestamp ? ' @ ' + escapeHtml(img.LatestSnapshotTimestamp) : ''}</div>
+        </div>
+        `;
+    });
+    container.innerHTML = html || '<p style="color:#666;">No images to display.</p>';
 }
 
 function toggleGoldenSunImage(name) {
@@ -2730,7 +2790,9 @@ function generateGoldenSunSearchScript() {
     scriptLines.push('    $cluster = ($vm | Get-Cluster | Select-Object -First 1).Name');
     scriptLines.push('    $vmHostName = ($vm | Get-VMHost | Select-Object -First 1).Name');
     scriptLines.push('    $ds = ($vm | Get-Datastore | Select-Object -First 1).Name');
-    scriptLines.push('    $snap = ($vm | Get-Snapshot | Sort-Object -Property Created -Descending | Select-Object -First 1).Name');
+    scriptLines.push('    $snapObj = ($vm | Get-Snapshot | Sort-Object -Property Created -Descending | Select-Object -First 1)');
+    scriptLines.push('    $snap = $snapObj.Name');
+    scriptLines.push('    $snapCreated = $snapObj.Created');
     scriptLines.push('    $item = [PSCustomObject]@{');
     scriptLines.push('        Name = $vm.Name');
     scriptLines.push('        Cluster = $cluster');
@@ -2740,6 +2802,7 @@ function generateGoldenSunSearchScript() {
     scriptLines.push('        MemoryGB = [math]::Round($vm.MemoryGB,2)');
     scriptLines.push('        ProvisionedSpaceGB = [math]::Round($vm.ProvisionedSpaceGB,2)');
     scriptLines.push('        LatestSnapshotName = $snap');
+    scriptLines.push('        LatestSnapshotTimestamp = $snapCreated');
     scriptLines.push('    }');
     scriptLines.push('    $results += $item');
     scriptLines.push('}');

@@ -43,6 +43,7 @@ process.on('unhandledRejection', (reason, promise) => {
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 
 // Store active monitoring tasks
@@ -2093,43 +2094,16 @@ app.post('/api/clear-history', async (req, res) => {
     try {
         console.log('Clearing completed monitoring jobs...');
 
-        // Delete completed alerts
-        const deletedAlerts = await db.query(`
-            DELETE FROM alerts_history 
-            WHERE email_sent = true 
-            AND sms_sent = true
-            RETURNING id
-        `);
+        const deletedAlerts = await db.query(`DELETE FROM alerts_history RETURNING id`);
+        const deletedSubscribers = await db.query(`DELETE FROM alert_subscribers RETURNING id`);
+        const deletedUrls = await db.query(`DELETE FROM monitored_urls RETURNING id`);
 
-        // Delete completed subscribers (those that have expired)
-        const deletedSubscribers = await db.query(`
-            DELETE FROM alert_subscribers 
-            WHERE is_active = false 
-            AND created_at + (polling_duration || ' minutes')::interval < NOW()
-            AND NOT EXISTS (
-                SELECT 1 
-                FROM alerts_history 
-                WHERE alerts_history.subscriber_id = alert_subscribers.id
-            )
-            RETURNING id
-        `);
-
-        // Delete completed URLs (those with no active subscribers and expired)
-        const deletedUrls = await db.query(`
-            DELETE FROM monitored_urls 
-            WHERE is_active = false 
-            AND NOT EXISTS (
-                SELECT 1 
-                FROM alert_subscribers 
-                WHERE alert_subscribers.url_id = monitored_urls.id
-                AND alert_subscribers.is_active = true
-                AND NOW() < alert_subscribers.created_at + (alert_subscribers.polling_duration || ' minutes')::interval
-            )
-            RETURNING id
-        `);
+        // Clear in-memory tasks
+        monitoringTasks.forEach((task) => task.stop());
+        monitoringTasks.clear();
 
         res.json({
-            message: 'Completed monitoring jobs cleared successfully',
+            message: 'All monitoring jobs and history cleared',
             deletedCounts: {
                 alerts: deletedAlerts.rows.length,
                 subscribers: deletedSubscribers.rows.length,

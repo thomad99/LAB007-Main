@@ -702,6 +702,22 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Image Report Tab -->
+            <div id="goldenSunReportPanel" class="horizon-task-panel" style="display: none;">
+                <h3>Image Report</h3>
+                <p style="color:#666;">Load the master images JSON and view snapshot timestamps. Sorted by name (A-Z) by default.</p>
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;">
+                    <button class="btn btn-secondary" onclick="openGoldenSunFileDialog()">Load JSON</button>
+                    <span id="goldenSunReportStatus" style="color:#666;"></span>
+                    <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+                        <label style="font-weight:600;">Sort:</label>
+                        <button class="btn btn-sm" onclick="setGoldenSunReportSort('name')">Name</button>
+                        <button class="btn btn-sm" onclick="setGoldenSunReportSort('date')">Snapshot Date</button>
+                    </div>
+                </div>
+                <div id="goldenSunReportList" style="max-height:400px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:10px; background:#f8f9fa;"></div>
+            </div>
         </div>
     </div>
 
@@ -715,6 +731,7 @@
             <div style="border-bottom: 2px solid #ddd; margin-bottom: 20px; display: flex; gap: 10px; justify-content: flex-start;">
                 <button class="task-tab active" id="goldenSunTabSearch" onclick="showGoldenSunTab('search')">Build Master List</button>
                 <button class="task-tab" id="goldenSunTabClone" onclick="showGoldenSunTab('clone')">Clone Master Images</button>
+                <button class="task-tab" id="goldenSunTabReport" onclick="showGoldenSunTab('report')">Image Report</button>
             </div>
 
             <!-- Clone Tab -->

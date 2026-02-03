@@ -207,7 +207,7 @@
                 <h1 style="margin:0;">Web-Alert Configuration</h1>
                 <a href="/webalert/status.html" style="font-weight:700;color:#007bff;text-decoration:none;">Monitor all jobs</a>
             </div>
-            <form id="alertForm" method="post" onsubmit="return false;">
+            <form id="alertForm" method="post" action="/webalert/api/monitor">
                 <div class="form-group">
                     <label for="websiteUrl">Website Link:</label>
                     <input type="url" id="websiteUrl" name="websiteUrl" class="form-control" required 
