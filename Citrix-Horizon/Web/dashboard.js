@@ -2608,16 +2608,6 @@ function renderGoldenSunImages() {
     container.innerHTML = html;
 }
 
-function formatGoldenSunTimestamp(ts) {
-    if (!ts) return '';
-    const d = new Date(ts);
-    if (Number.isNaN(d.getTime())) return ts;
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    const yy = String(d.getFullYear()).slice(-2);
-    return `${mm}${dd}${yy}`;
-}
-
 function setGoldenSunReportSort(mode) {
     goldenSunReportSort = mode;
     renderGoldenSunReport();
@@ -2663,12 +2653,11 @@ function renderGoldenSunReport() {
     </div>
     `;
     rows.forEach(img => {
-        const ts = formatGoldenSunTimestamp(img.LatestSnapshotTimestamp);
         html += `
         <div style="display:grid;grid-template-columns:2fr 1.5fr 1fr;gap:6px;border:1px solid #ddd;border-radius:4px;padding:8px;margin-bottom:6px;background:#fff;align-items:center;">
             <div style="font-weight:600;overflow-wrap:anywhere;">${escapeHtml(img.Name || 'Unknown')}</div>
             <div style="color:#555;overflow-wrap:anywhere;">${escapeHtml(img.LatestSnapshotName || 'N/A')}</div>
-            <div style="color:#333;">${ts ? escapeHtml(ts) : 'N/A'}</div>
+            <div style="color:#333;">${img.LatestSnapshotTimestamp ? escapeHtml(img.LatestSnapshotTimestamp) : 'N/A'}</div>
         </div>
         `;
     });
@@ -2799,8 +2788,18 @@ function generateGoldenSunSearchScript() {
     scriptLines.push('');
     scriptLines.push('$results = @()');
     scriptLines.push('foreach ($name in $vmNames) {');
-    scriptLines.push('    Write-Host "Collecting VM: $name" -ForegroundColor Cyan');
-    scriptLines.push('    $vm = Get-VM -Name $name -ErrorAction SilentlyContinue');
+    scriptLines.push('    Write-Host "Collecting VM (highest version): $name" -ForegroundColor Cyan');
+    scriptLines.push('    $escaped = [regex]::Escape($name)');
+    scriptLines.push('    $vm = Get-VM -Name "$name*" -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "^${escaped}[Vv](\\d+)$" } | Sort-Object @{');
+    scriptLines.push('        Expression = {');
+    scriptLines.push('            $m = [regex]::Match($_.Name, "^${escaped}[Vv](\\d+)$");');
+    scriptLines.push('            if ($m.Success) { [int]$m.Groups[1].Value } else { 0 }');
+    scriptLines.push('        };');
+    scriptLines.push('        Descending = $true');
+    scriptLines.push('    } | Select-Object -First 1');
+    scriptLines.push('    if (-not $vm) {');
+    scriptLines.push('        $vm = Get-VM -Name $name -ErrorAction SilentlyContinue');
+    scriptLines.push('    }');
     scriptLines.push('    if (-not $vm) {');
     scriptLines.push('        Write-Warning "VM not found: $name"');
     scriptLines.push('        continue');
@@ -2811,7 +2810,7 @@ function generateGoldenSunSearchScript() {
     scriptLines.push('    $ds = ($vm | Get-Datastore | Select-Object -First 1).Name');
     scriptLines.push('    $snapObj = ($vm | Get-Snapshot | Sort-Object -Property Created -Descending | Select-Object -First 1)');
     scriptLines.push('    $snap = $snapObj.Name');
-    scriptLines.push('    $snapCreated = if ($snapObj) { $snapObj.Created.ToString("MMddyy") } else { "" }');
+    scriptLines.push('    $snapCreated = if ($snapObj) { $snapObj.Created.ToString("yyyy-MM-dd HH:mm") } else { "" }');
     scriptLines.push('    $item = [PSCustomObject]@{');
     scriptLines.push('        Name = $vm.Name');
     scriptLines.push('        Cluster = $cluster');
