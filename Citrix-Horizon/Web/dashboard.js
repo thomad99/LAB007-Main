@@ -2811,7 +2811,7 @@ function generateGoldenSunSearchScript() {
     scriptLines.push('    $ds = ($vm | Get-Datastore | Select-Object -First 1).Name');
     scriptLines.push('    $snapObj = ($vm | Get-Snapshot | Sort-Object -Property Created -Descending | Select-Object -First 1)');
     scriptLines.push('    $snap = $snapObj.Name');
-    scriptLines.push('    $snapCreated = $snapObj.Created');
+    scriptLines.push('    $snapCreated = if ($snapObj) { $snapObj.Created.ToString("MMddyy") } else { "" }');
     scriptLines.push('    $item = [PSCustomObject]@{');
     scriptLines.push('        Name = $vm.Name');
     scriptLines.push('        Cluster = $cluster');

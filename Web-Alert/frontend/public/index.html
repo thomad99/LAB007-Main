@@ -215,7 +215,7 @@
                 </div>
                 <div class="form-group">
                     <label for="email">Email Address (Required)</label>
-                    <input type="email" class="form-control" id="email" required>
+                    <input type="email" class="form-control" id="email" name="email" required>
                 </div>
                 <div class="form-group">
                     <label for="pollingInterval">Polling Interval (minutes):</label>
@@ -241,7 +241,49 @@
         </div>
     </div>
     
-    <script src="src/js/utils.js"></script>
-    <script src="src/js/main.js"></script>
+    <script>
+    (function() {
+        const form = document.getElementById('alertForm');
+        const statusBox = document.getElementById('statusContent');
+        if (!form) return;
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (statusBox) statusBox.textContent = 'Starting monitor...';
+
+            const websiteUrl = document.getElementById('websiteUrl')?.value || '';
+            const email = document.getElementById('email')?.value || '';
+            const pollingInterval = document.getElementById('pollingInterval')?.value || '3';
+            const duration = document.getElementById('duration')?.value || '10';
+
+            try {
+                const res = await fetch('/webalert/api/monitor', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ websiteUrl, email, pollingInterval, duration })
+                });
+                const data = await res.json();
+                if (res.ok) {
+                    if (statusBox) {
+                        statusBox.innerHTML = `
+                            <div style="color: #155724; font-weight: 600;">Job started.</div>
+                            <div style="font-size: 14px; color: #333;">
+                                URL: ${websiteUrl}<br>
+                                Email: ${email || 'info@lab007.ai'}<br>
+                                Interval: ${pollingInterval} min<br>
+                                Duration: ${duration} min
+                            </div>
+                        `;
+                    }
+                } else {
+                    if (statusBox) statusBox.textContent = data?.error || 'Failed to start monitor';
+                }
+            } catch (err) {
+                if (statusBox) statusBox.textContent = 'Failed to start monitor';
+                console.error('Monitor start error:', err);
+            }
+        });
+    })();
+    </script>
 </body>
 </html> 
