@@ -466,7 +466,34 @@ try {
     $rebootCount = 0
 
     do {
-        $result = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $true,$false
+        $installError = $null
+        try {
+            $result = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $true,$false
+        } catch {
+            $installError = $_.Exception.Message
+            $result = $null
+        }
+
+        if ($installError) {
+            Write-Warning "[$ComputerName] Install attempt failed: $installError"
+            $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                -Title "Install failed" `
+                -Text "$ComputerName - Install attempt failed: $installError" `
+                -Level "warning" `
+                -Computer $env:COMPUTERNAME
+            break
+        }
+
+        if (-not $result) {
+            Write-Warning "[$ComputerName] Install returned no result; aborting to avoid hang."
+            $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                -Title "Install inconclusive" `
+                -Text "$ComputerName - Install returned no result; stopping to avoid hang." `
+                -Level "warning" `
+                -Computer $env:COMPUTERNAME
+            break
+        }
+
         $result | Format-List
 
         if ($result.Action -eq "Installed") {
