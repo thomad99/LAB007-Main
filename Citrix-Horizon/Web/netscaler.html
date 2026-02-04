@@ -8,6 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
     <style>
         body {
             font-family: 'Poppins', Arial, sans-serif;
@@ -129,7 +130,7 @@
         <div class="card">
             <h2>Upload ns.conf</h2>
             <p>Drop a NetScaler <code>ns.conf</code> file to get a quick overview and a generated diagram of vServers and services.</p>
-            <input type="file" id="nsFile" accept=".conf,.txt">
+            <input type="file" id="nsFile" accept=".conf,.txt,.tgz,.tar.gz,.tar">
             <div id="status"></div>
         </div>
 
@@ -162,14 +163,38 @@
     nsFile.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        setStatus('Reading file...');
-        const text = await file.text();
-        setStatus('Parsing config...');
-        const parsed = parseNsConf(text);
-        renderSummary(parsed);
-        renderDetails(parsed);
-        renderDiagram(parsed);
-        setStatus(`Analyzed ${file.name}`);
+        try {
+            setStatus('Reading file...');
+            const name = (file.name || '').toLowerCase();
+            let text = '';
+
+            if (name.endsWith('.conf') || name.endsWith('.txt')) {
+                text = await file.text();
+            } else if (name.endsWith('.tgz') || name.endsWith('.tar.gz') || name.endsWith('.tar')) {
+                const buffer = await file.arrayBuffer();
+                let tarBytes = new Uint8Array(buffer);
+                if (!name.endsWith('.tar')) {
+                    setStatus('Decompressing tgz...');
+                    tarBytes = pako.ungzip(tarBytes);
+                }
+                setStatus('Extracting ns.conf from archive...');
+                const confBytes = extractFileFromTar(tarBytes, 'ns.conf');
+                if (!confBytes) throw new Error('ns.conf not found in archive');
+                text = new TextDecoder().decode(confBytes);
+            } else {
+                throw new Error('Unsupported file type. Please use ns.conf or tgz/tar.gz');
+            }
+
+            setStatus('Parsing config...');
+            const parsed = parseNsConf(text);
+            renderSummary(parsed);
+            renderDetails(parsed);
+            renderDiagram(parsed);
+            setStatus(`Analyzed ${file.name}`);
+        } catch (err) {
+            console.error(err);
+            setStatus(`Error: ${err.message || err}`);
+        }
     });
 
     function setStatus(msg) {
@@ -228,6 +253,27 @@
         }
 
         return { lbVservers, services, binds, vpnVservers, certKeys, dnsServers, ldapActions, servers };
+    }
+
+    function extractFileFromTar(bytes, targetName) {
+        const dec = new TextDecoder();
+        const block = 512;
+        let offset = 0;
+        while (offset + block <= bytes.length) {
+            const header = bytes.slice(offset, offset + block);
+            const name = dec.decode(header.slice(0, 100)).replace(/\0.*$/, '');
+            if (!name) break;
+            const sizeOct = dec.decode(header.slice(124, 136)).replace(/\0.*$/, '').trim();
+            const size = parseInt(sizeOct, 8) || 0;
+            const dataStart = offset + block;
+            const dataEnd = dataStart + size;
+            if (name.toLowerCase().endsWith(targetName.toLowerCase()) || name === targetName) {
+                return bytes.slice(dataStart, dataEnd);
+            }
+            const padded = Math.ceil(size / block) * block;
+            offset = dataStart + padded;
+        }
+        return null;
     }
 
     function renderSummary(data) {
