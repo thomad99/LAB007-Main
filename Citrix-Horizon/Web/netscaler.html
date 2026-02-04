@@ -144,14 +144,40 @@
                 <div class="stat"><div class="stat-title">DNS Servers</div><div class="stat-value" id="dnsCount">0</div></div>
                 <div class="stat"><div class="stat-title">LDAP/AD Actions</div><div class="stat-value" id="ldapCount">0</div></div>
             </div>
-            <pre id="details"></pre>
         </div>
 
-        <div class="card">
-            <h2>Diagram</h2>
-            <p style="margin-bottom:8px;">LB vServers linked to bound services.</p>
-            <div id="mermaidContainer">
-                <div id="mermaidGraph"></div>
+        <div class="grid" id="detailCards" style="grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap:12px;">
+            <div class="card"><h2>Load Balance vServers</h2><div id="lbList" class="list"></div></div>
+            <div class="card"><h2>Services</h2><div id="svcList" class="list"></div></div>
+            <div class="card"><h2>LB Bindings</h2><div id="bindList" class="list"></div></div>
+            <div class="card"><h2>VPN vServers</h2><div id="vpnList" class="list"></div></div>
+            <div class="card"><h2>Cert Keys</h2><div id="certList" class="list"></div></div>
+            <div class="card"><h2>DNS Servers</h2><div id="dnsList" class="list"></div></div>
+            <div class="card"><h2>LDAP/AD Actions</h2><div id="ldapList" class="list"></div></div>
+            <div class="card"><h2>Servers</h2><div id="serverList" class="list"></div></div>
+        </div>
+
+        <div class="grid" style="grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap:12px;">
+            <div class="card">
+                <h2>LB → Services</h2>
+                <p style="margin-bottom:8px;">Load balancer vServers linked to bound services.</p>
+                <div id="mermaidContainerLB">
+                    <div id="mermaidGraphLB"></div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>VPN vServers</h2>
+                <p style="margin-bottom:8px;">Gateway endpoints.</p>
+                <div id="mermaidContainerVPN">
+                    <div id="mermaidGraphVPN"></div>
+                </div>
+            </div>
+            <div class="card">
+                <h2>Services by Backend</h2>
+                <p style="margin-bottom:8px;">Services grouped by backend IP.</p>
+                <div id="mermaidContainerSvc">
+                    <div id="mermaidGraphSvc"></div>
+                </div>
             </div>
         </div>
     </div>
@@ -189,7 +215,7 @@
             const parsed = parseNsConf(text);
             renderSummary(parsed);
             renderDetails(parsed);
-            renderDiagram(parsed);
+            renderDiagrams(parsed);
             setStatus(`Analyzed ${file.name}`);
         } catch (err) {
             console.error(err);
@@ -290,33 +316,30 @@
     }
 
     function renderDetails(data) {
-        const detailEl = document.getElementById('details');
-        if (!detailEl) return;
-        const lines = [];
-        lines.push('--- Load Balancing vServers ---');
-        data.lbVservers.forEach(v => lines.push(`- ${v.name} (${v.proto}) ${v.ip}:${v.port}`));
-        lines.push('');
-        lines.push('--- Services ---');
-        data.services.forEach(s => lines.push(`- ${s.name} (${s.proto}) ${s.ip}:${s.port}`));
-        lines.push('');
-        lines.push('--- LB Bindings ---');
-        data.binds.forEach(b => lines.push(`- ${b.lb} -> ${b.svc}`));
-        lines.push('');
-        lines.push('--- VPN vServers ---');
-        data.vpnVservers.forEach(v => lines.push(`- ${v.name} (${v.proto}) ${v.ip}:${v.port}`));
-        lines.push('');
-        lines.push('--- Cert Keys ---');
-        data.certKeys.forEach(c => lines.push(`- ${c.name}`));
-        lines.push('');
-        lines.push('--- DNS Servers ---');
-        data.dnsServers.forEach(d => lines.push(`- ${d}`));
-        lines.push('');
-        lines.push('--- LDAP/AD Actions ---');
-        data.ldapActions.forEach(a => lines.push(`- ${a.name}`));
-        detailEl.textContent = lines.join('\n');
+        renderList('lbList', data.lbVservers.map(v => `${v.name} (${v.proto}) ${v.ip}:${v.port}`));
+        renderList('svcList', data.services.map(s => `${s.name} (${s.proto}) ${s.ip}:${s.port}`));
+        renderList('bindList', data.binds.map(b => `${b.lb} ➜ ${b.svc}`));
+        renderList('vpnList', data.vpnVservers.map(v => `${v.name} (${v.proto}) ${v.ip}:${v.port}`));
+        renderList('certList', data.certKeys.map(c => c.name));
+        renderList('dnsList', data.dnsServers);
+        renderList('ldapList', data.ldapActions.map(a => a.name));
+        renderList('serverList', data.servers.map(s => `${s.name} (${s.ip})`));
     }
 
-    function renderDiagram(data) {
+    function renderList(id, items) {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (!items || !items.length) { el.innerHTML = '<div style="color:#94a3b8;">None</div>'; return; }
+        el.innerHTML = items.map(t => `<div style="padding:6px 8px; border:1px solid #1f2937; border-radius:6px; margin-bottom:6px; background:#0b1224;">${escapeHtml(t)}</div>`).join('');
+    }
+
+    function renderDiagrams(data) {
+        renderLbDiagram(data);
+        renderVpnDiagram(data);
+        renderSvcByBackendDiagram(data);
+    }
+
+    function renderLbDiagram(data) {
         const lines = ['flowchart TD'];
         const nodeSet = new Set();
         const addNode = (id, label) => {
@@ -341,12 +364,54 @@
             lines.push(`${lbId} --> ${svcId}`);
         });
 
-        const mermaidText = lines.join('\n');
-        const container = document.getElementById('mermaidGraph');
+        renderMermaid('mermaidGraphLB', 'nsDiagramLB', lines);
+    }
+
+    function renderVpnDiagram(data) {
+        const lines = ['flowchart TD'];
+        const nodeSet = new Set();
+        data.vpnVservers.forEach(v => {
+            const id = cleanId(`vpn_${v.name}`);
+            if (!nodeSet.has(id)) {
+                nodeSet.add(id);
+                lines.push(`${id}["VPN: ${v.name}\\n${v.ip}:${v.port}\\n${v.proto}"]`);
+            }
+        });
+        renderMermaid('mermaidGraphVPN', 'nsDiagramVPN', lines);
+    }
+
+    function renderSvcByBackendDiagram(data) {
+        const lines = ['flowchart TD'];
+        const nodeSet = new Set();
+        const addNode = (id, label) => {
+            if (nodeSet.has(id)) return;
+            nodeSet.add(id);
+            lines.push(`${id}["${label.replace(/"/g, '\\"')}"]`);
+        };
+        // services keyed by backend IP: show svc -> backend
+        data.services.forEach(svc => {
+            const svcId = cleanId(`svc_${svc.name}`);
+            addNode(svcId, `SVC: ${svc.name}\\n${svc.ip}:${svc.port}\\n${svc.proto}`);
+            if (svc.ip) {
+                const backendId = cleanId(`be_${svc.ip}`);
+                addNode(backendId, `Backend: ${svc.ip}`);
+                lines.push(`${svcId} --> ${backendId}`);
+            }
+        });
+        renderMermaid('mermaidGraphSvc', 'nsDiagramSvc', lines);
+    }
+
+    function renderMermaid(targetId, diagId, lines) {
+        const container = document.getElementById(targetId);
         if (!container) return;
+        if (!lines || lines.length <= 1) {
+            container.innerHTML = '<pre style="color:#94a3b8;">No data</pre>';
+            return;
+        }
+        const mermaidText = lines.join('\n');
         container.innerHTML = '';
         try {
-            mermaid.render('nsDiagram', mermaidText, (svgCode) => {
+            mermaid.render(diagId, mermaidText, (svgCode) => {
                 container.innerHTML = svgCode;
             });
         } catch (err) {
