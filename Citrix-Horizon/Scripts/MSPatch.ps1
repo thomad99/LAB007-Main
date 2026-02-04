@@ -23,6 +23,12 @@ param(
     [Parameter(Mandatory=$false)]
     [System.Management.Automation.PSCredential]$Credential,
 
+[Parameter(Mandatory=$false)]
+[string]$CredentialPath = "$PSScriptRoot\MSPatch.cred.xml",
+
+[Parameter(Mandatory=$false)]
+[switch]$SaveCredential,
+
 # WinRM / transport
 [Parameter(Mandatory=$false)]
 [ValidateSet('Default','Negotiate','Kerberos','Basic','Credssp')]
@@ -194,7 +200,26 @@ function Wait-ForWinRMReboot {
 }
 
 if (-not $Credential) {
+    if (Test-Path -LiteralPath $CredentialPath) {
+        try {
+            $Credential = Import-Clixml -LiteralPath $CredentialPath
+            Write-Host ("[{0}] Using saved credential from {1} (user: {2})" -f (Get-Date), $CredentialPath, $Credential.UserName) -ForegroundColor Cyan
+        } catch {
+            Write-Warning "Failed to load saved credential from $CredentialPath : $($_.Exception.Message)"
+        }
+    }
+}
+
+if (-not $Credential) {
     $Credential = Get-Credential
+    if ($SaveCredential) {
+        try {
+            $Credential | Export-Clixml -LiteralPath $CredentialPath -Force
+            Write-Host ("[{0}] Credential saved (DPAPI protected) to {1}" -f (Get-Date), $CredentialPath) -ForegroundColor Yellow
+        } catch {
+            Write-Warning "Failed to save credential to $CredentialPath : $($_.Exception.Message)"
+        }
+    }
 }
 Write-Host ("[{0}] Using credential user: {1}" -f (Get-Date), $Credential.UserName) -ForegroundColor Cyan
 Write-Host ("[{0}] WinRM auth: {1}  UseSSL: {2}" -f (Get-Date), $WinRMAuthentication, $UseSSL) -ForegroundColor Cyan
@@ -320,6 +345,10 @@ $UpdateScript = {
         throw "PSWindowsUpdate module not found on this server. Copy it into C:\Program Files\WindowsPowerShell\Modules\PSWindowsUpdate\"
     }
     Import-Module PSWindowsUpdate -Force
+
+    # Prep the box for Microsoft Update over remoting (workgroup-friendly)
+    try { Add-WUServiceManager -MicrosoftUpdate -Confirm:$false -ErrorAction SilentlyContinue } catch { Write-Verbose "Add-WUServiceManager: $($_.Exception.Message)" }
+    try { Enable-WURemoting -Confirm:$false -ErrorAction SilentlyContinue } catch { Write-Verbose "Enable-WURemoting: $($_.Exception.Message)" }
 
     # Ensure Windows Update service is enabled and running
     Start-WuauservIfNeeded

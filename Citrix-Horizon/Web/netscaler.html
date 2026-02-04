@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NetScaler Config Analyzer</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+        body {
+            font-family: 'Poppins', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #0f172a;
+            color: #e2e8f0;
+        }
+        header {
+            background: #111827;
+            padding: 16px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid #1f2937;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-weight: 700;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 24px auto;
+            padding: 0 16px 40px;
+        }
+        .card {
+            background: #111827;
+            border: 1px solid #1f2937;
+            border-radius: 10px;
+            padding: 18px;
+            margin-bottom: 18px;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+        }
+        .card h2 {
+            margin: 0 0 6px 0;
+            font-size: 18px;
+            color: #f9fafb;
+        }
+        .card p {
+            margin: 0 0 10px 0;
+            color: #cbd5e1;
+            font-size: 14px;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #0ea5e9;
+            border: none;
+            color: #0b1020;
+            font-weight: 700;
+            padding: 10px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            text-decoration: none;
+        }
+        .btn:hover { background: #38bdf8; }
+        input[type="file"] {
+            padding: 10px;
+            border: 1px dashed #334155;
+            border-radius: 8px;
+            background: #0b1224;
+            color: #e2e8f0;
+            width: 100%;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 12px;
+        }
+        .stat {
+            background: #0b1224;
+            border: 1px solid #1f2937;
+            border-radius: 10px;
+            padding: 12px;
+        }
+        .stat-title { color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-value { color: #f8fafc; font-weight: 700; font-size: 20px; }
+        #status {
+            margin-top: 8px;
+            color: #fbbf24;
+            font-size: 14px;
+        }
+        #mermaidContainer {
+            background: #0b1224;
+            border: 1px solid #1f2937;
+            border-radius: 10px;
+            padding: 12px;
+            overflow-x: auto;
+        }
+        #mermaidGraph {
+            min-height: 240px;
+        }
+        pre {
+            background: #0b1224;
+            border: 1px solid #1f2937;
+            padding: 12px;
+            border-radius: 10px;
+            overflow-x: auto;
+            color: #e5e7eb;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="brand">
+            <img src="images/LAB007-LOGO-GOLD.png" alt="LAB007" style="height:32px;width:auto;">
+            <span>NetScaler Config Analyzer</span>
+        </div>
+        <a class="btn" href="/citrix/index.html">Back to HZ</a>
+    </header>
+    <div class="container">
+        <div class="card">
+            <h2>Upload ns.conf</h2>
+            <p>Drop a NetScaler <code>ns.conf</code> file to get a quick overview and a generated diagram of vServers and services.</p>
+            <input type="file" id="nsFile" accept=".conf,.txt">
+            <div id="status"></div>
+        </div>
+
+        <div class="card">
+            <h2>Summary</h2>
+            <div class="grid" id="summaryGrid">
+                <div class="stat"><div class="stat-title">LB vServers</div><div class="stat-value" id="lbCount">0</div></div>
+                <div class="stat"><div class="stat-title">Services</div><div class="stat-value" id="svcCount">0</div></div>
+                <div class="stat"><div class="stat-title">Gateways (VPN)</div><div class="stat-value" id="vpnCount">0</div></div>
+                <div class="stat"><div class="stat-title">Cert Keys</div><div class="stat-value" id="certCount">0</div></div>
+                <div class="stat"><div class="stat-title">DNS Servers</div><div class="stat-value" id="dnsCount">0</div></div>
+                <div class="stat"><div class="stat-title">LDAP/AD Actions</div><div class="stat-value" id="ldapCount">0</div></div>
+            </div>
+            <pre id="details"></pre>
+        </div>
+
+        <div class="card">
+            <h2>Diagram</h2>
+            <p style="margin-bottom:8px;">LB vServers linked to bound services.</p>
+            <div id="mermaidContainer">
+                <div id="mermaidGraph"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'dark' });
+
+    const nsFile = document.getElementById('nsFile');
+    nsFile.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        setStatus('Reading file...');
+        const text = await file.text();
+        setStatus('Parsing config...');
+        const parsed = parseNsConf(text);
+        renderSummary(parsed);
+        renderDetails(parsed);
+        renderDiagram(parsed);
+        setStatus(`Analyzed ${file.name}`);
+    });
+
+    function setStatus(msg) {
+        const el = document.getElementById('status');
+        if (el) el.textContent = msg;
+    }
+
+    function parseNsConf(text) {
+        const lbVservers = [];
+        const services = [];
+        const binds = [];
+        const vpnVservers = [];
+        const certKeys = [];
+        const dnsServers = [];
+        const ldapActions = [];
+        const servers = [];
+
+        const lines = text.split(/\r?\n/);
+        for (const lineRaw of lines) {
+            const line = lineRaw.trim();
+            if (!line || line.startsWith('#')) continue;
+
+            let m;
+            if ((m = line.match(/add\s+lb\s+vserver\s+(\S+)\s+(\S+)\s+([\d\.]+)\s+(\d+)/i))) {
+                lbVservers.push({ name: m[1], proto: m[2], ip: m[3], port: m[4] });
+                continue;
+            }
+            if ((m = line.match(/add\s+service\s+(\S+)\s+(\S+)\s+([\d\.]+)\s+(\d+)/i))) {
+                services.push({ name: m[1], proto: m[2], ip: m[3], port: m[4] });
+                continue;
+            }
+            if ((m = line.match(/add\s+server\s+(\S+)\s+([\d\.]+)/i))) {
+                servers.push({ name: m[1], ip: m[2] });
+                continue;
+            }
+            if ((m = line.match(/bind\s+lb\s+vserver\s+(\S+)\s+(\S+)/i))) {
+                binds.push({ lb: m[1], svc: m[2] });
+                continue;
+            }
+            if ((m = line.match(/add\s+vpn\s+vserver\s+(\S+)\s+(\S+)\s+([\d\.]+)\s+(\d+)/i))) {
+                vpnVservers.push({ name: m[1], proto: m[2], ip: m[3], port: m[4] });
+                continue;
+            }
+            if ((m = line.match(/add\s+ssl\s+certKey\s+(\S+)/i))) {
+                certKeys.push({ name: m[1] });
+                continue;
+            }
+            if ((m = line.match(/add\s+dns\s+nameserver\s+([\d\.]+)/i))) {
+                dnsServers.push(m[1]);
+                continue;
+            }
+            if ((m = line.match(/add\s+authentication\s+ldapAction\s+(\S+)/i))) {
+                ldapActions.push({ name: m[1] });
+                continue;
+            }
+        }
+
+        return { lbVservers, services, binds, vpnVservers, certKeys, dnsServers, ldapActions, servers };
+    }
+
+    function renderSummary(data) {
+        const set = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        };
+        set('lbCount', data.lbVservers.length);
+        set('svcCount', data.services.length);
+        set('vpnCount', data.vpnVservers.length);
+        set('certCount', data.certKeys.length);
+        set('dnsCount', data.dnsServers.length);
+        set('ldapCount', data.ldapActions.length);
+    }
+
+    function renderDetails(data) {
+        const detailEl = document.getElementById('details');
+        if (!detailEl) return;
+        const lines = [];
+        lines.push('--- Load Balancing vServers ---');
+        data.lbVservers.forEach(v => lines.push(`- ${v.name} (${v.proto}) ${v.ip}:${v.port}`));
+        lines.push('');
+        lines.push('--- Services ---');
+        data.services.forEach(s => lines.push(`- ${s.name} (${s.proto}) ${s.ip}:${s.port}`));
+        lines.push('');
+        lines.push('--- LB Bindings ---');
+        data.binds.forEach(b => lines.push(`- ${b.lb} -> ${b.svc}`));
+        lines.push('');
+        lines.push('--- VPN vServers ---');
+        data.vpnVservers.forEach(v => lines.push(`- ${v.name} (${v.proto}) ${v.ip}:${v.port}`));
+        lines.push('');
+        lines.push('--- Cert Keys ---');
+        data.certKeys.forEach(c => lines.push(`- ${c.name}`));
+        lines.push('');
+        lines.push('--- DNS Servers ---');
+        data.dnsServers.forEach(d => lines.push(`- ${d}`));
+        lines.push('');
+        lines.push('--- LDAP/AD Actions ---');
+        data.ldapActions.forEach(a => lines.push(`- ${a.name}`));
+        detailEl.textContent = lines.join('\n');
+    }
+
+    function renderDiagram(data) {
+        const lines = ['flowchart TD'];
+        const nodeSet = new Set();
+        const addNode = (id, label) => {
+            if (nodeSet.has(id)) return;
+            nodeSet.add(id);
+            lines.push(`${id}["${label.replace(/"/g, '\\"')}"]`);
+        };
+
+        data.lbVservers.forEach(lb => {
+            const id = cleanId(`lb_${lb.name}`);
+            addNode(id, `LB: ${lb.name}\\n${lb.ip}:${lb.port}\\n${lb.proto}`);
+        });
+
+        data.services.forEach(svc => {
+            const id = cleanId(`svc_${svc.name}`);
+            addNode(id, `SVC: ${svc.name}\\n${svc.ip}:${svc.port}\\n${svc.proto}`);
+        });
+
+        data.binds.forEach(b => {
+            const lbId = cleanId(`lb_${b.lb}`);
+            const svcId = cleanId(`svc_${b.svc}`);
+            lines.push(`${lbId} --> ${svcId}`);
+        });
+
+        const mermaidText = lines.join('\n');
+        const container = document.getElementById('mermaidGraph');
+        if (!container) return;
+        container.innerHTML = '';
+        try {
+            mermaid.render('nsDiagram', mermaidText, (svgCode) => {
+                container.innerHTML = svgCode;
+            });
+        } catch (err) {
+            container.innerHTML = '<pre style="color:#f87171;">Diagram render failed: ' + (err.message || err) + '</pre>';
+        }
+    }
+
+    function cleanId(name) {
+        return name.replace(/[^a-zA-Z0-9_]/g, '_');
+    }
+    </script>
+</body>
+</html>
