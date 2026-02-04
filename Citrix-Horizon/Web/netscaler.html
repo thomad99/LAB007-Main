@@ -344,9 +344,11 @@
     }
 
     function renderDiagrams(data) {
+        setStatus('Rendering diagrams...');
         renderLbDiagram(data);
         renderVpnDiagram(data);
         renderSvcByBackendDiagram(data);
+        setStatus('Analyzed and rendered diagrams.');
     }
 
     function renderLbDiagram(data) {

@@ -346,9 +346,22 @@ $UpdateScript = {
     }
     Import-Module PSWindowsUpdate -Force
 
-    # Prep the box for Microsoft Update over remoting (workgroup-friendly)
-    try { Add-WUServiceManager -MicrosoftUpdate -Confirm:$false -ErrorAction SilentlyContinue } catch { Write-Verbose "Add-WUServiceManager: $($_.Exception.Message)" }
-    try { Enable-WURemoting -Confirm:$false -ErrorAction SilentlyContinue } catch { Write-Verbose "Enable-WURemoting: $($_.Exception.Message)" }
+    # Detect WSUS usage; if WSUS enforced, stay with it; otherwise enable Microsoft Update
+    $useWsus = $false
+    try {
+        $auKey = 'HKLM:\SOFTWARE\Policies\Microsoft\Windows\WindowsUpdate\AU'
+        $useVal = (Get-ItemProperty -Path $auKey -Name UseWUServer -ErrorAction SilentlyContinue).UseWUServer
+        if ($useVal -eq 1) { $useWsus = $true }
+    } catch { }
+
+    if ($useWsus) {
+        Write-Verbose "WSUS detected (UseWUServer=1). Using WSUS for updates."
+        try { Set-WUSettings -DoNotConnectWSUS $false -ErrorAction SilentlyContinue } catch { }
+    } else {
+        Write-Verbose "WSUS not enforced. Enabling Microsoft Update."
+        try { Add-WUServiceManager -MicrosoftUpdate -Confirm:$false -ErrorAction SilentlyContinue } catch { Write-Verbose "Add-WUServiceManager: $($_.Exception.Message)" }
+        try { Enable-WURemoting -Confirm:$false -ErrorAction SilentlyContinue } catch { Write-Verbose "Enable-WURemoting: $($_.Exception.Message)" }
+    }
 
     # Ensure Windows Update service is enabled and running
     Start-WuauservIfNeeded
@@ -366,7 +379,7 @@ $UpdateScript = {
 
     Write-Host ("[{0}] Checking available updates..." -f (Get-Date)) -ForegroundColor Cyan
 
-    $available = Get-WindowsUpdate -Category 'Security Updates','Critical Updates','Updates' -IgnoreUserInput -ErrorAction Stop
+    $available = Get-WindowsUpdate -Category 'Security Updates','Critical Updates','Updates' -IgnoreUserInput -ErrorAction Stop -MicrosoftUpdate:(!$useWsus)
     $count = ($available | Measure-Object).Count
 
     Write-Host ("[{0}] Available updates: {1}" -f (Get-Date), $count) -ForegroundColor Cyan
