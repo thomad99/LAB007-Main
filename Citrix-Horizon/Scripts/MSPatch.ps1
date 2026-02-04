@@ -414,7 +414,7 @@ $UpdateScript = {
 
     Write-Host ("[{0}] Installing updates..." -f (Get-Date)) -ForegroundColor Magenta
 
-    Install-WindowsUpdate -AcceptAll -IgnoreReboot -Verbose -ErrorAction Stop | Out-Host
+    Install-WindowsUpdate -AcceptAll -IgnoreReboot -Verbose -ErrorAction Stop -MicrosoftUpdate:(!$useWsus) | Out-Host
 
     $after = Get-LatestHotfixInfo
     $pending = Get-RebootRequired

@@ -237,6 +237,7 @@
         const dnsServers = [];
         const ldapActions = [];
         const servers = [];
+        const serviceGroups = [];
 
         const lines = text.split(/\r?\n/);
         for (const lineRaw of lines) {
@@ -252,12 +253,27 @@
                 services.push({ name: m[1], proto: m[2], ip: m[3], port: m[4] });
                 continue;
             }
+            if ((m = line.match(/add\s+serviceGroup\s+("?)(.+?)\1\s+(\S+)/i))) {
+                serviceGroups.push({ name: m[2], proto: m[3], members: [] });
+                continue;
+            }
             if ((m = line.match(/add\s+server\s+(\S+)\s+([\d\.]+)/i))) {
                 servers.push({ name: m[1], ip: m[2] });
                 continue;
             }
-            if ((m = line.match(/bind\s+lb\s+vserver\s+(\S+)\s+(\S+)/i))) {
-                binds.push({ lb: m[1], svc: m[2] });
+            if ((m = line.match(/bind\s+lb\s+vserver\s+(\S+)\s+("?)(.+?)\2/i))) {
+                binds.push({ lb: m[1], svc: m[3] });
+                continue;
+            }
+            if ((m = line.match(/bind\s+serviceGroup\s+("?)(.+?)\1\s+(\S+)\s+(\d+)/i))) {
+                const sgName = m[2];
+                const memberName = m[3];
+                const memberPort = m[4];
+                const sg = serviceGroups.find(s => s.name === sgName);
+                if (sg) {
+                    const serverObj = servers.find(s => s.name === memberName);
+                    sg.members.push({ name: memberName, ip: serverObj?.ip || '', port: memberPort });
+                }
                 continue;
             }
             if ((m = line.match(/add\s+vpn\s+vserver\s+(\S+)\s+(\S+)\s+([\d\.]+)\s+(\d+)/i))) {
@@ -278,7 +294,7 @@
             }
         }
 
-        return { lbVservers, services, binds, vpnVservers, certKeys, dnsServers, ldapActions, servers };
+        return { lbVservers, services, binds, vpnVservers, certKeys, dnsServers, ldapActions, servers, serviceGroups };
     }
 
     function extractFileFromTar(bytes, targetName) {
@@ -308,7 +324,7 @@
             if (el) el.textContent = val;
         };
         set('lbCount', data.lbVservers.length);
-        set('svcCount', data.services.length);
+        set('svcCount', data.services.length + data.serviceGroups.length);
         set('vpnCount', data.vpnVservers.length);
         set('certCount', data.certKeys.length);
         set('dnsCount', data.dnsServers.length);
@@ -317,7 +333,11 @@
 
     function renderDetails(data) {
         renderList('lbList', data.lbVservers.map(v => `${v.name} (${v.proto}) ${v.ip}:${v.port}`));
-        renderList('svcList', data.services.map(s => `${s.name} (${s.proto}) ${s.ip}:${s.port}`));
+        const svcItems = [
+            ...data.services.map(s => `${s.name} (${s.proto}) ${s.ip}:${s.port}`),
+            ...data.serviceGroups.map(g => `SG: ${g.name} (${g.proto}) members:${g.members.length}`)
+        ];
+        renderList('svcList', svcItems);
         renderList('bindList', data.binds.map(b => `${b.lb} ➜ ${b.svc}`));
         renderList('vpnList', data.vpnVservers.map(v => `${v.name} (${v.proto}) ${v.ip}:${v.port}`));
         renderList('certList', data.certKeys.map(c => c.name));
@@ -369,11 +389,28 @@
             const id = cleanId(`svc_${svc.name}`);
             addNode(id, `SVC: ${svc.name}\\n${svc.ip}:${svc.port}\\n${svc.proto}`);
         });
+        data.serviceGroups.forEach(g => {
+            const id = cleanId(`sg_${g.name}`);
+            addNode(id, `SG: ${g.name}\\n${g.proto}`);
+            g.members.forEach(m => {
+                const beId = cleanId(`be_${m.ip || m.name}`);
+                const label = m.ip ? `Backend: ${m.name}\\n${m.ip}:${m.port}` : `Backend: ${m.name}\\n:${m.port}`;
+                addNode(beId, label);
+                lines.push(`${id} --> ${beId}`);
+            });
+        });
 
         data.binds.forEach(b => {
             const lbId = cleanId(`lb_${b.lb}`);
-            const svcId = cleanId(`svc_${b.svc}`);
-            lines.push(`${lbId} --> ${svcId}`);
+            const targetSvc = data.services.find(s => s.name === b.svc);
+            const targetSg = data.serviceGroups.find(sg => sg.name === b.svc);
+            if (targetSvc) {
+                const svcId = cleanId(`svc_${b.svc}`);
+                lines.push(`${lbId} --> ${svcId}`);
+            } else if (targetSg) {
+                const sgId = cleanId(`sg_${b.svc}`);
+                lines.push(`${lbId} --> ${sgId}`);
+            }
         });
 
         renderMermaid('mermaidGraphLB', 'nsDiagramLB', lines);
@@ -409,6 +446,16 @@
                 addNode(backendId, `Backend: ${svc.ip}`);
                 lines.push(`${svcId} --> ${backendId}`);
             }
+        });
+        data.serviceGroups.forEach(g => {
+            const sgId = cleanId(`sg_${g.name}`);
+            addNode(sgId, `SG: ${g.name}\\n${g.proto}`);
+            g.members.forEach(m => {
+                const backendId = cleanId(`be_${m.ip || m.name}`);
+                const label = m.ip ? `Backend: ${m.name}\\n${m.ip}:${m.port}` : `Backend: ${m.name}\\n:${m.port}`;
+                addNode(backendId, label);
+                lines.push(`${sgId} --> ${backendId}`);
+            });
         });
         renderMermaid('mermaidGraphSvc', 'nsDiagramSvc', lines);
     }
