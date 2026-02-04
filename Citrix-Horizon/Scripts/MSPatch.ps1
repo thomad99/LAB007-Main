@@ -196,29 +196,31 @@ function Wait-ForWinRMReboot {
 if (-not $Credential) {
     $Credential = Get-Credential
 }
+Write-Host ("[{0}] Using credential user: {1}" -f (Get-Date), $Credential.UserName) -ForegroundColor Cyan
+Write-Host ("[{0}] WinRM auth: {1}  UseSSL: {2}" -f (Get-Date), $WinRMAuthentication, $UseSSL) -ForegroundColor Cyan
 
 # -------------------------------
 # TrustedHosts handling (optional, for workgroup/local admin)
 # -------------------------------
 $initialTrustedHosts = $null
 $addedTrustedHost = $false
-if ($AddToTrustedHosts) {
-    try {
-        $initialTrustedHosts = (Get-Item WSMan:\localhost\Client\TrustedHosts -ErrorAction Stop).Value
-        $hostList = @()
-        if ($initialTrustedHosts -and $initialTrustedHosts.Trim()) {
-            $hostList = $initialTrustedHosts.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
-        }
-        if ($hostList -notcontains $ComputerName -and $hostList -notcontains '*') {
-            $hostList += $ComputerName
-            $newValue = ($hostList -join ',')
-            Set-Item WSMan:\localhost\Client\TrustedHosts -Value $newValue -Force -ErrorAction Stop | Out-Null
-            $addedTrustedHost = $true
-            Write-Host "TrustedHosts updated to include $ComputerName" -ForegroundColor Yellow
-        }
-    } catch {
-        Write-Warning "Failed to update TrustedHosts: $($_.Exception.Message)"
+try {
+    $initialTrustedHosts = (Get-Item WSMan:\localhost\Client\TrustedHosts -ErrorAction Stop).Value
+    $hostList = @()
+    if ($initialTrustedHosts -and $initialTrustedHosts.Trim()) {
+        $hostList = $initialTrustedHosts.Split(',') | ForEach-Object { $_.Trim() } | Where-Object { $_ }
     }
+    if ($hostList -notcontains $ComputerName -and $hostList -notcontains '*') {
+        $hostList += $ComputerName
+        $newValue = ($hostList -join ',')
+        Set-Item WSMan:\localhost\Client\TrustedHosts -Value $newValue -Force -ErrorAction Stop | Out-Null
+        $addedTrustedHost = $true
+        Write-Host "TrustedHosts updated to include $ComputerName" -ForegroundColor Yellow
+    } else {
+        Write-Host "TrustedHosts already includes $ComputerName or wildcard (*)." -ForegroundColor Gray
+    }
+} catch {
+    Write-Warning "Failed to update TrustedHosts: $($_.Exception.Message)"
 }
 
 # Common WinRM parameter sets
@@ -527,12 +529,5 @@ catch {
     throw
 }
 finally {
-if ($addedTrustedHost -and $null -ne $initialTrustedHosts) {
-        try {
-            Set-Item WSMan:\localhost\Client\TrustedHosts -Value $initialTrustedHosts -Force -ErrorAction Stop | Out-Null
-            Write-Host "TrustedHosts restored to previous value." -ForegroundColor Yellow
-        } catch {
-            Write-Warning "Failed to restore TrustedHosts: $($_.Exception.Message)"
-        }
-    }
+# We intentionally leave TrustedHosts updated to keep future runs working for this host.
 }
