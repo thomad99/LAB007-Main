@@ -1859,6 +1859,8 @@ function generateCloneScript(selectedImages, destinationFolder, moveSourceAfterC
         '',
         '# Connect to vCenter',
         '$vc = "' + (vcenterFromData ? vcenterFromData.replace(/"/g, '""') : '') + '"',
+        '$vcDefault = "' + (GOLDEN_SUN_DEFAULT_VCENTER ? GOLDEN_SUN_DEFAULT_VCENTER.replace(/"/g, '""') : '') + '"',
+        'if ([string]::IsNullOrWhiteSpace($vc) -and -not [string]::IsNullOrWhiteSpace($vcDefault)) { $vc = $vcDefault }',
         '$existingConnection = $global:DefaultVIServer',
         '$viserver = $null',
         'if (-not [string]::IsNullOrWhiteSpace($vc)) {',
@@ -2772,6 +2774,7 @@ function generateGoldenSunSearchScript() {
     scriptLines.push('$viserver = Get-VIServer -ErrorAction SilentlyContinue');
     scriptLines.push('if (-not $viserver) {');
     scriptLines.push(`    $vc = "${vcenter || GOLDEN_SUN_DEFAULT_VCENTER}"`);
+    scriptLines.push(`    if ([string]::IsNullOrWhiteSpace($vc) -and -not [string]::IsNullOrWhiteSpace("${GOLDEN_SUN_DEFAULT_VCENTER || ''}")) { $vc = "${GOLDEN_SUN_DEFAULT_VCENTER || ''}"; }`);
     scriptLines.push('    if ([string]::IsNullOrWhiteSpace($vc)) { throw "vCenter server is required."; }');
     scriptLines.push('    $cred = Get-Credential -Message "Enter vCenter credentials for $vc"');
     scriptLines.push('    Connect-VIServer -Server $vc -Credential $cred -ErrorAction Stop | Out-Null');
