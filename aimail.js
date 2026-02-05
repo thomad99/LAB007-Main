@@ -235,6 +235,7 @@ async function fetchMailboxOnce() {
 }
 
 async function fetchMessagesForSender(domainOrId) {
+  console.log('AIMAIL: fetchMessagesForSender target:', domainOrId);
   const cfg = getImapConfig();
   if (cfg.missing.length) throw new Error('IMAP env vars missing');
   const client = (await authWithFallback(cfg)).client;
@@ -296,36 +297,48 @@ async function fetchMessagesForSender(domainOrId) {
     try { await client.logout(); } catch (_) {}
   }
   messages.sort((a, b) => new Date(b.date) - new Date(a.date));
+  console.log(`AIMAIL: fetched ${messages.length} messages for ${target}`);
   return messages;
 }
 
 async function scanSendersEnvelope() {
+  console.log('AIMAIL: scanSendersEnvelope start; allowlist len:', EMAIL_TOSCAN.length);
   const cfg = getImapConfig();
   if (cfg.missing.length) throw new Error('IMAP env vars missing');
   const counts = {};
-  const order = [...EMAIL_TOSCAN];
-  // If allowlist is provided, just seed those; skip IMAP scan to reduce load/timeouts
-  if (EMAIL_TOSCAN.length > 0) {
-    order.forEach((id) => { counts[id] = 0; });
-  } else {
+  let order = [...EMAIL_TOSCAN];
+
+  // If no allowlist, derive last 10 unique senders from recent messages
+  if (EMAIL_TOSCAN.length === 0) {
     const client = (await authWithFallback(cfg)).client;
     try {
       let lock = await client.getMailboxLock('INBOX');
       try {
         const allUids = await client.search({ all: true });
-        const slice = (allUids || []).slice(-MAX_SENDER_SCAN);
+        const slice = (allUids || []).slice(-SCAN_RECENT);
+        const seen = new Set();
+        // iterate newest last slice to keep recency
         for await (let msg of client.fetch(slice, { envelope: true }, { uid: true })) {
           const fromAddress = msg.envelope?.from?.[0]?.address || '';
           const emailId = normalizeSenderId(fromAddress);
+          if (!emailId) continue;
           counts[emailId] = (counts[emailId] || 0) + 1;
-          if (!order.includes(emailId)) order.push(emailId);
+          if (!seen.has(emailId)) {
+            seen.add(emailId);
+            order.push(emailId);
+          }
         }
+        // keep only last 10 unique
+        order = order.slice(-10);
       } finally {
         lock.release();
       }
     } finally {
       try { await client.logout(); } catch (_) {}
     }
+  } else {
+    // allowlist provided; seed with zero counts
+    order.forEach((id) => { counts[id] = 0; });
   }
   // merge into store metadata (respect order)
   order.forEach((id) => {
@@ -358,7 +371,7 @@ async function scanSendersEnvelope() {
     unread: (s.emails || []).filter(e => e.unread).length,
     total: s.total || (s.emails ? s.emails.length : 0),
     lastDate: s.lastDate || null
-  }));
+  })).sort((a, b) => (b.lastDate || 0) - (a.lastDate || 0)).slice(0, 10);
 }
 
 async function testConnection(override = {}) {
@@ -629,6 +642,14 @@ router.post('/llm-search', async (req, res) => {
 
 // Initialize
 loadStore();
+// Seed channels on startup (best-effort)
+(async () => {
+  try {
+    await scanSendersEnvelope();
+  } catch (err) {
+    console.warn('AIMAIL: initial scan failed:', err.message);
+  }
+})();
 
 module.exports = {
   router,

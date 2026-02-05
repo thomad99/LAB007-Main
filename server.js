@@ -77,6 +77,13 @@ console.warn('SMTP_USER or SMTP_PASS not configured - contact form emails will n
 // Serve LAB007 images (before project apps to avoid conflicts)
 app.use('/images', express.static(path.join(__dirname, 'LAB007', 'Images')));
 
+// Serve webdesign static page
+app.get('/webdesign', (req, res) => {
+  const p = path.join(__dirname, 'public', 'webdesign.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
+});
+
 // ========== Mount Project Apps FIRST ==========
 // Mount each project's Express app BEFORE main static middleware to ensure routes are matched correctly
 
