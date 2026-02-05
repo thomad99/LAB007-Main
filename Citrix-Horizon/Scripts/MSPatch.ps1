@@ -29,6 +29,9 @@ param(
 [Parameter(Mandatory=$false)]
 [switch]$SaveCredential,
 
+[Parameter(Mandatory=$false)]
+[switch]$RunLocal,
+
 # WinRM / transport
 [Parameter(Mandatory=$false)]
 [ValidateSet('Default','Negotiate','Kerberos','Basic','Credssp')]
@@ -435,8 +438,41 @@ $UpdateScript = {
 # MAIN
 # -------------------------------
 
+function Invoke-LocalRun {
+    param(
+        [string]$TargetComputer
+    )
+    $scriptText = Get-Content -Raw -LiteralPath $PSCommandPath
+    $argsList = @{
+        Target = $TargetComputer
+        Auth   = $WinRMAuthentication
+        UseSSL = $UseSSL
+        Timeout = $TimeoutSeconds
+        Poll = $PollSeconds
+        Offline = $OfflineWaitSeconds
+        MaxReboots = $MaxReboots
+        NoShutdown = $NoShutdownAfterPatch
+    }
+    Write-Host ("[{0}] Deploying MSPatch to {1}\C$\ctxadmin\mspatch.ps1 ..." -f (Get-Date), $TargetComputer) -ForegroundColor Yellow
+    Invoke-Command -ComputerName $TargetComputer -Credential $Credential -Authentication $WinRMAuthentication -UseSSL:$UseSSL -ScriptBlock {
+        param($content,$target,$auth,$useSSL,$timeout,$poll,$offline,$maxReboots,$noShutdown)
+        $dir = 'C:\ctxadmin'
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        $path = Join-Path $dir 'mspatch.ps1'
+        Set-Content -LiteralPath $path -Value $content -Encoding UTF8 -Force
+        Write-Host ("[{0}] Running local MSPatch from {1}" -f (Get-Date), $path) -ForegroundColor Cyan
+        powershell.exe -ExecutionPolicy Bypass -File $path -ComputerName $env:COMPUTERNAME -WinRMAuthentication $auth -UseSSL:$useSSL -TimeoutSeconds $timeout -PollSeconds $poll -OfflineWaitSeconds $offline -MaxReboots $maxReboots -NoShutdownAfterPatch:$noShutdown -RunLocal
+    } -ArgumentList $scriptText,$TargetComputer,$WinRMAuthentication,$UseSSL,$TimeoutSeconds,$PollSeconds,$OfflineWaitSeconds,$MaxReboots,$NoShutdownAfterPatch
+    Write-Host ("[{0}] Deployment invoked. Exiting wrapper." -f (Get-Date)) -ForegroundColor Green
+    exit 0
+}
+
+if (-not $RunLocal) {
+    Invoke-LocalRun -TargetComputer $ComputerName
+}
+
 $scriptStart = Get-Date
-Write-Host ("[{0}] Target: {1}" -f $scriptStart, $ComputerName) -ForegroundColor Cyan
+Write-Host ("[{0}] Target: {1} (local run)" -f $scriptStart, $ComputerName) -ForegroundColor Cyan
 
 $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
     -Title "MSPatch started" `
