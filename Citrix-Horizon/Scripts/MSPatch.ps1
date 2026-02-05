@@ -445,144 +445,155 @@ $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
     -Computer $env:COMPUTERNAME
 
 try {
-    # Phase 1: scan
-    $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
-        -Title "Checking for updates" `
-        -Text "$ComputerName - Checking for updates" `
-        -Level "info" `
-        -Computer $env:COMPUTERNAME
-
-    $scan = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $false,$false
-    $scan | Format-List
-
-    if ($scan.Action -eq "NoUpdates") {
+    for ($cycle = 1; $cycle -le 3; $cycle++) {
+        Write-Host ("[{0}] Cycle {1} start" -f (Get-Date), $cycle) -ForegroundColor Cyan
+        # Phase 1: scan
         $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
-            -Title "No updates found" `
-            -Text "$ComputerName - Update checks completed. No updates found." `
-            -Level "success" `
-            -Computer $env:COMPUTERNAME
-
-        if (-not $NoShutdownAfterPatch) {
-            $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
-                -Title "Shutting down" `
-                -Text "$ComputerName - Update checks completed, shutting down" `
-                -Level "warning" `
-                -Computer $env:COMPUTERNAME
-
-            Start-Sleep -Seconds 5
-            Stop-Computer -ComputerName $ComputerName -Credential $Credential -Force
-        }
-        return
-    }
-
-    # Phase 2: install + reboot loop
-    $rebootCount = 0
-
-    do {
-        $installError = $null
-        try {
-            $result = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $true,$false
-        } catch {
-            $installError = $_.Exception.Message
-            $result = $null
-        }
-
-        if ($installError) {
-            Write-Warning "[$ComputerName] Install attempt failed: $installError"
-            $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
-                -Title "Install failed" `
-                -Text "$ComputerName - Install attempt failed: $installError" `
-                -Level "warning" `
-                -Computer $env:COMPUTERNAME
-            break
-        }
-
-        if (-not $result) {
-            Write-Warning "[$ComputerName] Install returned no result; aborting to avoid hang."
-            $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
-                -Title "Install inconclusive" `
-                -Text "$ComputerName - Install returned no result; stopping to avoid hang." `
-                -Level "warning" `
-                -Computer $env:COMPUTERNAME
-            break
-        }
-
-        $result | Format-List
-
-        if ($result.Action -eq "Installed") {
-            $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
-                -Title "Updates installed" `
-                -Text "$ComputerName - Updates installed. Reboot required: $($result.RebootRequired)" `
-                -Level "info" `
-                -Computer $env:COMPUTERNAME
-        }
-
-        if ($result.RebootRequired -eq $true) {
-            if ($rebootCount -ge $MaxReboots) {
-                throw "Reboot required but max reboot count ($MaxReboots) reached. Stop and investigate."
-            }
-
-            $rebootCount++
-            $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
-                -Title "Restarting" `
-                -Text "$ComputerName - Reboot required, restarting (reboot #$rebootCount)" `
-                -Level "warning" `
-                -Computer $env:COMPUTERNAME
-
-            Restart-Computer -ComputerName $ComputerName -Credential $Credential -Force
-
-            Write-Host ("[{0}] Waiting for reboot to complete (WinRM + stable remoting)..." -f (Get-Date)) -ForegroundColor Cyan
-            Wait-ForWinRMReboot -ComputerName $ComputerName -Credential $Credential -TimeoutSeconds $TimeoutSeconds -PollSeconds $PollSeconds -OfflineWaitSeconds $OfflineWaitSeconds -Auth $WinRMAuthentication -UseSSL:$UseSSL
-
-            $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
-                -Title "Back online" `
-                -Text "$ComputerName - Reboot completed, continuing" `
-                -Level "success" `
-                -Computer $env:COMPUTERNAME
-        }
-
-    } while ($result.RebootRequired -eq $true)
-
-    Write-Host ("[{0}] Install/reboot loop complete. Reboots performed: {1}" -f (Get-Date), $rebootCount) -ForegroundColor Green
-
-    # Final scan safety check (only shutdown if truly NoUpdates now)
-    $finalScan = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $false,$false
-    $finalScan | Format-List
-
-    if ($finalScan.Action -ne "NoUpdates") {
-        $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
-            -Title "Still pending updates" `
-            -Text "$ComputerName - Updates still available after install loop. NOT shutting down." `
-            -Level "warning" `
-            -Computer $env:COMPUTERNAME
-
-        Write-Warning "[$ComputerName] Updates are still available. Not shutting down."
-        return
-    }
-
-    $duration = New-TimeSpan -Start $scriptStart -End (Get-Date)
-
-    $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
-        -Title "Patching complete" `
-        -Text "$ComputerName - Updates completed (reboots: $rebootCount, duration: $([int]$duration.TotalMinutes)m)" `
-        -Level "success" `
-        -Computer $env:COMPUTERNAME
-
-    if (-not $NoShutdownAfterPatch) {
-        $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
-            -Title "Shutting down" `
-            -Text "$ComputerName - Updates completed, shutting down" `
-            -Level "warning" `
-            -Computer $env:COMPUTERNAME
-
-        Start-Sleep -Seconds 5
-        Stop-Computer -ComputerName $ComputerName -Credential $Credential -Force
-    } else {
-        $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
-            -Title "Completed" `
-            -Text "$ComputerName - Completed, leaving powered on (-NoShutdownAfterPatch set)" `
+            -Title "Checking for updates (cycle $cycle)" `
+            -Text "$ComputerName - Checking for updates" `
             -Level "info" `
             -Computer $env:COMPUTERNAME
+
+        $scan = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $false,$false
+        $scan | Format-List
+
+        if ($scan.Action -eq "NoUpdates") {
+            $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                -Title "No updates found" `
+                -Text "$ComputerName - Update checks completed. No updates found." `
+                -Level "success" `
+                -Computer $env:COMPUTERNAME
+
+            if (-not $NoShutdownAfterPatch) {
+                $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                    -Title "Shutting down" `
+                    -Text "$ComputerName - Update checks completed, shutting down" `
+                    -Level "warning" `
+                    -Computer $env:COMPUTERNAME
+
+                Start-Sleep -Seconds 5
+                Stop-Computer -ComputerName $ComputerName -Credential $Credential -Force
+            }
+            break
+        }
+
+        # Phase 2: install + reboot loop
+        $rebootCount = 0
+
+        do {
+            $installError = $null
+            try {
+                $result = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $true,$false
+            } catch {
+                $installError = $_.Exception.Message
+                $result = $null
+            }
+
+            if ($installError) {
+                Write-Warning "[$ComputerName] Install attempt failed: $installError"
+                $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                    -Title "Install failed" `
+                    -Text "$ComputerName - Install attempt failed: $installError" `
+                    -Level "warning" `
+                    -Computer $env:COMPUTERNAME
+                break
+            }
+
+            if (-not $result) {
+                Write-Warning "[$ComputerName] Install returned no result; aborting to avoid hang."
+                $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                    -Title "Install inconclusive" `
+                    -Text "$ComputerName - Install returned no result; stopping to avoid hang." `
+                    -Level "warning" `
+                    -Computer $env:COMPUTERNAME
+                break
+            }
+
+            $result | Format-List
+
+            if ($result.Action -eq "Installed") {
+                $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                    -Title "Updates installed" `
+                    -Text "$ComputerName - Updates installed. Reboot required: $($result.RebootRequired)" `
+                    -Level "info" `
+                    -Computer $env:COMPUTERNAME
+            }
+
+            if ($result.RebootRequired -eq $true) {
+                if ($rebootCount -ge $MaxReboots) {
+                    throw "Reboot required but max reboot count ($MaxReboots) reached. Stop and investigate."
+                }
+
+                $rebootCount++
+                $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                    -Title "Restarting" `
+                    -Text "$ComputerName - Reboot required, restarting (reboot #$rebootCount)" `
+                    -Level "warning" `
+                    -Computer $env:COMPUTERNAME
+
+                Restart-Computer -ComputerName $ComputerName -Credential $Credential -Force
+
+                Write-Host ("[{0}] Waiting for reboot to complete (WinRM + stable remoting)..." -f (Get-Date)) -ForegroundColor Cyan
+                Wait-ForWinRMReboot -ComputerName $ComputerName -Credential $Credential -TimeoutSeconds $TimeoutSeconds -PollSeconds $PollSeconds -OfflineWaitSeconds $OfflineWaitSeconds -Auth $WinRMAuthentication -UseSSL:$UseSSL
+
+                $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                    -Title "Back online" `
+                    -Text "$ComputerName - Reboot completed, continuing" `
+                    -Level "success" `
+                    -Computer $env:COMPUTERNAME
+            }
+
+        } while ($result.RebootRequired -eq $true)
+
+        Write-Host ("[{0}] Install/reboot loop complete. Reboots performed: {1}" -f (Get-Date), $rebootCount) -ForegroundColor Green
+
+        # Final scan safety check (only shutdown if truly NoUpdates now)
+        $finalScan = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $false,$false
+        $finalScan | Format-List
+
+        if ($finalScan.Action -eq "NoUpdates") {
+            $duration = New-TimeSpan -Start $scriptStart -End (Get-Date)
+
+            $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                -Title "Patching complete" `
+                -Text "$ComputerName - Updates completed (reboots: $rebootCount, duration: $([int]$duration.TotalMinutes)m)" `
+                -Level "success" `
+                -Computer $env:COMPUTERNAME
+
+            if (-not $NoShutdownAfterPatch) {
+                $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                    -Title "Shutting down" `
+                    -Text "$ComputerName - Updates completed, shutting down" `
+                    -Level "warning" `
+                    -Computer $env:COMPUTERNAME
+
+                Start-Sleep -Seconds 5
+                Stop-Computer -ComputerName $ComputerName -Credential $Credential -Force
+            } else {
+                $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                    -Title "Completed" `
+                    -Text "$ComputerName - Completed, leaving powered on (-NoShutdownAfterPatch set)" `
+                    -Level "info" `
+                    -Computer $env:COMPUTERNAME
+            }
+            break
+        } else {
+            # Still updates: force a restart between cycles and rerun
+            if ($cycle -lt 3) {
+                Write-Host ("[{0}] Pending updates remain; restarting before next cycle." -f (Get-Date)) -ForegroundColor Yellow
+                Restart-Computer -ComputerName $ComputerName -Credential $Credential -Force
+                Write-Host ("[{0}] Waiting for reboot to complete (WinRM + stable remoting)..." -f (Get-Date)) -ForegroundColor Cyan
+                Wait-ForWinRMReboot -ComputerName $ComputerName -Credential $Credential -TimeoutSeconds $TimeoutSeconds -PollSeconds $PollSeconds -OfflineWaitSeconds $OfflineWaitSeconds -Auth $WinRMAuthentication -UseSSL:$UseSSL
+                continue
+            } else {
+                Write-Warning "[$ComputerName] Updates still available after max cycles."
+                $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
+                    -Title "Updates still pending after max cycles" `
+                    -Text "$ComputerName - Updates still available after max cycles." `
+                    -Level "warning" `
+                    -Computer $env:COMPUTERNAME
+            }
+        }
     }
 }
 catch {

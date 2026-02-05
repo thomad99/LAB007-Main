@@ -104,6 +104,63 @@
         @media (max-width: 820px) {
             .hero { grid-template-columns: 1fr; }
         }
+        .mockups {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 14px;
+        }
+        .mock {
+            position: relative;
+            border-radius: 14px;
+            overflow: hidden;
+            min-height: 180px;
+            background: linear-gradient(135deg, rgba(34,211,238,0.25), rgba(17,94,89,0.25)),
+                        radial-gradient(circle at 20% 30%, rgba(251,191,36,0.25), transparent 40%),
+                        #0f172a;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: var(--shadow);
+        }
+        .mock::after {
+            content: 'Mockup';
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            background: rgba(0,0,0,0.4);
+            color: #e4e7ef;
+            padding: 4px 10px;
+            border-radius: 10px;
+            font-size: 12px;
+            letter-spacing: 0.4px;
+        }
+        .mock .nav {
+            height: 28px;
+            background: rgba(255,255,255,0.06);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 10px;
+        }
+        .dot {
+            width: 10px; height: 10px; border-radius: 50%;
+            background: #ef4444;
+        }
+        .dot:nth-child(2){ background:#f59e0b; }
+        .dot:nth-child(3){ background:#22c55e; }
+        .mock .body {
+            padding: 12px;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 10px;
+        }
+        .block {
+            background: rgba(255,255,255,0.06);
+            border-radius: 10px;
+            height: 54px;
+        }
+        .block.tall { height: 110px; }
+        @media (max-width: 640px) {
+            .mock .body { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -176,6 +233,48 @@
             <h3>Let’s build your site</h3>
             <p style="color:var(--muted);margin:8px 0 14px;">Tell me what you need—storefront, booking portal, portfolio, or a lead-gen landing page. I’ll map the pages, design the flow, and ship fast.</p>
             <a class="cta" href="mailto:info@lab007.ai?subject=Website%20Design">Email info@lab007.ai</a>
+        </div>
+
+        <div style="margin-top:20px;">
+            <h3 style="margin-bottom:10px;">Sample layouts</h3>
+            <div class="mockups">
+                <div class="mock">
+                    <div class="nav"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                    <div class="body">
+                        <div>
+                            <div class="block tall"></div>
+                            <div class="block" style="margin-top:8px;"></div>
+                            <div class="block" style="margin-top:8px;"></div>
+                        </div>
+                        <div>
+                            <div class="block" style="height:80px;"></div>
+                            <div class="block" style="margin-top:8px; height:52px;"></div>
+                            <div class="block" style="margin-top:8px; height:52px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mock">
+                    <div class="nav"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                    <div class="body">
+                        <div class="block tall" style="height:140px;"></div>
+                        <div>
+                            <div class="block" style="height:52px;"></div>
+                            <div class="block" style="margin-top:8px; height:86px;"></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mock">
+                    <div class="nav"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+                    <div class="body">
+                        <div>
+                            <div class="block" style="height:60px;"></div>
+                            <div class="block" style="margin-top:8px; height:60px;"></div>
+                            <div class="block" style="margin-top:8px; height:60px;"></div>
+                        </div>
+                        <div class="block tall" style="height:150px;"></div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <footer>
