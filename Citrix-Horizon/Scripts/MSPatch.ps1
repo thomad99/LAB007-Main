@@ -32,6 +32,12 @@ param(
 [Parameter(Mandatory=$false)]
 [switch]$RunLocal,
 
+[Parameter(Mandatory=$false)]
+[string[]]$UpdateCategories = @('Security Updates'),
+
+[Parameter(Mandatory=$false)]
+[string]$LogPath = 'C:\ctxadmin\MSpatch.log',
+
 # WinRM / transport
 [Parameter(Mandatory=$false)]
 [ValidateSet('Default','Negotiate','Kerberos','Basic','Credssp')]
@@ -63,6 +69,19 @@ try {
     [System.Net.WebRequest]::DefaultWebProxy.Credentials = [System.Net.CredentialCache]::DefaultNetworkCredentials
 } catch { }
 $ProgressPreference = 'SilentlyContinue'
+
+# Ensure log directory
+try {
+    $logDir = Split-Path -Parent $LogPath
+    if ($logDir -and -not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
+} catch {}
+
+function Write-Log {
+    param([string]$Message)
+    $line = "[{0}] {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Message
+    try { Add-Content -LiteralPath $LogPath -Value $line -ErrorAction SilentlyContinue } catch {}
+    Write-Host $line
+}
 
 # -------------------------------
 # Teams Workflow Webhook URL
@@ -344,6 +363,7 @@ $UpdateScript = {
         return ($cbs -or $wu -or $pfr)
     }
 
+    Write-Log "UpdateScript start: Categories=$($UpdateCategories -join ', '), UseWSUS=$useWsus, MicrosoftUpdate=$(! $useWsus)"
     if (-not (Get-Module -ListAvailable PSWindowsUpdate)) {
         throw "PSWindowsUpdate module not found on this server. Copy it into C:\Program Files\WindowsPowerShell\Modules\PSWindowsUpdate\"
     }
@@ -381,11 +401,13 @@ $UpdateScript = {
     }
 
     Write-Host ("[{0}] Checking available updates..." -f (Get-Date)) -ForegroundColor Cyan
+    Write-Log "Scanning for updates..."
 
-    $available = Get-WindowsUpdate -Category 'Critical Updates' -IgnoreUserInput -ErrorAction Stop -MicrosoftUpdate:(!$useWsus)
+    $available = Get-WindowsUpdate -Category $UpdateCategories -IgnoreUserInput -ErrorAction Stop -MicrosoftUpdate:(!$useWsus)
     $count = ($available | Measure-Object).Count
 
     Write-Host ("[{0}] Available updates: {1}" -f (Get-Date), $count) -ForegroundColor Cyan
+    Write-Log "Found $count update(s)"
 
     if ($count -eq 0) {
         $after = Get-LatestHotfixInfo
@@ -416,8 +438,9 @@ $UpdateScript = {
     }
 
     Write-Host ("[{0}] Installing updates..." -f (Get-Date)) -ForegroundColor Magenta
+    Write-Log "Installing updates..."
     # Simplified install to mirror local success
-    Install-WindowsUpdate -AcceptAll -IgnoreReboot -Verbose -ErrorAction Stop -MicrosoftUpdate:(!$useWsus) -Category 'Critical Updates' | Out-Host
+    Install-WindowsUpdate -AcceptAll -IgnoreReboot -Verbose -ErrorAction Stop -MicrosoftUpdate:(!$useWsus) -Category $UpdateCategories | Out-Host
 
     $after = Get-LatestHotfixInfo
     $pending = Get-RebootRequired
@@ -473,6 +496,7 @@ if (-not $RunLocal) {
 
 $scriptStart = Get-Date
 Write-Host ("[{0}] Target: {1} (local run)" -f $scriptStart, $ComputerName) -ForegroundColor Cyan
+Write-Log "MSPatch start for $ComputerName (local run). Categories=$($UpdateCategories -join ', '). Log=$LogPath"
 
 $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
     -Title "MSPatch started" `
@@ -582,6 +606,7 @@ try {
         } while ($result.RebootRequired -eq $true)
 
         Write-Host ("[{0}] Install/reboot loop complete. Reboots performed: {1}" -f (Get-Date), $rebootCount) -ForegroundColor Green
+        Write-Log "Install/reboot loop complete. Reboots performed: $rebootCount"
 
         # Final scan safety check (only shutdown if truly NoUpdates now)
         $finalScan = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $false,$false
@@ -642,6 +667,7 @@ catch {
         -Level "error" `
         -Computer $env:COMPUTERNAME
 
+            Write-Log "ERROR: $err"
     throw
 }
 finally {
