@@ -182,6 +182,11 @@
                 <button class="btn secondary" id="favChannelFilterBtn">Show: All</button>
                 <button class="btn secondary" id="channelSortBtn">Sort: Recent</button>
             </div>
+            <div class="search-row" style="margin-top:8px;">
+                <input id="channelLimit" type="number" min="1" max="50" value="10" class="input" style="max-width:120px;" placeholder="Channels">
+                <button class="btn secondary" id="channelsRefreshBtn">Refresh Channels</button>
+                <button class="btn secondary" id="testConnBtn">Test Connection</button>
+            </div>
             <div class="channels-wrap">
                 <ul class="list" id="senderList"></ul>
             </div>
@@ -293,10 +298,12 @@
         const threadCard = document.getElementById('threadCard');
         const backToChannels = document.getElementById('backToChannels');
 
-        async function loadChannels() {
+        async function loadChannels(forceRefresh = true) {
             try {
                 senderStatus.innerHTML = '<span class="spinner"></span>Loading channels...';
-                const res = await fetch('/api/aimail/channels/refresh');
+                const limit = parseInt(channelLimit.value || '10', 10) || 10;
+                const url = forceRefresh ? `/api/aimail/channels/refresh?limit=${limit}` : `/api/aimail/channels?limit=${limit}`;
+                const res = await fetch(url);
                 const json = await res.json();
                 data.senders = json.channels || [];
                 renderSenders();
@@ -509,6 +516,21 @@
         sortBtn.onclick = () => { sortNewest = !sortNewest; sortBtn.textContent = `Sort: ${sortNewest ? 'Newest' : 'Oldest'}`; renderEmails(); };
         favFilterBtn.onclick = () => { favOnly = !favOnly; favFilterBtn.textContent = `Show: ${favOnly ? 'Favorites' : 'All'}`; renderEmails(); };
         resetFilters.onclick = () => { senderSearch.value=''; renderSenders(); };
+        const channelsRefreshBtn = document.getElementById('channelsRefreshBtn');
+        const testConnBtn = document.getElementById('testConnBtn');
+        const channelLimit = document.getElementById('channelLimit');
+        channelsRefreshBtn.onclick = () => loadChannels(true);
+        testConnBtn.onclick = async () => {
+            senderStatus.innerHTML = '<span class="spinner"></span>Testing connection...';
+            try {
+                const res = await fetch('/api/aimail/test-connection', { method: 'POST' });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
+                senderStatus.textContent = `IMAP OK. Messages: ${json.messages}, Unseen: ${json.unseen}, Auth: ${json.method}`;
+            } catch (err) {
+                senderStatus.textContent = 'Test failed: ' + err.message;
+            }
+        };
         favChannelFilterBtn.onclick = () => { showFavChannelsOnly = !showFavChannelsOnly; favChannelFilterBtn.textContent = `Show: ${showFavChannelsOnly ? 'Favorites' : 'All'}`; renderSenders(); };
         channelSortBtn.onclick = () => {
             channelSortMode = channelSortMode === 'recent' ? 'alpha' : 'recent';

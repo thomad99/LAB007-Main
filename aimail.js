@@ -301,8 +301,8 @@ async function fetchMessagesForSender(domainOrId) {
   return messages;
 }
 
-async function scanSendersEnvelope() {
-  console.log('AIMAIL: scanSendersEnvelope start; allowlist len:', EMAIL_TOSCAN.length);
+async function scanSendersEnvelope(limit = 10) {
+  console.log('AIMAIL: scanSendersEnvelope start; allowlist len:', EMAIL_TOSCAN.length, 'limit:', limit);
   const cfg = getImapConfig();
   if (cfg.missing.length) throw new Error('IMAP env vars missing');
   const counts = {};
@@ -329,7 +329,7 @@ async function scanSendersEnvelope() {
           }
         }
         // keep only last 10 unique
-        order = order.slice(-10);
+        order = order.slice(-limit);
       } finally {
         lock.release();
       }
@@ -371,7 +371,7 @@ async function scanSendersEnvelope() {
     unread: (s.emails || []).filter(e => e.unread).length,
     total: s.total || (s.emails ? s.emails.length : 0),
     lastDate: s.lastDate || null
-  })).sort((a, b) => (b.lastDate || 0) - (a.lastDate || 0)).slice(0, 10);
+  })).sort((a, b) => (b.lastDate || 0) - (a.lastDate || 0)).slice(0, limit);
 }
 
 async function testConnection(override = {}) {
@@ -459,6 +459,8 @@ ${contextText}
 
 // API routes
 router.get('/channels', (req, res) => {
+  const limit = Math.max(1, parseInt(req.query.limit || '10', 10));
+  console.log(`AIMAIL: GET /channels limit=${limit}`);
   const channels = Object.values(store.senders).map(s => {
     const unread = s.emails.filter(e => e.unread).length;
     const lastDate = s.emails.length ? Math.max(...s.emails.map(e => new Date(e.date || 0).getTime())) : (s.lastDate || null);
@@ -473,14 +475,16 @@ router.get('/channels', (req, res) => {
       total: s.total || s.emails.length,
       lastDate
     };
-  });
+  }).sort((a, b) => (b.lastDate || 0) - (a.lastDate || 0)).slice(0, limit);
   res.json({ channels });
 });
 
 // Refresh channel list by scanning envelopes only
-router.get('/channels/refresh', async (_req, res) => {
+router.get('/channels/refresh', async (req, res) => {
+  const limit = Math.max(1, parseInt(req.query.limit || '10', 10));
+  console.log(`AIMAIL: GET /channels/refresh limit=${limit}`);
   try {
-    const channels = await scanSendersEnvelope();
+    const channels = await scanSendersEnvelope(limit);
     res.json({ channels });
   } catch (err) {
     res.status(500).json({ ok: false, error: err.message });
@@ -489,6 +493,7 @@ router.get('/channels/refresh', async (_req, res) => {
 
 router.get('/channel/:id', (req, res) => {
   const id = normalizeSenderId(req.params.id);
+  console.log('AIMAIL: GET /channel', id);
   const sender = store.senders[id];
   if (!sender) return res.status(404).json({ error: 'Not found' });
   res.json(sender);
@@ -497,6 +502,7 @@ router.get('/channel/:id', (req, res) => {
 // Fetch messages on-demand for a channel (by domain/id)
 router.get('/channel/:id/fetch', async (req, res) => {
   const id = normalizeSenderId(req.params.id);
+  console.log('AIMAIL: GET /channel/fetch', id);
   try {
     const messages = await fetchMessagesForSender(id);
     if (!store.senders[id]) {
@@ -645,7 +651,7 @@ loadStore();
 // Seed channels on startup (best-effort)
 (async () => {
   try {
-    await scanSendersEnvelope();
+    await scanSendersEnvelope(10);
   } catch (err) {
     console.warn('AIMAIL: initial scan failed:', err.message);
   }
