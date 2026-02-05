@@ -387,7 +387,16 @@ async function testConnection(override = {}) {
     let lock = await client.getMailboxLock('INBOX');
     try {
       const status = await client.status('INBOX', { messages: true, unseen: true });
-      return { messages: status.messages || 0, unseen: status.unseen || 0, method: methodUsed };
+      console.log(`AIMAIL: testConnection ok host=${cfg.host} user=${cfg.user} secure=${cfg.secure} port=${cfg.port} method=${methodUsed} messages=${status.messages || 0} unseen=${status.unseen || 0}`);
+      return {
+        host: cfg.host,
+        user: cfg.user,
+        port: cfg.port,
+        secure: cfg.secure,
+        messages: status.messages || 0,
+        unseen: status.unseen || 0,
+        method: methodUsed
+      };
     } finally {
       lock.release();
     }
@@ -621,6 +630,7 @@ router.post('/channel/:id/logo', upload.single('file'), (req, res) => {
 
 router.post('/test-connection', async (req, res) => {
   try {
+    console.log('AIMAIL: POST /test-connection body:', req.body);
     const info = await testConnection(req.body || {});
     res.json({ ok: true, ...info });
   } catch (err) {
@@ -629,6 +639,7 @@ router.post('/test-connection', async (req, res) => {
       error: err.message,
       missing: err.missing || []
     };
+    console.warn('AIMAIL: test-connection failed:', details);
     if (err.code) details.code = err.code;
     if (err.command) details.command = err.command;
     if (err.response) details.response = err.response;

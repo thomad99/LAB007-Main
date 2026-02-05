@@ -526,7 +526,7 @@
                 const res = await fetch('/api/aimail/test-connection', { method: 'POST' });
                 const json = await res.json();
                 if (!res.ok) throw new Error(json.error || `HTTP ${res.status}`);
-                senderStatus.textContent = `IMAP OK. Messages: ${json.messages}, Unseen: ${json.unseen}, Auth: ${json.method}`;
+                senderStatus.textContent = `IMAP OK. Host: ${json.host} User: ${json.user} Port: ${json.port} Secure: ${json.secure} Messages: ${json.messages} Unseen: ${json.unseen} Auth: ${json.method}`;
             } catch (err) {
                 senderStatus.textContent = 'Test failed: ' + err.message;
             }
