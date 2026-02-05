@@ -216,7 +216,7 @@
             renderSummary(parsed);
             renderDetails(parsed);
             renderDiagrams(parsed);
-            setStatus(`Analyzed ${file.name}`);
+            setStatus(`Analyzed ${file.name} | LB:${parsed.lbVservers.length} SVC:${parsed.services.length} SG:${parsed.serviceGroups.length} Binds:${parsed.binds.length}`);
         } catch (err) {
             console.error(err);
             setStatus(`Error: ${err.message || err}`);

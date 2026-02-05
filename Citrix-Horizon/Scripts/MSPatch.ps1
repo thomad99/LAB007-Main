@@ -413,7 +413,7 @@ $UpdateScript = {
     }
 
     Write-Host ("[{0}] Installing updates..." -f (Get-Date)) -ForegroundColor Magenta
-
+    # Simplified install to mirror local success
     Install-WindowsUpdate -AcceptAll -IgnoreReboot -Verbose -ErrorAction Stop -MicrosoftUpdate:(!$useWsus) | Out-Host
 
     $after = Get-LatestHotfixInfo
