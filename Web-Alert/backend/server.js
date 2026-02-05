@@ -2138,6 +2138,47 @@ app.post('/api/clear-history', async (req, res) => {
     }
 });
 
+// Purge completed/inactive jobs only
+app.post('/api/purge-completed', async (req, res) => {
+    try {
+        console.log('Purging inactive/completed monitoring jobs...');
+        const inactiveIdsResult = await db.query(`SELECT id FROM monitored_urls WHERE is_active = false`);
+        const inactiveIds = inactiveIdsResult.rows.map(r => r.id);
+
+        let deletedAlerts = { rows: [] };
+        let deletedSubscribers = { rows: [] };
+        let deletedUrls = { rows: [] };
+
+        if (inactiveIds.length > 0) {
+            deletedAlerts = await db.query(
+                'DELETE FROM alerts_history WHERE monitored_url_id = ANY($1::int[]) RETURNING id',
+                [inactiveIds]
+            );
+            deletedSubscribers = await db.query(
+                'DELETE FROM alert_subscribers WHERE url_id = ANY($1::int[]) RETURNING id',
+                [inactiveIds]
+            );
+            deletedUrls = await db.query(
+                'DELETE FROM monitored_urls WHERE id = ANY($1::int[]) RETURNING id',
+                [inactiveIds]
+            );
+        }
+
+        res.json({
+            message: 'Inactive/completed jobs purged',
+            inactiveIds,
+            deletedCounts: {
+                alerts: deletedAlerts.rows.length,
+                subscribers: deletedSubscribers.rows.length,
+                urls: deletedUrls.rows.length
+            }
+        });
+    } catch (error) {
+        console.error('Error purging completed jobs:', error);
+        res.status(500).json({ error: 'Failed to purge completed jobs' });
+    }
+});
+
 // Add endpoint to stop individual monitoring
 app.post('/api/stop-monitoring/:id', async (req, res) => {
     try {
