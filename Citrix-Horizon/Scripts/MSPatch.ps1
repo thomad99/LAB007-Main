@@ -379,7 +379,7 @@ $UpdateScript = {
 
     Write-Host ("[{0}] Checking available updates..." -f (Get-Date)) -ForegroundColor Cyan
 
-    $available = Get-WindowsUpdate -Category 'Security Updates','Critical Updates','Updates' -IgnoreUserInput -ErrorAction Stop -MicrosoftUpdate:(!$useWsus)
+    $available = Get-WindowsUpdate -Category 'Critical Updates' -IgnoreUserInput -ErrorAction Stop -MicrosoftUpdate:(!$useWsus)
     $count = ($available | Measure-Object).Count
 
     Write-Host ("[{0}] Available updates: {1}" -f (Get-Date), $count) -ForegroundColor Cyan
@@ -414,7 +414,7 @@ $UpdateScript = {
 
     Write-Host ("[{0}] Installing updates..." -f (Get-Date)) -ForegroundColor Magenta
     # Simplified install to mirror local success
-    Install-WindowsUpdate -AcceptAll -IgnoreReboot -Verbose -ErrorAction Stop -MicrosoftUpdate:(!$useWsus) | Out-Host
+    Install-WindowsUpdate -AcceptAll -IgnoreReboot -Verbose -ErrorAction Stop -MicrosoftUpdate:(!$useWsus) -Category 'Critical Updates' | Out-Host
 
     $after = Get-LatestHotfixInfo
     $pending = Get-RebootRequired
