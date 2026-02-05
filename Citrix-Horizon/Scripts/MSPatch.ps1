@@ -491,7 +491,51 @@ function Invoke-LocalRun {
 }
 
 if (-not $RunLocal) {
-    Invoke-LocalRun -TargetComputer $ComputerName
+    # Deploy a minimal runner to the target instead of copying full script
+    $simpleScript = @"
+param(
+    [string]`$LogPath = 'C:\ctxadmin\MSpatch.log',
+    [string[]]`$Categories = @('Security Updates','Critical Updates'),
+    [int]`$SleepAfterRebootSeconds = 60
+)
+function Write-LogSimple { param(`$m) `$line = "[{0}] {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), `$m; Add-Content -LiteralPath `$LogPath -Value `$line -ErrorAction SilentlyContinue; Write-Host `$line }
+try {
+    if (!(Test-Path 'C:\ctxadmin')) { New-Item -ItemType Directory -Path 'C:\ctxadmin' -Force | Out-Null }
+    Write-LogSimple "Simple patch runner start. Categories: `$($Categories -join ', ')"
+    Import-Module PSWindowsUpdate -ErrorAction Stop
+    Write-LogSimple "Scanning for updates..."
+    `$scan = Get-WindowsUpdate -Category `$Categories -IgnoreUserInput -ErrorAction Stop -MicrosoftUpdate
+    `$count = (`$scan | Measure-Object).Count
+    Write-LogSimple "Found `$count update(s)"
+    if (`$count -gt 0) {
+        Write-LogSimple "Installing updates..."
+        Install-WindowsUpdate -AcceptAll -IgnoreReboot -Category `$Categories -Verbose -MicrosoftUpdate -ErrorAction Continue | Out-Host
+        Write-LogSimple "Install pass complete. Rebooting..."
+        Restart-Computer -Force
+        Write-LogSimple "Waiting for reboot..."
+        Start-Sleep -Seconds `$SleepAfterRebootSeconds
+        Write-LogSimple "Post-reboot wait complete."
+    } else {
+        Write-LogSimple "No updates to install."
+    }
+} catch {
+    Write-LogSimple "ERROR: `$($_.Exception.Message)"
+    throw
+}
+"@
+
+    Write-Host ("[{0}] Deploying minimal runner to {1}\C$\ctxadmin\mspatch-run.ps1 ..." -f (Get-Date), $ComputerName) -ForegroundColor Yellow
+    Invoke-Command -ComputerName $ComputerName -Credential $Credential -Authentication $WinRMAuthentication -UseSSL:$UseSSL -ScriptBlock {
+        param($content,$logPath)
+        $dir = 'C:\ctxadmin'
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        $path = Join-Path $dir 'mspatch-run.ps1'
+        Set-Content -LiteralPath $path -Value $content -Encoding UTF8 -Force
+        Write-Host ("[{0}] Running local mspatch-run.ps1" -f (Get-Date)) -ForegroundColor Cyan
+        powershell.exe -ExecutionPolicy Bypass -File $path -LogPath $logPath
+    } -ArgumentList $simpleScript,$LogPath
+    Write-Host ("[{0}] Deployment invoked. Exiting wrapper." -f (Get-Date)) -ForegroundColor Green
+    exit 0
 }
 
 $scriptStart = Get-Date
