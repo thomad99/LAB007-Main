@@ -355,6 +355,18 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
     console.log(`Scheduling cron job with expression: ${cronExpression}`);
     const task = cron.schedule(cronExpression, async () => {
         try {
+            // If task was removed from map, exit early
+            if (!monitoringTasks.has(urlId)) {
+                return;
+            }
+            // Verify URL still exists/active
+            const urlRow = await db.query('SELECT is_active FROM monitored_urls WHERE id = $1', [urlId]);
+            if (!urlRow.rows || urlRow.rows.length === 0 || urlRow.rows[0].is_active === false) {
+                console.log(`URL ID ${urlId} not active or missing; stopping cron task.`);
+                task.stop();
+                monitoringTasks.delete(urlId);
+                return;
+            }
             // Check if there are any active subscribers before proceeding
             const activeSubscribers = await db.query(`
                 SELECT COUNT(*) 
@@ -2100,12 +2112,15 @@ app.post('/api/clear-history', async (req, res) => {
     try {
         console.log('Clearing completed monitoring jobs...');
 
+        const tasksBefore = monitoringTasks.size;
         const deletedAlerts = await db.query(`DELETE FROM alerts_history RETURNING id`);
         const deletedSubscribers = await db.query(`DELETE FROM alert_subscribers RETURNING id`);
         const deletedUrls = await db.query(`DELETE FROM monitored_urls RETURNING id`);
 
         // Clear in-memory tasks
-        monitoringTasks.forEach((task) => task.stop());
+        monitoringTasks.forEach((task, key) => {
+            try { task.stop(); } catch (_) {}
+        });
         monitoringTasks.clear();
 
         res.json({
@@ -2114,7 +2129,8 @@ app.post('/api/clear-history', async (req, res) => {
                 alerts: deletedAlerts.rows.length,
                 subscribers: deletedSubscribers.rows.length,
                 urls: deletedUrls.rows.length
-            }
+            },
+            tasksStopped: tasksBefore
         });
     } catch (error) {
         console.error('Error clearing history:', error);
