@@ -447,12 +447,19 @@
         // Function to clear history
         async function clearHistory() {
             try {
+                const basePath = window.location.pathname.startsWith('/webalert') ? '/webalert' : '';
+                const purgeUrl = window.location.protocol + '//' + window.location.host + basePath + '/api/purge-completed';
                 const clearHistoryUrl = window.location.protocol + '//' + window.location.host + basePath + '/api/clear-history';
-                const response = await fetch(clearHistoryUrl, {
-                    method: 'POST'
-                });
-                const result = await response.json();
+
+                // First purge only inactive/completed
+                let result = await fetch(purgeUrl, { method: 'POST' }).then(r => r.json());
+                console.log('Purge completed:', result);
+
+                // Then do full clear (DB + in-memory)
+                const response = await fetch(clearHistoryUrl, { method: 'POST' });
+                result = await response.json();
                 console.log('History cleared:', result);
+
                 loadStatus(); // Refresh the table
             } catch (error) {
                 console.error('Error clearing history:', error);
