@@ -7,6 +7,7 @@ const cors = require('cors');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
 const { router: aimailRouter } = require('./aimail');
+const fetchFn = global.fetch || ((...args) => import('node-fetch').then(({ default: f }) => f(...args)));
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -401,6 +402,60 @@ app.use('/aimail-logos', express.static(path.join(__dirname, 'aimail-data', 'log
 // AIMAIL landing
 app.get('/aimail', (req, res) => {
 res.sendFile(path.join(__dirname, 'public', 'aimail.html'));
+});
+
+// UAG AI analysis endpoint
+app.post('/api/uag/ai-analyze', async (req, res) => {
+  try {
+    const { text } = req.body || {};
+    if (!text || !text.trim()) {
+      return res.status(400).json({ error: 'Text is required' });
+    }
+    const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
+    }
+    const prompt = `
+You are helping analyze exported logs/errors from an Omnissa Universal Access Gateway (UAG).
+User provided this snippet (may contain errors): 
+"""
+${text}
+"""
+Tasks:
+- Briefly explain in plain English what this looks like.
+- State if it is expected/benign or likely an issue.
+- Suggest practical next steps to fix/verify.
+- Provide top 3 relevant links (public docs/forums) that match the error text.
+Keep it concise and actionable.`;
+
+    const body = {
+      model: 'gpt-4o-mini',
+      temperature: 0.2,
+      max_tokens: 450,
+      messages: [
+        { role: 'system', content: 'You are a senior support engineer for Omnissa/VMware UAG. Be concise and helpful.' },
+        { role: 'user', content: prompt }
+      ]
+    };
+    const response = await fetchFn('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      const errText = await response.text().catch(()=> '');
+      return res.status(response.status).json({ error: `OpenAI request failed: ${errText || response.statusText}` });
+    }
+    const data = await response.json();
+    const result = data?.choices?.[0]?.message?.content || '';
+    return res.json({ result });
+  } catch (err) {
+    console.error('AI analyze error:', err);
+    return res.status(500).json({ error: 'Failed to analyze with AI' });
+  }
 });
 
 // Catch-all route for main landing page (must be last, only matches exact /)

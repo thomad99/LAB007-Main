@@ -37,6 +37,13 @@
         margin-right:6px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+    .log-entry { border:1px solid rgba(255,255,255,0.08); border-radius:8px; margin-bottom:6px; background:#0f172a; }
+    .log-head { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; cursor:pointer; font-weight:700; }
+    .log-toggle { font-weight:900; color:#e5b600; margin-left:10px; }
+    .log-body { display:none; border-top:1px solid rgba(255,255,255,0.08); }
+    .log-body pre { white-space:pre-wrap; max-height:160px; overflow:auto; font-size:12px; color:#cbd5e1; margin:0; padding:8px 10px; }
+    .log-match { background:#fde047; color:#111; font-weight:700; padding:1px 2px; border-radius:3px; }
+    .log-match.active { background:#22d3ee; color:#0b1020; }
     </style>
 </head>
 <body>
@@ -51,10 +58,10 @@
                     </p>
                 </div>
             </div>
-            <div class="refresh-controls" style="z-index: 9999; position: relative; display: flex; flex-wrap: wrap; gap: 4px; justify-content: space-between; align-items: flex-start; width: 100%; padding: 0 4px; font-size: 12px;">
-                <div style="display: flex; flex-direction: column; gap: 2px; min-width: 180px; align-items: stretch; flex: 1 1 0;">
+            <div class="refresh-controls" style="z-index: 9999; position: relative; display: flex; flex-wrap: nowrap; gap: 6px; justify-content: space-between; align-items: flex-start; width: 100%; padding: 0 4px; font-size: 12px; overflow-x: auto;">
+                <div style="display: flex; flex-direction: column; gap: 2px; min-width: 220px; align-items: stretch; flex: 1.5 1 0;">
                     <div style="text-align: center; color: #dcdcdc; letter-spacing: 2px; font-weight: 600;">Discover</div>
-                    <div style="border: 2px solid #dcdcdc; border-radius: 10px; padding: 4px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; background: rgba(255,255,255,0.04);">
+                    <div style="border: 2px solid #dcdcdc; border-radius: 10px; padding: 4px; display: flex; flex-wrap: nowrap; gap: 4px; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); overflow-x:auto;">
                     <a href="/citrix/api/download-audit-files" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; font-size: 12px; padding: 8px 14px; min-height: 38px; background:#e5b600; border-color:#e5b600; color:#000;">Download Tools</a>
                     <div class="file-input-wrapper" style="display: inline-block; position: relative;">
                         <button id="loadFileBtn" class="btn btn-primary" style="z-index: 10000; font-size: 12px; padding: 8px 14px; min-height: 38px; background:#e5b600; border-color:#e5b600; color:#000;" title="Load 0-Citrix-audit*.json or Citrix export ZIP files">Load Audit</button>
@@ -68,16 +75,16 @@
                     </div>
                 </div>
 
-                <div style="display: flex; flex-direction: column; gap: 2px; min-width: 140px; align-items: stretch; flex: 0.8 1 0;">
+                <div style="display: flex; flex-direction: column; gap: 2px; min-width: 120px; align-items: stretch; flex: 0.7 1 0;">
                     <div style="text-align: center; color: #dcdcdc; letter-spacing: 2px; font-weight: 600;">Build</div>
-                    <div style="border: 2px solid #dcdcdc; border-radius: 10px; padding: 4px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; background: rgba(255,255,255,0.04);">
+                    <div style="border: 2px solid #dcdcdc; border-radius: 10px; padding: 4px; display: flex; flex-wrap: nowrap; gap: 4px; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); overflow-x:auto;">
                         <button onclick="window.location.href='todo.html'" class="btn btn-secondary" style="background: #17a2b8; border-color: #17a2b8; font-size: 12px; padding: 8px 14px; min-height: 38px;">Build</button>
                     </div>
                 </div>
 
-                <div style="display: flex; flex-direction: column; gap: 2px; min-width: 220px; align-items: stretch; flex: 1 1 0;">
+                <div style="display: flex; flex-direction: column; gap: 2px; min-width: 200px; align-items: stretch; flex: 1.2 1 0;">
                     <div style="text-align: center; color: #dcdcdc; letter-spacing: 2px; font-weight: 600;">Manage</div>
-                    <div style="border: 2px solid #dcdcdc; border-radius: 10px; padding: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; background: rgba(255,255,255,0.04);">
+                    <div style="border: 2px solid #dcdcdc; border-radius: 10px; padding: 6px; display: flex; flex-wrap: nowrap; gap: 4px; align-items: center; justify-content: center; background: rgba(255,255,255,0.04); overflow-x:auto;">
                     <button id="goldenSunBtn" class="btn btn-secondary" style="background: linear-gradient(135deg,#1f8e3d,#32a852); border-color: #1f8e3d; font-size: 12px; padding: 8px 14px; min-height: 38px;">GoldenSun</button>
                     <button id="horizonTasksBtn" class="btn btn-primary" style="font-size: 12px; padding: 8px 14px; min-height: 38px; background:#e5b600; border-color:#e5b600; color:#000;">HZ Tasks</button>
                     <button onclick="openUagModal()" class="btn btn-secondary" style="background:#e5b600;border-color:#e5b600;color:#000;font-size:12px;padding:8px 14px;min-height:38px;">UAG</button>
@@ -382,7 +389,6 @@
         <div class="modal-content" style="max-width: 96%; width: 96%; margin-top: 80px; background:#0b1020; color:#e2e8f0;">
             <span class="modal-close" onclick="closeUagModal()">&times;</span>
             <h2 style="margin:0 0 6px 0;">UAG Config Analyzer</h2>
-            <p style="margin:0 0 12px 0; color:#94a3b8;">Import UAG configs and logs; view topology and key endpoints.</p>
             <div style="display:flex; gap:8px; margin-bottom:10px;">
                 <button class="task-tab active" id="uagTabConfig" onclick="showUagTab('config')">Config Dashboard</button>
                 <button class="task-tab" id="uagTabDebug" onclick="showUagTab('debug')">Debug / Logs</button>
@@ -390,7 +396,6 @@
 
             <div id="uagConfigPanel" class="horizon-task-panel" style="display:block;">
                 <h3>Import UAG Config</h3>
-                <p style="color:#94a3b8;">Upload an existing UAG configuration file (txt/conf/json/ini). The parser will extract key endpoints and render a quick diagram.</p>
                 <input type="file" id="uagConfigFile" accept=".txt,.conf,.cfg,.ini,.log,.json" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
                 <div id="uagConfigStatus" style="margin-top:8px; color:#94a3b8;"></div>
 
@@ -410,7 +415,7 @@
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap:10px; margin-top:10px;">
+                <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:10px; margin-top:10px;">
                     <div class="card" style="min-height:180px; background:#11182a;">
                         <h4>Gateways / External</h4>
                         <div id="uagListGateway" class="chips"></div>
@@ -433,12 +438,20 @@
 
             <div id="uagDebugPanel" class="horizon-task-panel" style="display:none;">
                 <h3>Debug / Logs</h3>
-                <p style="color:#94a3b8;">Import UAG log bundle (.zip). Quick search across entries.</p>
                 <input type="file" id="uagLogFile" accept=".zip" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
-                <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                     <input id="uagLogSearch" class="input" style="max-width:260px;" placeholder="Search text in logs...">
                     <button class="btn" id="uagLogSearchBtn">Search</button>
+                    <button class="btn" id="uagLogPrevBtn" title="Previous match">Prev</button>
+                    <button class="btn" id="uagLogNextBtn" title="Next match">Next</button>
+                    <span id="uagLogCount" style="color:#94a3b8;">0</span>
                 </div>
+                <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start;">
+                    <textarea id="uagAiInput" rows="3" placeholder="Paste an error snippet to analyze..." style="flex:1 1 360px; min-width:260px; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:#0f172a; color:#e2e8f0;"></textarea>
+                    <button class="btn btn-secondary" id="uagAiBtn" style="background:#22d3ee; border-color:#22d3ee; color:#0b1020; min-height:38px;">AI Analyze</button>
+                </div>
+                <div id="uagAiStatus" style="margin-top:6px; color:#94a3b8;"></div>
+                <div id="uagAiResult" style="margin-top:8px; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px; background:#0f172a; color:#e2e8f0; display:none;"></div>
                 <div id="uagLogStatus" style="margin-top:8px;color:#94a3b8;"></div>
                 <div class="logs" id="uagLogResults"></div>
             </div>
@@ -1332,6 +1345,7 @@
     }
 
     function renderUagDiagram(){
+        const container = document.getElementById('uagMermaidGraph');
         const lines = ['flowchart TB'];
         uagData.gateways.forEach((g,i)=> lines.push(`gw${i}([Gateway ${i+1}\\n${escapeMermaid(g)}])`));
         uagData.conn.forEach((c,i)=> lines.push(`cs${i}([Conn ${i+1}\\n${escapeMermaid(c)}])`));
@@ -1339,6 +1353,7 @@
         uagData.ad.forEach((a,i)=> lines.push(`ad${i}([AD ${i+1}\\n${escapeMermaid(a)}])`));
         uagData.certs.forEach((c,i)=> lines.push(`crt${i}([Cert ${i+1}\\n${escapeMermaid(c)}])`));
 
+        // Build edges
         if (uagData.gateways.length && (uagData.conn.length || uagData.external.length)) {
             uagData.gateways.forEach((_,gi)=>{
                 uagData.conn.forEach((_,ci)=> lines.push(`gw${gi} --> cs${ci}`));
@@ -1354,10 +1369,18 @@
         if (uagData.conn.length && uagData.ad.length) {
             uagData.conn.forEach((_,ci)=> uagData.ad.forEach((_,ai)=> lines.push(`cs${ci} --> ad${ai}`)));
         }
+        // If no nodes were added, show guidance instead of empty graph
+        if (lines.length === 1) {
+            if (container) container.innerHTML = '<div style="padding:12px; color:#94a3b8;">Load a config with at least one gateway or external URL to draw the topology.</div>';
+            return;
+        }
         const graph = lines.join('\n');
-        const container = document.getElementById('uagMermaidGraph');
-        if (container) {
+        if (!container) return;
+        try {
             mermaid.render('uagGraphSvg', graph, (svg)=>{ container.innerHTML = svg; });
+        } catch (err) {
+            console.error('Mermaid render failed', err);
+            container.innerHTML = '<div style="padding:12px; color:#f87171;">Could not render diagram. Check that the config has gateways / external URLs / connection servers.</div>';
         }
     }
     function escapeMermaid(s){return (s||'').replace(/[\[\]\(\)\{\}]/g,'');}
@@ -1369,13 +1392,22 @@
     // Debug / logs
     const logInput = document.getElementById('uagLogFile');
     const logSearchBtn = document.getElementById('uagLogSearchBtn');
+    const logPrevBtn = document.getElementById('uagLogPrevBtn');
+    const logNextBtn = document.getElementById('uagLogNextBtn');
+    const aiBtn = document.getElementById('uagAiBtn');
     if (logInput) {
         logInput.addEventListener('change', handleLogZip);
     }
     if (logSearchBtn) {
         logSearchBtn.addEventListener('click', () => filterLogs());
     }
+    if (aiBtn) {
+        aiBtn.addEventListener('click', analyzeLogAi);
+    }
     let uagLogEntries = [];
+    let uagLogMatches = [];
+    let uagLogMatchIndex = -1;
+    let aiRunning = false;
     async function handleLogZip(e){
         const file = e.target.files?.[0];
         if (!file) return;
@@ -1391,27 +1423,125 @@
             }));
             uagLogEntries = entries;
             setUagStatus('uagLogStatus', `Loaded ${entries.length} file(s).`);
-            renderLogResults(entries);
+            renderLogResults(entries, (document.getElementById('uagLogSearch')?.value || '').trim());
         }catch(err){
             console.error(err);
             setUagStatus('uagLogStatus', 'Failed to read zip.');
         }
     }
     function filterLogs(){
-        const q = (document.getElementById('uagLogSearch')?.value || '').toLowerCase();
-        if (!q) return renderLogResults(uagLogEntries);
-        renderLogResults(uagLogEntries.filter(e=> e.text.toLowerCase().includes(q)));
+        const q = (document.getElementById('uagLogSearch')?.value || '').trim();
+        renderLogResults(uagLogEntries, q);
     }
-    function renderLogResults(list){
+    if (logPrevBtn) logPrevBtn.addEventListener('click', () => gotoLogMatch(-1));
+    if (logNextBtn) logNextBtn.addEventListener('click', () => gotoLogMatch(1));
+    function toggleLogEntry(idx){
+        const entry = document.querySelector(`.log-entry[data-idx="${idx}"]`);
+        if (!entry) return;
+        const body = entry.querySelector('.log-body');
+        const icon = entry.querySelector('.log-toggle');
+        const open = body.style.display === 'block';
+        body.style.display = open ? 'none' : 'block';
+        if (icon) icon.textContent = open ? '+' : '−';
+    }
+
+    function highlightText(text, query){
+        if (!query) return escapeHtml(text);
+        const escQ = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp(escQ, 'gi');
+        return escapeHtml(text).replace(re, (m)=>`<span class="log-match">${m}</span>`);
+    }
+    function gotoLogMatch(step){
+        if (!uagLogMatches.length) return;
+        uagLogMatchIndex = (uagLogMatchIndex + step + uagLogMatches.length) % uagLogMatches.length;
+        uagLogMatches.forEach((el,i)=> el.classList.toggle('active', i === uagLogMatchIndex));
+        const target = uagLogMatches[uagLogMatchIndex];
+        if (target) {
+            const entry = target.closest('.log-entry');
+            if (entry) {
+                const body = entry.querySelector('.log-body');
+                const icon = entry.querySelector('.log-toggle');
+                if (body) body.style.display = 'block';
+                if (icon) icon.textContent = '−';
+            }
+            target.scrollIntoView({ behavior:'smooth', block:'center' });
+        }
+        const countEl = document.getElementById('uagLogCount');
+        if (countEl) countEl.textContent = uagLogMatches.length ? `${uagLogMatchIndex+1}/${uagLogMatches.length}` : '0';
+    }
+
+    function renderLogResults(list, query = ''){
         const wrap = document.getElementById('uagLogResults');
         if (!wrap) return;
         if (!list.length){ wrap.innerHTML = '<div style="color:#94a3b8;">No entries</div>'; return;}
-        wrap.innerHTML = list.map(e=>`
-            <div style="border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px; margin-bottom:6px; background:#0f172a;">
-                <div style="font-weight:700; margin-bottom:4px;">${escapeHtml(e.name)}</div>
-                <pre style="white-space:pre-wrap; max-height:160px; overflow:auto; font-size:12px; color:#cbd5e1;">${escapeHtml(e.text.substring(0,5000))}</pre>
-            </div>
-        `).join('');
+        const qLower = query.toLowerCase();
+        wrap.innerHTML = list.map((e,i)=>{
+            const snippet = e.text.substring(0,5000);
+            const hasMatch = qLower ? snippet.toLowerCase().includes(qLower) : false;
+            const rendered = highlightText(snippet, query);
+            const bodyDisplay = hasMatch && query ? 'block' : 'none';
+            const toggleSymbol = bodyDisplay === 'block' ? '−' : '+';
+            return `
+            <div class="log-entry" data-idx="${i}">
+                <div class="log-head" onclick="toggleLogEntry(${i})">
+                    <span>${escapeHtml(e.name)}</span>
+                    <span class="log-toggle">${toggleSymbol}</span>
+                </div>
+                <div class="log-body" style="display:${bodyDisplay};">
+                    <pre>${rendered}</pre>
+                </div>
+            </div>`;
+        }).join('');
+        uagLogMatches = Array.from(wrap.querySelectorAll('.log-match'));
+        if (uagLogMatches.length) {
+            uagLogMatchIndex = 0;
+            uagLogMatches[0].classList.add('active');
+            const entry = uagLogMatches[0].closest('.log-entry');
+            if (entry) {
+                const body = entry.querySelector('.log-body');
+                const icon = entry.querySelector('.log-toggle');
+                if (body) body.style.display = 'block';
+                if (icon) icon.textContent = '−';
+            }
+            uagLogMatches[0].scrollIntoView({ behavior:'smooth', block:'center' });
+        } else {
+            uagLogMatchIndex = -1;
+        }
+        const countEl = document.getElementById('uagLogCount');
+        if (countEl) countEl.textContent = uagLogMatches.length ? `${uagLogMatchIndex+1}/${uagLogMatches.length}` : '0';
+    }
+
+    async function analyzeLogAi(){
+        if (aiRunning) return;
+        const text = (document.getElementById('uagAiInput')?.value || '').trim();
+        const statusEl = document.getElementById('uagAiStatus');
+        const resultEl = document.getElementById('uagAiResult');
+        if (!text) {
+            if (statusEl) statusEl.textContent = 'Paste an error snippet first.';
+            return;
+        }
+        aiRunning = true;
+        if (statusEl) statusEl.innerHTML = '<span class="spinner-eye"></span> Sending to AI...';
+        if (resultEl) { resultEl.style.display='none'; resultEl.textContent=''; }
+        try{
+            const res = await fetch('/api/uag/ai-analyze', {
+                method:'POST',
+                headers:{ 'Content-Type':'application/json' },
+                body: JSON.stringify({ text })
+            });
+            const data = await res.json().catch(()=> ({}));
+            if (!res.ok) throw new Error(data?.error || 'AI analyze failed');
+            if (statusEl) statusEl.textContent = 'Analysis complete';
+            if (resultEl) {
+                resultEl.style.display='block';
+                resultEl.innerHTML = data.result ? data.result : 'No response.';
+            }
+        }catch(err){
+            console.error('AI analyze error', err);
+            if (statusEl) statusEl.textContent = err.message || 'Failed to analyze';
+        }finally{
+            aiRunning = false;
+        }
     }
     </script>
 </body>
