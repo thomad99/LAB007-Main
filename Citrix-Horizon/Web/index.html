@@ -50,7 +50,7 @@
     <div class="container">
         <header>
             <div class="header-content">
-                <img src="images/LAB007-LOGO-GOLD.png" alt="LAB007 Logo" class="logo" style="opacity: 1;">
+                <img src="/citrix/images/LAB007-LOGO-GOLD.png" alt="LAB007 Logo" class="logo" style="opacity: 1;">
                 <div class="header-title">
                     <p class="header-subtitle" style="margin: 0;">
                         <span class="header-title-main">Citrix Environment</span><br>
@@ -396,7 +396,7 @@
 
             <div id="uagConfigPanel" class="horizon-task-panel" style="display:block;">
                 <h3>Import UAG Config</h3>
-                <input type="file" id="uagConfigFile" accept=".txt,.conf,.cfg,.ini,.log,.json" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
+                <input type="file" id="uagConfigFile" accept=".txt,.conf,.cfg,.ini,.log,.json" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:12px 12px; min-height:68px; font-size:14px;">
                 <div id="uagConfigStatus" style="margin-top:8px; color:#94a3b8;"></div>
 
                 <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:8px; margin:12px 0;">
@@ -415,21 +415,21 @@
                     </div>
                 </div>
 
-                <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:10px; margin-top:10px;">
-                    <div class="card" style="min-height:180px; background:#11182a;">
+                <div style="display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px;">
+                    <div class="card" style="min-height:160px; background:#11182a;">
                         <h4>Gateways / External</h4>
                         <div id="uagListGateway" class="chips"></div>
                     </div>
-                    <div class="card" style="min-height:180px; background:#11182a;">
+                    <div class="card" style="min-height:160px; background:#11182a;">
                         <h4>Connection Servers</h4>
                         <div id="uagListConn" class="chips"></div>
                     </div>
-                    <div class="card" style="min-height:180px; background:#11182a;">
+                    <div class="card" style="min-height:160px; background:#11182a;">
                         <h4>DNS / AD</h4>
                         <div id="uagListDns" class="chips"></div>
                         <div id="uagListAd" class="chips" style="margin-top:6px;"></div>
                     </div>
-                    <div class="card" style="min-height:180px; background:#11182a;">
+                    <div class="card" style="min-height:160px; background:#11182a;">
                         <h4>Certificates</h4>
                         <div id="uagListCerts" class="chips"></div>
                     </div>
@@ -438,19 +438,27 @@
 
             <div id="uagDebugPanel" class="horizon-task-panel" style="display:none;">
                 <h3>Debug / Logs</h3>
-                <input type="file" id="uagLogFile" accept=".zip" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
-                <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
-                    <input id="uagLogSearch" class="input" style="max-width:260px;" placeholder="Search text in logs...">
-                    <button class="btn" id="uagLogSearchBtn">Search</button>
-                    <button class="btn" id="uagLogPrevBtn" title="Previous match">Prev</button>
-                    <button class="btn" id="uagLogNextBtn" title="Next match">Next</button>
-                    <span id="uagLogCount" style="color:#94a3b8;">0</span>
+                <div style="position: sticky; top: 56px; z-index: 3000; background:#0b1020; padding:8px 4px; border-bottom:1px solid rgba(255,255,255,0.08);">
+                    <div style="display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;">
+                        <div style="flex:1 1 420px; min-width:320px;">
+                            <input type="file" id="uagLogFile" accept=".zip" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
+                            <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                                <input id="uagLogSearch" class="input" style="max-width:260px; min-height:38px; padding:8px 10px;" placeholder="Search text in logs...">
+                                <button class="btn" id="uagLogSearchBtn">Search</button>
+                                <button class="btn" id="uagLogPrevBtn" title="Previous match">Prev</button>
+                                <button class="btn" id="uagLogNextBtn" title="Next match">Next</button>
+                                <span id="uagLogCount" style="color:#94a3b8;">0</span>
+                            </div>
+                        </div>
+                        <div style="flex:1 1 360px; min-width:300px; display:flex; gap:8px; align-items:stretch;">
+                            <textarea id="uagAiInput" rows="3" placeholder="Paste an error snippet to analyze..." style="flex:1 1 auto; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:#0f172a; color:#e2e8f0; min-height:72px;"></textarea>
+                            <div style="display:flex; flex-direction:column; gap:6px; min-width:110px; align-items:stretch;">
+                                <button class="btn btn-secondary" id="uagAiBtn" style="background:#22d3ee; border-color:#22d3ee; color:#0b1020; min-height:38px;">AI Analyze</button>
+                                <div id="uagAiStatus" style="color:#94a3b8; font-size:12px; min-height:18px;"></div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div style="margin-top:10px; display:flex; flex-wrap:wrap; gap:8px; align-items:flex-start;">
-                    <textarea id="uagAiInput" rows="3" placeholder="Paste an error snippet to analyze..." style="flex:1 1 360px; min-width:260px; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:#0f172a; color:#e2e8f0;"></textarea>
-                    <button class="btn btn-secondary" id="uagAiBtn" style="background:#22d3ee; border-color:#22d3ee; color:#0b1020; min-height:38px;">AI Analyze</button>
-                </div>
-                <div id="uagAiStatus" style="margin-top:6px; color:#94a3b8;"></div>
                 <div id="uagAiResult" style="margin-top:8px; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px; background:#0f172a; color:#e2e8f0; display:none;"></div>
                 <div id="uagLogStatus" style="margin-top:8px;color:#94a3b8;"></div>
                 <div class="logs" id="uagLogResults"></div>
@@ -1241,7 +1249,7 @@
     <!-- Footer -->
     <footer class="main-footer">
         <div class="footer-content">
-            <img src="images/LAB007-LOGO-TRANS.png" alt="LAB007 Logo" class="footer-logo">
+            <img src="/citrix/images/LAB007-LOGO-TRANS.png" alt="LAB007 Logo" class="footer-logo">
             <p class="footer-text">
                 Copyright 2025 - LAB007.AI All rights reserved. See <a href="https://www.lab007.ai" target="_blank">www.lab007.ai</a> for Conditions of use.
             </p>
@@ -1470,28 +1478,111 @@
         if (countEl) countEl.textContent = uagLogMatches.length ? `${uagLogMatchIndex+1}/${uagLogMatches.length}` : '0';
     }
 
+    function getLogGroup(name){
+        if (!name) return 'Other';
+        const idx = name.indexOf('/');
+        return idx > 0 ? name.slice(0, idx) : 'Other';
+    }
+    function toggleLogGroup(id){
+        const body = document.querySelector(`.log-group[data-group="${id}"] .log-group-body`);
+        const icon = document.querySelector(`.log-group[data-group="${id}"] .log-group-toggle`);
+        if (!body) return;
+        const open = body.style.display === 'block';
+        body.style.display = open ? 'none' : 'block';
+        if (icon) icon.textContent = open ? '+' : '−';
+    }
+
     function renderLogResults(list, query = ''){
         const wrap = document.getElementById('uagLogResults');
         if (!wrap) return;
         if (!list.length){ wrap.innerHTML = '<div style="color:#94a3b8;">No entries</div>'; return;}
         const qLower = query.toLowerCase();
-        wrap.innerHTML = list.map((e,i)=>{
-            const snippet = e.text.substring(0,5000);
-            const hasMatch = qLower ? snippet.toLowerCase().includes(qLower) : false;
-            const rendered = highlightText(snippet, query);
+        const priorityNames = [
+            'esmanager.log','horizon.log','admin.log','audit.log','reverseproxy.log',
+            'authbroker.log','wsbroker.log','blastgateway.log','pcoipgateway.log','system.log'
+        ];
+        const priorityEntries = [];
+        const remaining = [];
+        list.forEach((entry,i)=>{
+            const n = (entry.name||'').toLowerCase();
+            const isPriority = priorityNames.some(p=> n.endsWith(p));
+            if (isPriority) priorityEntries.push({entry, idx:i}); else remaining.push({entry, idx:i});
+        });
+        // group by top-level prefix before '/'
+        const groups = [];
+        const grouped = {};
+        remaining.forEach(({entry, idx}) => {
+            const g = getLogGroup(entry.name);
+            if (!grouped[g]) { grouped[g] = []; groups.push(g); }
+            grouped[g].push({ entry, idx });
+        });
+        let html = '';
+        if (priorityEntries.length){
+            const hasMatch = query ? priorityEntries.some(({entry}) => entry.text.toLowerCase().includes(qLower)) : false;
             const bodyDisplay = hasMatch && query ? 'block' : 'none';
             const toggleSymbol = bodyDisplay === 'block' ? '−' : '+';
-            return `
-            <div class="log-entry" data-idx="${i}">
-                <div class="log-head" onclick="toggleLogEntry(${i})">
-                    <span>${escapeHtml(e.name)}</span>
-                    <span class="log-toggle">${toggleSymbol}</span>
+            html += `
+            <div class="log-group" data-group="priority" style="border:1px solid rgba(255,255,255,0.12); border-radius:10px; margin-bottom:10px; background:#0c1326;">
+                <div class="log-head" style="font-size:15px;" onclick="toggleLogGroup('priority')">
+                    <span>Top Logs <span style="color:#94a3b8;font-weight:500;">(${priorityEntries.length})</span></span>
+                    <span class="log-group-toggle">${toggleSymbol}</span>
                 </div>
-                <div class="log-body" style="display:${bodyDisplay};">
-                    <pre>${rendered}</pre>
+                <div class="log-group-body" style="display:${bodyDisplay}; padding:6px 8px; border-top:1px solid rgba(255,255,255,0.08);">
+            `;
+            priorityEntries.forEach(({entry, idx})=>{
+                const snippet = entry.text.substring(0,5000);
+                const hasMatchEntry = qLower ? snippet.toLowerCase().includes(qLower) : false;
+                const rendered = highlightText(snippet, query);
+                const entryDisplay = hasMatchEntry && query ? 'block' : 'none';
+                const toggleSymbolEntry = entryDisplay === 'block' ? '−' : '+';
+                html += `
+                    <div class="log-entry" data-idx="${idx}" style="margin-bottom:6px;">
+                        <div class="log-head" onclick="toggleLogEntry(${idx})">
+                            <span>${escapeHtml(entry.name)}</span>
+                            <span class="log-toggle">${toggleSymbolEntry}</span>
+                        </div>
+                        <div class="log-body" style="display:${entryDisplay};">
+                            <pre>${rendered}</pre>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
+        }
+        groups.forEach((g, gi) => {
+            const items = grouped[g];
+            const hasMatchInGroup = query ? items.some(({entry}) => entry.text.toLowerCase().includes(qLower)) : false;
+            const bodyDisplay = hasMatchInGroup && query ? 'block' : 'none';
+            const toggleSymbol = bodyDisplay === 'block' ? '−' : '+';
+            html += `
+            <div class="log-group" data-group="${gi}" style="border:1px solid rgba(255,255,255,0.12); border-radius:10px; margin-bottom:10px; background:#0c1326;">
+                <div class="log-head" style="font-size:15px;" onclick="toggleLogGroup(${gi})">
+                    <span>${escapeHtml(g)} <span style="color:#94a3b8;font-weight:500;">(${items.length})</span></span>
+                    <span class="log-group-toggle">${toggleSymbol}</span>
                 </div>
-            </div>`;
-        }).join('');
+                <div class="log-group-body" style="display:${bodyDisplay}; padding:6px 8px; border-top:1px solid rgba(255,255,255,0.08);">
+            `;
+            items.forEach(({entry, idx}) => {
+                const snippet = entry.text.substring(0,5000);
+                const hasMatch = qLower ? snippet.toLowerCase().includes(qLower) : false;
+                const rendered = highlightText(snippet, query);
+                const entryDisplay = hasMatch && query ? 'block' : 'none';
+                const toggleSymbolEntry = entryDisplay === 'block' ? '−' : '+';
+                html += `
+                    <div class="log-entry" data-idx="${idx}" style="margin-bottom:6px;">
+                        <div class="log-head" onclick="toggleLogEntry(${idx})">
+                            <span>${escapeHtml(entry.name)}</span>
+                            <span class="log-toggle">${toggleSymbolEntry}</span>
+                        </div>
+                        <div class="log-body" style="display:${entryDisplay};">
+                            <pre>${rendered}</pre>
+                        </div>
+                    </div>
+                `;
+            });
+            html += `</div></div>`;
+        });
+        wrap.innerHTML = html;
         uagLogMatches = Array.from(wrap.querySelectorAll('.log-match'));
         if (uagLogMatches.length) {
             uagLogMatchIndex = 0;
