@@ -40,8 +40,8 @@
     .log-entry { border:1px solid rgba(255,255,255,0.08); border-radius:8px; margin-bottom:6px; background:#0f172a; }
     .log-head { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; cursor:pointer; font-weight:700; }
     .log-toggle { font-weight:900; color:#e5b600; margin-left:10px; }
-    .log-body { display:none; border-top:1px solid rgba(255,255,255,0.08); }
-    .log-body pre { white-space:pre-wrap; max-height:60vh; overflow:auto; font-size:12px; color:#cbd5e1; margin:0; padding:8px 10px; }
+    .log-body { display:none; border-top:1px solid rgba(255,255,255,0.08); max-height:70vh; overflow:auto; }
+    .log-body pre { white-space:pre-wrap; max-height:none; overflow:visible; font-size:12px; color:#cbd5e1; margin:0; padding:8px 10px; }
     .log-match { background:#fde047; color:#111; font-weight:700; padding:1px 2px; border-radius:3px; }
     .log-match.active { background:#22d3ee; color:#0b1020; }
     </style>
@@ -1559,6 +1559,14 @@
         const graph = lines.join('\n');
         const renderId = `uagManualSvg_${Date.now()}`;
         try{
+            // Validate graph first to surface errors
+            try { mermaid.parse(graph); }
+            catch(parseErr){
+                console.error('Mermaid parse failed', parseErr);
+                if (status) status.textContent = 'Invalid diagram data: ' + (parseErr?.str || parseErr?.message || 'parse error');
+                if (tgt) tgt.innerHTML = '<div style="color:#f87171;">Parse error</div>';
+                return;
+            }
             mermaid.render(renderId, graph, svg=>{
                 if (tgt) tgt.innerHTML = svg;
                 if (status) status.textContent = `Diagram generated (${ext.length} external, ${vip.length} VIP, ${uag.length} UAG, ${conn.length} Conn).`;
@@ -1569,7 +1577,11 @@
             if (tgt) tgt.innerHTML = '<div style="color:#f87171;">Render error</div>';
         }
     }
-    function escapeMermaid(s){return (s||'').replace(/[\[\]\(\)\{\}]/g,'');}
+    function escapeMermaid(s){
+        return (s||'')
+            .replace(/[\[\]\(\)\{\}]/g,'')
+            .replace(/[^a-zA-Z0-9 .:\/_\-]/g,''); // strip characters that break mermaid labels
+    }
     function resetUagData(){
         uagData.gateways=[]; uagData.conn=[]; uagData.dns=[]; uagData.ad=[]; uagData.certs=[]; uagData.external=[];
     }
