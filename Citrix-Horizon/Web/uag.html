@@ -50,7 +50,9 @@
         .stat .val { font-size: 18px; font-weight: 800; color: var(--gold); }
         .section { margin-top: 10px; }
         .list { margin: 0; padding-left: 16px; color: var(--text); }
-        .badge { display: inline-block; padding: 4px 8px; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); margin-right: 6px; margin-bottom: 6px; }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); margin-right: 6px; margin-bottom: 6px; font-size: 12px; }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: flex-start; }
+        .col-card { min-height: 180px; display: flex; flex-direction: column; }
         .input { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: var(--text); }
         .btn { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: #0b0b0b; padding: 10px 14px; border-radius: 10px; border: none; font-weight: 800; cursor: pointer; }
         .tabs { display: flex; gap: 8px; margin-bottom: 10px; }
@@ -60,13 +62,25 @@
         #mermaidGraph { min-height: 260px; }
         .logs { max-height: 280px; overflow-y: auto; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 8px; }
         .log-line { font-family: Consolas, monospace; font-size: 13px; color: #cbd5e1; padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,0.05); }
+        .spinner-eye {
+            display: inline-block;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            border: 3px solid rgba(34,211,238,0.25);
+            border-top-color: #22d3ee;
+            animation: spin 0.8s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 <div class="wrap">
     <header>
         <div style="display:flex; align-items:center; gap:10px;">
-            <img src="images/lab007-trans.PNG" alt="LAB007" style="height:44px;width:auto;">
+            <img src="/images/lab007-trans.PNG" alt="LAB007" style="height:44px;width:auto;">
             <div>
                 <div style="font-weight:800;font-size:18px;">UAG Config Analyzer</div>
                 <div style="color:var(--muted);font-size:13px;">Import UAG configs and logs, view topology and summaries.</div>
@@ -100,23 +114,23 @@
             <div id="diagramWrap"><div id="mermaidGraph">Load a config to view diagram.</div></div>
         </div>
 
-        <div class="section grid" id="listGrid">
-            <div class="card">
+        <div class="section grid" id="listGrid" style="grid-template-columns: repeat(auto-fit, minmax(240px,1fr));">
+            <div class="card col-card">
                 <h3>Gateways / External</h3>
-                <div id="listGateway"></div>
+                <div id="listGateway" class="chips"></div>
             </div>
-            <div class="card">
+            <div class="card col-card">
                 <h3>Connection Servers</h3>
-                <div id="listConn"></div>
+                <div id="listConn" class="chips"></div>
             </div>
-            <div class="card">
+            <div class="card col-card">
                 <h3>DNS / AD</h3>
-                <div id="listDns"></div>
-                <div id="listAd" style="margin-top:8px;"></div>
+                <div id="listDns" class="chips"></div>
+                <div id="listAd" class="chips" style="margin-top:8px;"></div>
             </div>
-            <div class="card">
+            <div class="card col-card">
                 <h3>Certificates</h3>
-                <div id="listCerts"></div>
+                <div id="listCerts" class="chips"></div>
             </div>
         </div>
     </div>
@@ -278,7 +292,7 @@ function renderDiagram(){
 async function handleLogZip(e){
     const file=e.target.files[0];
     if(!file) return;
-    setStatus('logStatus',`Reading ${file.name}...`);
+    setStatus('logStatus',`<span class="spinner-eye"></span>Reading ${file.name}...`);
     const zip = await JSZip.loadAsync(file);
     const entries=[];
     for(const [name,entry] of Object.entries(zip.files)){

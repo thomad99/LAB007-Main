@@ -13,6 +13,31 @@
     <link rel="stylesheet" href="styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <style>
+    .chip {
+        display:inline-block;
+        padding:6px 10px;
+        border-radius:16px;
+        background:rgba(255,255,255,0.06);
+        border:1px solid rgba(255,255,255,0.12);
+        margin:4px;
+        font-size:12px;
+    }
+    .chips { display:flex; flex-wrap:wrap; gap:6px; }
+    .spinner-eye {
+        display:inline-block;
+        width:20px;
+        height:20px;
+        border-radius:50%;
+        border:3px solid rgba(34,211,238,0.25);
+        border-top-color:#22d3ee;
+        animation: spin 0.8s linear infinite;
+        vertical-align:middle;
+        margin-right:6px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
     <div class="container">
@@ -30,13 +55,13 @@
                 <div style="display: flex; flex-direction: column; gap: 2px; min-width: 180px; align-items: stretch; flex: 1 1 0;">
                     <div style="text-align: center; color: #dcdcdc; letter-spacing: 2px; font-weight: 600;">Discover</div>
                     <div style="border: 2px solid #dcdcdc; border-radius: 10px; padding: 4px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; background: rgba(255,255,255,0.04);">
-                    <a href="/citrix/api/download-audit-files" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; font-size: 12px; padding: 6px 10px; min-height: 34px; background:#e5b600; border-color:#e5b600; color:#000;">Download Tools</a>
+                    <a href="/citrix/api/download-audit-files" class="btn btn-secondary" style="text-decoration: none; display: inline-flex; align-items: center; font-size: 12px; padding: 8px 14px; min-height: 38px; background:#e5b600; border-color:#e5b600; color:#000;">Download Tools</a>
                     <div class="file-input-wrapper" style="display: inline-block; position: relative;">
-                        <button id="loadFileBtn" class="btn btn-primary" style="z-index: 10000; font-size: 12px; padding: 6px 10px; min-height: 34px; background:#e5b600; border-color:#e5b600; color:#000;" title="Load 0-Citrix-audit*.json or Citrix export ZIP files">Load Audit</button>
+                        <button id="loadFileBtn" class="btn btn-primary" style="z-index: 10000; font-size: 12px; padding: 8px 14px; min-height: 38px; background:#e5b600; border-color:#e5b600; color:#000;" title="Load 0-Citrix-audit*.json or Citrix export ZIP files">Load Audit</button>
                         <input type="file" id="fileInput" accept=".json,.zip" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
                     </div>
-                    <button onclick="window.location.href='netscaler.html'" class="btn btn-secondary" style="background: #e5b600; border-color: #e5b600; color: #000; font-size: 12px; padding: 6px 10px; min-height: 34px;">NetScaler Config</button>
-                    <button id="configBtn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 6px 10px; min-height: 34px; background:#e5b600; border-color:#e5b600; color:#000;">
+                    <button onclick="window.location.href='netscaler.html'" class="btn btn-secondary" style="background: #e5b600; border-color: #e5b600; color: #000; font-size: 12px; padding: 8px 14px; min-height: 38px;">NetScaler Config</button>
+                    <button id="configBtn" class="btn btn-secondary" style="display: inline-flex; align-items: center; gap: 6px; font-size: 12px; padding: 8px 14px; min-height: 38px; background:#e5b600; border-color:#e5b600; color:#000;">
                         <img src="images/lab007 Icon.PNG" alt="LAB007" style="height: 16px; width: 16px; object-fit: contain;">
                         Config
                     </button>
@@ -46,7 +71,7 @@
                 <div style="display: flex; flex-direction: column; gap: 2px; min-width: 140px; align-items: stretch; flex: 0.8 1 0;">
                     <div style="text-align: center; color: #dcdcdc; letter-spacing: 2px; font-weight: 600;">Build</div>
                     <div style="border: 2px solid #dcdcdc; border-radius: 10px; padding: 4px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; background: rgba(255,255,255,0.04);">
-                        <button onclick="window.location.href='todo.html'" class="btn btn-secondary" style="background: #17a2b8; border-color: #17a2b8; font-size: 12px; padding: 6px 10px; min-height: 34px;">Build</button>
+                        <button onclick="window.location.href='todo.html'" class="btn btn-secondary" style="background: #17a2b8; border-color: #17a2b8; font-size: 12px; padding: 8px 14px; min-height: 38px;">Build</button>
                     </div>
                 </div>
 
@@ -55,7 +80,7 @@
                     <div style="border: 2px solid #dcdcdc; border-radius: 10px; padding: 6px; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; justify-content: center; background: rgba(255,255,255,0.04);">
                     <button id="goldenSunBtn" class="btn btn-secondary" style="background: linear-gradient(135deg,#1f8e3d,#32a852); border-color: #1f8e3d; font-size: 12px; padding: 8px 14px; min-height: 38px;">GoldenSun</button>
                     <button id="horizonTasksBtn" class="btn btn-primary" style="font-size: 12px; padding: 8px 14px; min-height: 38px; background:#e5b600; border-color:#e5b600; color:#000;">HZ Tasks</button>
-                    <button onclick="window.location.href='uag.html'" class="btn btn-secondary" style="background:#e5b600;border-color:#e5b600;color:#000;font-size:12px;padding:8px 14px;min-height:38px;">UAG</button>
+                    <button onclick="openUagModal()" class="btn btn-secondary" style="background:#e5b600;border-color:#e5b600;color:#000;font-size:12px;padding:8px 14px;min-height:38px;">UAG</button>
                     <div class="file-input-wrapper" style="display: inline-block; position: relative;">
                         <button id="uploadDebugBtn" class="btn btn-secondary" style="background: #e5b600; color: #000; border-color: #e5b600; z-index: 10000; font-size: 12px; padding: 8px 14px; min-height: 38px;">Upload Debugs</button>
                         <input type="file" id="debugFileInput" accept=".zip" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; opacity: 0; cursor: pointer;">
@@ -349,6 +374,74 @@
                     </div>
                 </div>
             </section>
+        </div>
+    </div>
+
+    <!-- UAG Modal -->
+    <div id="uagModal" class="modal" style="display:none;">
+        <div class="modal-content" style="max-width: 96%; width: 96%; margin-top: 80px; background:#0b1020; color:#e2e8f0;">
+            <span class="modal-close" onclick="closeUagModal()">&times;</span>
+            <h2 style="margin:0 0 6px 0;">UAG Config Analyzer</h2>
+            <p style="margin:0 0 12px 0; color:#94a3b8;">Import UAG configs and logs; view topology and key endpoints.</p>
+            <div style="display:flex; gap:8px; margin-bottom:10px;">
+                <button class="task-tab active" id="uagTabConfig" onclick="showUagTab('config')">Config Dashboard</button>
+                <button class="task-tab" id="uagTabDebug" onclick="showUagTab('debug')">Debug / Logs</button>
+            </div>
+
+            <div id="uagConfigPanel" class="horizon-task-panel" style="display:block;">
+                <h3>Import UAG Config</h3>
+                <p style="color:#94a3b8;">Upload an existing UAG configuration file (txt/conf/json/ini). The parser will extract key endpoints and render a quick diagram.</p>
+                <input type="file" id="uagConfigFile" accept=".txt,.conf,.cfg,.ini,.log,.json" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
+                <div id="uagConfigStatus" style="margin-top:8px; color:#94a3b8;"></div>
+
+                <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:8px; margin:12px 0;">
+                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">Gateways</div><div id="uagStatGateways" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
+                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">Connection Servers</div><div id="uagStatConn" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
+                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">DNS</div><div id="uagStatDns" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
+                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">AD / Entra</div><div id="uagStatAd" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
+                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">Certs</div><div id="uagStatCerts" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
+                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">External URLs</div><div id="uagStatExt" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
+                </div>
+
+                <div class="card" style="padding:10px; background:#11182a;">
+                    <h4 style="margin:0 0 8px 0;">Topology (Mermaid)</h4>
+                    <div id="uagDiagramWrap" style="background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px; min-height:240px; overflow-x:auto;">
+                        <div id="uagMermaidGraph">Load a config to view diagram.</div>
+                    </div>
+                </div>
+
+                <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap:10px; margin-top:10px;">
+                    <div class="card" style="min-height:180px; background:#11182a;">
+                        <h4>Gateways / External</h4>
+                        <div id="uagListGateway" class="chips"></div>
+                    </div>
+                    <div class="card" style="min-height:180px; background:#11182a;">
+                        <h4>Connection Servers</h4>
+                        <div id="uagListConn" class="chips"></div>
+                    </div>
+                    <div class="card" style="min-height:180px; background:#11182a;">
+                        <h4>DNS / AD</h4>
+                        <div id="uagListDns" class="chips"></div>
+                        <div id="uagListAd" class="chips" style="margin-top:6px;"></div>
+                    </div>
+                    <div class="card" style="min-height:180px; background:#11182a;">
+                        <h4>Certificates</h4>
+                        <div id="uagListCerts" class="chips"></div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="uagDebugPanel" class="horizon-task-panel" style="display:none;">
+                <h3>Debug / Logs</h3>
+                <p style="color:#94a3b8;">Import UAG log bundle (.zip). Quick search across entries.</p>
+                <input type="file" id="uagLogFile" accept=".zip" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
+                <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+                    <input id="uagLogSearch" class="input" style="max-width:260px;" placeholder="Search text in logs...">
+                    <button class="btn" id="uagLogSearchBtn">Search</button>
+                </div>
+                <div id="uagLogStatus" style="margin-top:8px;color:#94a3b8;"></div>
+                <div class="logs" id="uagLogResults"></div>
+            </div>
         </div>
     </div>
 
@@ -1143,6 +1236,184 @@
     </footer>
 
     <script src="dashboard.js"></script>
+    <script>
+    // UAG modal + parser (lightweight inline to avoid extra page)
+    mermaid.initialize({ startOnLoad: false, theme: 'dark' });
+    const uagData = { gateways: [], conn: [], dns: [], ad: [], certs: [], external: [] };
+
+    function openUagModal() {
+        document.getElementById('uagModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+    function closeUagModal() {
+        document.getElementById('uagModal').style.display = 'none';
+        document.body.style.overflow = '';
+    }
+    function showUagTab(tab) {
+        const tabs = ['config','debug'];
+        tabs.forEach(t => {
+            document.getElementById(`uag${capitalize(t)}Panel`).style.display = t === tab ? 'block' : 'none';
+            document.getElementById(`uagTab${capitalize(t)}`).classList.toggle('active', t === tab);
+        });
+    }
+    function capitalize(s){return s.charAt(0).toUpperCase()+s.slice(1);}
+    function escapeHtml(str){return (str||'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+
+    // Config handling
+    const cfgInput = document.getElementById('uagConfigFile');
+    if (cfgInput) {
+        cfgInput.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            setUagStatus('uagConfigStatus', `Reading ${file.name} ...`);
+            const text = await file.text();
+            parseUagConfig(text);
+        });
+    }
+
+    function parseUagConfig(text) {
+        resetUagData();
+        // Try JSON first
+        try {
+            const obj = JSON.parse(text);
+            if (obj.generalSettings || obj.edgeServiceSettingsList) {
+                hydrateFromJson(obj);
+                renderUag();
+                setUagStatus('uagConfigStatus','Config parsed (JSON)');
+                return;
+            }
+        } catch {}
+        // Fallback: line parsing
+        const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
+        lines.forEach(line=>{
+            if (/gateway/i.test(line) && /https?:\/\//i.test(line)) uagData.gateways.push(line);
+            if (/connection/i.test(line) && /server/i.test(line)) uagData.conn.push(line);
+            if (/dns/i.test(line)) uagData.dns.push(line);
+            if (/(ad|ldap|entra)/i.test(line)) uagData.ad.push(line);
+            if (/cert/i.test(line)) uagData.certs.push(line);
+            if (/https?:\/\//i.test(line)) uagData.external.push(line);
+        });
+        renderUag();
+        setUagStatus('uagConfigStatus','Config parsed (text)');
+    }
+
+    function hydrateFromJson(obj){
+        const add = (arr,val)=>{ if(val) arr.push(val); };
+        const gs = obj.generalSettings || {};
+        add(uagData.gateways, gs.hostname || gs.fqdn);
+        (obj.edgeServiceSettingsList||[]).forEach(svc=>{
+            add(uagData.external, svc.externalUrl);
+            add(uagData.conn, svc.targetUrl || svc.bridgeInternalUrl);
+        });
+        (obj.dnsSettings||[]).forEach(d=>add(uagData.dns,d.host));
+        (obj.adSettings||[]).forEach(a=>add(uagData.ad,a.domainName||a.host));
+        (obj.certSettings||[]).forEach(c=>add(uagData.certs,c.alias||c.thumbprint));
+    }
+
+    function renderUag(){
+        setChipList('uagListGateway', uagData.gateways);
+        setChipList('uagListConn', uagData.conn);
+        setChipList('uagListDns', uagData.dns);
+        setChipList('uagListAd', uagData.ad);
+        setChipList('uagListCerts', uagData.certs);
+        document.getElementById('uagStatGateways').textContent = uagData.gateways.length;
+        document.getElementById('uagStatConn').textContent = uagData.conn.length;
+        document.getElementById('uagStatDns').textContent = uagData.dns.length;
+        document.getElementById('uagStatAd').textContent = uagData.ad.length;
+        document.getElementById('uagStatCerts').textContent = uagData.certs.length;
+        document.getElementById('uagStatExt').textContent = uagData.external.length;
+        renderUagDiagram();
+    }
+
+    function setChipList(id, arr){
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.innerHTML = arr.length ? arr.map(v=>`<span class="chip">${escapeHtml(v)}</span>`).join('') : '<span style="color:#94a3b8;">None</span>';
+    }
+
+    function renderUagDiagram(){
+        const lines = ['flowchart TB'];
+        uagData.gateways.forEach((g,i)=> lines.push(`gw${i}([Gateway ${i+1}\\n${escapeMermaid(g)}])`));
+        uagData.conn.forEach((c,i)=> lines.push(`cs${i}([Conn ${i+1}\\n${escapeMermaid(c)}])`));
+        uagData.dns.forEach((d,i)=> lines.push(`dns${i}([DNS ${i+1}\\n${escapeMermaid(d)}])`));
+        uagData.ad.forEach((a,i)=> lines.push(`ad${i}([AD ${i+1}\\n${escapeMermaid(a)}])`));
+        uagData.certs.forEach((c,i)=> lines.push(`crt${i}([Cert ${i+1}\\n${escapeMermaid(c)}])`));
+
+        if (uagData.gateways.length && (uagData.conn.length || uagData.external.length)) {
+            uagData.gateways.forEach((_,gi)=>{
+                uagData.conn.forEach((_,ci)=> lines.push(`gw${gi} --> cs${ci}`));
+                uagData.external.forEach((ext,ei)=>{
+                    lines.push(`ext${ei}([External ${ei+1}\\n${escapeMermaid(ext)}])`);
+                    lines.push(`ext${ei} --> gw${gi}`);
+                });
+            });
+        }
+        if (uagData.conn.length && uagData.dns.length) {
+            uagData.conn.forEach((_,ci)=> uagData.dns.forEach((_,di)=> lines.push(`cs${ci} --> dns${di}`)));
+        }
+        if (uagData.conn.length && uagData.ad.length) {
+            uagData.conn.forEach((_,ci)=> uagData.ad.forEach((_,ai)=> lines.push(`cs${ci} --> ad${ai}`)));
+        }
+        const graph = lines.join('\n');
+        const container = document.getElementById('uagMermaidGraph');
+        if (container) {
+            mermaid.render('uagGraphSvg', graph, (svg)=>{ container.innerHTML = svg; });
+        }
+    }
+    function escapeMermaid(s){return (s||'').replace(/[\[\]\(\)\{\}]/g,'');}
+    function resetUagData(){
+        uagData.gateways=[]; uagData.conn=[]; uagData.dns=[]; uagData.ad=[]; uagData.certs=[]; uagData.external=[];
+    }
+    function setUagStatus(id,msg){ const el=document.getElementById(id); if(el) el.innerHTML = msg; }
+
+    // Debug / logs
+    const logInput = document.getElementById('uagLogFile');
+    const logSearchBtn = document.getElementById('uagLogSearchBtn');
+    if (logInput) {
+        logInput.addEventListener('change', handleLogZip);
+    }
+    if (logSearchBtn) {
+        logSearchBtn.addEventListener('click', () => filterLogs());
+    }
+    let uagLogEntries = [];
+    async function handleLogZip(e){
+        const file = e.target.files?.[0];
+        if (!file) return;
+        setUagStatus('uagLogStatus', `<span class="spinner-eye"></span> Loading ${escapeHtml(file.name)} ...`);
+        try{
+            const buf = await file.arrayBuffer();
+            const zip = await JSZip.loadAsync(buf);
+            const entries = [];
+            await Promise.all(Object.keys(zip.files).map(async (k)=>{
+                if (zip.files[k].dir) return;
+                const txt = await zip.files[k].async('text');
+                entries.push({ name:k, text:txt });
+            }));
+            uagLogEntries = entries;
+            setUagStatus('uagLogStatus', `Loaded ${entries.length} file(s).`);
+            renderLogResults(entries);
+        }catch(err){
+            console.error(err);
+            setUagStatus('uagLogStatus', 'Failed to read zip.');
+        }
+    }
+    function filterLogs(){
+        const q = (document.getElementById('uagLogSearch')?.value || '').toLowerCase();
+        if (!q) return renderLogResults(uagLogEntries);
+        renderLogResults(uagLogEntries.filter(e=> e.text.toLowerCase().includes(q)));
+    }
+    function renderLogResults(list){
+        const wrap = document.getElementById('uagLogResults');
+        if (!wrap) return;
+        if (!list.length){ wrap.innerHTML = '<div style="color:#94a3b8;">No entries</div>'; return;}
+        wrap.innerHTML = list.map(e=>`
+            <div style="border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:8px; margin-bottom:6px; background:#0f172a;">
+                <div style="font-weight:700; margin-bottom:4px;">${escapeHtml(e.name)}</div>
+                <pre style="white-space:pre-wrap; max-height:160px; overflow:auto; font-size:12px; color:#cbd5e1;">${escapeHtml(e.text.substring(0,5000))}</pre>
+            </div>
+        `).join('');
+    }
+    </script>
 </body>
 </html>
 
