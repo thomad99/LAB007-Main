@@ -492,7 +492,7 @@ External LB IPs/VIPs: ${dataVars.vips || '(none)'}
 UAG Names: ${dataVars.uags || '(none)'}
 Connection Servers: ${dataVars.cons || '(none)'}
 
-LAYOUT (match this structure exactly)
+LAYOUT (match this structure exactly; keep everything centered with generous spacing and sized to fit the 1400x1500 viewBox)
 1) Top: Title "LAB007 • Horizon UAG Topology"
    Subtitle: "Based on provided inputs: ${dataVars.urls || 'n/a'} • VIP ${dataVars.vips || 'n/a'} • UAGs ${dataVars.uags || 'n/a'} • Connection Servers ${dataVars.cons || 'n/a'}"
 2) "Horizon Clients" icon group (phone, monitor, laptop) centered.
@@ -518,6 +518,7 @@ RULES / EDGE CASES
 - Use consistent spacing and center alignment.
 - Ensure no text overlaps; reduce font size slightly if needed for long lists.
 - Keep the diagram visually similar to a simple Horizon architecture template (clean, minimal line art).
+- Use clear spacing and sizing so text does not overlap shapes; adjust font size/line breaks to keep within the canvas with no clipping. Keep DMZ and rows evenly spaced.
 
 Now generate the SVG.`;
 
