@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>UAG Config Analyzer</title>
+    <link rel="icon" type="image/png" href="images/lab007 Icon.PNG">
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <style>
+        :root {
+            --bg: #0b1020;
+            --card: #11182a;
+            --muted: #94a3b8;
+            --text: #e2e8f0;
+            --accent: #22d3ee;
+            --gold: #e5b600;
+            --shadow: 0 12px 30px rgba(0,0,0,0.35);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: "Inter","Segoe UI",system-ui,sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            padding: 16px;
+        }
+        header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        a { color: var(--accent); text-decoration: none; font-weight: 700; }
+        .wrap { max-width: 1200px; margin: 0 auto; }
+        .card {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.06);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            padding: 14px;
+            margin-bottom: 14px;
+        }
+        h2 { margin: 0 0 8px 0; }
+        p { margin: 6px 0; color: var(--muted); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px,1fr)); gap: 10px; }
+        .stat { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px; }
+        .stat .title { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .stat .val { font-size: 18px; font-weight: 800; color: var(--gold); }
+        .section { margin-top: 10px; }
+        .list { margin: 0; padding-left: 16px; color: var(--text); }
+        .badge { display: inline-block; padding: 4px 8px; border-radius: 8px; background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1); margin-right: 6px; margin-bottom: 6px; }
+        .input { width: 100%; padding: 10px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); background: rgba(255,255,255,0.04); color: var(--text); }
+        .btn { display: inline-flex; align-items: center; gap: 8px; background: var(--gold); color: #0b0b0b; padding: 10px 14px; border-radius: 10px; border: none; font-weight: 800; cursor: pointer; }
+        .tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+        .tab { padding: 10px 14px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.1); cursor: pointer; }
+        .tab.active { background: var(--accent); color: #08111f; border-color: var(--accent); }
+        #diagramWrap { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px; overflow-x: auto; }
+        #mermaidGraph { min-height: 260px; }
+        .logs { max-height: 280px; overflow-y: auto; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 8px; }
+        .log-line { font-family: Consolas, monospace; font-size: 13px; color: #cbd5e1; padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,0.05); }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <header>
+        <div style="display:flex; align-items:center; gap:10px;">
+            <img src="images/lab007-trans.PNG" alt="LAB007" style="height:44px;width:auto;">
+            <div>
+                <div style="font-weight:800;font-size:18px;">UAG Config Analyzer</div>
+                <div style="color:var(--muted);font-size:13px;">Import UAG configs and logs, view topology and summaries.</div>
+            </div>
+        </div>
+        <a href="/citrix">← Back to HZ</a>
+    </header>
+
+    <div class="tabs">
+        <div class="tab active" data-tab="configTab">Config Dashboard</div>
+        <div class="tab" data-tab="debugTab">Debug / Logs</div>
+    </div>
+
+    <div id="configTab" class="card">
+        <h2>Import UAG Config</h2>
+        <p>Upload an existing UAG configuration file (txt/conf/ini). The parser will extract key endpoints and render a quick diagram.</p>
+        <input type="file" id="configFile" accept=".txt,.conf,.cfg,.ini,.log" class="input">
+        <div id="configStatus" style="margin-top:8px;color:var(--muted);"></div>
+
+        <div class="grid section" id="statGrid">
+            <div class="stat"><div class="title">Gateways</div><div class="val" id="statGateways">0</div></div>
+            <div class="stat"><div class="title">Connection Servers</div><div class="val" id="statConn">0</div></div>
+            <div class="stat"><div class="title">DNS</div><div class="val" id="statDns">0</div></div>
+            <div class="stat"><div class="title">AD / Entra</div><div class="val" id="statAd">0</div></div>
+            <div class="stat"><div class="title">Certs</div><div class="val" id="statCerts">0</div></div>
+            <div class="stat"><div class="title">External URLs</div><div class="val" id="statExt">0</div></div>
+        </div>
+
+        <div class="section card" style="padding:10px;">
+            <h3 style="margin:0 0 8px 0;">Topology (Mermaid)</h3>
+            <div id="diagramWrap"><div id="mermaidGraph">Load a config to view diagram.</div></div>
+        </div>
+
+        <div class="section grid" id="listGrid">
+            <div class="card">
+                <h3>Gateways / External</h3>
+                <div id="listGateway"></div>
+            </div>
+            <div class="card">
+                <h3>Connection Servers</h3>
+                <div id="listConn"></div>
+            </div>
+            <div class="card">
+                <h3>DNS / AD</h3>
+                <div id="listDns"></div>
+                <div id="listAd" style="margin-top:8px;"></div>
+            </div>
+            <div class="card">
+                <h3>Certificates</h3>
+                <div id="listCerts"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="debugTab" class="card" style="display:none;">
+        <h2>Debug / Logs</h2>
+        <p>Import UAG log bundle (.zip). Quick search across entries.</p>
+        <input type="file" id="logFile" accept=".zip" class="input">
+        <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+            <input id="logSearch" class="input" style="max-width:260px;" placeholder="Search text in logs...">
+            <button class="btn" id="logSearchBtn">Search</button>
+        </div>
+        <div id="logStatus" style="margin-top:8px;color:var(--muted);"></div>
+        <div class="logs" id="logResults"></div>
+    </div>
+</div>
+
+<script>
+mermaid.initialize({ startOnLoad:false, securityLevel:'loose', theme:'dark' });
+
+const state = {
+    gateways: [],
+    conn: [],
+    dns: [],
+    ad: [],
+    certs: [],
+    externals: []
+};
+
+document.querySelectorAll('.tab').forEach(tab => {
+    tab.onclick = () => {
+        document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        document.getElementById('configTab').style.display = tab.dataset.tab === 'configTab' ? 'block':'none';
+        document.getElementById('debugTab').style.display = tab.dataset.tab === 'debugTab' ? 'block':'none';
+    };
+});
+
+document.getElementById('configFile').addEventListener('change', handleConfigFile);
+document.getElementById('logFile').addEventListener('change', handleLogZip);
+document.getElementById('logSearchBtn').addEventListener('click', renderLogs);
+document.getElementById('logSearch').addEventListener('input', renderLogs);
+
+function setStatus(id,msg){ const el=document.getElementById(id); if(el) el.textContent=msg||''; }
+
+async function handleConfigFile(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    setStatus('configStatus',`Reading ${file.name}...`);
+    const text = await file.text();
+    parseConfig(text);
+    renderSummary();
+    renderLists();
+    renderDiagram();
+    setStatus('configStatus',`Parsed ${file.name}`);
+}
+
+function parseConfig(text){
+    state.gateways = [];
+    state.conn = [];
+    state.dns = [];
+    state.ad = [];
+    state.certs = [];
+    state.externals = [];
+    const add = (arr,val) => { if(val && !arr.includes(val)) arr.push(val); };
+
+    let jsonObj = null;
+    try { jsonObj = JSON.parse(text); } catch {}
+
+    if (jsonObj && typeof jsonObj === 'object') {
+        try {
+            const sys = jsonObj.systemSettings || {};
+            const general = jsonObj.generalSettings || {};
+            const edges = (jsonObj.edgeServiceSettingsList && jsonObj.edgeServiceSettingsList.edgeServiceSettingsList) || [];
+
+            if (general.uagName) add(state.gateways, `UAG: ${general.uagName} (${general.ip0 || ''})`);
+            if (sys.allowedHostHeaderValues) add(state.gateways, `HostHeader: ${sys.allowedHostHeaderValues}`);
+            if (sys.autoAllowedHostHeaderValues) add(state.gateways, `AutoHost: ${sys.autoAllowedHostHeaderValues}`);
+
+            if (sys.dns) sys.dns.split(/\s+/).forEach(d=>add(state.dns,d));
+            if (sys.dnsSearch) add(state.dns, `Search: ${sys.dnsSearch}`);
+            if (sys.ntpServers) add(state.dns, `NTP: ${sys.ntpServers}`);
+
+            edges.forEach(e=>{
+                if (e.proxyDestinationUrl) add(state.conn, `Conn: ${e.proxyDestinationUrl}`);
+                if (e.blastExternalUrl) add(state.gateways, `BlastExt: ${e.blastExternalUrl}`);
+                if (e.tunnelExternalUrl) add(state.gateways, `TunnelExt: ${e.tunnelExternalUrl}`);
+                if (e.proxyDestinationUrlThumbprints) add(state.certs, `Thumbprint: ${e.proxyDestinationUrlThumbprints}`);
+                if (e.idpEntityID) add(state.ad, `IdP: ${e.idpEntityID}`);
+                if (e.authMethods) add(state.ad, `Auth: ${e.authMethods}`);
+                if (e.originHeaderDetailsList) {
+                    e.originHeaderDetailsList.forEach(o=>{
+                        if (o.origin) add(state.externals, o.origin);
+                    });
+                }
+                if (e.externalUrl) add(state.externals, e.externalUrl);
+                if (e.blastExternalUrl) add(state.externals, e.blastExternalUrl);
+                if (e.tunnelExternalUrl) add(state.externals, e.tunnelExternalUrl);
+            });
+
+            // IdP metadata hint
+            if (jsonObj.idPExternalMetadataSettingsList && jsonObj.idPExternalMetadataSettingsList.idPExternalMetadataSettingsList) {
+                jsonObj.idPExternalMetadataSettingsList.idPExternalMetadataSettingsList.forEach(x=>{
+                    if (x.entityID) add(state.ad, `IdP: ${x.entityID}`);
+                });
+            }
+        } catch (_) {}
+    } else {
+        const lines = text.split(/\r?\n/);
+        lines.forEach(l=>{
+            const line = l.trim();
+            if(!line) return;
+            if(/uag|gateway|externalurl|pcappliance|gatewayurl/i.test(line)) add(state.gateways,line);
+            if(/conn|broker|cs|view-conn|connectionserver|pcoip/i.test(line)) add(state.conn,line);
+            if(/dns/i.test(line)) add(state.dns,line);
+            if(/ldap|ad |active\s*directory|entra|azuread/i.test(line)) add(state.ad,line);
+            if(/cert|certificate|sslkey/i.test(line)) add(state.certs,line);
+            if(/https?:\/\//i.test(line)) add(state.externals,line.match(/https?:\/\/[^\s]+/i)?.[0] || line);
+        });
+    }
+}
+
+function renderSummary(){
+    document.getElementById('statGateways').textContent = state.gateways.length;
+    document.getElementById('statConn').textContent = state.conn.length;
+    document.getElementById('statDns').textContent = state.dns.length;
+    document.getElementById('statAd').textContent = state.ad.length;
+    document.getElementById('statCerts').textContent = state.certs.length;
+    document.getElementById('statExt').textContent = state.externals.length;
+}
+function renderList(elId, arr){
+    const el=document.getElementById(elId);
+    if(!el) return;
+    if(!arr.length){ el.innerHTML='<div class="badge">None</div>'; return; }
+    el.innerHTML = arr.map(x=>`<div class="badge">${escapeHtml(x)}</div>`).join('');
+}
+function renderLists(){
+    renderList('listGateway',state.gateways.concat(state.externals));
+    renderList('listConn',state.conn);
+    renderList('listDns',state.dns);
+    renderList('listAd',state.ad);
+    renderList('listCerts',state.certs);
+}
+function renderDiagram(){
+    const lines = ['flowchart LR','G[UAG Gateway]'];
+    const add = (id,label) => { lines.push(`${id}["${escapeHtml(label)}"]`); };
+    state.conn.forEach((c,i)=>{ const id=`C${i}`; add(id,`Connection Server\\n${c}`); lines.push(`G-->${id}`); });
+    state.dns.forEach((d,i)=>{ const id=`D${i}`; add(id,`DNS\\n${d}`); lines.push(`G-->${id}`); });
+    state.ad.forEach((a,i)=>{ const id=`A${i}`; add(id,`AD/Entra\\n${a}`); lines.push(`G-->${id}`); });
+    state.certs.forEach((c,i)=>{ const id=`S${i}`; add(id,`Cert\\n${c}`); lines.push(`G-->${id}`); });
+    if(state.externals.length){ state.externals.forEach((u,i)=>{ const id=`E${i}`; add(id,`External\\n${u}`); lines.push(`${id}-->G`); }); }
+    const graph = lines.join('\n');
+    const container = document.getElementById('mermaidGraph');
+    container.innerHTML = '';
+    try { mermaid.render('uagDiagram',graph,svg=>{ container.innerHTML=svg; }); }
+    catch(err){ container.innerHTML = `<pre style="color:#f87171;">Diagram failed: ${escapeHtml(err.message||err)}</pre>`; }
+}
+
+async function handleLogZip(e){
+    const file=e.target.files[0];
+    if(!file) return;
+    setStatus('logStatus',`Reading ${file.name}...`);
+    const zip = await JSZip.loadAsync(file);
+    const entries=[];
+    for(const [name,entry] of Object.entries(zip.files)){
+        if(entry.dir) continue;
+        const txt = await entry.async('text');
+        entries.push(...txt.split(/\r?\n/).map(line=>({file:name,line})));
+    }
+    window.uagLogs = entries;
+    setStatus('logStatus',`Loaded ${entries.length} log lines from ${file.name}`);
+    renderLogs();
+}
+function renderLogs(){
+    const q = (document.getElementById('logSearch').value||'').toLowerCase();
+    const target = document.getElementById('logResults');
+    const entries = (window.uagLogs||[]);
+    const filtered = q ? entries.filter(e=>e.line.toLowerCase().includes(q)) : entries.slice(0,300);
+    target.innerHTML = filtered.slice(0,300).map(e=>`<div class="log-line"><strong>${escapeHtml(e.file)}:</strong> ${escapeHtml(e.line)}</div>`).join('') || '<div class="log-line">No log lines.</div>';
+}
+
+function escapeHtml(str){
+    return String(str||'').replace(/[&<>"]/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[s]));
+}
+</script>
+</body>
+</html>
