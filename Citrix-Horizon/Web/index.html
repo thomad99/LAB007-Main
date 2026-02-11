@@ -386,13 +386,16 @@
 
     <!-- UAG Modal -->
     <div id="uagModal" class="modal" style="display:none;">
-        <div class="modal-content" style="max-width: 96%; width: 96%; margin-top: 80px; background:#0b1020; color:#e2e8f0;">
+        <div class="modal-content" style="max-width: 96%; width: 96%; margin-top: 20px; background:#0b1020; color:#e2e8f0; height: calc(100vh - 40px); max-height: calc(100vh - 40px); display:flex; flex-direction:column; overflow:hidden;">
             <span class="modal-close" onclick="closeUagModal()">&times;</span>
             <h2 style="margin:0 0 6px 0;">UAG Config Analyzer</h2>
             <div style="display:flex; gap:8px; margin-bottom:10px;">
                 <button class="task-tab active" id="uagTabConfig" onclick="showUagTab('config')">Config Dashboard</button>
                 <button class="task-tab" id="uagTabDebug" onclick="showUagTab('debug')">Debug / Logs</button>
+                <button class="task-tab" id="uagTabDiagram" onclick="showUagTab('diagram')">Diagram (Manual)</button>
             </div>
+
+            <div id="uagModalBody" style="flex:1 1 auto; overflow:auto; padding-right:4px;">
 
             <div id="uagConfigPanel" class="horizon-task-panel" style="display:block;">
                 <h3>Import UAG Config</h3>
@@ -463,6 +466,35 @@
                 <div id="uagLogStatus" style="margin-top:8px;color:#94a3b8;"></div>
                 <div class="logs" id="uagLogResults"></div>
             </div>
+
+            <div id="uagDiagramPanel" class="horizon-task-panel" style="display:none;">
+                <h3>Manual Diagram</h3>
+                <p style="color:#94a3b8; margin-top:0;">Enter values (comma separated) to draw a quick UAG topology.</p>
+                <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap:10px;">
+                    <div>
+                        <label style="display:block; color:#cbd5e1; margin-bottom:4px;">External URLs</label>
+                        <input id="uagManualExternal" class="input" placeholder="https://uag.example.com, https://uag2.example.com">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#cbd5e1; margin-bottom:4px;">External LB IPs / VIPs</label>
+                        <input id="uagManualVip" class="input" placeholder="203.0.113.10, 203.0.113.11">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#cbd5e1; margin-bottom:4px;">UAG Names</label>
+                        <input id="uagManualUag" class="input" placeholder="uag01, uag02">
+                    </div>
+                    <div>
+                        <label style="display:block; color:#cbd5e1; margin-bottom:4px;">Connection Servers</label>
+                        <input id="uagManualConn" class="input" placeholder="conn01, conn02">
+                    </div>
+                </div>
+                <button class="btn btn-secondary" style="margin-top:10px; background:#22d3ee; border-color:#22d3ee; color:#0b1020;" onclick="renderManualDiagram()">Draw Diagram</button>
+                <div id="uagManualStatus" style="margin-top:8px; color:#94a3b8;"></div>
+                <div id="uagManualDiagramWrap" style="margin-top:12px; background:#0f172a; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px; min-height:240px; overflow-x:auto;">
+                    <div id="uagManualMermaid">Enter details and click Draw.</div>
+                </div>
+            </div>
+            </div> <!-- end uagModalBody -->
         </div>
     </div>
 
@@ -1271,10 +1303,12 @@
         document.body.style.overflow = '';
     }
     function showUagTab(tab) {
-        const tabs = ['config','debug'];
+        const tabs = ['config','debug','diagram'];
         tabs.forEach(t => {
-            document.getElementById(`uag${capitalize(t)}Panel`).style.display = t === tab ? 'block' : 'none';
-            document.getElementById(`uagTab${capitalize(t)}`).classList.toggle('active', t === tab);
+            const panel = document.getElementById(`uag${capitalize(t)}Panel`);
+            const tabBtn = document.getElementById(`uagTab${capitalize(t)}`);
+            if (panel) panel.style.display = t === tab ? 'block' : 'none';
+            if (tabBtn) tabBtn.classList.toggle('active', t === tab);
         });
     }
     function capitalize(s){return s.charAt(0).toUpperCase()+s.slice(1);}
@@ -1447,6 +1481,58 @@
         } catch (err) {
             console.error('Mermaid render failed', err);
             container.innerHTML = '<div style="padding:12px; color:#f87171;">Could not render diagram. Check that the config has gateways / external URLs / connection servers.</div>';
+        }
+    }
+
+    function renderManualDiagram(){
+        const status = document.getElementById('uagManualStatus');
+        const tgt = document.getElementById('uagManualMermaid');
+        const ext = (document.getElementById('uagManualExternal')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
+        const vip = (document.getElementById('uagManualVip')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
+        const uag = (document.getElementById('uagManualUag')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
+        const conn = (document.getElementById('uagManualConn')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
+        const lines = ['flowchart TB'];
+        lines.push('classDef dmz fill:#0b1a30,stroke:#22d3ee,stroke-width:1,color:#e2e8f0;');
+        lines.push('classDef internal fill:#0f172a,stroke:#8b5cf6,stroke-width:1,color:#e2e8f0;');
+
+        lines.push('subgraph dmz[DMZ]');
+        ext.forEach((u,i)=> lines.push(`ext${i}([External ${i+1}\\n${escapeMermaid(u)}]):::dmz`));
+        vip.forEach((v,i)=> lines.push(`vip${i}([Load Balancer ${i+1}\\n${escapeMermaid(v)}]):::dmz`));
+        uag.forEach((n,i)=> lines.push(`uag${i}([UAG ${i+1}\\n${escapeMermaid(n)}]):::dmz`));
+        lines.push('end');
+
+        lines.push('subgraph internal[Internal]');
+        conn.forEach((c,i)=> lines.push(`cs${i}([Connection Server ${i+1}\\n${escapeMermaid(c)}]):::internal`));
+        lines.push('vsphere([vSphere / Pools]):::internal');
+        lines.push('end');
+
+        if (vip.length && uag.length) {
+            ext.forEach((_,ei)=> vip.forEach((_,vi)=> lines.push(`ext${ei} --> vip${vi}`)));
+            vip.forEach((_,vi)=> uag.forEach((_,ui)=> lines.push(`vip${vi} --> uag${ui}`)));
+        } else if (uag.length) {
+            ext.forEach((_,ei)=> uag.forEach((_,ui)=> lines.push(`ext${ei} --> uag${ui}`)));
+        } else if (vip.length) {
+            ext.forEach((_,ei)=> vip.forEach((_,vi)=> lines.push(`ext${ei} --> vip${vi}`)));
+        }
+        uag.forEach((_,ui)=> conn.forEach((_,ci)=> lines.push(`uag${ui} --> cs${ci}`)));
+        if (conn.length) {
+            conn.forEach((_,ci)=> lines.push(`cs${ci} --> vsphere`));
+        }
+
+        if (!lines.some(l=>l.startsWith('vip')||l.startsWith('ext')||l.startsWith('uag'))) {
+            if (status) status.textContent = 'Enter at least an External URL or UAG name.';
+            if (tgt) tgt.innerHTML = 'Enter details and click Draw.';
+            return;
+        }
+        const graph = lines.join('\n');
+        try{
+            mermaid.render('uagManualSvg', graph, svg=>{
+                if (tgt) tgt.innerHTML = svg;
+                if (status) status.textContent = `Diagram generated (${ext.length} external, ${vip.length} VIP, ${uag.length} UAG, ${conn.length} Conn).`;
+            });
+        }catch(err){
+            console.error('Manual diagram render failed', err);
+            if (status) status.textContent = 'Failed to render diagram.';
         }
     }
     function escapeMermaid(s){return (s||'').replace(/[\[\]\(\)\{\}]/g,'');}
