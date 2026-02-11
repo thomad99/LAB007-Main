@@ -466,12 +466,19 @@
                     <div style="display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;">
                         <div style="flex:1 1 420px; min-width:320px; min-height:76px;">
                             <input type="file" id="uagLogFile" accept=".zip" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
-                            <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+                    <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                                 <input id="uagLogSearch" class="input" style="max-width:260px; min-height:38px; padding:8px 10px;" placeholder="Search text in logs...">
                                 <button class="btn" id="uagLogSearchBtn">Search</button>
                                 <button class="btn" id="uagLogPrevBtn" title="Previous match">Prev</button>
                                 <button class="btn" id="uagLogNextBtn" title="Next match">Next</button>
                                 <span id="uagLogCount" style="color:#94a3b8;">0</span>
+                        <select id="uagLogLevel" class="input" style="min-height:38px; padding:6px 8px;">
+                            <option value="all">All</option>
+                            <option value="info">[INFO]</option>
+                            <option value="debug">[DEBUG]</option>
+                            <option value="warn">[WARN]</option>
+                            <option value="error">[ERROR]</option>
+                        </select>
                             </div>
                         </div>
                         <div style="flex:1 1 420px; min-width:340px; display:flex; gap:8px; align-items:stretch; min-height:76px;">
@@ -485,7 +492,10 @@
                 </div>
                 <div id="uagAiResult" style="margin-top:10px; border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px; background:#0f172a; color:#e2e8f0; display:none; position:relative; z-index:1;"></div>
                 <div id="uagLogStatus" style="margin-top:8px;color:#94a3b8;"></div>
-                <div class="logs" id="uagLogResults" style="margin-top:10px;"></div>
+                <div id="uagLogScrollTop" class="log-scroll" style="margin-top:10px; margin-bottom:4px; overflow-x:auto; overflow-y:hidden; height:12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
+                    <div id="uagLogScrollTopInner" style="height:1px;"></div>
+                </div>
+                <div class="logs" id="uagLogResults" style="margin-top:0; overflow:auto; max-height:70vh;"></div>
             </div>
 
             <div id="uagDiagramPanel" class="horizon-task-panel" style="display:none;">
@@ -1591,11 +1601,18 @@
     const logPrevBtn = document.getElementById('uagLogPrevBtn');
     const logNextBtn = document.getElementById('uagLogNextBtn');
     const aiBtn = document.getElementById('uagAiBtn');
+    const logLevelSel = document.getElementById('uagLogLevel');
     if (logInput) {
         logInput.addEventListener('change', handleLogZip);
     }
     if (logSearchBtn) {
         logSearchBtn.addEventListener('click', () => filterLogs());
+    }
+    if (logLevelSel) {
+        logLevelSel.addEventListener('change', () => {
+            uagLogLevel = logLevelSel.value || 'all';
+            filterLogs();
+        });
     }
     if (aiBtn) {
         aiBtn.addEventListener('click', analyzeLogAi);
@@ -1604,6 +1621,8 @@
     let uagLogMatches = [];
     let uagLogMatchIndex = -1;
     let aiRunning = false;
+    let uagLogLevel = 'all';
+    const uagLogReverse = true;
     async function handleLogZip(e){
         const file = e.target.files?.[0];
         if (!file) return;
@@ -1637,8 +1656,26 @@
         const body = entry.querySelector('.log-body');
         const icon = entry.querySelector('.log-toggle');
         const open = body.style.display === 'block';
-        body.style.display = open ? 'none' : 'block';
-        if (icon) icon.textContent = open ? '+' : '−';
+        if (open) {
+            body.style.display = 'none';
+            if (icon) icon.textContent = '+';
+            return;
+        }
+        // show spinner while expanding large content
+        const spinner = document.createElement('div');
+        spinner.innerHTML = '<span class="spinner-eye"></span> Loading...';
+        spinner.style.color = '#94a3b8';
+        body.innerHTML = '';
+        body.appendChild(spinner);
+        body.style.display = 'block';
+        setTimeout(()=> {
+            const pre = entry.querySelector('pre');
+            if (pre) {
+                // already populated
+            }
+            if (icon) icon.textContent = '−';
+            if (body.contains(spinner)) body.removeChild(spinner);
+        }, 10); // allow repaint
     }
 
     function highlightText(text, query){
@@ -1682,6 +1719,8 @@
 
     function renderLogResults(list, query = ''){
         const wrap = document.getElementById('uagLogResults');
+        const scrollTop = document.getElementById('uagLogScrollTop');
+        const scrollTopInner = document.getElementById('uagLogScrollTopInner');
         if (!wrap) return;
         if (!list.length){ wrap.innerHTML = '<div style="color:#94a3b8;">No entries</div>'; return;}
         const qLower = query.toLowerCase();
@@ -1710,7 +1749,7 @@
         }
         let html = '';
         if (priorityEntries.length){
-            const hasMatch = query ? priorityEntries.some(({entry}) => entry.text.toLowerCase().includes(qLower)) : false;
+            const hasMatch = query ? priorityEntries.some(({entry}) => (entry.text||'').toLowerCase().includes(qLower)) : false;
             const bodyDisplay = hasMatch && query ? 'block' : 'none';
             const toggleSymbol = bodyDisplay === 'block' ? '−' : '+';
             html += `
@@ -1722,7 +1761,12 @@
                 <div class="log-group-body" style="display:${bodyDisplay}; padding:6px 8px; border-top:1px solid rgba(255,255,255,0.08);">
             `;
             priorityEntries.forEach(({entry, idx})=>{
-            const snippet = entry.text || '';
+                let snippet = entry.text || '';
+                const lines = snippet.split(/\r?\n/);
+                const levelRegex = (uagLogLevel && uagLogLevel !== 'all') ? new RegExp(`\\[${uagLogLevel}\\]`,'i') : null;
+                const filtered = levelRegex ? lines.filter(l=> levelRegex.test(l)) : lines;
+                if (uagLogReverse) filtered.reverse();
+                snippet = filtered.join('\n');
                 const hasMatchEntry = qLower ? snippet.toLowerCase().includes(qLower) : false;
                 const rendered = highlightText(snippet, query);
                 const entryDisplay = hasMatchEntry && query ? 'block' : 'none';
@@ -1743,7 +1787,7 @@
         }
         groups.forEach((g, gi) => {
             const items = grouped[g];
-            const hasMatchInGroup = query ? items.some(({entry}) => entry.text.toLowerCase().includes(qLower)) : false;
+            const hasMatchInGroup = query ? items.some(({entry}) => (entry.text||'').toLowerCase().includes(qLower)) : false;
             const bodyDisplay = hasMatchInGroup && query ? 'block' : 'none';
             const toggleSymbol = bodyDisplay === 'block' ? '−' : '+';
             html += `
@@ -1755,7 +1799,12 @@
                 <div class="log-group-body" style="display:${bodyDisplay}; padding:6px 8px; border-top:1px solid rgba(255,255,255,0.08);">
             `;
             items.forEach(({entry, idx}) => {
-                const snippet = entry.text || '';
+                let snippet = entry.text || '';
+                const lines = snippet.split(/\r?\n/);
+                const levelRegex = (uagLogLevel && uagLogLevel !== 'all') ? new RegExp(`\\[${uagLogLevel}\\]`,'i') : null;
+                const filtered = levelRegex ? lines.filter(l=> levelRegex.test(l)) : lines;
+                if (uagLogReverse) filtered.reverse();
+                snippet = filtered.join('\n');
                 const hasMatch = qLower ? snippet.toLowerCase().includes(qLower) : false;
                 const rendered = highlightText(snippet, query);
                 const entryDisplay = hasMatch && query ? 'block' : 'none';
@@ -1792,6 +1841,14 @@
         }
         const countEl = document.getElementById('uagLogCount');
         if (countEl) countEl.textContent = uagLogMatches.length ? `${uagLogMatchIndex+1}/${uagLogMatches.length}` : '0';
+
+        // sync horizontal scroll top bar
+        if (scrollTop && scrollTopInner) {
+            // set inner width to content width to allow scrollbar
+            scrollTopInner.style.width = wrap.scrollWidth + 'px';
+            scrollTop.onscroll = () => { wrap.scrollLeft = scrollTop.scrollLeft; };
+            wrap.onscroll = () => { scrollTop.scrollLeft = wrap.scrollLeft; };
+        }
     }
 
     async function analyzeLogAi(){

@@ -544,11 +544,16 @@ Now generate the SVG.`;
       return res.status(response.status).json({ error: `OpenAI request failed: ${errText || response.statusText}` });
     }
     const data = await response.json();
-    const svg = (data?.choices?.[0]?.message?.content || '').trim();
+    let svg = (data?.choices?.[0]?.message?.content || '').trim();
+    console.log('[diagram-ai] response preview:', svg.slice(0, 400), '...');
+    // Strip code fences if the model returned them
+    if (svg.startsWith('```')) {
+      svg = svg.replace(/^```[a-zA-Z]*\s*/, '').replace(/```$/, '').trim();
+    }
     if (!svg.startsWith('<?xml')) {
       return res.status(500).json({ error: 'AI response was not SVG', preview: svg.slice(0,200) });
     }
-    return res.json({ svg, prompt });
+    return res.json({ svg, prompt, preview: svg.slice(0,200) });
   } catch (err) {
     console.error('AI diagram error:', err);
     return res.status(500).json({ error: 'Failed to generate diagram' });
