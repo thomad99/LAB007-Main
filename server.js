@@ -417,6 +417,7 @@ app.post('/api/uag/ai-analyze', async (req, res) => {
     }
     const prompt = `
 You are helping analyze exported logs/errors from an Omnissa Universal Access Gateway (UAG).
+You are being sent info from an IT engineer doing support on this device with the aim of helping to troubleshoot.
 User provided this snippet (may contain errors): 
 """
 ${text}

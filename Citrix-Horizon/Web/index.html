@@ -41,7 +41,7 @@
     .log-head { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; cursor:pointer; font-weight:700; }
     .log-toggle { font-weight:900; color:#e5b600; margin-left:10px; }
     .log-body { display:none; border-top:1px solid rgba(255,255,255,0.08); }
-    .log-body pre { white-space:pre-wrap; max-height:160px; overflow:auto; font-size:12px; color:#cbd5e1; margin:0; padding:8px 10px; }
+    .log-body pre { white-space:pre-wrap; max-height:60vh; overflow:auto; font-size:12px; color:#cbd5e1; margin:0; padding:8px 10px; }
     .log-match { background:#fde047; color:#111; font-weight:700; padding:1px 2px; border-radius:3px; }
     .log-match.active { background:#22d3ee; color:#0b1020; }
     </style>
@@ -440,7 +440,7 @@
                 <h3>Debug / Logs</h3>
                 <div style="position: sticky; top: 56px; z-index: 3000; background:#0b1020; padding:8px 4px; border-bottom:1px solid rgba(255,255,255,0.08);">
                     <div style="display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;">
-                        <div style="flex:1 1 420px; min-width:320px;">
+                        <div style="flex:1 1 420px; min-width:320px; min-height:76px;">
                             <input type="file" id="uagLogFile" accept=".zip" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
                             <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
                                 <input id="uagLogSearch" class="input" style="max-width:260px; min-height:38px; padding:8px 10px;" placeholder="Search text in logs...">
@@ -450,9 +450,9 @@
                                 <span id="uagLogCount" style="color:#94a3b8;">0</span>
                             </div>
                         </div>
-                        <div style="flex:1 1 360px; min-width:300px; display:flex; gap:8px; align-items:stretch;">
-                            <textarea id="uagAiInput" rows="3" placeholder="Paste an error snippet to analyze..." style="flex:1 1 auto; padding:8px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:#0f172a; color:#e2e8f0; min-height:72px;"></textarea>
-                            <div style="display:flex; flex-direction:column; gap:6px; min-width:110px; align-items:stretch;">
+                        <div style="flex:1 1 420px; min-width:340px; display:flex; gap:8px; align-items:stretch; min-height:76px;">
+                            <textarea id="uagAiInput" rows="3" placeholder="Paste an error snippet to analyze..." style="flex:1 1 auto; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:#0f172a; color:#e2e8f0; min-height:80px;"></textarea>
+                            <div style="display:flex; flex-direction:column; gap:6px; min-width:120px; align-items:stretch;">
                                 <button class="btn btn-secondary" id="uagAiBtn" style="background:#22d3ee; border-color:#22d3ee; color:#0b1020; min-height:38px;">AI Analyze</button>
                                 <div id="uagAiStatus" style="color:#94a3b8; font-size:12px; min-height:18px;"></div>
                             </div>
@@ -1307,31 +1307,72 @@
         // Fallback: line parsing
         const lines = text.split(/\r?\n/).map(l=>l.trim()).filter(Boolean);
         lines.forEach(line=>{
-            if (/gateway/i.test(line) && /https?:\/\//i.test(line)) uagData.gateways.push(line);
-            if (/connection/i.test(line) && /server/i.test(line)) uagData.conn.push(line);
-            if (/dns/i.test(line)) uagData.dns.push(line);
-            if (/(ad|ldap|entra)/i.test(line)) uagData.ad.push(line);
-            if (/cert/i.test(line)) uagData.certs.push(line);
-            if (/https?:\/\//i.test(line)) uagData.external.push(line);
+            const urls = line.match(/https?:\/\/[^\s"']+/gi) || [];
+            urls.forEach(u => {
+                if (/gateway|uag/i.test(line)) uagData.gateways.push(u);
+                uagData.external.push(u);
+            });
+            const hosts = (line.match(/\b(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}\b/g) || [])
+                .concat(line.match(/\b\d{1,3}(?:\.\d{1,3}){3}\b/g) || []);
+            if (/gateway|uag/i.test(line)) hosts.forEach(h=>uagData.gateways.push(h));
+            if (/connection|conn/i.test(line)) hosts.forEach(h=>uagData.conn.push(h));
+            if (/dns|nameserver/i.test(line)) hosts.forEach(h=>uagData.dns.push(h));
+            if (/(ad|ldap|entra)/i.test(line)) hosts.forEach(h=>uagData.ad.push(h));
+            if (/cert/i.test(line)) hosts.forEach(h=>uagData.certs.push(h));
         });
         renderUag();
         setUagStatus('uagConfigStatus','Config parsed (text)');
     }
 
+    function isUrl(val){ return /^https?:\/\//i.test(val); }
+    function isHostOrIp(val){
+        if (!val || typeof val !== 'string') return false;
+        if (/\s/.test(val)) return false;
+        const ip = /^\d{1,3}(\.\d{1,3}){3}$/;
+        const host = /^[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/;
+        return ip.test(val) || host.test(val);
+    }
+    function addVal(arr,val){ if (val) arr.push(val); }
     function hydrateFromJson(obj){
-        const add = (arr,val)=>{ if(val) arr.push(val); };
-        const gs = obj.generalSettings || {};
-        add(uagData.gateways, gs.hostname || gs.fqdn);
-        (obj.edgeServiceSettingsList||[]).forEach(svc=>{
-            add(uagData.external, svc.externalUrl);
-            add(uagData.conn, svc.targetUrl || svc.bridgeInternalUrl);
-        });
-        (obj.dnsSettings||[]).forEach(d=>add(uagData.dns,d.host));
-        (obj.adSettings||[]).forEach(a=>add(uagData.ad,a.domainName||a.host));
-        (obj.certSettings||[]).forEach(c=>add(uagData.certs,c.alias||c.thumbprint));
+        const walk = (node, keyHint='')=>{
+            if (node == null) return;
+            if (Array.isArray(node)) { node.forEach(n=>walk(n,keyHint)); return; }
+            if (typeof node === 'object') {
+                Object.entries(node).forEach(([k,v])=>{
+                    walk(v, k.toLowerCase());
+                });
+                return;
+            }
+            if (typeof node === 'string') {
+                const val = node.trim();
+                if (isUrl(val)) {
+                    addVal(uagData.external, val);
+                    if (keyHint.includes('gateway')) addVal(uagData.gateways, val);
+                    if (keyHint.includes('conn')) addVal(uagData.conn, val);
+                    return;
+                }
+                if (isHostOrIp(val)) {
+                    if (keyHint.includes('gateway') || keyHint.includes('uag')) addVal(uagData.gateways, val);
+                    else if (keyHint.includes('conn') || keyHint.includes('connection')) addVal(uagData.conn, val);
+                    else if (keyHint.includes('dns') || keyHint.includes('nameserver')) addVal(uagData.dns, val);
+                    else if (keyHint.includes('ldap') || keyHint.includes('ad') || keyHint.includes('entra')) addVal(uagData.ad, val);
+                    else addVal(uagData.external, val);
+                    if (keyHint.includes('cert')) addVal(uagData.certs, val);
+                }
+            }
+        };
+        walk(obj,'');
     }
 
     function renderUag(){
+        const uniq = arr => Array.from(new Set(arr.filter(Boolean)));
+        uagData.gateways = uniq(uagData.gateways);
+        uagData.conn = uniq(uagData.conn);
+        uagData.dns = uniq(uagData.dns);
+        uagData.ad = uniq(uagData.ad);
+        uagData.certs = uniq(uagData.certs);
+        uagData.external = uniq(uagData.external);
+
         setChipList('uagListGateway', uagData.gateways);
         setChipList('uagListConn', uagData.conn);
         setChipList('uagListDns', uagData.dns);
@@ -1379,7 +1420,24 @@
         }
         // If no nodes were added, show guidance instead of empty graph
         if (lines.length === 1) {
-            if (container) container.innerHTML = '<div style="padding:12px; color:#94a3b8;">Load a config with at least one gateway or external URL to draw the topology.</div>';
+            if (container) container.innerHTML = `
+            <div style="padding:12px; color:#94a3b8; display:flex; align-items:center; gap:12px;">
+                <svg width="90" height="70" viewBox="0 0 160 120" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="25" width="140" height="70" rx="10" fill="#0f172a" stroke="#22d3ee" stroke-width="4"/>
+                    <rect x="30" y="45" width="30" height="30" rx="4" fill="#22d3ee" opacity="0.2" stroke="#22d3ee" stroke-width="3"/>
+                    <rect x="100" y="45" width="30" height="30" rx="4" fill="#22d3ee" opacity="0.2" stroke="#22d3ee" stroke-width="3"/>
+                    <rect x="67" y="35" width="26" height="50" rx="6" fill="#0f172a" stroke="#22d3ee" stroke-width="3"/>
+                    <circle cx="80" cy="60" r="6" fill="#22d3ee"/>
+                    <path d="M80 46 L80 52" stroke="#22d3ee" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M80 68 L80 74" stroke="#22d3ee" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M55 60 H67" stroke="#22d3ee" stroke-width="3" stroke-linecap="round"/>
+                    <path d="M93 60 H105" stroke="#22d3ee" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+                <div>
+                    <div style="font-weight:700; color:#e2e8f0;">Gateway topology</div>
+                    <div>Load a config with at least one gateway or external URL to draw the diagram.</div>
+                </div>
+            </div>`;
             return;
         }
         const graph = lines.join('\n');
@@ -1516,6 +1574,10 @@
             if (!grouped[g]) { grouped[g] = []; groups.push(g); }
             grouped[g].push({ entry, idx });
         });
+        // Sort the "Other" group alphabetically by filename for easier scan
+        if (grouped['Other']) {
+            grouped['Other'].sort((a,b)=> (a.entry.name||'').localeCompare(b.entry.name||''));
+        }
         let html = '';
         if (priorityEntries.length){
             const hasMatch = query ? priorityEntries.some(({entry}) => entry.text.toLowerCase().includes(qLower)) : false;
