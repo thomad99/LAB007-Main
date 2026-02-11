@@ -385,7 +385,7 @@
     </div>
 
     <!-- UAG Modal -->
-    <div id="uagModal" class="modal" style="display:none;">
+    <div id="uagModal" class="modal" style="display:none; position:fixed; inset:0; overflow:hidden;">
         <div class="modal-content" style="max-width: 96%; width: 96%; margin-top: 20px; background:#0b1020; color:#e2e8f0; height: calc(100vh - 40px); max-height: calc(100vh - 40px); display:flex; flex-direction:column; overflow:hidden;">
             <span class="modal-close" onclick="closeUagModal()">&times;</span>
             <h2 style="margin:0 0 6px 0;">UAG Config Analyzer</h2>
@@ -1368,6 +1368,36 @@
     }
     function addVal(arr,val){ if (val) arr.push(val); }
     function hydrateFromJson(obj){
+        const gs = obj.generalSettings || {};
+        addVal(uagData.gateways, gs.ip0);
+        addVal(uagData.gateways, gs.defaultGateway);
+
+        const sys = obj.systemSettings || {};
+        (sys.dns || '').split(/\s+/).filter(Boolean).forEach(v=>addVal(uagData.dns, v));
+        (sys.dnsSearch || '').split(/\s+/).filter(Boolean).forEach(v=>addVal(uagData.ad, v));
+        (sys.allowedHostHeaderValues || '').split(/[, ]+/).filter(Boolean).forEach(v=>addVal(uagData.gateways, v));
+        (sys.autoAllowedHostHeaderValues || '').split(/[, ]+/).filter(Boolean).forEach(v=>addVal(uagData.gateways, v));
+        addVal(uagData.gateways, sys.uagName);
+
+        const svcList = Array.isArray(obj.edgeServiceSettingsList?.edgeServiceSettingsList)
+            ? obj.edgeServiceSettingsList.edgeServiceSettingsList
+            : Array.isArray(obj.edgeServiceSettingsList) ? obj.edgeServiceSettingsList : [];
+        svcList.forEach(svc=>{
+            addVal(uagData.external, svc.blastExternalUrl);
+            addVal(uagData.external, svc.tunnelExternalUrl);
+            if (svc.proxyDestinationUrl) {
+                addVal(uagData.conn, svc.proxyDestinationUrl);
+                try {
+                    const h = new URL(svc.proxyDestinationUrl).hostname;
+                    addVal(uagData.conn, h);
+                } catch(_){}
+            }
+            (svc.originHeaderDetailsList||[]).forEach(o=>{
+                if (isUrl(o.origin)) addVal(uagData.conn, o.origin);
+                else if (isHostOrIp(o.origin)) addVal(uagData.conn, o.origin);
+            });
+        });
+
         const walk = (node, keyHint='')=>{
             if (node == null) return;
             if (Array.isArray(node)) { node.forEach(n=>walk(n,keyHint)); return; }
@@ -1491,6 +1521,8 @@
         const vip = (document.getElementById('uagManualVip')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
         const uag = (document.getElementById('uagManualUag')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
         const conn = (document.getElementById('uagManualConn')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
+        if (status) status.textContent = 'Building diagram...';
+        console.log('UAG manual diagram inputs', { ext, vip, uag, conn });
         const lines = ['flowchart TB'];
         lines.push('classDef dmz fill:#0b1a30,stroke:#22d3ee,stroke-width:1,color:#e2e8f0;');
         lines.push('classDef internal fill:#0f172a,stroke:#8b5cf6,stroke-width:1,color:#e2e8f0;');
@@ -1525,14 +1557,16 @@
             return;
         }
         const graph = lines.join('\n');
+        const renderId = `uagManualSvg_${Date.now()}`;
         try{
-            mermaid.render('uagManualSvg', graph, svg=>{
+            mermaid.render(renderId, graph, svg=>{
                 if (tgt) tgt.innerHTML = svg;
                 if (status) status.textContent = `Diagram generated (${ext.length} external, ${vip.length} VIP, ${uag.length} UAG, ${conn.length} Conn).`;
             });
         }catch(err){
             console.error('Manual diagram render failed', err);
-            if (status) status.textContent = 'Failed to render diagram.';
+            if (status) status.textContent = 'Failed to render diagram. Check console for details.';
+            if (tgt) tgt.innerHTML = '<div style="color:#f87171;">Render error</div>';
         }
     }
     function escapeMermaid(s){return (s||'').replace(/[\[\]\(\)\{\}]/g,'');}
