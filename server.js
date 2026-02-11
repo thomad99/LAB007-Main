@@ -530,6 +530,7 @@ Now generate the SVG.`;
         { role: 'user', content: prompt }
       ]
     };
+    console.log('[diagram-ai] prompt preview:', (prompt || '').slice(0, 400), '...');
     const response = await fetchFn('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -547,7 +548,7 @@ Now generate the SVG.`;
     if (!svg.startsWith('<?xml')) {
       return res.status(500).json({ error: 'AI response was not SVG', preview: svg.slice(0,200) });
     }
-    return res.json({ svg });
+    return res.json({ svg, prompt });
   } catch (err) {
     console.error('AI diagram error:', err);
     return res.status(500).json({ error: 'Failed to generate diagram' });

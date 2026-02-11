@@ -1550,6 +1550,7 @@
         const conn = (document.getElementById('uagManualConn')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
         if (status) status.textContent = 'Building diagram via AI...';
         if (tgt) tgt.innerHTML = 'Generating...';
+        console.log('[UAG Diagram] payload', { ext, vip, uag, conn });
         try{
             const res = await fetch('/api/uag/diagram-ai', {
                 method:'POST',
@@ -1562,6 +1563,7 @@
                 })
             });
             const data = await res.json().catch(()=> ({}));
+            console.log('[UAG Diagram] response', data);
             if (!res.ok) throw new Error(data?.error || 'Diagram generation failed');
             if (!data.svg || !data.svg.startsWith('<?xml')) throw new Error('Invalid SVG returned');
             if (tgt) {
