@@ -14,6 +14,27 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/js-yaml@4.1.0/dist/js-yaml.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script>
+    // early stub to avoid undefined onclick; replaced later in main script
+    window.openUagModal = function() {
+        const modal = document.getElementById('uagModal');
+        if (modal) modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    };
+    window.closeUagModal = function() {
+        const modal = document.getElementById('uagModal');
+        if (modal) modal.style.display = 'none';
+        document.body.style.overflow = '';
+    };
+    window.showUagTab = function(tab){
+        ['config','debug','diagram'].forEach(t=>{
+            const panel = document.getElementById(`uag${t.charAt(0).toUpperCase()+t.slice(1)}Panel`);
+            const btn = document.getElementById(`uagTab${t.charAt(0).toUpperCase()+t.slice(1)}`);
+            if (panel) panel.style.display = (t===tab)?'block':'none';
+            if (btn) btn.classList.toggle('active', t===tab);
+        });
+    };
+    </script>
     <style>
     .chip {
         display:inline-block;
@@ -1295,13 +1316,18 @@
     const uagData = { gateways: [], conn: [], dns: [], ad: [], certs: [], external: [] };
 
     function openUagModal() {
-        document.getElementById('uagModal').style.display = 'block';
+        const modal = document.getElementById('uagModal');
+        if (modal) modal.style.display = 'block';
         document.body.style.overflow = 'hidden';
     }
     function closeUagModal() {
-        document.getElementById('uagModal').style.display = 'none';
+        const modal = document.getElementById('uagModal');
+        if (modal) modal.style.display = 'none';
         document.body.style.overflow = '';
     }
+    // expose for inline onclick
+    window.openUagModal = openUagModal;
+    window.closeUagModal = closeUagModal;
     function showUagTab(tab) {
         const tabs = ['config','debug','diagram'];
         tabs.forEach(t => {
