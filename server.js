@@ -463,17 +463,28 @@ Keep it concise and actionable.`;
 // UAG AI diagram endpoint (returns SVG)
 app.post('/api/uag/diagram-ai', async (req, res) => {
   try {
-    const { externalUrls = [], externalVips = [], uagNames = [], connServers = [] } = req.body || {};
+    const {
+      externalDns = [],
+      dmzLoadBalancers = [],
+      uagNames = [],
+      uagIps = [],
+      internalLb = [],
+      connServers = [],
+      connIps = []
+    } = req.body || {};
     const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_KEY;
     if (!apiKey) {
       return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
     }
     const toCsv = (arr) => (Array.isArray(arr) ? arr.map(s => (s || '').trim()).filter(Boolean).join(', ') : '');
     const dataVars = {
-      urls: toCsv(externalUrls),
-      vips: toCsv(externalVips),
+      dns: toCsv(externalDns),
+      dmzLb: toCsv(dmzLoadBalancers),
       uags: toCsv(uagNames),
-      cons: toCsv(connServers)
+      uagIps: toCsv(uagIps),
+      intLb: toCsv(internalLb),
+      cons: toCsv(connServers),
+      consIp: toCsv(connIps)
     };
     const prompt = `
 You are an expert technical diagram designer. Generate a SINGLE, self-contained SVG file (no external images, no scripts, no CSS imports) that renders a clean network topology diagram for Omnissa Horizon Unified Access Gateway (UAG).
@@ -487,26 +498,30 @@ OUTPUT REQUIREMENTS
 - DO NOT include markdown fences. DO NOT explain anything. Just the SVG.
 
 DATA (from web form)
-External URLs: ${dataVars.urls || '(none)'}
-External LB IPs/VIPs: ${dataVars.vips || '(none)'}
+External DNS Name(s): ${dataVars.dns || '(none)'}
+DMZ Load Balancer Address(es): ${dataVars.dmzLb || '(none)'}
 UAG Names: ${dataVars.uags || '(none)'}
-Connection Servers: ${dataVars.cons || '(none)'}
+UAG IPs: ${dataVars.uagIps || '(none)'}
+Internal Load Balancer: ${dataVars.intLb || '(none)'}
+Connection Server Names: ${dataVars.cons || '(none)'}
+Connection Server IPs: ${dataVars.consIp || '(none)'}
 
 LAYOUT (match this structure exactly; keep everything centered with generous spacing and sized to fit the 1400x1500 viewBox)
 1) Top: Title "LAB007 • Horizon UAG Topology"
-   Subtitle: "Based on provided inputs: ${dataVars.urls || 'n/a'} • VIP ${dataVars.vips || 'n/a'} • UAGs ${dataVars.uags || 'n/a'} • Connection Servers ${dataVars.cons || 'n/a'}"
+   Subtitle: "Based on provided inputs: DNS ${dataVars.dns || 'n/a'} • DMZ LB ${dataVars.dmzLb || 'n/a'} • UAGs ${dataVars.uags || 'n/a'} • Connection Servers ${dataVars.cons || 'n/a'}"
 2) "Horizon Clients" icon group (phone, monitor, laptop) centered.
-3) Line to "Internet" cloud labeled "Internet" and below cloud list the External URLs (comma separated).
+3) Line to "Internet" cloud labeled "Internet" and below cloud list the External DNS Names (comma separated).
 4) Line to "Load Balancer" inside a DMZ boundary.
    - DMZ boundary: rounded rectangle with PURPLE stroke, label "DMZ" at top-right.
    - Load Balancer icon (simple shield) centered, label "Load Balancer"
-   - Under label list VIPs: "VIP: ${dataVars.vips || ''}" (if multiple, show first as VIP and the rest on the next line as "Also: ...")
+   - Under label list DMZ LB(s): "LB: ${dataVars.dmzLb || ''}" (if multiple, show first as primary and the rest on the next line as "Also: ...")
 5) From Load Balancer, branch lines to UAG nodes (one per UAG name).
    - Each UAG node is a circle line-art with 3 purple dots connected (like a simple gateway symbol).
-   - Under each: "<UAGNAME> (UAG)"
+   - Under each: "<UAGNAME> (UAG) — ${corresponding UAG IP if provided}"
 6) From UAG layer, connect down to a "Horizon Connection Servers" row:
    - Four rounded rectangles minimum; if more than 4 servers, wrap to a second row with equal spacing.
-   - Each box label is the server name exactly as provided.
+   - Each box label is the server name; if a matching IP is provided (by index), append "— IP".
+   - Show an Internal Load Balancer node feeding the connection servers if provided.
 7) From connection servers, connect down to "Horizon Desktops and RDS Hosts":
    - Draw a dashed purple rounded rectangle.
    - Inside, draw 8 small VM tiles (2 rows x 4) labeled "vm".
