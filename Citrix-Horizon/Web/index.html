@@ -1735,7 +1735,12 @@
     }
     async function renderCsBundleFromFile(file){
         const status = document.getElementById('csBundleStatus');
-        if (status) status.innerHTML = `<span class="spinner-eye"></span> Reading ${file.name} ...`;
+        const results = document.getElementById('csBundleResults');
+        if (!status && !results) {
+            console.warn('CS bundle UI not present; open UAG > Debug/Logs to view.');
+            return;
+        }
+        if (status) status.innerHTML = `<span class="spinner-eye"></span> Reading ${escapeHtml(file.name)} ...`;
         csBundleGroups = {};
         try{
             if (typeof JSZip === 'undefined') throw new Error('JSZip missing');
@@ -1761,10 +1766,11 @@
                 csBundleGroups[cat].push(n);
             });
             renderCsBundle();
-            if (status) status.textContent = `Loaded ${names.length} file(s).`;
+            if (status) status.textContent = `Loaded ${names.length} file(s). See panels below.`;
         }catch(err){
             console.error('CS bundle error', err);
-            if (status) status.textContent = 'Failed to read bundle: ' + err.message;
+            if (status) status.textContent = 'Failed to read bundle: ' + (err.message || err);
+            if (results) results.innerHTML = `<div style="color:#f87171;">${escapeHtml(err.message||'Bundle parse failed')}</div>`;
         }
     }
     window.renderCsBundleFromFile = renderCsBundleFromFile;
