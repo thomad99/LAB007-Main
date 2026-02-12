@@ -504,31 +504,31 @@
                 <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap:10px;">
                     <div>
                         <label style="display:block; color:#cbd5e1; margin-bottom:4px;">External DNS Name(s)</label>
-                        <input id="uagManualExternalDns" class="input" placeholder="horizon.example.com, uag.example.com">
+                        <input id="uagManualExternalDns" class="input" style="min-height:44px; padding:10px;" placeholder="horizon.example.com, uag.example.com">
                     </div>
                     <div>
                         <label style="display:block; color:#cbd5e1; margin-bottom:4px;">DMZ Load Balancer Address(es)</label>
-                        <input id="uagManualDmzLb" class="input" placeholder="203.0.113.10, 203.0.113.11">
+                        <input id="uagManualDmzLb" class="input" style="min-height:44px; padding:10px;" placeholder="203.0.113.10, 203.0.113.11">
                     </div>
                     <div>
                         <label style="display:block; color:#cbd5e1; margin-bottom:4px;">UAG Names</label>
-                        <input id="uagManualUag" class="input" placeholder="uag01, uag02">
+                        <input id="uagManualUag" class="input" style="min-height:44px; padding:10px;" placeholder="uag01, uag02">
                     </div>
                     <div>
                         <label style="display:block; color:#cbd5e1; margin-bottom:4px;">UAG IP addresses</label>
-                        <input id="uagManualUagIp" class="input" placeholder="10.0.0.11, 10.0.0.12">
+                        <input id="uagManualUagIp" class="input" style="min-height:44px; padding:10px;" placeholder="10.0.0.11, 10.0.0.12">
                     </div>
                     <div>
                         <label style="display:block; color:#cbd5e1; margin-bottom:4px;">Internal Load Balancer</label>
-                        <input id="uagManualInternalLb" class="input" placeholder="10.0.1.20">
+                        <input id="uagManualInternalLb" class="input" style="min-height:44px; padding:10px;" placeholder="10.0.1.20">
                     </div>
                     <div>
                         <label style="display:block; color:#cbd5e1; margin-bottom:4px;">Connection Server Names</label>
-                        <input id="uagManualConn" class="input" placeholder="conn01, conn02">
+                        <input id="uagManualConn" class="input" style="min-height:44px; padding:10px;" placeholder="conn01, conn02">
                     </div>
                     <div>
                         <label style="display:block; color:#cbd5e1; margin-bottom:4px;">Connection Server IPs</label>
-                        <input id="uagManualConnIp" class="input" placeholder="10.0.1.31, 10.0.1.32">
+                        <input id="uagManualConnIp" class="input" style="min-height:44px; padding:10px;" placeholder="10.0.1.31, 10.0.1.32">
                     </div>
                 </div>
                 <button class="btn btn-secondary" style="margin-top:10px; background:#22d3ee; border-color:#22d3ee; color:#0b1020;" onclick="renderManualDiagram()">Draw Diagram</button>
@@ -1572,7 +1572,7 @@
         const intLb = (document.getElementById('uagManualInternalLb')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
         const conn = (document.getElementById('uagManualConn')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
         const connIp = (document.getElementById('uagManualConnIp')?.value || '').split(',').map(s=>s.trim()).filter(Boolean);
-        if (status) status.textContent = 'Building diagram via AI...';
+        if (status) status.innerHTML = '<span class="spinner-eye"></span> Building diagram...';
         if (tgt) tgt.innerHTML = 'Generating...';
         console.log('[UAG Diagram] payload', { extDns, dmzLb, uag, uagIp, intLb, conn, connIp });
         try{

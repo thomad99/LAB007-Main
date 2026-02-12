@@ -549,7 +549,12 @@ Constraints:
       svg = svg.replace(/^```[a-zA-Z]*\s*/, '').replace(/```$/, '').trim();
     }
     if (!svg.startsWith('<?xml')) {
-      return res.status(500).json({ error: 'AI response was not SVG', preview: svg.slice(0,200) });
+      // Accept bare <svg ...> and prepend xml header
+      if (svg.trim().startsWith('<svg')) {
+        svg = `<?xml version="1.0" encoding="UTF-8"?>\n${svg.trim()}`;
+      } else {
+        return res.status(500).json({ error: 'AI response was not SVG', preview: svg.slice(0,200) });
+      }
     }
     return res.json({ svg, prompt, preview: svg.slice(0,200) });
   } catch (err) {
