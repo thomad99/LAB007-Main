@@ -6,11 +6,26 @@ const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
+const multer = require('multer');
 const { router: aimailRouter } = require('./aimail');
 const fetchFn = global.fetch || ((...args) => import('node-fetch').then(({ default: f }) => f(...args)));
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const uploadDir = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+const upload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, uploadDir),
+    filename: (req, file, cb) => {
+      const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      cb(null, `${Date.now()}-${safeName}`);
+    }
+  }),
+  limits: { fileSize: 1024 * 1024 * 300 } // 300MB max
+});
 
 // Boot diagnostics
 console.log('BOOT:', __filename);
@@ -402,6 +417,27 @@ app.use('/aimail-logos', express.static(path.join(__dirname, 'aimail-data', 'log
 // AIMAIL landing
 app.get('/aimail', (req, res) => {
 res.sendFile(path.join(__dirname, 'public', 'aimail.html'));
+});
+
+// Upload debug bundle (stores file only)
+app.post('/citrix/api/upload-debug', upload.single('debugFile'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No file uploaded' });
+    }
+    return res.json({
+      success: true,
+      file: {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        size: req.file.size,
+        path: req.file.path
+      }
+    });
+  } catch (err) {
+    console.error('upload-debug error', err);
+    return res.status(500).json({ error: 'Upload failed' });
+  }
 });
 
 // UAG AI analysis endpoint
