@@ -508,6 +508,21 @@
                 <div id="uagAiResult" style="margin-top:10px; border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px; background:#0f172a; color:#e2e8f0; display:none; position:relative; z-index:1;"></div>
                 <div id="uagLogStatus" style="margin-top:8px;color:#94a3b8;"></div>
                 <div class="logs" id="uagLogResults" style="margin-top:10px; overflow:auto; max-height:70vh;"></div>
+
+                <h3 style="margin-top:18px;">Connection Server Bundle</h3>
+                <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
+                    <div>
+                        <label style="color:#cbd5e1; display:block; margin-bottom:4px;">Upload CS Bundle (.zip)</label>
+                        <input type="file" id="csBundleFile" accept=".zip" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
+                    </div>
+                    <div>
+                        <label style="color:#cbd5e1; display:block; margin-bottom:4px;">Upload Any File (store)</label>
+                        <input type="file" id="csAnyFile" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
+                    </div>
+                </div>
+                <div id="csBundleStatus" style="color:#94a3b8; margin-bottom:8px;"></div>
+                <div id="csBundleSummary" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;"></div>
+                <div id="csBundleResults" style="border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:8px; background:#0f172a; max-height:420px; overflow:auto;"></div>
             </div>
 
             <div id="uagDiagramPanel" class="horizon-task-panel" style="display:none;">
@@ -1659,6 +1674,102 @@
             el.value = values.filter(Boolean).join(', ');
         }
     }
+    async function handleCsBundleUpload(e){
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const status = document.getElementById('csBundleStatus');
+        if (status) status.innerHTML = `<span class="spinner-eye"></span> Reading ${file.name} ...`;
+        csBundleGroups = {};
+        try{
+            if (typeof JSZip === 'undefined') throw new Error('JSZip missing');
+            const buf = await file.arrayBuffer();
+            const zip = await JSZip.loadAsync(buf);
+            const names = Object.keys(zip.files||{});
+            const cats = {
+                debug: /debug-.*\.log/i,
+                broker: /broker-.*\.log/i,
+                security: /security-.*\.log/i,
+                pcoip: /pcoip_server-.*\.log/i,
+                messages: /(messages|syslog|event|evt|evtx)/i
+            };
+            names.forEach(n=>{
+                if (zip.files[n].dir) return;
+                let cat = 'other';
+                if (cats.debug.test(n)) cat='debug';
+                else if (cats.broker.test(n)) cat='broker';
+                else if (cats.security.test(n)) cat='security';
+                else if (cats.pcoip.test(n)) cat='pcoip';
+                else if (cats.messages.test(n)) cat='messages';
+                if (!csBundleGroups[cat]) csBundleGroups[cat]=[];
+                csBundleGroups[cat].push(n);
+            });
+            renderCsBundle();
+            if (status) status.textContent = `Loaded ${names.length} file(s).`;
+        }catch(err){
+            console.error('CS bundle error', err);
+            if (status) status.textContent = 'Failed to read bundle: ' + err.message;
+        }
+    }
+    function renderCsBundle(){
+        const wrap = document.getElementById('csBundleResults');
+        const summary = document.getElementById('csBundleSummary');
+        if (summary) {
+            summary.innerHTML = Object.entries(csBundleGroups).map(([k,v])=> `<div class="card" style="padding:8px 10px; background:#11182a; color:#e5e8f0; border-radius:8px; border:1px solid rgba(255,255,255,0.08); font-size:13px;">${k.toUpperCase()} <span style="color:#e5b600;font-weight:700;">${v.length}</span></div>`).join('');
+        }
+        if (!wrap) return;
+        let html = '';
+        Object.entries(csBundleGroups).forEach(([cat, files], idx)=>{
+            html += `<details class="log-group" open>
+                        <summary style="cursor:pointer; font-weight:700; color:#e5b600; padding:6px 4px;">${cat.toUpperCase()} (${files.length})</summary>
+                        <div>`;
+            files.sort().forEach((f,i)=>{
+                const id = `csfile-${cat}-${i}`;
+                html += `<div class="log-entry" style="margin-bottom:6px;">
+                            <div class="log-head" onclick="loadCsFile('${cat}','${f}','${id}')">
+                                <span>${escapeHtml(f)}</span>
+                                <span class="log-toggle">+</span>
+                            </div>
+                            <div class="log-body" id="${id}" style="display:none;"></div>
+                         </div>`;
+            });
+            html += `</div></details>`;
+        });
+        wrap.innerHTML = html || '<div style="color:#94a3b8;">No files loaded.</div>';
+    }
+    async function loadCsFile(cat, filename, targetId){
+        const body = document.getElementById(targetId);
+        const toggle = body?.previousElementSibling?.querySelector('.log-toggle');
+        if (!body) return;
+        const zipInput = document.getElementById('csBundleFile');
+        const file = zipInput?.files?.[0];
+        if (!file) return;
+        const open = body.style.display === 'block';
+        if (open){
+            body.style.display = 'none';
+            if (toggle) toggle.textContent = '+';
+            return;
+        }
+        body.style.display = 'block';
+        body.innerHTML = '<span class="spinner-eye"></span> Loading...';
+        if (toggle) toggle.textContent = '−';
+        try{
+            const buf = await file.arrayBuffer();
+            const zip = await JSZip.loadAsync(buf);
+            const entry = zip.file(filename);
+            if (!entry) throw new Error('File missing in zip');
+            const text = await entry.async('string');
+            body.innerHTML = `<pre style="white-space:pre-wrap; font-size:12px; color:#cbd5e1; margin:0;">${escapeHtml(text)}</pre>`;
+        }catch(err){
+            console.error('CS file load error', err);
+            body.innerHTML = `<div style="color:#f87171;">Error loading file: ${escapeHtml(err.message||'unknown')}</div>`;
+        }
+    }
+    function handleCsAnyUpload(e){
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const status = document.getElementById('csBundleStatus');
+        if (status) status.textContent = `Received file: ${file.name} (${file.size} bytes)`;
+    }
 
     // Debug / logs
     const logInput = document.getElementById('uagLogFile');
@@ -1682,11 +1793,17 @@
     if (aiBtn) {
         aiBtn.addEventListener('click', analyzeLogAi);
     }
+    const csBundleFile = document.getElementById('csBundleFile');
+    const csAnyFile = document.getElementById('csAnyFile');
+    if (csBundleFile) csBundleFile.addEventListener('change', handleCsBundleUpload);
+    if (csAnyFile) csAnyFile.addEventListener('change', handleCsAnyUpload);
     let uagLogEntries = [];
     let uagLogMatches = [];
     let uagLogMatchIndex = -1;
     let aiRunning = false;
     let uagLogLevel = 'all';
+    // CS bundle
+    let csBundleGroups = {};
     const uagLogReverse = true;
     async function handleLogZip(e){
         const file = e.target.files?.[0];
