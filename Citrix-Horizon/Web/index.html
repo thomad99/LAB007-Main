@@ -408,7 +408,6 @@
     <!-- UAG Modal -->
     <div id="uagModal" class="modal" style="display:none; position:fixed; inset:0; overflow:hidden;">
         <div class="modal-content" style="max-width: 96%; width: 96%; margin-top: 120px; background:#0b1020; color:#e2e8f0; height: calc(100vh - 140px); max-height: calc(100vh - 140px); display:flex; flex-direction:column; overflow:hidden;">
-            <span class="modal-close" onclick="closeUagModal()">&times;</span>
             <h2 style="margin:0 0 6px 0;">UAG Config Analyzer</h2>
             <div style="display:flex; gap:8px; margin-bottom:10px;">
                 <button class="task-tab active" id="uagTabConfig" onclick="showUagTab('config')">Config Dashboard</button>
@@ -420,7 +419,7 @@
 
             <div id="uagConfigPanel" class="horizon-task-panel" style="display:block;">
                 <h3>Import UAG Config</h3>
-                <input type="file" id="uagConfigFile" accept=".txt,.conf,.cfg,.ini,.log,.json" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:12px 12px; min-height:68px; font-size:14px; height:68px; box-sizing:border-box;">
+                <input type="file" id="uagConfigFile" accept=".txt,.conf,.cfg,.ini,.log,.json" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:10px 12px; min-height:44px; font-size:14px; height:44px; box-sizing:border-box;">
                 <div id="uagConfigStatus" style="margin-top:8px; color:#94a3b8;"></div>
 
                 <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:8px; margin:12px 0;">
@@ -432,7 +431,28 @@
                     <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">External URLs</div><div id="uagStatExt" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
                 </div>
 
-                <!-- Topology card removed per request -->
+                <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:8px; margin-bottom:12px;">
+                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;">
+                        <div style="font-size:12px; color:#94a3b8;">UAG Name</div>
+                        <div id="uagMetaName" style="font-weight:700; font-size:15px; color:#e5b600; overflow-wrap:anywhere;">-</div>
+                    </div>
+                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;">
+                        <div style="font-size:12px; color:#94a3b8;">UAG IP</div>
+                        <div id="uagMetaIp" style="font-weight:700; font-size:15px; color:#e5b600; overflow-wrap:anywhere;">-</div>
+                    </div>
+                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;">
+                        <div style="font-size:12px; color:#94a3b8;">Connection Server</div>
+                        <div id="uagMetaCsUrl" style="font-weight:700; font-size:15px; color:#e5b600; overflow-wrap:anywhere;">-</div>
+                    </div>
+                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;">
+                        <div style="font-size:12px; color:#94a3b8;">Conn Server Thumbprint</div>
+                        <div id="uagMetaThumb" style="font-weight:700; font-size:15px; color:#e5b600; overflow-wrap:anywhere;">-</div>
+                    </div>
+                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;">
+                        <div style="font-size:12px; color:#94a3b8;">Max Blast Connections</div>
+                        <div id="uagMetaBlast" style="font-weight:700; font-size:15px; color:#e5b600; overflow-wrap:anywhere;">-</div>
+                    </div>
+                </div>
 
                 <div style="display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px;">
                     <div class="card" style="min-height:160px; background:#11182a;">
@@ -496,34 +516,42 @@
             <div id="uagDiagramPanel" class="horizon-task-panel" style="display:none;">
                 <h3>Manual Diagram</h3>
                 <p style="color:#94a3b8; margin-top:0;">Enter values (comma separated) to draw a quick UAG topology.</p>
-                <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap:12px;">
-                    <div>
-                        <label style="display:block; color:#cbd5e1; margin-bottom:6px;">External DNS Name</label>
-                        <input id="uagManualExternalDns" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="horizon.example.com, uag.example.com">
+                <div style="display:flex; flex-direction:column; gap:10px;">
+                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                        <div style="flex:1 1 0; min-width:320px;">
+                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">External DNS Name</label>
+                            <input id="uagManualExternalDns" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="horizon.example.com, uag.example.com">
+                        </div>
+                        <div style="flex:1 1 0; min-width:320px;">
+                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">DMZ NLB IP</label>
+                            <input id="uagManualDmzLb" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="203.0.113.10, 203.0.113.11">
+                        </div>
                     </div>
-                    <div>
-                        <label style="display:block; color:#cbd5e1; margin-bottom:6px;">DMZ NLB IP</label>
-                        <input id="uagManualDmzLb" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="203.0.113.10, 203.0.113.11">
+                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                        <div style="flex:1 1 0; min-width:320px;">
+                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">UAG Names</label>
+                            <input id="uagManualUag" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="uag01, uag02">
+                        </div>
+                        <div style="flex:1 1 0; min-width:320px;">
+                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">UAG IPs</label>
+                            <input id="uagManualUagIp" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="10.0.0.11, 10.0.0.12">
+                        </div>
                     </div>
-                    <div>
-                        <label style="display:block; color:#cbd5e1; margin-bottom:6px;">UAG Names</label>
-                        <input id="uagManualUag" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="uag01, uag02">
+                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                        <div style="flex:1 1 0; min-width:320px;">
+                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">Internal NLB IP</label>
+                            <input id="uagManualInternalLb" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="10.0.1.20">
+                        </div>
                     </div>
-                    <div>
-                        <label style="display:block; color:#cbd5e1; margin-bottom:6px;">UAG IPs</label>
-                        <input id="uagManualUagIp" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="10.0.0.11, 10.0.0.12">
-                    </div>
-                    <div>
-                        <label style="display:block; color:#cbd5e1; margin-bottom:6px;">Internal NLB IP</label>
-                        <input id="uagManualInternalLb" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="10.0.1.20">
-                    </div>
-                    <div>
-                        <label style="display:block; color:#cbd5e1; margin-bottom:6px;">Connection Server Names</label>
-                        <input id="uagManualConn" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="conn01, conn02">
-                    </div>
-                    <div>
-                        <label style="display:block; color:#cbd5e1; margin-bottom:6px;">Connection Server IPs</label>
-                        <input id="uagManualConnIp" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="10.0.1.31, 10.0.1.32">
+                    <div style="display:flex; gap:12px; flex-wrap:wrap;">
+                        <div style="flex:1 1 0; min-width:320px;">
+                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">Connection Server Names</label>
+                            <input id="uagManualConn" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="conn01, conn02">
+                        </div>
+                        <div style="flex:1 1 0; min-width:320px;">
+                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">Connection Server IPs</label>
+                            <input id="uagManualConnIp" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="10.0.1.31, 10.0.1.32">
+                        </div>
                     </div>
                 </div>
                 <button class="btn btn-secondary" style="margin-top:10px; background:#22d3ee; border-color:#22d3ee; color:#0b1020;" onclick="renderManualDiagram()">Draw Diagram</button>
@@ -1331,6 +1359,7 @@
     // UAG modal + parser (lightweight inline to avoid extra page)
     mermaid.initialize({ startOnLoad: false, theme: 'dark' });
     const uagData = { gateways: [], conn: [], dns: [], ad: [], certs: [], external: [] };
+    const uagMeta = { uagName: '-', uagIp: '-', csUrl: '-', csThumb: '-', maxBlast: '-' };
 
     function openUagModal() {
         const modal = document.getElementById('uagModal');
@@ -1414,8 +1443,10 @@
         const gs = obj.generalSettings || {};
         addVal(uagData.gateways, gs.ip0);
         addVal(uagData.gateways, gs.defaultGateway);
+        if (gs.ip0) uagMeta.uagIp = gs.ip0;
 
         const sys = obj.systemSettings || {};
+        if (sys.uagName) uagMeta.uagName = sys.uagName;
         (sys.dns || '').split(/\s+/).filter(Boolean).forEach(v=>addVal(uagData.dns, v));
         (sys.dnsSearch || '').split(/\s+/).filter(Boolean).forEach(v=>addVal(uagData.ad, v));
         (sys.allowedHostHeaderValues || '').split(/[, ]+/).filter(Boolean).forEach(v=>addVal(uagData.gateways, v));
@@ -1430,11 +1461,14 @@
             addVal(uagData.external, svc.tunnelExternalUrl);
             if (svc.proxyDestinationUrl) {
                 addVal(uagData.conn, svc.proxyDestinationUrl);
+                uagMeta.csUrl = svc.proxyDestinationUrl;
                 try {
                     const h = new URL(svc.proxyDestinationUrl).hostname;
                     addVal(uagData.conn, h);
                 } catch(_){}
             }
+            if (svc.proxyDestinationUrlThumbprints) uagMeta.csThumb = svc.proxyDestinationUrlThumbprints;
+            if (svc.maxActiveBlastSessions) uagMeta.maxBlast = svc.maxActiveBlastSessions;
             (svc.originHeaderDetailsList||[]).forEach(o=>{
                 if (isUrl(o.origin)) addVal(uagData.conn, o.origin);
                 else if (isHostOrIp(o.origin)) addVal(uagData.conn, o.origin);
@@ -1491,6 +1525,17 @@
         document.getElementById('uagStatAd').textContent = uagData.ad.length;
         document.getElementById('uagStatCerts').textContent = uagData.certs.length;
         document.getElementById('uagStatExt').textContent = uagData.external.length;
+        const metaMap = {
+            uagMetaName: uagMeta.uagName || '-',
+            uagMetaIp: uagMeta.uagIp || '-',
+            uagMetaCsUrl: uagMeta.csUrl || '-',
+            uagMetaThumb: uagMeta.csThumb || '-',
+            uagMetaBlast: uagMeta.maxBlast || '-'
+        };
+        Object.entries(metaMap).forEach(([id,val])=>{
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+        });
         renderUagDiagram();
     }
 

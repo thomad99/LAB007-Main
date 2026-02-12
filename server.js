@@ -498,23 +498,29 @@ Goal: render a clean IT infrastructure diagram with 3 vertical columns labeled:
 2) DMZ
 3) Internal Network
 
+Canvas:
+- Use width="1100" height="520" and viewBox="0 0 1100 520"
+- Use three background bands for the columns: left/right light gray (#f4f6f8), center light purple (#eef0ff)
+
 Style:
 - White cards with subtle borders, rounded corners, consistent spacing.
 - Purple (#4b2bd6) for flow lines and DMZ accents.
 - Teal (#0d7a6b) for the DMZ load balancer vertical pill.
 - Font: Arial, sans-serif. Use readable font sizes and never overflow text outside shapes.
-- Always leave generous padding around all text and shapes. No clipping.
+- Generous padding around all text and shapes. No clipping.
 
-Layout rules:
-- External column: a single box showing external_dns_name (line 1) and dmz_load_balancer_address (line 2). Draw an arrow into a small firewall icon near the column boundary.
-- DMZ column: a vertical “Load Balancer” pill, then UAG circular nodes stacked. Each UAG shows name on line 1 and IP on line 2.
-- Internal column: a small box for internal_load_balancer (if provided), then a vertical list of connection servers (one rounded rectangle per server) showing name and IP.
-- Draw arrows from External -> DMZ LB, then from LB -> each UAG, then from each UAG -> internal section (toward the connection servers).
+Layout rules (match this structure and spacing):
+- Top titles centered over columns: External, DMZ, Internal Network.
+- External column: one box with external_dns_name on line 1 and dmz_load_balancer_address on line 2; place a small firewall icon near the boundary.
+- DMZ column: a vertical “Load Balancer” pill; stack UAG circular nodes (name line 1, IP line 2).
+- Internal column: box for internal_load_balancer (if provided), then a vertical list of connection servers (one rounded rectangle per server) showing name and IP.
+- Draw arrows: External -> DMZ LB, LB -> each UAG, each UAG -> Internal (toward the connection servers).
 
 Constraints:
 - Output must be a single <svg>…</svg>.
 - No embedded images. Use simple SVG shapes for icons.
-- All text must fit within its container. If too long, reduce font-size slightly (never overflow or clip).`;
+- All text must fit within its container; reduce font-size slightly if needed to avoid clipping.
+- Keep everything centered and evenly spaced within the 1100x520 viewBox.`;
 
     const prompt = JSON.stringify(formData, null, 2);
 
