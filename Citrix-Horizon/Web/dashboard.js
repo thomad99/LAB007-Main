@@ -569,6 +569,10 @@ function uploadDebugFile(file) {
             if (debugFileInput) {
                 debugFileInput.value = '';
             }
+            // Also render the bundle client-side if the helper exists
+            if (window.renderCsBundleFromFile) {
+                window.renderCsBundleFromFile(file);
+            }
         } else {
             alert('Upload failed: ' + (data.error || 'Unknown error'));
             if (loadingIndicator) {

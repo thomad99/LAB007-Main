@@ -1677,38 +1677,7 @@
     async function handleCsBundleUpload(e){
         const file = e.target.files?.[0];
         if (!file) return;
-        const status = document.getElementById('csBundleStatus');
-        if (status) status.innerHTML = `<span class="spinner-eye"></span> Reading ${file.name} ...`;
-        csBundleGroups = {};
-        try{
-            if (typeof JSZip === 'undefined') throw new Error('JSZip missing');
-            const buf = await file.arrayBuffer();
-            const zip = await JSZip.loadAsync(buf);
-            const names = Object.keys(zip.files||{});
-            const cats = {
-                debug: /debug-.*\.log/i,
-                broker: /broker-.*\.log/i,
-                security: /security-.*\.log/i,
-                pcoip: /pcoip_server-.*\.log/i,
-                messages: /(messages|syslog|event|evt|evtx)/i
-            };
-            names.forEach(n=>{
-                if (zip.files[n].dir) return;
-                let cat = 'other';
-                if (cats.debug.test(n)) cat='debug';
-                else if (cats.broker.test(n)) cat='broker';
-                else if (cats.security.test(n)) cat='security';
-                else if (cats.pcoip.test(n)) cat='pcoip';
-                else if (cats.messages.test(n)) cat='messages';
-                if (!csBundleGroups[cat]) csBundleGroups[cat]=[];
-                csBundleGroups[cat].push(n);
-            });
-            renderCsBundle();
-            if (status) status.textContent = `Loaded ${names.length} file(s).`;
-        }catch(err){
-            console.error('CS bundle error', err);
-            if (status) status.textContent = 'Failed to read bundle: ' + err.message;
-        }
+        await renderCsBundleFromFile(file);
     }
     function renderCsBundle(){
         const wrap = document.getElementById('csBundleResults');
@@ -1764,6 +1733,41 @@
             body.innerHTML = `<div style="color:#f87171;">Error loading file: ${escapeHtml(err.message||'unknown')}</div>`;
         }
     }
+    async function renderCsBundleFromFile(file){
+        const status = document.getElementById('csBundleStatus');
+        if (status) status.innerHTML = `<span class="spinner-eye"></span> Reading ${file.name} ...`;
+        csBundleGroups = {};
+        try{
+            if (typeof JSZip === 'undefined') throw new Error('JSZip missing');
+            const buf = await file.arrayBuffer();
+            const zip = await JSZip.loadAsync(buf);
+            const names = Object.keys(zip.files||{});
+            const cats = {
+                debug: /debug-.*\.log/i,
+                broker: /broker-.*\.log/i,
+                security: /security-.*\.log/i,
+                pcoip: /pcoip_server-.*\.log/i,
+                messages: /(messages|syslog|event|evt|evtx)/i
+            };
+            names.forEach(n=>{
+                if (zip.files[n].dir) return;
+                let cat = 'other';
+                if (cats.debug.test(n)) cat='debug';
+                else if (cats.broker.test(n)) cat='broker';
+                else if (cats.security.test(n)) cat='security';
+                else if (cats.pcoip.test(n)) cat='pcoip';
+                else if (cats.messages.test(n)) cat='messages';
+                if (!csBundleGroups[cat]) csBundleGroups[cat]=[];
+                csBundleGroups[cat].push(n);
+            });
+            renderCsBundle();
+            if (status) status.textContent = `Loaded ${names.length} file(s).`;
+        }catch(err){
+            console.error('CS bundle error', err);
+            if (status) status.textContent = 'Failed to read bundle: ' + err.message;
+        }
+    }
+    window.renderCsBundleFromFile = renderCsBundleFromFile;
     function handleCsAnyUpload(e){
         const file = e.target.files?.[0];
         if (!file) return;
