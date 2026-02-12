@@ -476,77 +476,59 @@ app.post('/api/uag/diagram-ai', async (req, res) => {
     if (!apiKey) {
       return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
     }
-    const toCsv = (arr) => (Array.isArray(arr) ? arr.map(s => (s || '').trim()).filter(Boolean).join(', ') : '');
-    const dataVars = {
-      dns: toCsv(externalDns),
-      dmzLb: toCsv(dmzLoadBalancers),
-      uags: toCsv(uagNames),
-      uagIps: toCsv(uagIps),
-      intLb: toCsv(internalLb),
-      cons: toCsv(connServers),
-      consIp: toCsv(connIps)
+    const formData = {
+      external_dns_name: Array.isArray(externalDns) ? externalDns.map(s => (s || '').trim()).filter(Boolean).join(', ') : '',
+      dmz_load_balancer_address: Array.isArray(dmzLoadBalancers) ? dmzLoadBalancers.map(s => (s || '').trim()).filter(Boolean).join(', ') : '',
+      internal_load_balancer: Array.isArray(internalLb) ? internalLb.map(s => (s || '').trim()).filter(Boolean).join(', ') : (internalLb || ''),
+      uag: (Array.isArray(uagNames) ? uagNames : []).map((name, i) => ({
+        name: (name || '').trim(),
+        ip: (Array.isArray(uagIps) ? uagIps[i] : '')?.trim()
+      })).filter(u => u.name || u.ip),
+      connection_servers: (Array.isArray(connServers) ? connServers : []).map((name, i) => ({
+        name: (name || '').trim(),
+        ip: (Array.isArray(connIps) ? connIps[i] : '')?.trim()
+      })).filter(c => c.name || c.ip)
     };
-    const prompt = `
-You are an expert technical diagram designer. Generate a SINGLE, self-contained SVG file (no external images, no scripts, no CSS imports) that renders a clean network topology diagram for Omnissa Horizon Unified Access Gateway (UAG).
 
-OUTPUT REQUIREMENTS
-- Output ONLY valid SVG markup starting with: <?xml version="1.0" encoding="UTF-8"?>
-- Use width="1400" height="1500" and viewBox="0 0 1400 1500"
-- White background, navy line-art icons, purple accent for DMZ border and vSphere bar (LAB007 style).
-- Consistent strokes (3px primary, 2.25px secondary), rounded corners, modern typography (Inter/Segoe UI/Arial fallback).
-- Everything must fit within the canvas (no clipping).
-- DO NOT include markdown fences. DO NOT explain anything. Just the SVG.
+    const systemPrompt = `
+You are a diagram-rendering engine. Output ONLY valid SVG markup (no markdown, no explanations, no code fences).
 
-DATA (from web form)
-External DNS Name(s): ${dataVars.dns || '(none)'}
-DMZ Load Balancer Address(es): ${dataVars.dmzLb || '(none)'}
-UAG Names: ${dataVars.uags || '(none)'}
-UAG IPs: ${dataVars.uagIps || '(none)'}
-Internal Load Balancer: ${dataVars.intLb || '(none)'}
-Connection Server Names: ${dataVars.cons || '(none)'}
-Connection Server IPs: ${dataVars.consIp || '(none)'}
+Goal: render a clean IT infrastructure diagram with 3 vertical columns labeled:
+1) External
+2) DMZ
+3) Internal Network
 
-LAYOUT (match this structure exactly; keep everything centered with generous spacing and sized to fit the 1400x1500 viewBox)
-1) Top: Title "LAB007 • Horizon UAG Topology"
-   Subtitle: "Based on provided inputs: DNS ${dataVars.dns || 'n/a'} • DMZ LB ${dataVars.dmzLb || 'n/a'} • UAGs ${dataVars.uags || 'n/a'} • Connection Servers ${dataVars.cons || 'n/a'}"
-2) "Horizon Clients" icon group (phone, monitor, laptop) centered.
-3) Line to "Internet" cloud labeled "Internet" and below cloud list the External DNS Names (comma separated).
-4) Line to "Load Balancer" inside a DMZ boundary.
-   - DMZ boundary: rounded rectangle with PURPLE stroke, label "DMZ" at top-right.
-   - Load Balancer icon (simple shield) centered, label "Load Balancer"
-   - Under label list DMZ LB(s): "LB: ${dataVars.dmzLb || ''}" (if multiple, show first as primary and the rest on the next line as "Also: ...")
-5) From Load Balancer, branch lines to UAG nodes (one per UAG name).
-   - Each UAG node is a circle line-art with 3 purple dots connected (like a simple gateway symbol).
-   - Under each: "<UAGNAME> (UAG) — ${corresponding UAG IP if provided}"
-6) From UAG layer, connect down to a "Horizon Connection Servers" row:
-   - Four rounded rectangles minimum; if more than 4 servers, wrap to a second row with equal spacing.
-   - Each box label is the server name; if a matching IP is provided (by index), append "— IP".
-   - Show an Internal Load Balancer node feeding the connection servers if provided.
-7) From connection servers, connect down to "Horizon Desktops and RDS Hosts":
-   - Draw a dashed purple rounded rectangle.
-   - Inside, draw 8 small VM tiles (2 rows x 4) labeled "vm".
-   - Add a purple rounded rectangle labeled "vSphere" on the right side inside this dashed box.
+Style:
+- White cards with subtle borders, rounded corners, consistent spacing.
+- Purple (#4b2bd6) for flow lines and DMZ accents.
+- Teal (#0d7a6b) for the DMZ load balancer vertical pill.
+- Font: Arial, sans-serif. Use readable font sizes and never overflow text outside shapes.
+- Always leave generous padding around all text and shapes. No clipping.
 
-RULES / EDGE CASES
-- If any list has only 1 item, still draw the same structure (single UAG, single VIP, etc.).
-- CSV inputs may include spaces; trim whitespace.
-- Use consistent spacing and center alignment.
-- Ensure no text overlaps; reduce font size slightly if needed for long lists.
-- Keep the diagram visually similar to a simple Horizon architecture template (clean, minimal line art).
-- Use clear spacing and sizing so text does not overlap shapes; adjust font size/line breaks to keep within the canvas with no clipping. Keep DMZ and rows evenly spaced.
+Layout rules:
+- External column: a single box showing external_dns_name (line 1) and dmz_load_balancer_address (line 2). Draw an arrow into a small firewall icon near the column boundary.
+- DMZ column: a vertical “Load Balancer” pill, then UAG circular nodes stacked. Each UAG shows name on line 1 and IP on line 2.
+- Internal column: a small box for internal_load_balancer (if provided), then a vertical list of connection servers (one rounded rectangle per server) showing name and IP.
+- Draw arrows from External -> DMZ LB, then from LB -> each UAG, then from each UAG -> internal section (toward the connection servers).
 
-Now generate the SVG.`;
+Constraints:
+- Output must be a single <svg>…</svg>.
+- No embedded images. Use simple SVG shapes for icons.
+- All text must fit within its container. If too long, reduce font-size slightly (never overflow or clip).`;
+
+    const prompt = JSON.stringify(formData, null, 2);
 
     const body = {
       model: 'gpt-4o-mini',
       temperature: 0.2,
       max_tokens: 1800,
       messages: [
-        { role: 'system', content: 'You only output SVG per the user instructions.' },
+        { role: 'system', content: systemPrompt },
         { role: 'user', content: prompt }
       ]
     };
-    console.log('[diagram-ai] prompt preview:', (prompt || '').slice(0, 400), '...');
+    console.log('[diagram-ai] system prompt preview:', systemPrompt.slice(0, 200), '...');
+    console.log('[diagram-ai] user JSON:', prompt);
     const response = await fetchFn('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
