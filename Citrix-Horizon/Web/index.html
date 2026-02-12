@@ -507,10 +507,7 @@
                 </div>
                 <div id="uagAiResult" style="margin-top:10px; border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px; background:#0f172a; color:#e2e8f0; display:none; position:relative; z-index:1;"></div>
                 <div id="uagLogStatus" style="margin-top:8px;color:#94a3b8;"></div>
-                <div id="uagLogScrollTop" class="log-scroll" style="margin-top:10px; margin-bottom:4px; overflow-x:auto; overflow-y:hidden; height:12px; background:rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.08); border-radius:6px;">
-                    <div id="uagLogScrollTopInner" style="height:1px;"></div>
-                </div>
-                <div class="logs" id="uagLogResults" style="margin-top:0; overflow:auto; max-height:70vh;"></div>
+                <div class="logs" id="uagLogResults" style="margin-top:10px; overflow:auto; max-height:70vh;"></div>
             </div>
 
             <div id="uagDiagramPanel" class="horizon-task-panel" style="display:none;">
@@ -1777,8 +1774,6 @@
 
     function renderLogResults(list, query = ''){
         const wrap = document.getElementById('uagLogResults');
-        const scrollTop = document.getElementById('uagLogScrollTop');
-        const scrollTopInner = document.getElementById('uagLogScrollTopInner');
         if (!wrap) return;
         if (!list.length){ wrap.innerHTML = '<div style="color:#94a3b8;">No entries</div>'; return;}
         const qLower = query.toLowerCase();
@@ -1900,13 +1895,6 @@
         const countEl = document.getElementById('uagLogCount');
         if (countEl) countEl.textContent = uagLogMatches.length ? `${uagLogMatchIndex+1}/${uagLogMatches.length}` : '0';
 
-        // sync horizontal scroll top bar
-        if (scrollTop && scrollTopInner) {
-            // set inner width to content width to allow scrollbar
-            scrollTopInner.style.width = wrap.scrollWidth + 'px';
-            scrollTop.onscroll = () => { wrap.scrollLeft = scrollTop.scrollLeft; };
-            wrap.onscroll = () => { scrollTop.scrollLeft = wrap.scrollLeft; };
-        }
     }
 
     async function analyzeLogAi(){
