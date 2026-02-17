@@ -200,33 +200,19 @@ document.addEventListener('DOMContentLoaded', async function() {
         }
     });
 
-    // Debug ZIP upload functionality
+    // Debug Tools modal
     const uploadDebugBtn = document.getElementById('uploadDebugBtn');
-    const debugFileInput = document.getElementById('debugFileInput');
-
-    console.log('uploadDebugBtn element:', uploadDebugBtn);
-    console.log('debugFileInput element:', debugFileInput);
-    console.log('uploadDebugBtn exists:', !!uploadDebugBtn);
-    console.log('debugFileInput exists:', !!debugFileInput);
-
-    if (uploadDebugBtn && debugFileInput) {
-        console.log('Attaching Upload Debug ZIP event listeners');
-
-        uploadDebugBtn.addEventListener('click', (e) => {
-            console.log('Upload Debug ZIP button clicked!');
-            debugFileInput.click();
+    if (uploadDebugBtn) {
+        uploadDebugBtn.addEventListener('click', () => {
+            openDebugToolsModal();
         });
-
-        debugFileInput.addEventListener('change', (e) => {
-            console.log('Debug file input changed, files:', e.target.files.length);
-            if (e.target.files.length > 0) {
-                uploadDebugFile(e.target.files[0]);
-            }
-        });
-        console.log('Upload Debug ZIP event listeners attached successfully');
-    } else {
-        console.error('Upload Debug ZIP elements not found!');
     }
+    window.addEventListener('click', function(event) {
+        const modal = document.getElementById('debugToolsModal');
+        if (modal && event.target === modal) {
+            closeDebugToolsModal();
+        }
+    });
 
     console.log('=== Initialization complete ===');
 
@@ -595,6 +581,151 @@ function uploadDebugFile(file) {
             loadingText.textContent = 'Awaiting your command';
         }
     });
+}
+
+// -------------------------------
+// Debug Tools Modal (inline)
+// -------------------------------
+let debugToolsInitialized = false;
+
+function openDebugToolsModal() {
+    const modal = document.getElementById('debugToolsModal');
+    if (modal) {
+        modal.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+        showDebugToolsTab('upload');
+        if (!debugToolsInitialized) {
+            initDebugTools();
+            debugToolsInitialized = true;
+        }
+    }
+}
+
+function closeDebugToolsModal() {
+    const modal = document.getElementById('debugToolsModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+function showDebugToolsTab(tab) {
+    const uploadPanel = document.getElementById('debugToolsUploadPanel');
+    const anonPanel = document.getElementById('debugToolsAnonPanel');
+    const uploadBtn = document.getElementById('debugTabUploadBtn');
+    const anonBtn = document.getElementById('debugTabAnonBtn');
+
+    if (uploadPanel) uploadPanel.style.display = tab === 'upload' ? 'block' : 'none';
+    if (anonPanel) anonPanel.style.display = tab === 'anon' ? 'block' : 'none';
+    if (uploadBtn) uploadBtn.classList.toggle('active', tab === 'upload');
+    if (anonBtn) anonBtn.classList.toggle('active', tab === 'anon');
+}
+
+function initDebugTools() {
+    // Upload & Store
+    const pickBtn = document.getElementById('debugStorePickBtn');
+    const fileInput = document.getElementById('debugStoreFileModal');
+    if (pickBtn && fileInput) {
+        pickBtn.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+                uploadDebugStoreFile(file);
+            }
+            e.target.value = '';
+        });
+    }
+
+    // Anonymise
+    const anonPickBtn = document.getElementById('anonPickBtn');
+    const anonFile = document.getElementById('anonFileModal');
+    if (anonPickBtn && anonFile) {
+        anonPickBtn.addEventListener('click', () => anonFile.click());
+        anonFile.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+                await anonymiseModalFile(file);
+            }
+            e.target.value = '';
+        });
+    }
+}
+
+function uploadDebugStoreFile(file) {
+    const status = document.getElementById('debugStoreStatus');
+    if (!file) {
+        if (status) status.textContent = 'No file chosen.';
+        return;
+    }
+    if (status) status.innerHTML = `<span class="spinner-eye"></span> Uploading ${file.name}...`;
+
+    const formData = new FormData();
+    formData.append('debugFile', file);
+
+    fetch('/citrix/api/upload-debug', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.success) {
+            if (status) status.textContent = `Uploaded: ${data.file?.filename || file.name}`;
+            if (window.renderCsBundleFromFile) {
+                try {
+                    window.renderCsBundleFromFile(file);
+                } catch (err) {
+                    console.warn('Bundle render failed:', err);
+                }
+            }
+        } else {
+            if (status) status.textContent = `Upload failed: ${data.error || 'Unknown error'}`;
+        }
+    })
+    .catch(err => {
+        console.error('Upload error', err);
+        if (status) status.textContent = `Upload error: ${err.message || err}`;
+    });
+}
+
+async function anonymiseModalFile(file) {
+    const status = document.getElementById('anonStatusModal');
+    if (status) status.innerHTML = `<span class="spinner-eye"></span> Processing ${file.name}...`;
+    try {
+        const text = await file.text();
+        const domainsRaw = document.getElementById('anonDomainsModal')?.value || '';
+        const domainList = domainsRaw.split(',').map(s => s.trim()).filter(Boolean);
+        const doIp = document.getElementById('anonIpModal')?.checked;
+        const doUser = document.getElementById('anonUserModal')?.checked;
+
+        let out = text;
+        domainList.forEach(d => {
+            const esc = d.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+            const re = new RegExp(esc,'gi');
+            out = out.replace(re,'DUMMYDOMAIN');
+        });
+        if (doIp) {
+            out = out.replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g,'1.2.3.4');
+        }
+        if (doUser) {
+            out = out.replace(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/g,'USERID');
+            out = out.replace(/\b[a-zA-Z]{2,3}\d+\b/g,'USERID');
+        }
+
+        const extMatch = file.name.match(/(\.[^.]+)$/);
+        const ext = extMatch ? extMatch[1] : '.txt';
+        const base = file.name.replace(/(\.[^.]+)$/,'');
+        const fname = `${base}_anon${ext}`;
+        const blob = new Blob([out], { type:'text/plain' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = fname;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        if (status) status.textContent = `Anonymised and downloaded: ${fname}`;
+    } catch (err) {
+        console.error('Anonymise error', err);
+        if (status) status.textContent = `Error: ${err.message || err}`;
+    }
 }
 
 // Parse Citrix export ZIP (YAML bundle) into dashboard-friendly JSON
@@ -2948,37 +3079,39 @@ function generateHorizonAdminScript(action) {
     if (!/^https?:\/\//i.test(baseUrl)) {
         baseUrl = 'https://' + baseUrl;
     }
+    // Horizon REST base is /rest; enforce it once
     if (!baseUrl.toLowerCase().includes('/rest')) {
         baseUrl = baseUrl.replace(/\/+$/,'') + '/rest';
     }
+    baseUrl = baseUrl.replace(/\/+$/,''); // drop trailing slash for clean joins
     const scripts = {
         farms: {
             name: 'FARM Data',
-            endpoint: '/monitor/farms',
+            endpoint: '/monitor/v1/farms',
             outfile: 'horizon-farms.json',
             desc: 'List all farms'
         },
         desktops: {
             name: 'Desktops',
-            endpoint: '/monitor/desktop-pools',
+            endpoint: '/monitor/v1/desktop-pools',
             outfile: 'horizon-desktop-pools.json',
             desc: 'List all desktop pools'
         },
         restarts: {
             name: 'Restarts',
-            endpoint: '/config/farms/scheduled-updates',
+            endpoint: '/config/v1/farms/scheduled-updates',
             outfile: 'horizon-farm-restarts.json',
             desc: 'Scheduled image updates per farm'
         },
         clones: {
             name: 'Clones',
-            endpoint: '/monitor/tasks',
+            endpoint: '/monitor/v1/tasks',
             outfile: 'horizon-clone-status.json',
             desc: 'Clone progress for pools/farms'
         },
         imageDates: {
             name: 'Image Dates',
-            endpoint: '/monitor/farms',
+            endpoint: '/monitor/v1/farms',
             outfile: 'horizon-image-dates.json',
             desc: 'Farm -> master image and snapshot'
         }
@@ -2991,77 +3124,27 @@ function generateHorizonAdminScript(action) {
     }
 
     const scriptLines = [];
-    scriptLines.push(`# Horizon Admin - ${cfg.name}`);
+    scriptLines.push(`# Horizon Admin - ${cfg.name} (curl)`);
     scriptLines.push(`# ${cfg.desc}`);
-    scriptLines.push(`# Endpoint: ${cfg.endpoint} (verify in Omnissa docs)`);
+    scriptLines.push(`# Endpoint: ${cfg.endpoint} (Horizon Server API 2506)`);
     scriptLines.push('');
-    scriptLines.push('Import-Module VMware.PowerCLI -ErrorAction SilentlyContinue');
-    scriptLines.push('try { Import-Module powershell-yaml -ErrorAction SilentlyContinue } catch {}');
-    scriptLines.push('$ErrorActionPreference = "Stop"');
+    scriptLines.push('# Paste your bearer token (obtain via Horizon REST auth)');
+    scriptLines.push(`BASE="${baseUrl}"`);
+    scriptLines.push('TOKEN="<paste_bearer_token_here>"');
     scriptLines.push('');
-    scriptLines.push('$baseUrl = "' + baseUrl + '"');
-    scriptLines.push('$endpoint = "' + cfg.endpoint + '"');
-    scriptLines.push('$outJson = "' + cfg.outfile + '"');
-    scriptLines.push('$outYaml = [System.IO.Path]::ChangeExtension($outJson, ".yaml")');
-    scriptLines.push('');
-    scriptLines.push('# --- Auth ---');
-    scriptLines.push('$cred = Get-Credential -Message "Enter Horizon credentials (REST)"');
-    scriptLines.push('$pair = "$($cred.UserName):$($cred.GetNetworkCredential().Password)"');
-    scriptLines.push('$bytes = [System.Text.Encoding]::UTF8.GetBytes($pair)');
-    scriptLines.push('$basic = [Convert]::ToBase64String($bytes)');
-    scriptLines.push('$headers = @{');
-    scriptLines.push("    'Authorization' = \"Basic $basic\";");
-    scriptLines.push("    'Accept'        = 'application/json';");
-    scriptLines.push("    'Content-Type'  = 'application/json'");
-    scriptLines.push('}');
-    scriptLines.push('');
-    scriptLines.push('# --- Call ---');
-    scriptLines.push('$uri = "$baseUrl$endpoint"');
-    scriptLines.push('Write-Host "Calling $uri ..." -ForegroundColor Cyan');
-    scriptLines.push('$response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers -ErrorAction Stop');
+    scriptLines.push('curl -sS -X GET \\');
+    scriptLines.push(`  "$BASE${cfg.endpoint}" \\`);
+    scriptLines.push('  -H "Authorization: Bearer $TOKEN" \\');
+    scriptLines.push('  -H "Accept: application/json" \\');
+    scriptLines.push('  -o "' + cfg.outfile + '"');
     scriptLines.push('');
     if (action === 'imageDates') {
+        scriptLines.push('# Optional: preview key fields (requires jq)');
+        scriptLines.push('jq -r \'.[] | [.name, .baseImageName // .baseImage.name, .baseImageSnapshotName // .baseImage.snapshotName, .baseImageSnapshotCreationTime // .baseImage.snapshotCreationTime] | @tsv\' "' + cfg.outfile + '"');
         scriptLines.push('');
-        scriptLines.push('# --- Transform for Image Dates ---');
-        scriptLines.push('$rows = @()');
-        scriptLines.push('foreach ($farm in $response) {');
-        scriptLines.push('    $imgName  = $farm.baseImageName');
-        scriptLines.push('    if (-not $imgName -and $farm.baseImage) { $imgName = $farm.baseImage.name }');
-        scriptLines.push('    $snapName = $farm.baseImageSnapshotName');
-        scriptLines.push('    if (-not $snapName -and $farm.baseImage) { $snapName = $farm.baseImage.snapshotName }');
-        scriptLines.push('    $snapTime = $farm.baseImageSnapshotCreationTime');
-        scriptLines.push('    if (-not $snapTime -and $farm.baseImage) { $snapTime = $farm.baseImage.snapshotCreationTime }');
-        scriptLines.push('    $rows += [PSCustomObject]@{');
-        scriptLines.push('        Farm              = $farm.name');
-        scriptLines.push('        BaseImage         = $imgName');
-        scriptLines.push('        Snapshot          = $snapName');
-        scriptLines.push('        SnapshotTimestamp = $snapTime');
-        scriptLines.push('    }');
-        scriptLines.push('}');
-        scriptLines.push('$response = $rows');
     }
-    scriptLines.push('');
-    scriptLines.push('# --- Output ---');
-    scriptLines.push('$json = $response | ConvertTo-Json -Depth 6');
-    scriptLines.push('$json | Out-File -FilePath $outJson -Encoding UTF8');
-    scriptLines.push('Write-Host "Saved JSON to $outJson" -ForegroundColor Green');
-    scriptLines.push('');
-    scriptLines.push('if (Get-Command ConvertTo-Yaml -ErrorAction SilentlyContinue) {');
-    scriptLines.push('    try {');
-    scriptLines.push('        $yaml = $response | ConvertTo-Yaml');
-    scriptLines.push('        $yaml | Out-File -FilePath $outYaml -Encoding UTF8');
-    scriptLines.push('        Write-Host "Saved YAML to $outYaml" -ForegroundColor Green');
-    scriptLines.push('    } catch {');
-    scriptLines.push('        Write-Warning "Could not save YAML: $($_.Exception.Message)"');
-    scriptLines.push('    }');
-    scriptLines.push('} else {');
-    scriptLines.push('    Write-Warning "powershell-yaml module not available; skipping YAML output."');
-    scriptLines.push('}');
-    scriptLines.push('');
-    scriptLines.push('Write-Host "Response preview:" -ForegroundColor Yellow');
-    scriptLines.push('$response');
-    scriptLines.push('');
-    scriptLines.push('# Horizon REST 2506+ endpoints: /rest/monitor/* /rest/config/* (adjust if needed).');
+    scriptLines.push('# Show saved JSON');
+    scriptLines.push('cat "' + cfg.outfile + '"');
 
     const script = scriptLines.join('\n');
     const out = document.getElementById('adminScriptContent');
@@ -3081,7 +3164,7 @@ function downloadAdminScript() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'Horizon-Admin.ps1';
+    a.download = 'Horizon-Admin.sh';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

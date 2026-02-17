@@ -109,7 +109,7 @@
                     <button id="goldenSunBtn" class="btn btn-secondary" style="background: linear-gradient(135deg,#1f8e3d,#32a852); border-color: #1f8e3d; font-size: 12px; padding: 8px 14px; min-height: 38px;">GoldenSun</button>
                     <button id="horizonTasksBtn" class="btn btn-primary" style="font-size: 12px; padding: 8px 14px; min-height: 38px; background:#e5b600; border-color:#e5b600; color:#000;">HZ Tasks</button>
                     <button onclick="openUagModal()" class="btn btn-secondary" style="background:#e5b600;border-color:#e5b600;color:#000;font-size:12px;padding:8px 14px;min-height:38px;">UAG</button>
-                    <a href="debug-tools.html" class="btn btn-secondary" style="background: #e5b600; color: #000; border-color: #e5b600; z-index: 10000; font-size: 12px; padding: 8px 14px; min-height: 38px; text-decoration:none; display:inline-flex; align-items:center;">Upload Debugs</a>
+                    <button id="uploadDebugBtn" class="btn btn-secondary" style="background: #e5b600; color: #000; border-color: #e5b600; z-index: 10000; font-size: 12px; padding: 8px 14px; min-height: 38px;">Upload Debugs</button>
                     </div>
                 </div>
             </div>
@@ -1361,6 +1361,55 @@
                 </form>
 
                 <div id="configStatusMessage" class="status-message" style="display: none;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Debug Tools Modal (inline, white theme) -->
+    <div id="debugToolsModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 95%; width: 95%; margin-top: 120px; background: #ffffff; color: #111;">
+            <span class="modal-close" onclick="closeDebugToolsModal()">&times;</span>
+            <h2 style="color:#111;">Debug Tools</h2>
+            <p style="color:#444;">Upload/store Horizon debug bundles or anonymise a log without leaving this page.</p>
+
+            <div style="border-bottom: 2px solid #ddd; margin-bottom: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
+                <button class="task-tab active" id="debugTabUploadBtn" onclick="showDebugToolsTab('upload')" style="color:#111;">Upload &amp; Store</button>
+                <button class="task-tab" id="debugTabAnonBtn" onclick="showDebugToolsTab('anon')" style="color:#111;">Anonymise Log</button>
+            </div>
+
+            <div id="debugToolsUploadPanel" class="horizon-task-panel active" style="display: block; color:#111;">
+                <div style="margin: 12px 0; padding: 14px; border: 1px solid #ddd; border-radius: 6px; background: #f8f9fa;">
+                    <p style="margin:0 0 10px 0; color:#333;">Select a ZIP or text log. Files are stored via the existing /citrix/api/upload-debug endpoint.</p>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <button id="debugStorePickBtn" class="btn btn-secondary" style="background:#e5b600; color:#000; border-color:#e5b600;">Choose File</button>
+                        <input type="file" id="debugStoreFileModal" accept=".zip,.log,.txt" style="display:none;">
+                        <span id="debugStoreStatus" style="color:#555;">No file chosen.</span>
+                    </div>
+                </div>
+            </div>
+
+            <div id="debugToolsAnonPanel" class="horizon-task-panel" style="display: none; color:#111;">
+                <div style="margin: 12px 0; padding: 14px; border: 1px solid #ddd; border-radius: 6px; background: #f8f9fa; display:flex; flex-direction:column; gap:12px;">
+                    <div>
+                        <label for="anonDomainsModal" style="font-weight:600;">Domain Names (comma separated)</label>
+                        <input id="anonDomainsModal" type="text" class="input" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; color:#111;">
+                        <small style="color:#555;">Matches replaced with DUMMYDOMAIN</small>
+                    </div>
+                    <div style="display:flex; gap:16px; flex-wrap:wrap;">
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#111;">
+                            <input type="checkbox" id="anonIpModal"> Replace IP addresses with 1.2.3.4
+                        </label>
+                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#111;">
+                            <input type="checkbox" id="anonUserModal"> Replace usernames with USERID
+                        </label>
+                    </div>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <button id="anonPickBtn" class="btn btn-secondary" style="background:#e5b600; color:#000; border-color:#e5b600;">Choose File</button>
+                        <input type="file" id="anonFileModal" accept=".txt,.log,.conf,.json,.ini" style="display:none;">
+                        <span id="anonStatusModal" style="color:#555;">No file chosen.</span>
+                    </div>
+                    <p style="color:#444; margin:0;">Downloads an anonymised copy with “_anon” suffix.</p>
+                </div>
             </div>
         </div>
     </div>
