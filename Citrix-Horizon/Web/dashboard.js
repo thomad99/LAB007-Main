@@ -3089,6 +3089,13 @@ function generateHorizonAdminScript(action) {
     if (!/^https?:\/\//i.test(baseUrl)) {
         baseUrl = 'https://' + baseUrl;
     }
+    // Normalize any stray leading slashes after protocol (avoids https:///host)
+    const protoMatch = baseUrl.match(/^(https?:\/\/)(.*)$/i);
+    if (protoMatch) {
+        const proto = protoMatch[1];
+        const rest = protoMatch[2].replace(/^\/+/, '');
+        baseUrl = proto + rest;
+    }
     // Horizon REST base is /rest; enforce it once
     if (!baseUrl.toLowerCase().includes('/rest')) {
         baseUrl = baseUrl.replace(/\/+$/,'') + '/rest';
