@@ -2662,11 +2662,26 @@ function renderGoldenSunReport() {
     </div>
     `;
     rows.forEach(img => {
+        const ts = img.LatestSnapshotTimestamp ? new Date(img.LatestSnapshotTimestamp) : null;
+        let isFresh = false;
+        if (ts && !isNaN(ts.getTime())) {
+            const now = new Date();
+            const nowMonth = now.getMonth(); // 0-11
+            const nowYear = now.getFullYear();
+            const tsMonth = ts.getMonth();
+            const tsYear = ts.getFullYear();
+            // fresh if same month/year, or previous month (account for year rollover)
+            const sameMonth = (tsMonth === nowMonth && tsYear === nowYear);
+            const prevMonth = (tsMonth === (nowMonth + 11) % 12) && (tsYear === (nowMonth === 0 ? nowYear - 1 : nowYear));
+            isFresh = sameMonth || prevMonth;
+        }
+        const snapStyle = isFresh ? 'color:#0f9d58;font-weight:700;' : 'color:#555;';
+        const timeStyle = isFresh ? 'color:#0f9d58;font-weight:700;' : 'color:#333;';
         html += `
         <div style="display:grid;grid-template-columns:2fr 1.5fr 1fr;gap:6px;border:1px solid #ddd;border-radius:4px;padding:8px;margin-bottom:6px;background:#fff;align-items:center;">
             <div style="font-weight:600;overflow-wrap:anywhere;">${escapeHtml(img.Name || 'Unknown')}</div>
-            <div style="color:#555;overflow-wrap:anywhere;">${escapeHtml(img.LatestSnapshotName || 'N/A')}</div>
-            <div style="color:#333;">${img.LatestSnapshotTimestamp ? escapeHtml(img.LatestSnapshotTimestamp) : 'N/A'}</div>
+            <div style="${snapStyle}overflow-wrap:anywhere;">${escapeHtml(img.LatestSnapshotName || 'N/A')}</div>
+            <div style="${timeStyle}">${img.LatestSnapshotTimestamp ? escapeHtml(img.LatestSnapshotTimestamp) : 'N/A'}</div>
         </div>
         `;
     });
