@@ -696,6 +696,8 @@ async function anonymiseModalFile(file) {
         const domainList = domainsRaw.split(',').map(s => s.trim()).filter(Boolean);
         const doIp = document.getElementById('anonIpModal')?.checked;
         const doUser = document.getElementById('anonUserModal')?.checked;
+        const serverPrefix = (document.getElementById('anonServerPrefixModal')?.value || '').trim();
+        const doOuHide = document.getElementById('anonOuHideModal')?.checked;
 
         let out = text;
         domainList.forEach(d => {
@@ -709,6 +711,14 @@ async function anonymiseModalFile(file) {
         if (doUser) {
             out = out.replace(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/g,'USERID');
             out = out.replace(/\b[a-zA-Z]{2,3}\d+\b/g,'USERID');
+        }
+        if (serverPrefix) {
+            const esc = serverPrefix.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+            const re = new RegExp(`${esc}[A-Za-z0-9._-]*`, 'gi');
+            out = out.replace(re, 'SERVERNAME');
+        }
+        if (doOuHide) {
+            out = out.replace(/OU=[^;]*;/g, 'OU=HIDDEN;');
         }
 
         const extMatch = file.name.match(/(\.[^.]+)$/);
@@ -3124,27 +3134,66 @@ function generateHorizonAdminScript(action) {
     }
 
     const scriptLines = [];
-    scriptLines.push(`# Horizon Admin - ${cfg.name} (curl)`);
+    scriptLines.push(`# Horizon Admin - ${cfg.name} (PowerShell, REST)`);
     scriptLines.push(`# ${cfg.desc}`);
     scriptLines.push(`# Endpoint: ${cfg.endpoint} (Horizon Server API 2506)`);
     scriptLines.push('');
-    scriptLines.push('# Paste your bearer token (obtain via Horizon REST auth)');
-    scriptLines.push(`BASE="${baseUrl}"`);
-    scriptLines.push('TOKEN="<paste_bearer_token_here>"');
+    scriptLines.push('$ErrorActionPreference = "Stop"');
+    scriptLines.push(`$BaseUrl = "${baseUrl}"`);
+    scriptLines.push(`$Endpoint = "${cfg.endpoint}"`);
+    scriptLines.push(`$OutJson = "${cfg.outfile}"`);
+    scriptLines.push(`$OutHtml = [System.IO.Path]::ChangeExtension($OutJson, ".html")`);
+    scriptLines.push('$Domain = Read-Host "Domain (optional, leave blank if not needed)"');
+    scriptLines.push('$cred = Get-Credential -Message "Enter Horizon credentials (REST)"');
+    scriptLines.push('$user = $cred.UserName');
+    scriptLines.push('$pass = $cred.GetNetworkCredential().Password');
     scriptLines.push('');
-    scriptLines.push('curl -sS -X GET \\');
-    scriptLines.push(`  "$BASE${cfg.endpoint}" \\`);
-    scriptLines.push('  -H "Authorization: Bearer $TOKEN" \\');
-    scriptLines.push('  -H "Accept: application/json" \\');
-    scriptLines.push('  -o "' + cfg.outfile + '"');
+    scriptLines.push('# --- Login to get bearer token ---');
+    scriptLines.push('$loginBody = @{ username = $user; password = $pass }');
+    scriptLines.push('if ($Domain) { $loginBody.domain = $Domain }');
+    scriptLines.push('$tokenResp = Invoke-RestMethod -Method Post -Uri "$BaseUrl/login" -ContentType "application/json" -Body ($loginBody | ConvertTo-Json)');
+    scriptLines.push('$token = $tokenResp.access_token');
+    scriptLines.push('if (-not $token) { throw "Login did not return access_token" }');
+    scriptLines.push('$headers = @{ Authorization = "Bearer $token"; Accept = "application/json" }');
+    scriptLines.push('');
+    scriptLines.push('# --- Call API ---');
+    scriptLines.push('$uri = "$BaseUrl$Endpoint"');
+    scriptLines.push('Write-Host "Calling $uri ..." -ForegroundColor Cyan');
+    scriptLines.push('$response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers');
     scriptLines.push('');
     if (action === 'imageDates') {
-        scriptLines.push('# Optional: preview key fields (requires jq)');
-        scriptLines.push('jq -r \'.[] | [.name, .baseImageName // .baseImage.name, .baseImageSnapshotName // .baseImage.snapshotName, .baseImageSnapshotCreationTime // .baseImage.snapshotCreationTime] | @tsv\' "' + cfg.outfile + '"');
-        scriptLines.push('');
+        scriptLines.push('# Transform for image dates view');
+        scriptLines.push('$rows = @()');
+        scriptLines.push('foreach ($farm in $response) {');
+        scriptLines.push('    $imgName  = $farm.baseImageName; if (-not $imgName -and $farm.baseImage) { $imgName = $farm.baseImage.name }');
+        scriptLines.push('    $snapName = $farm.baseImageSnapshotName; if (-not $snapName -and $farm.baseImage) { $snapName = $farm.baseImage.snapshotName }');
+        scriptLines.push('    $snapTime = $farm.baseImageSnapshotCreationTime; if (-not $snapTime -and $farm.baseImage) { $snapTime = $farm.baseImage.snapshotCreationTime }');
+        scriptLines.push('    $rows += [PSCustomObject]@{');
+        scriptLines.push('        Farm              = $farm.name');
+        scriptLines.push('        BaseImage         = $imgName');
+        scriptLines.push('        Snapshot          = $snapName');
+        scriptLines.push('        SnapshotTimestamp = $snapTime');
+        scriptLines.push('    }');
+        scriptLines.push('}');
+        scriptLines.push('$response = $rows');
     }
-    scriptLines.push('# Show saved JSON');
-    scriptLines.push('cat "' + cfg.outfile + '"');
+    scriptLines.push('');
+    scriptLines.push('# --- Save JSON ---');
+    scriptLines.push('$response | ConvertTo-Json -Depth 8 | Out-File -FilePath $OutJson -Encoding UTF8');
+    scriptLines.push('Write-Host "Saved JSON to $OutJson" -ForegroundColor Green');
+    scriptLines.push('');
+    scriptLines.push('# --- Build simple HTML report ---');
+    scriptLines.push('$style = @\'');
+    scriptLines.push('table { border-collapse: collapse; width: 100%; font-family: Arial; font-size: 12px; }');
+    scriptLines.push('th, td { border: 1px solid #ddd; padding: 8px; }');
+    scriptLines.push('th { background: #f4f6f8; text-align: left; }');
+    scriptLines.push('tr:nth-child(even) { background: #fafafa; }');
+    scriptLines.push('\'@');
+    scriptLines.push('$html = $response | ConvertTo-Html -PreContent "<h2>${cfg.name}</h2><p>${cfg.desc}</p>" -Head "<style>$style</style>"');
+    scriptLines.push('$html | Out-File -FilePath $OutHtml -Encoding UTF8');
+    scriptLines.push('Write-Host "Saved HTML to $OutHtml" -ForegroundColor Green');
+    scriptLines.push('');
+    scriptLines.push('Write-Host "Done." -ForegroundColor Cyan');
 
     const script = scriptLines.join('\n');
     const out = document.getElementById('adminScriptContent');
@@ -3164,7 +3213,7 @@ function downloadAdminScript() {
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'Horizon-Admin.sh';
+    a.download = 'Horizon-Admin.ps1';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);

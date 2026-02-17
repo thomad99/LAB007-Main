@@ -43,6 +43,11 @@
                     <label style="display:block; margin-bottom:4px;">Domain Names (comma separated)</label>
                     <input id="anonDomains" class="input" placeholder="example.com, corp.local">
                 </div>
+                    <div>
+                        <label style="display:block; margin-bottom:4px;">Server name prefix (optional)</label>
+                        <input id="anonServerPrefix" class="input" placeholder="e.g. HZN-">
+                        <small style="color:#94a3b8;">Matches like prefix* become SERVERNAME</small>
+                    </div>
                 <div>
                     <label style="display:block; margin-bottom:4px;">IP Address replacement</label>
                     <label><input type="checkbox" id="anonIp" checked> Replace IPs with 1.2.3.4</label>
@@ -51,6 +56,10 @@
                     <label style="display:block; margin-bottom:4px;">User Names replacement</label>
                     <label><input type="checkbox" id="anonUser" checked> Replace usernames with USERID</label>
                 </div>
+                    <div>
+                        <label style="display:block; margin-bottom:4px;">Hide OU structures</label>
+                        <label><input type="checkbox" id="anonOuHide"> Replace OU=...; with OU=HIDDEN;</label>
+                    </div>
             </div>
             <input type="file" id="anonFile" class="btn btn-secondary" style="padding:10px; min-height:44px; margin-bottom:8px;">
             <div id="anonStatus" style="margin-top:6px; color:#94a3b8;"></div>
@@ -106,6 +115,8 @@
                 const domainList = domainsRaw.split(',').map(s=>s.trim()).filter(Boolean);
                 const doIp = document.getElementById('anonIp')?.checked;
                 const doUser = document.getElementById('anonUser')?.checked;
+                const serverPrefix = (document.getElementById('anonServerPrefix')?.value || '').trim();
+                const doOuHide = document.getElementById('anonOuHide')?.checked;
                 let out = text;
                 // domains
                 domainList.forEach(d=>{
@@ -121,6 +132,16 @@
                 if (doUser) {
                     out = out.replace(/\b[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b/g,'USERID');
                     out = out.replace(/\b[a-zA-Z]{2,3}\d+\b/g,'USERID');
+                }
+                // server name prefix (partial)
+                if (serverPrefix) {
+                    const esc = serverPrefix.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+                    const re = new RegExp(`${esc}[A-Za-z0-9._-]*`, 'gi');
+                    out = out.replace(re,'SERVERNAME');
+                }
+                // OU structure hide
+                if (doOuHide) {
+                    out = out.replace(/OU=[^;]*;/g,'OU=HIDDEN;');
                 }
                 const extMatch = file.name.match(/(\.[^.]+)$/);
                 const ext = extMatch ? extMatch[1] : '.txt';

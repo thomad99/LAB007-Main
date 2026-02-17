@@ -1395,6 +1395,11 @@
                         <input id="anonDomainsModal" type="text" class="input" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; color:#111;">
                         <small style="color:#555;">Matches replaced with DUMMYDOMAIN</small>
                     </div>
+                            <div>
+                                <label for="anonServerPrefixModal" style="font-weight:600;">Server name prefix (optional)</label>
+                                <input id="anonServerPrefixModal" type="text" class="input" placeholder="e.g. HZN-" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; color:#111;">
+                                <small style="color:#555;">Partial matches like prefix* become SERVERNAME</small>
+                            </div>
                     <div style="display:flex; gap:16px; flex-wrap:wrap;">
                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#111;">
                             <input type="checkbox" id="anonIpModal"> Replace IP addresses with 1.2.3.4
@@ -1402,6 +1407,9 @@
                         <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#111;">
                             <input type="checkbox" id="anonUserModal"> Replace usernames with USERID
                         </label>
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#111;">
+                                    <input type="checkbox" id="anonOuHideModal"> Hide OU structures (OU=...; → OU=HIDDEN;)
+                                </label>
                     </div>
                     <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                         <button id="anonPickBtn" class="btn btn-secondary" style="background:#e5b600; color:#000; border-color:#e5b600;">Choose File</button>
