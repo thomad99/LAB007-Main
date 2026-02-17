@@ -1075,6 +1075,17 @@
                         <button class="btn btn-sm" onclick="setGoldenSunReportSort('date')">Snapshot Date</button>
                     </div>
                 </div>
+                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0;">
+                    <button class="btn btn-primary" onclick="generateGoldenSunReportScript()">Re-run snapshot check (PowerShell)</button>
+                </div>
+                <div id="goldenSunReportScriptOutput" style="display:none; margin:10px 0;">
+                    <h4 style="margin:0 0 6px 0;">Snapshot Re-check Script</h4>
+                    <textarea id="goldenSunReportScriptContent" readonly style="width:100%; height:240px; font-family:'Courier New', monospace; font-size:12px; padding:8px; border:1px solid #ddd; border-radius:4px; background:#f8f9fa;"></textarea>
+                    <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end;">
+                        <button class="btn btn-secondary" onclick="copyGoldenSunReportScript()">Copy</button>
+                        <button class="btn btn-secondary" onclick="downloadGoldenSunReportScript()">Download</button>
+                    </div>
+                </div>
                 <div id="goldenSunReportList" style="max-height:400px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:10px; background:#f8f9fa;"></div>
             </div>
         </div>

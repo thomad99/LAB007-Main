@@ -152,6 +152,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.generateGoldenSunSearchScript = generateGoldenSunSearchScript;
     window.copyGoldenSunSearchScript = copyGoldenSunSearchScript;
     window.downloadGoldenSunSearchScript = downloadGoldenSunSearchScript;
+    window.generateGoldenSunReportScript = generateGoldenSunReportScript;
+    window.copyGoldenSunReportScript = copyGoldenSunReportScript;
+    window.downloadGoldenSunReportScript = downloadGoldenSunReportScript;
 
     // GoldenSun file picker
     const gsPicker = document.getElementById('goldenSunFilePicker');
@@ -2668,6 +2671,76 @@ function renderGoldenSunReport() {
         `;
     });
     container.innerHTML = html || '<p style="color:#666;">No images to display.</p>';
+}
+
+function generateGoldenSunReportScript() {
+    if (!goldenSunImages.length) {
+        alert('Load a Master Images JSON first.');
+        return;
+    }
+    const unique = Array.from(new Set(goldenSunImages.map(i => (i.Name || '').trim()).filter(Boolean)));
+    if (!unique.length) {
+        alert('No VM names found in the loaded JSON.');
+        return;
+    }
+    let vcenter = (document.getElementById('goldenSunSearchVCenter')?.value || '').trim();
+    if (!vcenter) vcenter = GOLDEN_SUN_DEFAULT_VCENTER;
+    const lines = [];
+    lines.push('# GoldenSun snapshot re-check');
+    lines.push(`# Generated: ${new Date().toISOString()}`);
+    lines.push('');
+    lines.push('Import-Module VMware.PowerCLI -ErrorAction SilentlyContinue');
+    lines.push('$ErrorActionPreference = "Stop"');
+    lines.push('');
+    lines.push(`$vc = "${vcenter || GOLDEN_SUN_DEFAULT_VCENTER}"`);
+    lines.push('if ([string]::IsNullOrWhiteSpace($vc)) { $vc = Read-Host "Enter vCenter server" }');
+    lines.push('$cred = Get-Credential -Message "Enter vCenter credentials"');
+    lines.push('Connect-VIServer -Server $vc -Credential $cred -ErrorAction Stop | Out-Null');
+    lines.push('');
+    lines.push('# VM list from loaded JSON');
+    lines.push(`$vmNames = @(${unique.map(n=>`"${n}"`).join(', ')})`);
+    lines.push('');
+    lines.push('$results = @()');
+    lines.push('foreach ($name in $vmNames) {');
+    lines.push('    Write-Host "Checking snapshots for $name" -ForegroundColor Cyan');
+    lines.push('    $vm = Get-VM -Name $name -ErrorAction SilentlyContinue');
+    lines.push('    if (-not $vm) { Write-Warning "VM not found: $name"; continue }');
+    lines.push('    $snap = Get-Snapshot -VM $vm -ErrorAction SilentlyContinue | Sort-Object Created -Descending | Select-Object -First 1');
+    lines.push('    $latestName = $snap?.Name');
+    lines.push('    $latestTime = $snap?.Created');
+    lines.push('    $results += [pscustomobject]@{');
+    lines.push('        Name = $vm.Name');
+    lines.push('        Cluster = ($vm | Get-Cluster | Select-Object -First 1).Name');
+    lines.push('        Host = ($vm | Get-VMHost | Select-Object -First 1).Name');
+    lines.push('        Datastore = ($vm | Get-Datastore | Select-Object -First 1).Name');
+    lines.push('        LatestSnapshot = $latestName');
+    lines.push('        LatestSnapshotTime = if ($latestTime) { $latestTime.ToString("yyyy-MM-dd HH:mm") } else { $null }');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('');
+    lines.push('$results | Format-Table -AutoSize');
+    lines.push('');
+    lines.push('# Export JSON for report');
+    lines.push('$results | ConvertTo-Json -Depth 4 | Set-Content -Path "Snapshot-Recheck.json" -Encoding UTF8');
+    const script = lines.join('\n');
+    const out = document.getElementById('goldenSunReportScriptContent');
+    const wrap = document.getElementById('goldenSunReportScriptOutput');
+    if (out) out.value = script;
+    if (wrap) { wrap.style.display = 'block'; wrap.scrollIntoView({behavior:'smooth', block:'nearest'}); }
+}
+function copyGoldenSunReportScript(){
+    const ta = document.getElementById('goldenSunReportScriptContent');
+    if (!ta) return;
+    ta.select(); document.execCommand('copy');
+}
+function downloadGoldenSunReportScript(){
+    const scriptContent = document.getElementById('goldenSunReportScriptContent')?.value || '';
+    const blob = new Blob([scriptContent], { type:'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = 'GoldenSun-Snapshot-Recheck.ps1';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
 }
 
 function toggleGoldenSunImage(name) {
