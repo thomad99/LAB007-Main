@@ -2954,27 +2954,33 @@ function generateHorizonAdminScript(action) {
     const scripts = {
         farms: {
             name: 'FARM Data',
-            endpoint: '/monitor/farms', // placeholder; update per API docs
+            endpoint: '/monitor/farms',
             outfile: 'horizon-farms.json',
             desc: 'List all farms'
         },
         desktops: {
             name: 'Desktops',
-            endpoint: '/monitor/desktop-pools', // placeholder; update per API docs
+            endpoint: '/monitor/desktop-pools',
             outfile: 'horizon-desktop-pools.json',
             desc: 'List all desktop pools'
         },
         restarts: {
             name: 'Restarts',
-            endpoint: '/config/farms/scheduled-updates', // placeholder; update per API docs
+            endpoint: '/config/farms/scheduled-updates',
             outfile: 'horizon-farm-restarts.json',
             desc: 'Scheduled image updates per farm'
         },
         clones: {
             name: 'Clones',
-            endpoint: '/monitor/tasks', // placeholder; update per API docs
+            endpoint: '/monitor/tasks',
             outfile: 'horizon-clone-status.json',
             desc: 'Clone progress for pools/farms'
+        },
+        imageDates: {
+            name: 'Image Dates',
+            endpoint: '/monitor/farms',
+            outfile: 'horizon-image-dates.json',
+            desc: 'Farm -> master image and snapshot'
         }
     };
 
@@ -3014,6 +3020,27 @@ function generateHorizonAdminScript(action) {
     scriptLines.push('Write-Host "Calling $uri ..." -ForegroundColor Cyan');
     scriptLines.push('$response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers -ErrorAction Stop');
     scriptLines.push('');
+    if (action === 'imageDates') {
+        scriptLines.push('');
+        scriptLines.push('# --- Transform for Image Dates ---');
+        scriptLines.push('$rows = @()');
+        scriptLines.push('foreach ($farm in $response) {');
+        scriptLines.push('    $imgName  = $farm.baseImageName');
+        scriptLines.push('    if (-not $imgName -and $farm.baseImage) { $imgName = $farm.baseImage.name }');
+        scriptLines.push('    $snapName = $farm.baseImageSnapshotName');
+        scriptLines.push('    if (-not $snapName -and $farm.baseImage) { $snapName = $farm.baseImage.snapshotName }');
+        scriptLines.push('    $snapTime = $farm.baseImageSnapshotCreationTime');
+        scriptLines.push('    if (-not $snapTime -and $farm.baseImage) { $snapTime = $farm.baseImage.snapshotCreationTime }');
+        scriptLines.push('    $rows += [PSCustomObject]@{');
+        scriptLines.push('        Farm              = $farm.name');
+        scriptLines.push('        BaseImage         = $imgName');
+        scriptLines.push('        Snapshot          = $snapName');
+        scriptLines.push('        SnapshotTimestamp = $snapTime');
+        scriptLines.push('    }');
+        scriptLines.push('}');
+        scriptLines.push('$response = $rows');
+    }
+    scriptLines.push('');
     scriptLines.push('# --- Output ---');
     scriptLines.push('$json = $response | ConvertTo-Json -Depth 6');
     scriptLines.push('$json | Out-File -FilePath $outJson -Encoding UTF8');
@@ -3034,7 +3061,7 @@ function generateHorizonAdminScript(action) {
     scriptLines.push('Write-Host "Response preview:" -ForegroundColor Yellow');
     scriptLines.push('$response');
     scriptLines.push('');
-    scriptLines.push('# TODO: validate endpoint paths against Omnissa Horizon REST docs.');
+    scriptLines.push('# Horizon REST 2506+ endpoints: /rest/monitor/* /rest/config/* (adjust if needed).');
 
     const script = scriptLines.join('\n');
     const out = document.getElementById('adminScriptContent');
