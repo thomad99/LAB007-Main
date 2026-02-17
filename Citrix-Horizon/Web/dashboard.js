@@ -25,7 +25,7 @@ let goldenSunSelectedImages = new Set();
 let goldenSunActiveTab = 'search';
 let goldenSunFileOptions = [];
 const GOLDEN_SUN_DEFAULT_VCENTER = 'shcvcsacx01v.ccr.cchcs.org';
-const HZ_ADMIN_DEFAULT_BASE = 'https://horizon.steward.org';
+const HZ_ADMIN_DEFAULT_BASE = 'https://shchrznconap04v.ccr.cchcs.org';
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', async function() {
@@ -3166,7 +3166,18 @@ function generateHorizonAdminScript(action) {
     scriptLines.push('# --- Call API ---');
     scriptLines.push('$uri = "$BaseUrl$Endpoint"');
     scriptLines.push('Write-Host "Calling $uri ..." -ForegroundColor Cyan');
-    scriptLines.push('$response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers');
+    scriptLines.push('try {');
+    scriptLines.push('    $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers');
+    scriptLines.push('}');
+    scriptLines.push('catch {');
+    scriptLines.push('    if ($_.Exception.Response.StatusCode.value__ -eq 404 -and $Endpoint -match "/v1/") {');
+    scriptLines.push('        # Fallback: try without /v1 if environment exposes unversioned endpoints');
+    scriptLines.push('        $altEndpoint = $Endpoint -replace "/v1","";');
+    scriptLines.push('        $altUri = "$BaseUrl$altEndpoint"');
+    scriptLines.push('        Write-Warning "Got 404 on $uri, retrying $altUri"');
+    scriptLines.push('        $response = Invoke-RestMethod -Method Get -Uri $altUri -Headers $headers');
+    scriptLines.push('    } else { throw }');
+    scriptLines.push('}');
     scriptLines.push('');
     if (action === 'imageDates') {
         scriptLines.push('# Transform for image dates view');
