@@ -74,8 +74,8 @@
                 <img src="/citrix/images/LAB007-LOGO-GOLD.png" alt="LAB007 Logo" class="logo" style="opacity: 1;">
                 <div class="header-title">
                     <p class="header-subtitle" style="margin: 0;">
-                        <span class="header-title-main">Citrix Environment</span><br>
-                        <span class="header-title-sub">Audit Dashboard</span>
+                        <span class="header-title-main">Citrix2Horizon</span><br>
+                        <span class="header-title-sub">Dashboard</span>
                     </p>
                 </div>
             </div>
@@ -1391,22 +1391,22 @@
             <div id="debugToolsAnonPanel" class="horizon-task-panel" style="display: none; color:#111;">
                 <div style="margin: 12px 0; padding: 14px; border: 1px solid #ddd; border-radius: 6px; background: #f8f9fa; display:flex; flex-direction:column; gap:12px;">
                     <div>
-                        <label for="anonDomainsModal" style="font-weight:600;">Domain Names (comma separated)</label>
+                                <label for="anonDomainsModal" style="font-weight:600;">Domain Names</label>
                         <input id="anonDomainsModal" type="text" class="input" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; color:#111;">
-                        <small style="color:#555;">Matches replaced with DUMMYDOMAIN</small>
+                                <small style="color:#555;">Matches replaced with DUMMYDOMAIN. Comma separated.</small>
                     </div>
                             <div>
-                                <label for="anonServerPrefixModal" style="font-weight:600;">Server name prefix (optional)</label>
+                                <label for="anonServerPrefixModal" style="font-weight:600;">Server name prefix</label>
                                 <input id="anonServerPrefixModal" type="text" class="input" placeholder="e.g. HZN-" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; color:#111;">
                                 <small style="color:#555;">Partial matches like prefix* become SERVERNAME</small>
                             </div>
-                    <div style="display:flex; gap:16px; flex-wrap:wrap;">
-                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#111;">
-                            <input type="checkbox" id="anonIpModal"> Replace IP addresses with 1.2.3.4
-                        </label>
-                        <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#111;">
-                            <input type="checkbox" id="anonUserModal"> Replace usernames with USERID
-                        </label>
+                            <div style="display:flex; flex-direction:column; gap:10px;">
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#111;">
+                                    <input type="checkbox" id="anonIpModal"> Replace IP addresses with 1.2.3.4
+                                </label>
+                                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#111;">
+                                    <input type="checkbox" id="anonUserModal"> Replace usernames with USERID
+                                </label>
                                 <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#111;">
                                     <input type="checkbox" id="anonOuHideModal"> Hide OU structures (OU=...; → OU=HIDDEN;)
                                 </label>

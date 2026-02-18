@@ -39,25 +39,19 @@
         <div id="panelAnon" class="panel card">
             <h3 style="margin-top:0;">Anonymise Log</h3>
             <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin-bottom:12px;">
-                <div>
-                    <label style="display:block; margin-bottom:4px;">Domain Names (comma separated)</label>
-                    <input id="anonDomains" class="input" placeholder="example.com, corp.local">
-                </div>
                     <div>
-                        <label style="display:block; margin-bottom:4px;">Server name prefix (optional)</label>
+                        <label style="display:block; margin-bottom:4px;">Domain Names</label>
+                        <input id="anonDomains" class="input" placeholder="example.com, corp.local">
+                        <small style="color:#94a3b8;">Matches replaced with DUMMYDOMAIN. Comma separated.</small>
+                    </div>
+                    <div>
+                        <label style="display:block; margin-bottom:4px;">Server name prefix</label>
                         <input id="anonServerPrefix" class="input" placeholder="e.g. HZN-">
                         <small style="color:#94a3b8;">Matches like prefix* become SERVERNAME</small>
                     </div>
-                <div>
-                    <label style="display:block; margin-bottom:4px;">IP Address replacement</label>
-                    <label><input type="checkbox" id="anonIp" checked> Replace IPs with 1.2.3.4</label>
-                </div>
-                <div>
-                    <label style="display:block; margin-bottom:4px;">User Names replacement</label>
-                    <label><input type="checkbox" id="anonUser" checked> Replace usernames with USERID</label>
-                </div>
-                    <div>
-                        <label style="display:block; margin-bottom:4px;">Hide OU structures</label>
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        <label><input type="checkbox" id="anonIp" checked> Replace IP addresses with 1.2.3.4</label>
+                        <label><input type="checkbox" id="anonUser" checked> Replace usernames with USERID</label>
                         <label><input type="checkbox" id="anonOuHide"> Replace OU=...; with OU=HIDDEN;</label>
                     </div>
             </div>
