@@ -20,13 +20,16 @@
         header {
             background: #ffffff;
             padding: 16px 20px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
             border-bottom: 1px solid #e5e7eb;
             position: sticky;
             top: 0;
             z-index: 10;
+        }
+        .top-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 12px;
         }
         .brand {
             display: flex;
@@ -36,6 +39,12 @@
             letter-spacing: 1px;
             text-transform: uppercase;
             color: #111;
+        }
+        .top-actions {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
         }
         .container {
             max-width: 1200px;
@@ -124,11 +133,17 @@
 </head>
 <body>
     <header>
-        <div class="brand">
-            <img src="images/LAB007-LOGO-GOLD.png" alt="LAB007" style="height:32px;width:auto;">
-            <span>NetScaler Config Analyzer</span>
+        <div class="top-bar">
+            <div class="brand">
+                <img src="images/LAB007-LOGO-GOLD.png" alt="LAB007" style="height:32px;width:auto;">
+                <span>NetScaler Config Analyzer</span>
+            </div>
+            <div class="top-actions">
+                <a class="btn" href="/citrix/index.html">Back to HZ</a>
+                <a class="btn" href="/citrix/index.html#debugToolsModal">Debug Tools</a>
+                <a class="btn" href="/citrix/index.html#horizonTasksModal">HZ Tasks</a>
+            </div>
         </div>
-        <a class="btn" href="/citrix/index.html">Back to HZ</a>
     </header>
     <div class="container">
         <div class="card">
