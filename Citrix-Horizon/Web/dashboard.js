@@ -3313,9 +3313,10 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('$rowsForHtml = $response | ForEach-Object {');
         scriptLines.push('    $statusClass = "fail";');
         scriptLines.push('    if ($_.StatusCode -eq 200 -or $_.StatusCode -eq 204) { $statusClass = "ok" }');
+        scriptLines.push('    $statusVal = $_.StatusCode; if (-not $statusVal) { $statusVal = "n/a" }');
         scriptLines.push('    [pscustomobject]@{');
         scriptLines.push('        Endpoint   = $_.Endpoint');
-        scriptLines.push('        StatusCode = "<span class=\"" + $statusClass + "\">" + ($_.StatusCode ?? "n/a") + "</span>"');
+        scriptLines.push('        StatusCode = "<span class=\"" + $statusClass + "\">" + $statusVal + "</span>"');
         scriptLines.push('        Items      = $_.Items');
         scriptLines.push('        UsedAlt    = $_.UsedAlt');
         scriptLines.push('        Error      = $_.Error');
