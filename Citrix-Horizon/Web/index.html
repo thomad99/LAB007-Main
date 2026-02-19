@@ -1441,6 +1441,7 @@
     const uagMeta = { uagName: '-', uagIp: '-', csUrl: '-', csThumb: '-', maxBlast: '-' };
 
     function openUagModal() {
+        if (window.closeAllModals) window.closeAllModals('uagModal');
         const modal = document.getElementById('uagModal');
         if (modal) modal.style.display = 'block';
         document.body.style.overflow = 'hidden';

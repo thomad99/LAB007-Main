@@ -14,16 +14,19 @@
             font-family: 'Poppins', Arial, sans-serif;
             margin: 0;
             padding: 0;
-            background: #0f172a;
-            color: #e2e8f0;
+            background: #f5f7fb;
+            color: #111;
         }
         header {
-            background: #111827;
+            background: #ffffff;
             padding: 16px 20px;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            border-bottom: 1px solid #1f2937;
+            border-bottom: 1px solid #e5e7eb;
+            position: sticky;
+            top: 0;
+            z-index: 10;
         }
         .brand {
             display: flex;
@@ -32,6 +35,7 @@
             font-weight: 700;
             letter-spacing: 1px;
             text-transform: uppercase;
+            color: #111;
         }
         .container {
             max-width: 1200px;
@@ -39,21 +43,21 @@
             padding: 0 16px 40px;
         }
         .card {
-            background: #111827;
-            border: 1px solid #1f2937;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
             border-radius: 10px;
             padding: 18px;
             margin-bottom: 18px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.35);
+            box-shadow: 0 6px 16px rgba(17, 24, 39, 0.08);
         }
         .card h2 {
             margin: 0 0 6px 0;
             font-size: 18px;
-            color: #f9fafb;
+            color: #0f172a;
         }
         .card p {
             margin: 0 0 10px 0;
-            color: #cbd5e1;
+            color: #4b5563;
             font-size: 14px;
         }
         .btn {
@@ -61,23 +65,23 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            background: #0ea5e9;
-            border: none;
-            color: #0b1020;
+            background: #e5b600;
+            border: 1px solid #e5b600;
+            color: #000;
             font-weight: 700;
             padding: 10px 14px;
             border-radius: 8px;
             cursor: pointer;
-            transition: background 0.2s ease;
+            transition: background 0.2s ease, transform 0.1s ease;
             text-decoration: none;
         }
-        .btn:hover { background: #38bdf8; }
+        .btn:hover { background: #f2cb2f; transform: translateY(-1px); }
         input[type="file"] {
             padding: 10px;
-            border: 1px dashed #334155;
+            border: 1px dashed #cbd5e1;
             border-radius: 8px;
-            background: #0b1224;
-            color: #e2e8f0;
+            background: #fff;
+            color: #111;
             width: 100%;
         }
         .grid {
@@ -86,21 +90,21 @@
             gap: 12px;
         }
         .stat {
-            background: #0b1224;
-            border: 1px solid #1f2937;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
             border-radius: 10px;
             padding: 12px;
         }
-        .stat-title { color: #94a3b8; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
-        .stat-value { color: #f8fafc; font-weight: 700; font-size: 20px; }
+        .stat-title { color: #6b7280; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; }
+        .stat-value { color: #111827; font-weight: 700; font-size: 20px; }
         #status {
             margin-top: 8px;
-            color: #fbbf24;
+            color: #b45309;
             font-size: 14px;
         }
         #mermaidContainerLB, #mermaidContainerVPN, #mermaidContainerSvc {
-            background: #0b1224;
-            border: 1px solid #1f2937;
+            background: #fff;
+            border: 1px solid #e5e7eb;
             border-radius: 10px;
             padding: 12px;
             overflow-x: auto;
@@ -109,12 +113,12 @@
             min-height: 240px;
         }
         pre {
-            background: #0b1224;
-            border: 1px solid #1f2937;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
             padding: 12px;
             border-radius: 10px;
             overflow-x: auto;
-            color: #e5e7eb;
+            color: #111;
         }
     </style>
 </head>
@@ -183,7 +187,7 @@
     </div>
 
     <script>
-    mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'dark' });
+    mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'neutral' });
 
     const nsFile = document.getElementById('nsFile');
     nsFile.addEventListener('change', async (e) => {

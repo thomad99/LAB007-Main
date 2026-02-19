@@ -84,6 +84,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (configBtn) {
         configBtn.addEventListener('click', () => {
             console.log('Config button clicked');
+                closeAllModals('configModal');
             showConfigModal();
         });
     }
@@ -595,6 +596,7 @@ function uploadDebugFile(file) {
 let debugToolsInitialized = false;
 
 function openDebugToolsModal() {
+    closeAllModals('debugToolsModal');
     const modal = document.getElementById('debugToolsModal');
     if (modal) {
         modal.style.display = 'block';
@@ -1332,6 +1334,7 @@ function loadConfigIntoModal() {
 
 function showHorizonTasksModal() {
     console.log('showHorizonTasksModal function called');
+    closeAllModals('horizonTasksModal');
     const modal = document.getElementById('horizonTasksModal');
     console.log('Modal element:', modal);
     if (modal) {
@@ -1368,6 +1371,7 @@ function closeHorizonTasksModal() {
 // Config Modal Functions
 function showConfigModal() {
     console.log('showConfigModal function called');
+    closeAllModals('configModal');
     const modal = document.getElementById('configModal');
     if (modal) {
         modal.style.display = 'block';
@@ -1380,6 +1384,30 @@ function showConfigModal() {
 
 function closeConfigModal() {
     document.getElementById('configModal').style.display = 'none';
+}
+
+// Close all known modals except the one provided
+function closeAllModals(exceptId) {
+    const ids = [
+        'horizonTasksModal',
+        'configModal',
+        'debugToolsModal',
+        'goldenSunModal',
+        'uagModal',
+        'usersModal',
+        'desktopsModal',
+        'deliveryGroupsModal',
+        'catalogModal',
+        'masterImagesModal',
+        'storeFrontStoresModal',
+        'appModal'
+    ];
+    ids.forEach(id => {
+        if (id !== exceptId) {
+            const el = document.getElementById(id);
+            if (el) el.style.display = 'none';
+        }
+    });
 }
 
 async function testConnection() {
