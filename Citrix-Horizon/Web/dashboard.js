@@ -504,7 +504,13 @@ function handleFileLoad(event) {
     reader.onload = function(e) {
         try {
             auditData = JSON.parse(e.target.result);
-            displayDashboard(auditData);
+            try {
+                displayDashboard(auditData);
+            } catch (err) {
+                console.error('Display error:', err);
+                showError('Error rendering audit data: ' + (err.message || err));
+                hideDashboard();
+            }
         } catch (error) {
             showError('Error parsing JSON file: ' + error.message);
             hideDashboard();
@@ -1181,6 +1187,19 @@ function parseImagePath(imagePath) {
             vmName: 'N/A',
             snapshotName: 'N/A'
         };
+    }
+
+    if (typeof imagePath !== 'string') {
+        try {
+            imagePath = String(imagePath);
+        } catch (e) {
+            return {
+                fullPath: 'N/A',
+                clusterName: 'N/A',
+                vmName: 'N/A',
+                snapshotName: 'N/A'
+            };
+        }
     }
     
     // Remove XDHyp:\ prefix if present
