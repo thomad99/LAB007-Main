@@ -4342,28 +4342,16 @@ function exportRolesCSV() {
 
 // Helper functions
 function escapeHtml(text) {
-    if (text === null || text === undefined) return 'N/A';
-    let str;
     try {
-        if (typeof text === 'string') {
-            str = text;
-        } else {
-            str = JSON.stringify(text);
-        }
+        if (text === null || text === undefined) return 'N/A';
+        const str = '' + text; // force string
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
     } catch (e) {
-        try {
-            str = String(text);
-        } catch (err) {
-            return 'N/A';
-        }
+        console.warn('escapeHtml fallback', text, e);
+        return 'N/A';
     }
-    // Ensure we have a string before replacing entities
-    if (typeof str !== 'string') {
-        str = String(str ?? '');
-    }
-    const div = document.createElement('div');
-    div.textContent = str;
-    return div.innerHTML;
 }
 
 function formatNumber(num) {
