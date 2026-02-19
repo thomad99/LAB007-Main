@@ -3181,27 +3181,41 @@ function generateHorizonAdminScript(action) {
     scriptLines.push('');
     if (action === 'imageDates') {
         scriptLines.push('# Transform for image dates view');
+        scriptLines.push('# Some environments return an object with an Items array; normalize to a flat list');
+        scriptLines.push('$source = $response');
+        scriptLines.push('if ($response -is [hashtable] -and $response.ContainsKey("items")) { $source = $response.items }');
+        scriptLines.push('if ($response -is [pscustomobject] -and $response.PSObject.Properties.Name -contains "items") { $source = $response.items }');
+        scriptLines.push('');
         scriptLines.push('$rows = @()');
-        scriptLines.push('foreach ($farm in $response) {');
-        scriptLines.push('    # try multiple fields for image and snapshot names');
-        scriptLines.push('    $imgName  = $farm.baseImageName;');
+        scriptLines.push('foreach ($farm in $source) {');
+        scriptLines.push('    # base image candidates');
+        scriptLines.push('    $imgName = $farm.baseImageName');
         scriptLines.push('    if (-not $imgName -and $farm.baseImage) { $imgName = $farm.baseImage.name }');
         scriptLines.push('    if (-not $imgName -and $farm.baseImage) { $imgName = $farm.baseImage.goldenImageName }');
         scriptLines.push('    if (-not $imgName -and $farm.baseImage -and $farm.baseImage.goldenImage) { $imgName = $farm.baseImage.goldenImage.name }');
         scriptLines.push('');
-        scriptLines.push('    $snapName = $farm.baseImageSnapshotName;');
+        scriptLines.push('    # snapshot candidates');
+        scriptLines.push('    $snapName = $farm.baseImageSnapshotName');
         scriptLines.push('    if (-not $snapName -and $farm.baseImage) { $snapName = $farm.baseImage.snapshotName }');
         scriptLines.push('    if (-not $snapName -and $farm.baseImage -and $farm.baseImage.snapshot) { $snapName = $farm.baseImage.snapshot.name }');
         scriptLines.push('');
-        scriptLines.push('    $snapTime = $farm.baseImageSnapshotCreationTime;');
+        scriptLines.push('    # snapshot timestamp candidates');
+        scriptLines.push('    $snapTime = $farm.baseImageSnapshotCreationTime');
         scriptLines.push('    if (-not $snapTime -and $farm.baseImage) { $snapTime = $farm.baseImage.snapshotCreationTime }');
         scriptLines.push('    if (-not $snapTime -and $farm.baseImage -and $farm.baseImage.snapshot) { $snapTime = $farm.baseImage.snapshot.creationTime }');
+        scriptLines.push('');
         scriptLines.push('    $rows += [PSCustomObject]@{');
         scriptLines.push('        Farm              = $farm.name');
         scriptLines.push('        BaseImage         = $imgName');
         scriptLines.push('        Snapshot          = $snapName');
         scriptLines.push('        SnapshotTimestamp = $snapTime');
         scriptLines.push('    }');
+        scriptLines.push('}');
+        scriptLines.push('');
+        scriptLines.push('# Debug: show first item keys to assist mapping');
+        scriptLines.push('if ($source -and $source[0]) {');
+        scriptLines.push('    Write-Host "First item properties:" -ForegroundColor Yellow');
+        scriptLines.push('    $source[0].PSObject.Properties.Name | ForEach-Object { Write-Host " - $_" }');
         scriptLines.push('}');
         scriptLines.push('$response = $rows');
     }
@@ -3220,6 +3234,9 @@ function generateHorizonAdminScript(action) {
     scriptLines.push('$html = $response | ConvertTo-Html -PreContent "<h2>${cfg.name}</h2><p>${cfg.desc}</p>" -Head "<style>$style</style>"');
     scriptLines.push('$html | Out-File -FilePath $OutHtml -Encoding UTF8');
     scriptLines.push('Write-Host "Saved HTML to $OutHtml" -ForegroundColor Green');
+    scriptLines.push('');
+    scriptLines.push('# Auto-launch HTML report');
+    scriptLines.push('try { Start-Process $OutHtml } catch { Write-Warning "Could not open HTML automatically: $($_.Exception.Message)" }');
     scriptLines.push('');
     scriptLines.push('Write-Host "Done." -ForegroundColor Cyan');
 
