@@ -4221,7 +4221,15 @@ function convertArrayToCSV(items) {
 
     const escapeValue = (value) => {
         if (value === null || value === undefined) return '';
-        let str = typeof value === 'string' ? value : JSON.stringify(value);
+        let str;
+        try {
+            str = typeof value === 'string' ? value : JSON.stringify(value);
+        } catch (e) {
+            str = String(value ?? '');
+        }
+        if (typeof str !== 'string') {
+            str = String(value ?? '');
+        }
         str = str.replace(/"/g, '""');
         return `"${str}"`;
     };
@@ -4335,8 +4343,26 @@ function exportRolesCSV() {
 // Helper functions
 function escapeHtml(text) {
     if (text === null || text === undefined) return 'N/A';
+    let str;
+    try {
+        if (typeof text === 'string') {
+            str = text;
+        } else {
+            str = JSON.stringify(text);
+        }
+    } catch (e) {
+        try {
+            str = String(text);
+        } catch (err) {
+            return 'N/A';
+        }
+    }
+    // Ensure we have a string before replacing entities
+    if (typeof str !== 'string') {
+        str = String(str ?? '');
+    }
     const div = document.createElement('div');
-    div.textContent = text;
+    div.textContent = str;
     return div.innerHTML;
 }
 
