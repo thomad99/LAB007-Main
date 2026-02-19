@@ -3131,6 +3131,12 @@ function generateHorizonAdminScript(action) {
             endpoint: '/monitor/v1/farms',
             outfile: 'horizon-image-dates.json',
             desc: 'Farm -> master image and snapshot'
+        },
+        discovery: {
+            name: 'Discovery',
+            endpoint: '__discovery__',
+            outfile: 'horizon-discovery.json',
+            desc: 'Probe common Horizon REST endpoints'
         }
     };
 
@@ -3143,7 +3149,11 @@ function generateHorizonAdminScript(action) {
     const scriptLines = [];
     scriptLines.push(`# Horizon Admin - ${cfg.name} (PowerShell, REST)`);
     scriptLines.push(`# ${cfg.desc}`);
-    scriptLines.push(`# Endpoint: ${cfg.endpoint} (Horizon Server API 2506)`);
+    if (action !== 'discovery') {
+        scriptLines.push(`# Endpoint: ${cfg.endpoint} (Horizon Server API 2506)`);
+    } else {
+        scriptLines.push(`# Probes a list of common endpoints and records which respond`);
+    }
     scriptLines.push('');
     scriptLines.push('$ErrorActionPreference = "Stop"');
     scriptLines.push(`$BaseUrl = "${baseUrl}"`);
@@ -3163,22 +3173,74 @@ function generateHorizonAdminScript(action) {
     scriptLines.push('if (-not $token) { throw "Login did not return access_token" }');
     scriptLines.push('$headers = @{ Authorization = "Bearer $token"; Accept = "application/json" }');
     scriptLines.push('');
-    scriptLines.push('# --- Call API ---');
-    scriptLines.push('$uri = "$BaseUrl$Endpoint"');
-    scriptLines.push('Write-Host "Calling $uri ..." -ForegroundColor Cyan');
-    scriptLines.push('try {');
-    scriptLines.push('    $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers');
-    scriptLines.push('}');
-    scriptLines.push('catch {');
-    scriptLines.push('    $status = $_.Exception.Response.StatusCode.value__');
-    scriptLines.push('    if ($status -eq 404 -and $Endpoint -match "/v1/") {');
-    scriptLines.push('        # Fallback: try without /v1 if environment exposes unversioned endpoints');
-    scriptLines.push('        $altEndpoint = $Endpoint -replace "/v1","";');
-    scriptLines.push('        $altUri = "$BaseUrl$altEndpoint"');
-    scriptLines.push('        Write-Warning "Got 404 on $uri, retrying $altUri"');
-    scriptLines.push('        $response = Invoke-RestMethod -Method Get -Uri $altUri -Headers $headers');
-    scriptLines.push('    } else { throw }');
-    scriptLines.push('}');
+    if (action !== 'discovery') {
+        scriptLines.push('# --- Call API ---');
+        scriptLines.push('$uri = "$BaseUrl$Endpoint"');
+        scriptLines.push('Write-Host "Calling $uri ..." -ForegroundColor Cyan');
+        scriptLines.push('try {');
+        scriptLines.push('    $response = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers');
+        scriptLines.push('}');
+        scriptLines.push('catch {');
+        scriptLines.push('    $status = $_.Exception.Response.StatusCode.value__');
+        scriptLines.push('    if ($status -eq 404 -and $Endpoint -match "/v1/") {');
+        scriptLines.push('        # Fallback: try without /v1 if environment exposes unversioned endpoints');
+        scriptLines.push('        $altEndpoint = $Endpoint -replace "/v1","";');
+        scriptLines.push('        $altUri = "$BaseUrl$altEndpoint"');
+        scriptLines.push('        Write-Warning "Got 404 on $uri, retrying $altUri"');
+        scriptLines.push('        $response = Invoke-RestMethod -Method Get -Uri $altUri -Headers $headers');
+        scriptLines.push('    } else { throw }');
+        scriptLines.push('}');
+    } else {
+        scriptLines.push('# --- Discovery: probe multiple endpoints ---');
+        scriptLines.push('$endpoints = @(');
+        scriptLines.push("  '/monitor/v1/farms',");
+        scriptLines.push("  '/monitor/v1/desktop-pools',");
+        scriptLines.push("  '/monitor/v1/tasks',");
+        scriptLines.push("  '/config/v1/farms/scheduled-updates',");
+        scriptLines.push("  '/config/v1/admin-users-or-groups/permissions',");
+        scriptLines.push("  '/config/v1/compute-profiles',");
+        scriptLines.push("  '/config/v1/connection-servers'");
+        scriptLines.push(')');
+        scriptLines.push('Write-Host "Probing endpoints:" -ForegroundColor Cyan');
+        scriptLines.push('$endpoints | ForEach-Object { Write-Host " - $_" }');
+        scriptLines.push('');
+        scriptLines.push('$results = @()');
+        scriptLines.push('foreach ($ep in $endpoints) {');
+        scriptLines.push('    $uri = "$BaseUrl$ep"');
+        scriptLines.push('    $statusCode = $null; $err = $null; $items = $null; $usedAlt = $false; $body = $null;');
+        scriptLines.push('    try {');
+        scriptLines.push('        $resp = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers');
+        scriptLines.push('        $body = $resp;');
+        scriptLines.push('        $statusCode = 200;');
+        scriptLines.push('    } catch {');
+        scriptLines.push('        if ($_.Exception.Response) { $statusCode = $_.Exception.Response.StatusCode.value__ }');
+        scriptLines.push('        $err = $_.Exception.Message');
+        scriptLines.push('        if ($statusCode -eq 404 -and $ep -match "/v1/") {');
+        scriptLines.push('            $altEp = $ep -replace "/v1","";');
+        scriptLines.push('            $altUri = "$BaseUrl$altEp"');
+        scriptLines.push('            Write-Warning "404 on $uri, retrying $altUri"');
+        scriptLines.push('            try {');
+        scriptLines.push('                $resp = Invoke-RestMethod -Method Get -Uri $altUri -Headers $headers');
+        scriptLines.push('                $body = $resp; $statusCode = 200; $err = $null; $usedAlt = $true; $ep = $altEp;');
+        scriptLines.push('            } catch {');
+        scriptLines.push('                if ($_.Exception.Response) { $statusCode = $_.Exception.Response.StatusCode.value__ }');
+        scriptLines.push('                $err = $_.Exception.Message');
+        scriptLines.push('            }');
+        scriptLines.push('        }');
+        scriptLines.push('    }');
+        scriptLines.push('    if ($body -is [hashtable] -and $body.ContainsKey("items")) { $items = $body.items.Count }');
+        scriptLines.push('    elseif ($body -is [array]) { $items = $body.Count }');
+        scriptLines.push('    elseif ($body) { $items = 1 }');
+        scriptLines.push('    $results += [pscustomobject]@{');
+        scriptLines.push('        Endpoint   = $ep');
+        scriptLines.push('        StatusCode = $statusCode');
+        scriptLines.push('        Items      = $items');
+        scriptLines.push('        UsedAlt    = $usedAlt');
+        scriptLines.push('        Error      = $err');
+        scriptLines.push('    }');
+        scriptLines.push('}');
+        scriptLines.push('$response = $results');
+    }
     scriptLines.push('');
     if (action === 'imageDates') {
         scriptLines.push('# Transform for image dates view');
@@ -3244,8 +3306,25 @@ function generateHorizonAdminScript(action) {
     scriptLines.push('th, td { border: 1px solid #ddd; padding: 8px; }');
     scriptLines.push('th { background: #f4f6f8; text-align: left; }');
     scriptLines.push('tr:nth-child(even) { background: #fafafa; }');
+    scriptLines.push('.ok { color: #0a7f2e; font-weight: 700; }');
+    scriptLines.push('.fail { color: #b00020; font-weight: 700; }');
     scriptLines.push('\'@');
-    scriptLines.push('$html = $response | ConvertTo-Html -PreContent "<h2>${cfg.name}</h2><p>${cfg.desc}</p>" -Head "<style>$style</style>"');
+    if (action === 'discovery') {
+        scriptLines.push('$rowsForHtml = $response | ForEach-Object {');
+        scriptLines.push('    $statusClass = "fail";');
+        scriptLines.push('    if ($_.StatusCode -eq 200 -or $_.StatusCode -eq 204) { $statusClass = "ok" }');
+        scriptLines.push('    [pscustomobject]@{');
+        scriptLines.push('        Endpoint   = $_.Endpoint');
+        scriptLines.push('        StatusCode = "<span class=\"" + $statusClass + "\">" + ($_.StatusCode ?? "n/a") + "</span>"');
+        scriptLines.push('        Items      = $_.Items');
+        scriptLines.push('        UsedAlt    = $_.UsedAlt');
+        scriptLines.push('        Error      = $_.Error');
+        scriptLines.push('    }');
+        scriptLines.push('}');
+        scriptLines.push('$html = $rowsForHtml | ConvertTo-Html -PreContent "<h2>${cfg.name}</h2><p>${cfg.desc}</p>" -Head "<style>$style</style>" -As Table');
+    } else {
+        scriptLines.push('$html = $response | ConvertTo-Html -PreContent "<h2>${cfg.name}</h2><p>${cfg.desc}</p>" -Head "<style>$style</style>"');
+    }
     scriptLines.push('$html | Out-File -FilePath $OutHtml -Encoding UTF8');
     scriptLines.push('Write-Host "Saved HTML to $OutHtml" -ForegroundColor Green');
     scriptLines.push('');
