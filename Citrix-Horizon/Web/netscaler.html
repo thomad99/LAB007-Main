@@ -13,39 +13,120 @@
         body {
             font-family: 'Poppins', Arial, sans-serif;
             margin: 0;
-            padding: 0;
-            background: #f5f7fb;
+            padding: 20px;
+            background: #e8e9ea;
             color: #111;
         }
         header {
-            background: #ffffff;
-            padding: 16px 20px;
-            border-bottom: 1px solid #e5e7eb;
+            background: linear-gradient(135deg, #2c2c2c 0%, #3a3a3a 50%, #2c2c2c 100%),
+                        radial-gradient(circle at 20% 50%, rgba(255, 255, 255, 0.03) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 80%, rgba(255, 255, 255, 0.02) 0%, transparent 50%);
+            background-size: 100% 100%, 100% 100%, 100% 100%;
+            padding: 15px 20px 15px 10px;
+            border-radius: 15px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+            min-height: auto;
+            border: 1px solid rgba(255, 255, 255, 0.1);
             position: sticky;
             top: 0;
-            z-index: 10;
+            z-index: 1500;
+            overflow: hidden;
         }
-        .top-bar {
+        .header-content {
+            flex: 1;
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            gap: 12px;
+            justify-content: flex-start;
+            gap: 30px;
+            padding-left: 0;
         }
-        .brand {
-            display: flex;
-            align-items: center;
-            gap: 10px;
+        .header-content .logo {
+            margin-right: 20px;
+        }
+        .header-title {
+            margin-left: auto;
+            color: #fff;
+        }
+        .header-title .header-subtitle {
+            margin: 0;
+            color: #dcdcdc;
+        }
+        .header-title-main {
+            font-size: 18px;
             font-weight: 700;
             letter-spacing: 1px;
-            text-transform: uppercase;
-            color: #111;
+            color: #fff;
         }
-        .top-actions {
+        .header-title-sub {
+            font-size: 14px;
+            color: #dcdcdc;
+        }
+        .refresh-controls {
+            z-index: 9999;
+            position: relative;
             display: flex;
-            align-items: center;
-            gap: 10px;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+            gap: 6px;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
+            padding: 0 4px;
+            font-size: 12px;
+            overflow-x: auto;
         }
+        .refresh-controls .column {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            min-width: 200px;
+            align-items: stretch;
+        }
+        .group-label {
+            text-align: center;
+            color: #dcdcdc;
+            letter-spacing: 2px;
+            font-weight: 600;
+        }
+        .btn-group {
+            border: 2px solid #dcdcdc;
+            border-radius: 10px;
+            padding: 4px;
+            display: flex;
+            flex-wrap: nowrap;
+            gap: 4px;
+            align-items: center;
+            justify-content: center;
+            background: rgba(255,255,255,0.04);
+            overflow-x:auto;
+        }
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #e5b600;
+            border: 1px solid #e5b600;
+            color: #000;
+            font-weight: 700;
+            padding: 8px 14px;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.2s ease, transform 0.1s ease;
+            text-decoration: none;
+            font-size: 12px;
+            min-height: 38px;
+        }
+        .btn:hover { background: #f2cb2f; transform: translateY(-1px); }
+        .btn-primary { background: #e5b600; border-color: #e5b600; color: #000; }
+        .btn-secondary { background: #e5b600; border-color: #e5b600; color: #000; }
+        .btn-teal { background: #17a2b8; border-color: #17a2b8; color: #fff; }
+        .btn-green { background: linear-gradient(135deg,#1f8e3d,#32a852); border-color:#1f8e3d; color:#fff; }
         .container {
             max-width: 1200px;
             margin: 24px auto;
@@ -69,22 +150,6 @@
             color: #4b5563;
             font-size: 14px;
         }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            background: #e5b600;
-            border: 1px solid #e5b600;
-            color: #000;
-            font-weight: 700;
-            padding: 10px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: background 0.2s ease, transform 0.1s ease;
-            text-decoration: none;
-        }
-        .btn:hover { background: #f2cb2f; transform: translateY(-1px); }
         input[type="file"] {
             padding: 10px;
             border: 1px dashed #cbd5e1;
@@ -133,15 +198,39 @@
 </head>
 <body>
     <header>
-        <div class="top-bar">
-            <div class="brand">
-                <img src="images/LAB007-LOGO-GOLD.png" alt="LAB007" style="height:32px;width:auto;">
-                <span>NetScaler Config Analyzer</span>
+        <div class="header-content">
+            <img src="/citrix/images/LAB007-LOGO-GOLD.png" alt="LAB007 Logo" class="logo" style="opacity: 1; height:48px; width:auto;">
+            <div class="header-title">
+                <p class="header-subtitle" style="margin: 0;">
+                    <span class="header-title-main">Citrix2Horizon</span><br>
+                    <span class="header-title-sub">Dashboard</span>
+                </p>
             </div>
-            <div class="top-actions">
-                <a class="btn" href="/citrix/index.html">Back to HZ</a>
-                <a class="btn" href="/citrix/index.html#debugToolsModal">Debug Tools</a>
-                <a class="btn" href="/citrix/index.html#horizonTasksModal">HZ Tasks</a>
+        </div>
+        <div class="refresh-controls">
+            <div class="column" style="flex: 1.5 1 0; min-width:220px;">
+                <div class="group-label">Discover</div>
+                <div class="btn-group">
+                    <a href="/citrix/api/download-audit-files" class="btn btn-secondary" style="text-decoration: none;">Download Tools</a>
+                    <a href="/citrix/index.html" class="btn btn-primary">Load Audit</a>
+                    <a href="/citrix/netscaler.html" class="btn btn-secondary" style="background:#0ea5e9; border-color:#0ea5e9; color:#fff;">NetScaler Config</a>
+                    <a href="/citrix/index.html#configModal" class="btn btn-secondary">Config</a>
+                </div>
+            </div>
+            <div class="column" style="flex: 0.7 1 0; min-width:120px;">
+                <div class="group-label">Build</div>
+                <div class="btn-group" style="padding:4px;">
+                    <a href="/citrix/todo.html" class="btn btn-teal">Build</a>
+                </div>
+            </div>
+            <div class="column" style="flex: 1.2 1 0; min-width:200px;">
+                <div class="group-label">Manage</div>
+                <div class="btn-group" style="padding:6px;">
+                    <a href="/citrix/index.html#goldenSunModal" class="btn btn-green">GoldenSun</a>
+                    <a href="/citrix/index.html#horizonTasksModal" class="btn btn-secondary">HZ Tasks</a>
+                    <a href="/citrix/index.html#uagModal" class="btn btn-secondary">UAG</a>
+                    <a href="/citrix/index.html#debugToolsModal" class="btn btn-secondary">Upload Debugs</a>
+                </div>
             </div>
         </div>
     </header>
