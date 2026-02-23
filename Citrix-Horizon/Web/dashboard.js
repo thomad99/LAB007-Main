@@ -482,10 +482,18 @@ function handleFileLoad(event) {
     showLoading();
 
     if (isZip) {
-        parseCitrixExportZip(file)
+        // Try JSON bundle first, then YAML bundle
+        parseCitrixJsonBundleZip(file)
             .then(data => {
-                auditData = data;
-                displayDashboard(auditData);
+                if (data) {
+                    auditData = data;
+                    displayDashboard(auditData);
+                    return;
+                }
+                return parseCitrixExportZip(file).then(data => {
+                    auditData = data;
+                    displayDashboard(auditData);
+                });
             })
             .catch(err => {
                 console.error('ZIP parse error:', err);
@@ -934,6 +942,136 @@ async function parseCitrixExportZip(file) {
         Roles: roles,
         Desktops: [],
         StoreFront: site?.SiteData ? site.SiteData : {}
+    };
+}
+
+// Parse JSON bundle ZIP (multiple citrix-*.json files)
+async function parseCitrixJsonBundleZip(file) {
+    if (typeof JSZip === 'undefined') {
+        throw new Error('Missing JSZip library');
+    }
+    const arrayBuffer = await file.arrayBuffer();
+    const zip = await JSZip.loadAsync(arrayBuffer);
+    const entries = Object.keys(zip.files || {});
+    const hasJsonBundle = entries.some(e => e.toLowerCase().includes('citrix-servers.json'));
+    if (!hasJsonBundle) return null; // not this format
+
+    const readJson = async (name) => {
+        const match = entries.find(e => e.toLowerCase() === name.toLowerCase());
+        if (!match) return null;
+        try {
+            const text = await zip.file(match).async('string');
+            return JSON.parse(text);
+        } catch (e) {
+            console.warn(`JSON parse failed for ${name}:`, e);
+            return null;
+        }
+    };
+
+    const serversData = await readJson('citrix-servers.json') || {};
+    const appsData = await readJson('citrix-applications.json') || {};
+    const dgData = await readJson('citrix-delivery-groups.json') || {};
+    const catData = await readJson('citrix-catalogs.json') || {};
+    const policiesData = await readJson('citrix-policies.json') || {};
+    const rolesData = await readJson('citrix-roles.json') || {};
+    const siteInfoData = await readJson('citrix-site-info.json') || {};
+    const storefrontData = await readJson('citrix-storefront.json') || {};
+    const masterImagesData = await readJson('goldensun-master-images-FULL.json') || await readJson('goldensun-master-images-SMALL.json') || {};
+
+    const servers = (serversData.Servers || []).map(s => ({
+        Name: s.Name || s.DnsName || 'Unknown',
+        PowerState: (s.PowerState !== undefined && s.PowerState !== null) ? String(s.PowerState) : 'Unknown',
+        RegistrationState: (s.RegistrationState !== undefined && s.RegistrationState !== null) ? String(s.RegistrationState) : 'Unknown',
+        TotalRAM_GB: s.TotalRAM_GB ?? s.TotalRAMGB ?? undefined,
+        CPUCores: s.CPUCores ?? s.CPUs ?? undefined,
+        CPULogicalProcessors: s.CPULogicalProcessors ?? undefined,
+        DiskTotalSize_GB: s.DiskTotalSize_GB ?? s.DiskTotalSizeGB ?? undefined,
+        DiskFreeSpace_GB: s.DiskFreeSpace_GB ?? s.DiskFreeSpaceGB ?? undefined,
+        OSVersion: s.OSVersion || '',
+        DesktopGroup: s.DesktopGroup || '',
+        SpecsSource: s.SpecsSource || 'None'
+    }));
+
+    const applications = (appsData.Applications || []).map(a => ({
+        Name: a.Name || 'Unknown',
+        ApplicationName: a.ApplicationName || a.Name || '',
+        PublishedName: a.PublishedName || a.ApplicationName || a.Name || '',
+        DesktopGroup: a.DesktopGroup || '',
+        Enabled: a.Enabled !== false,
+        Description: a.Description || '',
+        CommandLineExecutable: a.CommandLineExecutable || '',
+        CommandLineArguments: a.CommandLineArguments || '',
+        WorkingDirectory: a.WorkingDirectory || '',
+        AssignedUsers: a.AssignedUsers || [],
+        AssignedGroups: a.AssignedGroups || []
+    }));
+
+    const deliveryGroups = (dgData.DeliveryGroups || []).map(g => ({
+        Name: g.Name || 'Unknown',
+        DesktopKind: g.DesktopKind ?? '',
+        SessionSupport: g.SessionSupport ?? '',
+        TotalMachines: g.TotalMachines ?? 0,
+        AvailableCount: g.AvailableCount ?? 0,
+        InUseCount: g.InUseCount ?? 0,
+        TotalApplications: g.TotalApplications ?? 0,
+        RestartSchedule: g.RestartSchedule || '',
+        RestartScheduleEnabled: !!g.RestartScheduleEnabled,
+        InMaintenanceMode: !!g.InMaintenanceMode,
+        Enabled: g.Enabled !== false
+    }));
+
+    const catalogs = (catData.Catalogs || []).map(cat => ({
+        Name: cat.Name || 'Unknown Catalog',
+        AllocationType: cat.AllocationType ?? '',
+        ProvisioningType: cat.ProvisioningType ?? '',
+        SessionSupport: cat.SessionSupport ?? '',
+        TotalCount: cat.TotalCount ?? 0,
+        AvailableCount: cat.AvailableCount ?? 0,
+        InUseCount: cat.InUseCount ?? 0,
+        PersistUserChanges: !!cat.PersistUserChanges
+    }));
+
+    const policies = []; // keeping empty to avoid render issues; raw data still available if needed
+    const roles = rolesData.Roles || [];
+
+    const summary = {
+        SiteName: siteInfoData.SiteName || 'Unknown',
+        TotalPublishedApplications: applications.length || 0,
+        TotalPublishedDesktops: 0,
+        MaxConcurrentUsers_30Days: 0,
+        LicenseType: siteInfoData.LicenseType || 'Unknown',
+        ControllerCount: siteInfoData.ControllerCount || (siteInfoData.Controllers ? siteInfoData.Controllers.length : 0) || 0,
+        NumberOfCatalogs: catalogs.length || 0,
+        NumberOfDeliveryGroups: deliveryGroups.length || 0,
+        UniqueUserConnections_30Days: 0,
+        TotalNumberOfServers: servers.length || 0,
+        TotalUniqueMasterImages: (masterImagesData.MasterImages || []).length || 0,
+        TotalStoreFrontStores: storefrontData.TotalStores || 0
+    };
+
+    return {
+        summary,
+        SiteName: summary.SiteName,
+        TotalPublishedApplications: summary.TotalPublishedApplications,
+        TotalPublishedDesktops: summary.TotalPublishedDesktops,
+        MaxConcurrentUsers_30Days: summary.MaxConcurrentUsers_30Days,
+        LicenseType: summary.LicenseType,
+        ControllerCount: summary.ControllerCount,
+        NumberOfCatalogs: summary.NumberOfCatalogs,
+        NumberOfDeliveryGroups: summary.NumberOfDeliveryGroups,
+        UniqueUserConnections_30Days: summary.UniqueUserConnections_30Days,
+        TotalNumberOfServers: summary.TotalNumberOfServers,
+        TotalUniqueMasterImages: summary.TotalUniqueMasterImages,
+        TotalStoreFrontStores: summary.TotalStoreFrontStores,
+        Servers: servers,
+        Applications: applications,
+        DeliveryGroups: deliveryGroups,
+        Catalogs: catalogs,
+        Policies: policies,
+        Roles: roles,
+        StoreFront: storefrontData || {},
+        UniqueMasterImages: masterImagesData.MasterImages || [],
+        MasterImages: masterImagesData.MasterImages || []
     };
 }
 
