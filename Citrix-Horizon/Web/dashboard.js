@@ -960,7 +960,11 @@ async function parseCitrixJsonBundleZip(file) {
         const match = entries.find(e => e.toLowerCase() === name.toLowerCase());
         if (!match) return null;
         try {
-            const text = await zip.file(match).async('string');
+            let text = await zip.file(match).async('string');
+            // strip UTF-8 BOM if present
+            if (text.charCodeAt(0) === 0xFEFF) {
+                text = text.slice(1);
+            }
             return JSON.parse(text);
         } catch (e) {
             console.warn(`JSON parse failed for ${name}:`, e);
@@ -1427,6 +1431,10 @@ function closeMasterImagesModal() {
 // Horizon Environment Tasks Functions
 function loadConfigIntoModal() {
     try {
+        if (location.protocol === 'file:') {
+            console.warn('Skipping config load (file://)');
+            return;
+        }
         // Try to load from localStorage first
         let config = localStorage.getItem('lab007Config');
         if (config) {
@@ -1982,6 +1990,10 @@ function confirmCustomSourceFolder() {
 
 async function loadConfigIntoMainModal() {
     try {
+        if (location.protocol === 'file:') {
+            console.warn('Skipping config load (file://)');
+            return;
+        }
         const response = await fetch('/api/audit-config');
         if (response.ok) {
             const config = await response.json();
