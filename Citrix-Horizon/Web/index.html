@@ -1464,7 +1464,15 @@
         });
     }
     function capitalize(s){return s.charAt(0).toUpperCase()+s.slice(1);}
-    function escapeHtml(str){return (str||'').replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));}
+    function escapeHtml(str){
+        try {
+            const s = '' + (str === undefined || str === null ? '' : str);
+            return s.replace(/[&<>"']/g,m=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[m]));
+        } catch (e) {
+            console.warn('escapeHtml fallback', str, e);
+            return 'N/A';
+        }
+    }
 
     // Config handling
     const cfgInput = document.getElementById('uagConfigFile');

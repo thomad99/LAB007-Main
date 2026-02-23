@@ -4719,6 +4719,10 @@ let vmwareFoldersData = [];
 // Load config and populate clone folder fields
 async function loadConfigForCloneFields() {
     try {
+        if (location.protocol === 'file:') {
+            console.warn('Skipping config load for clone fields (file://)');
+            return;
+        }
         // Try to load config from server
         const response = await fetch('/api/audit-config');
         if (response.ok) {
