@@ -610,6 +610,11 @@ app.get('/', (req, res) => {
 res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+// Sports+ page
+app.get('/sportsplus', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'sportsplus.html'));
+});
+
 // Serve main public directory static files (for CSS, JS, images used by landing page)
 // This must come AFTER the catch-all route and AFTER all project apps
 app.use(express.static(path.join(__dirname, 'public')));
