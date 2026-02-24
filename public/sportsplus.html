@@ -32,29 +32,7 @@
       height: 72px;
       width: auto;
     }
-    .actions {
-      display: flex;
-      justify-content: center;
-      gap: 10px;
-      flex-wrap: wrap;
-      margin-top: 8px;
-    }
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 10px 14px;
-      border-radius: 8px;
-      border: 1px solid #e5b600;
-      background: #e5b600;
-      color: #000;
-      font-weight: 700;
-      text-decoration: none;
-      font-size: 13px;
-      min-height: 38px;
-      transition: background 0.2s ease, transform 0.1s ease;
-    }
-    .btn:hover { background: #f2cb2f; transform: translateY(-1px); }
+    .actions { display:none; }
     .gallery {
       width: 100%;
       display: flex;
@@ -76,16 +54,20 @@
       border-radius: 10px;
       display: block;
     }
+    footer {
+      margin-top: 20px;
+      text-align: center;
+      color: #555;
+      font-size: 14px;
+    }
+    footer a { color: #111; text-decoration: none; font-weight: 600; }
+    footer a:hover { text-decoration: underline; }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
-      <img src="/images/LAB007-LOGO-GOLD.png" alt="LAB007 Logo">
-      <div class="actions">
-        <a class="btn" href="/">Back to Home</a>
-        <a class="btn" href="/citrix">Citrix-2-HZ</a>
-      </div>
+      <img src="/images/lab007%20Icon.PNG" alt="LAB007 Logo">
     </header>
 
     <div class="gallery">
@@ -96,6 +78,10 @@
         <img src="/images/007LABS-Sports2.png" alt="Sports graphic 2">
       </div>
     </div>
+
+    <footer>
+      © 2026 LAB007. All rights reserved. | <a href="mailto:info@Lab007.ai">Email: info@Lab007.ai</a>
+    </footer>
   </div>
 </body>
 </html>
