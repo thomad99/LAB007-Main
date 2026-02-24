@@ -82,6 +82,21 @@
     }
     footer a { color: #111; text-decoration: none; font-weight: 600; }
     footer a:hover { text-decoration: underline; }
+
+    @media (max-width: 768px) {
+      body { padding: 0; }
+      .gallery .card {
+        border: none;
+        border-radius: 0;
+        box-shadow: none;
+        padding: 0;
+      }
+      .gallery .card img {
+        border-radius: 0;
+        width: 100%;
+        display: block;
+      }
+    }
   </style>
 </head>
 <body>
