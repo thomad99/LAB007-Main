@@ -404,8 +404,9 @@
 
     <!-- UAG Modal -->
     <div id="uagModal" class="modal" style="display:none; position:fixed; inset:0; overflow:hidden;">
-        <div class="modal-content" style="max-width: 96%; width: 96%; margin-top: 120px; background:#0b1020; color:#e2e8f0; height: calc(100vh - 140px); max-height: calc(100vh - 140px); display:flex; flex-direction:column; overflow:hidden;">
-            <h2 style="margin:0 0 6px 0;">UAG Config Analyzer</h2>
+        <div class="modal-content" style="max-width: 96%; width: 96%; margin-top: 90px; background:#ffffff; color:#111; height: calc(100vh - 120px); max-height: calc(100vh - 120px); display:flex; flex-direction:column; overflow:hidden; border:1px solid #e5e7eb;">
+            <span class="modal-close" onclick="closeUagModal()" style="font-size:26px; cursor:pointer; float:right;">&times;</span>
+            <h2 style="margin:0 0 10px 0; color:#111;">UAG Config Analyzer</h2>
             <div style="display:flex; gap:8px; margin-bottom:10px;">
                 <button class="task-tab active" id="uagTabConfig" onclick="showUagTab('config')">Config Dashboard</button>
                 <button class="task-tab" id="uagTabDebug" onclick="showUagTab('debug')">Debug / Logs</button>
@@ -417,55 +418,55 @@
             <div id="uagConfigPanel" class="horizon-task-panel" style="display:block;">
                 <h3>Import UAG Config</h3>
                 <input type="file" id="uagConfigFile" accept=".txt,.conf,.cfg,.ini,.log,.json" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:10px 12px; min-height:44px; font-size:14px; height:44px; box-sizing:border-box;">
-                <div id="uagConfigStatus" style="margin-top:8px; color:#94a3b8;"></div>
+                <div id="uagConfigStatus" style="margin-top:8px; color:#555;"></div>
 
                 <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:8px; margin:12px 0;">
-                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">Gateways</div><div id="uagStatGateways" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
-                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">Connection Servers</div><div id="uagStatConn" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
-                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">DNS</div><div id="uagStatDns" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
-                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">AD / Entra</div><div id="uagStatAd" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
-                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">Certs</div><div id="uagStatCerts" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
-                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;"><div style="font-size:12px; color:#94a3b8;">External URLs</div><div id="uagStatExt" style="font-weight:800; font-size:18px; color:#e5b600;">0</div></div>
+                    <div class="card" style="padding:10px; min-height:60px;"><div style="font-size:12px; color:#555;">Gateways</div><div id="uagStatGateways" style="font-weight:800; font-size:18px; color:#111;">0</div></div>
+                    <div class="card" style="padding:10px; min-height:60px;"><div style="font-size:12px; color:#555;">Connection Servers</div><div id="uagStatConn" style="font-weight:800; font-size:18px; color:#111;">0</div></div>
+                    <div class="card" style="padding:10px; min-height:60px;"><div style="font-size:12px; color:#555;">DNS</div><div id="uagStatDns" style="font-weight:800; font-size:18px; color:#111;">0</div></div>
+                    <div class="card" style="padding:10px; min-height:60px;"><div style="font-size:12px; color:#555;">AD / Entra</div><div id="uagStatAd" style="font-weight:800; font-size:18px; color:#111;">0</div></div>
+                    <div class="card" style="padding:10px; min-height:60px;"><div style="font-size:12px; color:#555;">Certs</div><div id="uagStatCerts" style="font-weight:800; font-size:18px; color:#111;">0</div></div>
+                    <div class="card" style="padding:10px; min-height:60px;"><div style="font-size:12px; color:#555;">External URLs</div><div id="uagStatExt" style="font-weight:800; font-size:18px; color:#111;">0</div></div>
                 </div>
 
                 <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:8px; margin-bottom:12px;">
-                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;">
-                        <div style="font-size:12px; color:#94a3b8;">UAG Name</div>
-                        <div id="uagMetaName" style="font-weight:700; font-size:15px; color:#e5b600; overflow-wrap:anywhere;">-</div>
+                    <div class="card" style="padding:10px; min-height:60px;">
+                        <div style="font-size:12px; color:#555;">UAG Name</div>
+                        <div id="uagMetaName" style="font-weight:700; font-size:15px; color:#111; overflow-wrap:anywhere;">-</div>
                     </div>
-                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;">
-                        <div style="font-size:12px; color:#94a3b8;">UAG IP</div>
-                        <div id="uagMetaIp" style="font-weight:700; font-size:15px; color:#e5b600; overflow-wrap:anywhere;">-</div>
+                    <div class="card" style="padding:10px; min-height:60px;">
+                        <div style="font-size:12px; color:#555;">UAG IP</div>
+                        <div id="uagMetaIp" style="font-weight:700; font-size:15px; color:#111; overflow-wrap:anywhere;">-</div>
                     </div>
-                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;">
-                        <div style="font-size:12px; color:#94a3b8;">Connection Server</div>
-                        <div id="uagMetaCsUrl" style="font-weight:700; font-size:15px; color:#e5b600; overflow-wrap:anywhere;">-</div>
+                    <div class="card" style="padding:10px; min-height:60px;">
+                        <div style="font-size:12px; color:#555;">Connection Server</div>
+                        <div id="uagMetaCsUrl" style="font-weight:700; font-size:15px; color:#111; overflow-wrap:anywhere;">-</div>
                     </div>
-                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;">
-                        <div style="font-size:12px; color:#94a3b8;">Conn Server Thumbprint</div>
-                        <div id="uagMetaThumb" style="font-weight:700; font-size:15px; color:#e5b600; overflow-wrap:anywhere;">-</div>
+                    <div class="card" style="padding:10px; min-height:60px;">
+                        <div style="font-size:12px; color:#555;">Conn Server Thumbprint</div>
+                        <div id="uagMetaThumb" style="font-weight:700; font-size:15px; color:#111; overflow-wrap:anywhere;">-</div>
                     </div>
-                    <div class="card" style="padding:10px; min-height:60px; background:#11182a; color:#e2e8f0;">
-                        <div style="font-size:12px; color:#94a3b8;">Max Blast Connections</div>
-                        <div id="uagMetaBlast" style="font-weight:700; font-size:15px; color:#e5b600; overflow-wrap:anywhere;">-</div>
+                    <div class="card" style="padding:10px; min-height:60px;">
+                        <div style="font-size:12px; color:#555;">Max Blast Connections</div>
+                        <div id="uagMetaBlast" style="font-weight:700; font-size:15px; color:#111; overflow-wrap:anywhere;">-</div>
                     </div>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px;">
-                    <div class="card" style="min-height:160px; background:#11182a;">
+                    <div class="card" style="min-height:160px;">
                         <h4>Gateways / External</h4>
                         <div id="uagListGateway" class="chips"></div>
                     </div>
-                    <div class="card" style="min-height:160px; background:#11182a;">
+                    <div class="card" style="min-height:160px;">
                         <h4>Connection Servers</h4>
                         <div id="uagListConn" class="chips"></div>
                     </div>
-                    <div class="card" style="min-height:160px; background:#11182a;">
+                    <div class="card" style="min-height:160px;">
                         <h4>DNS / AD</h4>
                         <div id="uagListDns" class="chips"></div>
                         <div id="uagListAd" class="chips" style="margin-top:6px;"></div>
                     </div>
-                    <div class="card" style="min-height:160px; background:#11182a;">
+                    <div class="card" style="min-height:160px;">
                         <h4>Certificates</h4>
                         <div id="uagListCerts" class="chips"></div>
                     </div>
@@ -474,7 +475,7 @@
 
             <div id="uagDebugPanel" class="horizon-task-panel" style="display:none;">
                 <h3>Debug / Logs</h3>
-                <div style="position: sticky; top: 56px; z-index: 3000; background:#0b1020; padding:8px 4px 14px 4px; border-bottom:1px solid rgba(255,255,255,0.08);">
+                <div style="position: sticky; top: 56px; z-index: 3000; background:#ffffff; padding:8px 4px 14px 4px; border-bottom:1px solid #e5e7eb;">
                     <div style="display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap;">
                         <div style="flex:1 1 420px; min-width:320px; min-height:76px;">
                             <input type="file" id="uagLogFile" accept=".zip" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
@@ -483,7 +484,7 @@
                                 <button class="btn" id="uagLogSearchBtn">Search</button>
                                 <button class="btn" id="uagLogPrevBtn" title="Previous match">Prev</button>
                                 <button class="btn" id="uagLogNextBtn" title="Next match">Next</button>
-                                <span id="uagLogCount" style="color:#94a3b8;">0</span>
+                                <span id="uagLogCount" style="color:#555;">0</span>
                         <select id="uagLogLevel" class="input" style="min-height:38px; padding:6px 8px;">
                             <option value="all">All</option>
                             <option value="info">[INFO]</option>
@@ -494,17 +495,17 @@
                             </div>
                         </div>
                         <div style="flex:1 1 420px; min-width:340px; display:flex; gap:8px; align-items:stretch; min-height:76px;">
-                            <textarea id="uagAiInput" rows="3" placeholder="Paste an error snippet to analyze..." style="flex:1 1 auto; padding:10px; border-radius:8px; border:1px solid rgba(255,255,255,0.1); background:#0f172a; color:#e2e8f0; min-height:80px;"></textarea>
+                            <textarea id="uagAiInput" rows="3" placeholder="Paste an error snippet to analyze..." style="flex:1 1 auto; padding:10px; border-radius:8px; border:1px solid #e5e7eb; background:#fff; color:#111; min-height:80px;"></textarea>
                             <div style="display:flex; flex-direction:column; gap:6px; min-width:120px; align-items:stretch;">
                                 <button class="btn btn-secondary" id="uagAiBtn" style="background:#22d3ee; border-color:#22d3ee; color:#0b1020; min-height:38px;">AI Analyze</button>
-                                <div id="uagAiStatus" style="color:#94a3b8; font-size:12px; min-height:18px;"></div>
+                                <div id="uagAiStatus" style="color:#555; font-size:12px; min-height:18px;"></div>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div id="uagAiResult" style="margin-top:10px; border:1px solid rgba(255,255,255,0.12); border-radius:10px; padding:10px; background:#0f172a; color:#e2e8f0; display:none; position:relative; z-index:1;"></div>
-                <div id="uagLogStatus" style="margin-top:8px;color:#94a3b8;"></div>
-                <div class="logs" id="uagLogResults" style="margin-top:10px; overflow:auto; max-height:70vh;"></div>
+                <div id="uagAiResult" style="margin-top:10px; border:1px solid #e5e7eb; border-radius:10px; padding:10px; background:#fff; color:#111; display:none; position:relative; z-index:1;"></div>
+                <div id="uagLogStatus" style="margin-top:8px;color:#555;"></div>
+                <div class="logs" id="uagLogResults" style="margin-top:10px; overflow:auto; max-height:70vh; background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:8px;"></div>
 
                 <h3 style="margin-top:18px;">Connection Server Bundle</h3>
                 <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:8px;">
@@ -517,55 +518,55 @@
                         <input type="file" id="csAnyFile" class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:6px 10px; min-height:34px;">
                     </div>
                 </div>
-                <div id="csBundleStatus" style="color:#94a3b8; margin-bottom:8px;"></div>
+                <div id="csBundleStatus" style="color:#555; margin-bottom:8px;"></div>
                 <div id="csBundleSummary" style="display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px;"></div>
-                <div id="csBundleResults" style="border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:8px; background:#0f172a; max-height:420px; overflow:auto;"></div>
+                <div id="csBundleResults" style="border:1px solid #e5e7eb; border-radius:10px; padding:8px; background:#fff; max-height:420px; overflow:auto;"></div>
             </div>
 
             <div id="uagDiagramPanel" class="horizon-task-panel" style="display:none;">
                 <h3>Manual Diagram</h3>
-                <p style="color:#94a3b8; margin-top:0;">Enter values (comma separated) to draw a quick UAG topology.</p>
+                <p style="color:#555; margin-top:0;">Enter values (comma separated) to draw a quick UAG topology.</p>
                 <div style="display:flex; flex-direction:column; gap:10px;">
                     <div style="display:flex; gap:12px; flex-wrap:wrap;">
                         <div style="flex:1 1 0; min-width:320px;">
-                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">External DNS Name</label>
+                            <label style="display:block; color:#555; margin-bottom:6px;">External DNS Name</label>
                             <input id="uagManualExternalDns" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="horizon.example.com, uag.example.com">
                         </div>
                         <div style="flex:1 1 0; min-width:320px;">
-                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">DMZ NLB IP</label>
+                            <label style="display:block; color:#555; margin-bottom:6px;">DMZ NLB IP</label>
                             <input id="uagManualDmzLb" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="203.0.113.10, 203.0.113.11">
                         </div>
                     </div>
                     <div style="display:flex; gap:12px; flex-wrap:wrap;">
                         <div style="flex:1 1 0; min-width:320px;">
-                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">UAG Names</label>
+                            <label style="display:block; color:#555; margin-bottom:6px;">UAG Names</label>
                             <input id="uagManualUag" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="uag01, uag02">
                         </div>
                         <div style="flex:1 1 0; min-width:320px;">
-                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">UAG IPs</label>
+                            <label style="display:block; color:#555; margin-bottom:6px;">UAG IPs</label>
                             <input id="uagManualUagIp" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="10.0.0.11, 10.0.0.12">
                         </div>
                     </div>
                     <div style="display:flex; gap:12px; flex-wrap:wrap;">
                         <div style="flex:1 1 0; min-width:320px;">
-                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">Internal NLB IP</label>
+                            <label style="display:block; color:#555; margin-bottom:6px;">Internal NLB IP</label>
                             <input id="uagManualInternalLb" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="10.0.1.20">
                         </div>
                     </div>
                     <div style="display:flex; gap:12px; flex-wrap:wrap;">
                         <div style="flex:1 1 0; min-width:320px;">
-                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">Connection Server Names</label>
+                            <label style="display:block; color:#555; margin-bottom:6px;">Connection Server Names</label>
                             <input id="uagManualConn" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="conn01, conn02">
                         </div>
                         <div style="flex:1 1 0; min-width:320px;">
-                            <label style="display:block; color:#cbd5e1; margin-bottom:6px;">Connection Server IPs</label>
+                            <label style="display:block; color:#555; margin-bottom:6px;">Connection Server IPs</label>
                             <input id="uagManualConnIp" class="input" style="min-height:44px; padding:10px; width:100%;" maxlength="200" placeholder="10.0.1.31, 10.0.1.32">
                         </div>
                     </div>
                 </div>
                 <button class="btn btn-secondary" style="margin-top:10px; background:#22d3ee; border-color:#22d3ee; color:#0b1020;" onclick="renderManualDiagram()">Draw Diagram</button>
-                <div id="uagManualStatus" style="margin-top:8px; color:#94a3b8;"></div>
-                <div id="uagManualDiagramWrap" style="margin-top:12px; background:#0f172a; border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px; min-height:240px; overflow:auto;">
+                <div id="uagManualStatus" style="margin-top:8px; color:#555;"></div>
+                <div id="uagManualDiagramWrap" style="margin-top:12px; background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:10px; min-height:240px; overflow:auto;">
                     <div id="uagManualMermaid">Enter details and click Draw.</div>
                 </div>
             </div>
@@ -1385,6 +1386,10 @@
                         <button id="debugStorePickBtn" class="btn btn-secondary" style="background:#e5b600; color:#000; border-color:#e5b600;">Choose File</button>
                         <input type="file" id="debugStoreFileModal" accept=".zip,.log,.txt" style="display:none;">
                         <span id="debugStoreStatus" style="color:#555;">No file chosen.</span>
+                    </div>
+                    <div style="margin-top:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:13px; color:#555;">
+                        <span style="font-weight:600;">Need to anonymise before sharing?</span>
+                        <button class="btn btn-secondary" style="background:#e5b600; color:#000; border-color:#e5b600; padding:6px 10px; min-height:32px;" onclick="showDebugToolsTab('anon')">Open Anonymise tab</button>
                     </div>
                 </div>
             </div>
