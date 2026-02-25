@@ -850,7 +850,7 @@
                             <div>
                                 <label for="searchMasterPrefix" style="display: block; margin-bottom: 8px; font-weight: bold;">Master Image Prefix:</label>
                                 <input type="text" id="searchMasterPrefix" placeholder="SHC-M-" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
-                                <p style="margin-top: 5px; color: #666; font-size: 12px;">Images will be searched using: [Prefix]* pattern</p>
+                                <p style="margin-top: 5px; color: #666; font-size: 12px;">Images will be searched using: [Prefix]* pattern. Only the latest version per base name is output (e.g. SHC-M-MAIN-T, SHC-M-MAIN-TV3, SHC-M-MAIN-T-V4 → only SHC-M-MAIN-T-V4).</p>
                             </div>
                         </div>
 
@@ -1028,7 +1028,7 @@
             <!-- Search / Build Tab -->
             <div id="goldenSunSearchPanel" class="horizon-task-panel" style="display: none;">
                 <h3>Build Master Image List</h3>
-                <p style="color: #666;"></p>
+                <p style="color: #666;">Searches for VMs matching each name. Only the latest version per base name is output (e.g. SHC-M-MAIN-T, SHC-M-MAIN-TV3, SHC-M-MAIN-T-V4 → only SHC-M-MAIN-T-V4).</p>
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
                     <div>

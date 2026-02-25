@@ -3221,22 +3221,20 @@ function generateGoldenSunSearchScript() {
     scriptLines.push('');
     scriptLines.push('$results = @()');
     scriptLines.push('foreach ($name in $vmNames) {');
-    scriptLines.push('    Write-Host "Collecting VM (highest version): $name" -ForegroundColor Cyan');
-    scriptLines.push('    $escaped = [regex]::Escape($name)');
-    scriptLines.push('    $vm = Get-VM -Name "$name*" -ErrorAction SilentlyContinue | Where-Object { $_.Name -match "^${escaped}[Vv](\\d+)$" } | Sort-Object @{');
-    scriptLines.push('        Expression = {');
-    scriptLines.push('            $m = [regex]::Match($_.Name, "^${escaped}[Vv](\\d+)$");');
-    scriptLines.push('            if ($m.Success) { [int]$m.Groups[1].Value } else { 0 }');
-    scriptLines.push('        };');
-    scriptLines.push('        Descending = $true');
-    scriptLines.push('    } | Select-Object -First 1');
-    scriptLines.push('    if (-not $vm) {');
-    scriptLines.push('        $vm = Get-VM -Name $name -ErrorAction SilentlyContinue');
+    scriptLines.push('    Write-Host "Collecting VM (latest version only): $name" -ForegroundColor Cyan');
+    scriptLines.push('    $candidates = @(Get-VM -Name "$name*" -ErrorAction SilentlyContinue)');
+    scriptLines.push('    if (-not $candidates) { $candidates = @(Get-VM -Name $name -ErrorAction SilentlyContinue) }');
+    scriptLines.push('    if (-not $candidates) { Write-Warning "VM not found: $name"; continue }');
+    scriptLines.push('    # Parse version from end of name (-V4, V4, V10) and keep only latest');
+    scriptLines.push('    $withVersion = $candidates | ForEach-Object {');
+    scriptLines.push('        $n = $_.Name; $base = $n; $ver = 0');
+    scriptLines.push('        if ($n -match \'^(.+?)(-?[Vv](\\d+))$\') { $base = $matches[1].TrimEnd(\'-\'); $ver = [int]$matches[3] }');
+    scriptLines.push('        [PSCustomObject]@{ VM = $_; BaseName = $base; VersionNum = $ver }');
+    scriptLines.push('    } | Group-Object BaseName | ForEach-Object {');
+    scriptLines.push('        $_.Group | Sort-Object VersionNum -Descending | Select-Object -First 1');
     scriptLines.push('    }');
-    scriptLines.push('    if (-not $vm) {');
-    scriptLines.push('        Write-Warning "VM not found: $name"');
-    scriptLines.push('        continue');
-    scriptLines.push('    }');
+    scriptLines.push('    $vm = ($withVersion | Sort-Object VersionNum -Descending | Select-Object -First 1).VM');
+    scriptLines.push('    if (-not $vm) { Write-Warning "No VM selected for: $name"; continue }');
     scriptLines.push('    $view = $vm | Get-View');
     scriptLines.push('    $cluster = ($vm | Get-Cluster | Select-Object -First 1).Name');
     scriptLines.push('    $vmHostName = ($vm | Get-VMHost | Select-Object -First 1).Name');
@@ -3752,17 +3750,18 @@ try {
             $vmHost = Get-VMHost -VM $vm -ErrorAction SilentlyContinue
             $datastore = Get-Datastore -VM $vm -ErrorAction SilentlyContinue | Select-Object -First 1
 
-            # Parse VM name to extract components
-            # Expected format: {Prefix}{ImageName}V{Version} or {Prefix}{ImageName}
+            # Parse VM name to extract base name and version (e.g. SHC-M-MAIN-T-V4, SHC-M-MAIN-TV3)
             $vmName = $vm.Name
-            $shortName = $vmName
+            $baseName = $vmName
             $clusterName = if ($cluster) { $cluster.Name } else { 'Unknown' }
-            $version = 'V1'
+            $version = ''
+            $versionNum = 0
 
-            # Extract version if present (look for V followed by number at the end)
-            if ($vmName -match '(.+?)(V\d+)$') {
-                $shortName = $matches[1]
+            # Extract version if present: -V4, V4, V10 at end of name
+            if ($vmName -match '^(.+?)(-?[Vv](\d+))$') {
+                $baseName = $matches[1].TrimEnd('-')
                 $version = $matches[2]
+                $versionNum = [int]$matches[3]
             }
 
             # Get snapshot information
@@ -3776,8 +3775,10 @@ try {
 
             $imageInfo = @{
                 Name = $vmName
-                ShortName = $shortName
+                ShortName = $baseName
+                BaseName = $baseName
                 Version = $version
+                VersionNum = $versionNum
                 Cluster = $clusterName
                 Host = if ($vmHost) { $vmHost.Name } else { 'Unknown' }
                 Datastore = if ($datastore) { $datastore.Name } else { 'Unknown' }
@@ -3806,6 +3807,18 @@ try {
             Write-Host "  OK: $vmName - Cluster: $clusterName, Version: $version" -ForegroundColor Green
             Write-Host "[DEBUG] Processed VM: $vmName" | Out-File -FilePath $debugFile -Append
         }
+
+        # Keep only the latest version per base name (e.g. SHC-M-MAIN-T, SHC-M-MAIN-TV3, SHC-M-MAIN-T-V4 -> only SHC-M-MAIN-T-V4)
+        $grouped = $masterImages | Group-Object -Property BaseName
+        $masterImages = @()
+        foreach ($grp in $grouped) {
+            $latest = $grp.Group | Sort-Object -Property VersionNum -Descending | Select-Object -First 1
+            $masterImages += $latest
+            if ($grp.Count -gt 1) {
+                Write-Host "  Kept latest: $($latest.Name) (from $($grp.Count) version(s) of $($latest.BaseName))" -ForegroundColor Cyan
+            }
+        }
+        Write-Host "Output: $($masterImages.Count) latest-version image(s)" -ForegroundColor Green
     }
 
     # Create result object
