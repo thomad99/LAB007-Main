@@ -1,71 +1,217 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Sports+ | LAB007</title>
   <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
   <link rel="shortcut icon" type="image/png" href="/images/lab007 Icon.PNG">
   <link rel="apple-touch-icon" href="/images/lab007 Icon.PNG">
+
   <style>
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-      background: #f5f7fb;
-      color: #111;
-      padding: 20px;
+    :root{
+      --accent: #f39a64;
+      --text: #ffffff;
+      --muted: rgba(255,255,255,.78);
+      --muted2: rgba(255,255,255,.62);
+      --shadow: 0 20px 60px rgba(0,0,0,.35);
+      --max: 1300px;
     }
-    .wrap {
-      max-width: 1100px;
-      margin: 0 auto;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 24px;
+
+    *{ box-sizing:border-box; }
+    body{
+      margin:0;
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+      color: var(--text);
+      background:#0b1320;
     }
-    header {
-      text-align: center;
-      padding-top: 10px;
+
+    .hero{
+      position:relative;
+      min-height: 100vh;
+      overflow:hidden;
     }
-    header img {
-      height: 72px;
-      width: auto;
+
+    .hero__bg{
+      position:absolute;
+      inset:0;
+      background:
+        linear-gradient(90deg, rgba(10,16,28,.75) 0%, rgba(10,16,28,.35) 55%, rgba(10,16,28,.55) 100%),
+        url("/images/bg2.png") center/cover no-repeat;
+      transform: scale(1.02);
     }
-    .actions { display:none; }
-    .gallery {
-      width: 100%;
-      display: flex;
-      flex-direction: column;
+
+    .hero__fx{
+      position:absolute;
+      inset:-20%;
+      background:
+        radial-gradient(circle at 20% 80%, rgba(255,255,255,.12), transparent 30%),
+        radial-gradient(circle at 55% 70%, rgba(255,255,255,.10), transparent 28%),
+        radial-gradient(circle at 70% 88%, rgba(255,255,255,.08), transparent 24%),
+        radial-gradient(circle at 35% 55%, rgba(255,255,255,.06), transparent 26%);
+      filter: blur(1px);
+      opacity:.7;
+      pointer-events:none;
+    }
+
+    .wrap{
+      position:relative;
+      max-width: var(--max);
+      margin:0 auto;
+      padding: 28px 28px 40px;
+      min-height: 100vh;
+    }
+
+    .topbar{
+      display:flex;
+      align-items:flex-start;
+      justify-content:space-between;
+      gap:16px;
+      margin-bottom: 34px;
+    }
+
+    .logo{
+      display:flex;
+      align-items:center;
+      gap:12px;
+      user-select:none;
+    }
+    .logo img{
+      width:110px;
+      height:auto;
+    }
+
+    .headline{
+      margin-top: 18px;
+      text-align:left;
+    }
+    .headline h1{
+      margin:0 0 14px;
+      font-weight: 800;
+      letter-spacing: .2px;
+      color: var(--accent);
+      font-size: clamp(34px, 4.2vw, 64px);
+      line-height: 1.05;
+    }
+    .headline .lead{
+      font-size: clamp(16px, 2.0vw, 30px);
+      line-height: 1.35;
+      color: var(--muted);
+      margin: 0 0 10px;
+      max-width: 980px;
+    }
+    .headline .lead strong{
+      color: rgba(255,255,255,.92);
+      font-weight: 900;
+      letter-spacing: .6px;
+    }
+    .headline .sub{
+      font-size: clamp(14px, 1.35vw, 22px);
+      color: var(--muted2);
+      margin: 10px 0 0;
+      max-width: 980px;
+    }
+
+    .grid{
+      position:relative;
+      display:grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 30px;
+      margin-top: 46px;
+      align-items:start;
+    }
+
+    .feature{
+      display:grid;
+      grid-template-columns: 220px 1fr;
       gap: 18px;
-      align-items: center;
+      align-items:center;
     }
-    .card {
-      background: #fff;
-      border: 1px solid #e5e7eb;
+
+    .feature__img{
+      width: 210px;
+      max-width: 100%;
+      height:auto;
+      filter: drop-shadow(var(--shadow));
+    }
+
+    .feature__text h2{
+      margin:0 0 8px;
+      font-size: clamp(26px, 2.6vw, 52px);
+      font-weight: 300;
+      letter-spacing: .2px;
+    }
+    .feature__text p{
+      margin:0;
+      font-size: clamp(14px, 1.2vw, 22px);
+      color: var(--muted);
+      line-height: 1.35;
+    }
+
+    .score{ grid-column: 1; margin-top: 6px; }
+
+    .photoshare{
+      grid-column: 1;
+      margin-top: 34px;
+    }
+    .photoshare .feature__text h2{ font-weight: 300; }
+
+    .chatbot{
+      grid-column: 2;
+      display:grid;
+      grid-template-columns: 1fr 260px;
+      gap: 18px;
+      align-items:center;
+      justify-items:end;
+      margin-top: 4px;
+    }
+
+    .chatbot .feature__text{
+      justify-self:start;
+      text-align:left;
+    }
+    .chatbot .feature__text h2{
+      font-size: clamp(30px, 3.2vw, 60px);
+      font-weight: 300;
+    }
+    .chatbot .feature__text .small{
+      margin-top: 14px;
+      color: rgba(255,255,255,.55);
+      font-size: clamp(13px, 1.0vw, 18px);
+    }
+
+    .noapp{
+      margin-top: 18px;
+      font-size: clamp(14px, 1.1vw, 20px);
+      color: rgba(255,255,255,.65);
+    }
+
+    .extra-info {
+      width: 100%;
+      text-align: center;
+      font-size: 17px;
+      line-height: 1.6;
+      color: #fff;
+      padding: 28px 24px;
+      margin-top: 40px;
+      background: rgba(0,0,0,0.25);
       border-radius: 12px;
-      box-shadow: 0 8px 22px rgba(17,24,39,0.08);
-      padding: 14px;
-      width: 100%;
     }
-    .card img {
-      width: 100%;
-      height: auto;
-      border-radius: 10px;
-      display: block;
-    }
+    .extra-info p { margin: 0 0 10px 0; }
+    .extra-info p:last-child { margin-bottom: 0; margin-top: 20px; font-size: 18px; font-weight: 600; }
+
     .embed-card {
-      background: #fff;
-      border: 1px solid #e5e7eb;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.12);
       border-radius: 12px;
-      box-shadow: 0 8px 22px rgba(17,24,39,0.08);
-      padding: 14px;
+      padding: 20px;
       width: 100%;
+      margin-top: 32px;
     }
     .embed-card h3 {
       margin: 0 0 12px 0;
       font-size: 18px;
-      color: #111827;
+      color: #fff;
     }
     .embed-card iframe {
       width: 100%;
@@ -74,53 +220,111 @@
       border-radius: 10px;
       background: #fff;
     }
+
     footer {
-      margin-top: 20px;
+      margin-top: 24px;
       text-align: center;
-      color: #555;
+      color: rgba(255,255,255,0.6);
       font-size: 14px;
     }
-    footer a { color: #111; text-decoration: none; font-weight: 600; }
+    footer a { color: #fff; text-decoration: none; font-weight: 600; }
     footer a:hover { text-decoration: underline; }
 
-    @media (max-width: 768px) {
-      body { padding: 0; }
-      .gallery .card {
-        border: none;
-        border-radius: 0;
-        box-shadow: none;
-        padding: 0;
+    @media (max-width: 980px){
+      .grid{
+        grid-template-columns: 1fr;
+        gap: 24px;
       }
-      .gallery .card img {
-        border-radius: 0;
-        width: 100%;
-        display: block;
+      .score, .photoshare, .chatbot{ grid-column: 1; }
+      .chatbot{
+        grid-template-columns: 220px 1fr;
+        justify-items:start;
       }
+      .chatbot .feature__img{ order: -1; }
+    }
+
+    @media (max-width: 560px){
+      .feature{ grid-template-columns: 1fr; }
+      .chatbot{ grid-template-columns: 1fr; }
+      .feature__img{ width: 180px; }
     }
   </style>
 </head>
-<body>
-  <div class="wrap">
-    <header>
-      <img src="/images/lab007%20Icon.PNG" alt="LAB007 Logo">
-    </header>
 
-    <div class="gallery">
-      <div class="card">
-        <img src="/images/007LABS-Sports1.png" alt="Sports graphic 1">
+<body>
+  <section class="hero">
+    <div class="hero__bg"></div>
+    <div class="hero__fx"></div>
+
+    <div class="wrap">
+      <div class="topbar">
+        <div class="logo">
+          <img src="/images/lab007%20Icon.PNG" alt="LAB007" />
+        </div>
       </div>
-      <div class="card">
-        <img src="/images/007LABS-Sports2.png" alt="Sports graphic 2">
+
+      <header class="headline">
+        <h1>Elevate your sports experience</h1>
+
+        <p class="lead">
+          We enhance your club sport to make the experience better for
+          <strong>YOU, YOUR CLUB, YOUR FAMILY &amp; FRIENDS</strong>
+        </p>
+
+        <p class="sub">
+          We can plug into any current scoring system or build you one from scratch.
+        </p>
+      </header>
+
+      <div class="grid">
+        <div class="feature score">
+          <img class="feature__img" src="/images/phone-scores.png" alt="Score Alerts phone" />
+          <div class="feature__text">
+            <h2>Score Alerts</h2>
+            <p>Get Text Alerts on your phone</p>
+          </div>
+        </div>
+
+        <div class="chatbot">
+          <div class="feature__text">
+            <h2>Chatbot</h2>
+            <p>
+              Ask information in natural language<br/>
+              pull stats, recall past results and more
+            </p>
+            <div class="noapp">No App required</div>
+          </div>
+          <img class="feature__img" src="/images/phone-chatbot.png" alt="Chatbot phone" style="width:250px;" />
+        </div>
+
+        <div class="feature photoshare">
+          <img class="feature__img" src="/images/phone-photos.png" alt="PhotoShare phone" />
+          <div class="feature__text">
+            <h2>PhotoShare</h2>
+            <p>
+              Private photo sharing<br/>
+              Face recognition for quick searching
+            </p>
+          </div>
+        </div>
       </div>
+
+      <section class="extra-info">
+        <p>We can integrate with what you have today.</p>
+        <p>We aim to add extra value to the sports experience</p>
+        <p>No Apps required we can deliver in rich web pages</p>
+        <p>Sarasota based company looking to help locals</p>
+      </section>
+
       <div class="embed-card">
         <h3>Love Sailing Chatbot. Ask about sailor Dominic Thomas</h3>
         <iframe src="https://lovesailing.ai/Chatbot.html" title="Love Sailing Chatbot" allow="clipboard-read; clipboard-write;"></iframe>
       </div>
-    </div>
 
-    <footer>
-      © 2026 LAB007. All rights reserved. | <a href="mailto:info@Lab007.ai">Email: info@Lab007.ai</a>
-    </footer>
-  </div>
+      <footer>
+        © 2026 LAB007. All rights reserved. | <a href="mailto:info@Lab007.ai">Email: info@Lab007.ai</a>
+      </footer>
+    </div>
+  </section>
 </body>
 </html>
