@@ -3201,14 +3201,13 @@ function generateGoldenSunSearchScript() {
     scriptLines.push('$ErrorActionPreference = "Stop"');
     scriptLines.push('');
     scriptLines.push(`# Ensure connection to vCenter (${vcenter || GOLDEN_SUN_DEFAULT_VCENTER})`);
-    scriptLines.push('$viserver = Get-VIServer -ErrorAction SilentlyContinue');
+    scriptLines.push(`$vc = "${(vcenter || GOLDEN_SUN_DEFAULT_VCENTER || '').toString().replace(/"/g, '""')}"`);
+    scriptLines.push('if ([string]::IsNullOrWhiteSpace($vc)) { throw "vCenter server is required. Enter it in the vCenter Server field." }');
+    scriptLines.push('$viserver = $global:DefaultVIServers | Where-Object { $_.Name -eq $vc -and $_.IsConnected } | Select-Object -First 1');
     scriptLines.push('if (-not $viserver) {');
-    scriptLines.push(`    $vc = "${vcenter || GOLDEN_SUN_DEFAULT_VCENTER}"`);
-    scriptLines.push(`    if ([string]::IsNullOrWhiteSpace($vc) -and -not [string]::IsNullOrWhiteSpace("${GOLDEN_SUN_DEFAULT_VCENTER || ''}")) { $vc = "${GOLDEN_SUN_DEFAULT_VCENTER || ''}"; }`);
-    scriptLines.push('    if ([string]::IsNullOrWhiteSpace($vc)) { throw "vCenter server is required."; }');
     scriptLines.push('    $cred = Get-Credential -Message "Enter vCenter credentials for $vc"');
     scriptLines.push('    Connect-VIServer -Server $vc -Credential $cred -ErrorAction Stop | Out-Null');
-    scriptLines.push('}');
+    scriptLines.push('} else { Write-Host "Using existing connection to $vc" -ForegroundColor Green }');
     scriptLines.push('');
     scriptLines.push('# Build VM name list');
     if (vmNames.length) {
