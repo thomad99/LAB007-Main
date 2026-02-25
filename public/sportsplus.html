@@ -124,7 +124,7 @@
     .feature{
       display:grid;
       grid-template-columns: 220px 1fr;
-      gap: 18px;
+      gap: 8px;
       align-items:center;
     }
 
@@ -179,16 +179,10 @@
       font-size: clamp(13px, 1.0vw, 18px);
     }
 
-    .noapp{
-      margin-top: 18px;
-      font-size: clamp(14px, 1.1vw, 20px);
-      color: rgba(255,255,255,.65);
-    }
-
     .extra-info {
       width: 100%;
       text-align: center;
-      font-size: 22px;
+      font-size: 28px;
       line-height: 1.6;
       color: #fff;
       padding: 28px 24px;
@@ -197,7 +191,7 @@
       border-radius: 12px;
       font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
     }
-    .extra-info p { margin: 0 0 12px 0; font-size: 22px; }
+    .extra-info p { margin: 0 0 12px 0; font-size: 28px; font-family: inherit; }
     .extra-info p:last-child { margin-bottom: 0; }
 
     .embed-card {
@@ -269,7 +263,7 @@
         <p class="lead">
           We enhance your club sport to make the experience better for
         </p>
-        <p class="lead"><strong>YOU, YOUR CLUB, YOUR FAMILY &amp; FRIENDS</strong></p>
+        <p class="lead"><strong>YOU,<br/>YOUR CLUB, YOUR FAMILY &amp; FRIENDS</strong></p>
 
         <p class="sub">
           We can plug into any current scoring system or build you one from scratch.
@@ -292,7 +286,6 @@
               Ask information in natural language<br/>
               pull stats, recall past results and more
             </p>
-            <div class="noapp">No App required</div>
           </div>
           <img class="feature__img" src="/images/phone-chatbot.png" alt="Chatbot phone" style="width:250px;" />
         </div>
