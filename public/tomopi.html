@@ -42,16 +42,11 @@
       margin: 0;
       color: var(--accent);
     }
-    .pi-url {
-      font-size: 0.85rem;
-      color: var(--muted);
-      background: var(--panel);
-      padding: 8px 12px;
-      border-radius: 8px;
-      border: 1px solid rgba(255,255,255,0.08);
-      word-break: break-all;
+    .header-logo {
+      height: 36px;
+      width: auto;
+      opacity: 0.9;
     }
-    .pi-url code { color: var(--accent); }
     .panel {
       background: var(--panel);
       border-radius: 12px;
@@ -161,9 +156,7 @@
   <div class="wrap">
     <header>
       <h1>TomoPI</h1>
-      <div class="pi-url">
-        Pi fetch URL: <code id="configUrl"></code>
-      </div>
+      <img src="/images/lab007-trans.PNG" alt="LAB007" class="header-logo">
     </header>
 
     <div class="panel">
@@ -181,7 +174,7 @@
         </select>
       </div>
       <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--muted);">
-        Edit the config below. Your Raspberry Pi fetches from the URL above every <code>refresh_seconds</code>.
+        Edit the config below. Your Raspberry Pi fetches from <code>/tomopi/config.json</code> every <code>refresh_seconds</code>.
       </p>
       <textarea id="configEditor" spellcheck="false" placeholder="Loading..."></textarea>
       <div class="actions">
@@ -210,11 +203,9 @@
     const saveBtn = document.getElementById('saveBtn');
     const reloadBtn = document.getElementById('reloadBtn');
     const statusEl = document.getElementById('status');
-    const configUrlEl = document.getElementById('configUrl');
     const modeSelect = document.getElementById('modeSelect');
 
     const CONFIG_URL = '/tomopi/config.json';
-    configUrlEl.textContent = window.location.origin + CONFIG_URL;
 
     function setStatus(msg, type) {
       statusEl.textContent = msg;
