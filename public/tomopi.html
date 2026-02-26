@@ -329,6 +329,10 @@
           <label for="rssFeeds">RSS feeds (one URL per line)</label>
           <textarea id="rssFeeds" placeholder="https://feeds.bbci.co.uk/news/rss.xml" rows="3"></textarea>
         </div>
+        <div class="ctrl-item rss-list">
+          <label for="tickersInput">Stock tickers (one per line or comma-separated)</label>
+          <textarea id="tickersInput" placeholder="TSLA&#10;IBRX&#10;AAPL" rows="2"></textarea>
+        </div>
       </div>
 
       <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--muted);">
@@ -377,6 +381,7 @@
     const transitionMs = document.getElementById('transitionMs');
     const maxHeadlines = document.getElementById('maxHeadlines');
     const rssFeeds = document.getElementById('rssFeeds');
+    const tickersInput = document.getElementById('tickersInput');
 
     const CONFIG_URL = '/tomopi/config.json';
 
@@ -432,6 +437,7 @@
         transitionMs.value = json.news_feed.transition_ms || '';
         maxHeadlines.value = json.news_feed.max_headlines || '';
         rssFeeds.value = (json.news_feed.rss_feeds || []).join('\n');
+        tickersInput.value = (json.news_feed.tickers || []).join('\n');
         const fc = rgbToStr(json.news_feed.clock_color_rgb) || rgbToStr(json.news_feed.text_color_rgb);
         ensureColorOption(fontColorSelect, fc, 'Custom');
         fontColorSelect.value = fc;
@@ -529,6 +535,8 @@
           if (maxHeadlines.value) j.news_feed.max_headlines = parseInt(maxHeadlines.value, 10);
           const urls = rssFeeds.value.split('\n').map(s => s.trim()).filter(Boolean);
           if (urls.length) j.news_feed.rss_feeds = urls;
+          const tickers = tickersInput.value.split(/[\n,]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
+          j.news_feed.tickers = tickers;
         }
       });
     }
@@ -595,6 +603,7 @@
       if (el && el.tagName === 'INPUT') el.addEventListener('blur', applyRefreshIntervals);
     });
     rssFeeds.addEventListener('blur', applyRefreshIntervals);
+    tickersInput.addEventListener('blur', applyRefreshIntervals);
     editor.addEventListener('input', syncControlsFromJson);
     load();
 

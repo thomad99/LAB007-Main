@@ -3769,7 +3769,7 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('})();');
         scriptLines.push('</script>');
         scriptLines.push('\'@');
-        scriptLines.push('$html = "<!DOCTYPE html><html><head><meta charset=\\"utf-8\\"/><style>$style</style></head><body>"+$pre+$tab+$filterScript+"</body></html>"');
+        scriptLines.push('$html = "<!DOCTYPE html><html><head><meta charset=`"utf-8`"/><style>$style</style></head><body>"+$pre+$tab+$filterScript+"</body></html>"');
     } else {
         scriptLines.push('$html = $response | ConvertTo-Html -PreContent "<h2>${cfg.name}</h2><p>${cfg.desc}</p>" -Head "<style>$style</style>"');
     }
