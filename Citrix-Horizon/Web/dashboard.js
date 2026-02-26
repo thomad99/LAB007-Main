@@ -3670,7 +3670,6 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('        Snapshot       = ""');
         scriptLines.push('        CloneStatus    = $t.status');
         scriptLines.push('        Progress       = $t.progress');
-        scriptLines.push('        FarmId         = $t.farm_id');
         scriptLines.push('        Error          = $t.error_message');
         scriptLines.push('    }');
         scriptLines.push('}');
@@ -3683,6 +3682,7 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('    if ($ps) {');
         scriptLines.push('        $goldenImage = $ps.parent_vm_path');
         scriptLines.push('        if (-not $goldenImage -and $ps.parent_vm_id) { $goldenImage = $ps.parent_vm_id }');
+        scriptLines.push('        if ($goldenImage -and $goldenImage -match \'/([^/]+)$\') { $goldenImage = $Matches[1] }');
         scriptLines.push('        $snapshot = $ps.snapshot_path');
         scriptLines.push('        if (-not $snapshot -and $ps.base_snapshot_id) { $snapshot = $ps.base_snapshot_id }');
         scriptLines.push('    }');
@@ -3699,7 +3699,6 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('        Snapshot       = $snapshot');
         scriptLines.push('        CloneStatus    = $cloneStatus');
         scriptLines.push('        Progress       = ""');
-        scriptLines.push('        FarmId         = $f.id');
         scriptLines.push('        Error          = $err');
         scriptLines.push('    }');
         scriptLines.push('}');
@@ -3712,12 +3711,15 @@ function generateHorizonAdminScript(action) {
     scriptLines.push('');
     scriptLines.push('# --- Build simple HTML report ---');
     scriptLines.push('$style = @\'');
-    scriptLines.push('table { border-collapse: collapse; width: 100%; font-family: Arial; font-size: 12px; }');
-    scriptLines.push('th, td { border: 1px solid #ddd; padding: 8px; }');
-    scriptLines.push('th { background: #f4f6f8; text-align: left; }');
-    scriptLines.push('tr:nth-child(even) { background: #fafafa; }');
-    scriptLines.push('.ok { color: #0a7f2e; font-weight: 700; }');
-    scriptLines.push('.fail { color: #b00020; font-weight: 700; }');
+    scriptLines.push('body{font-family:Segoe UI,Arial,sans-serif;margin:20px;}');
+    scriptLines.push('h1{color:#1a365d;font-size:24px;margin-bottom:8px;}');
+    scriptLines.push('table{border-collapse:collapse;width:100%;font-size:12px;}');
+    scriptLines.push('th,td{border:1px solid #ddd;padding:8px;}');
+    scriptLines.push('th{background:#f4f6f8;text-align:left;}');
+    scriptLines.push('tr:nth-child(even){background:#fafafa;}');
+    scriptLines.push('.ok{color:#0a7f2e;font-weight:700;}');
+    scriptLines.push('.fail{color:#b00020;font-weight:700;}');
+    scriptLines.push('input[type=text]{padding:4px;font-size:11px;}');
     scriptLines.push('\'@');
     if (action === 'discovery') {
         scriptLines.push('$rowsForHtml = $response | ForEach-Object {');
@@ -3733,6 +3735,41 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('    }');
         scriptLines.push('}');
         scriptLines.push('$html = $rowsForHtml | ConvertTo-Html -PreContent "<h2>${cfg.name}</h2><p>${cfg.desc}</p>" -Head "<style>$style</style>" -As Table');
+    } else if (action === 'clones') {
+        scriptLines.push('$cols = @("FarmName","GoldenImage","Snapshot","CloneStatus","Progress","Error")');
+        scriptLines.push('$tab = $response | ConvertTo-Html -Property $cols -Fragment');
+        scriptLines.push('$pre = "<h1>HZ Farm Master Image Report</h1><p>Filter by typing in the boxes below each column header.</p>"');
+        scriptLines.push('$filterScript = @\'');
+        scriptLines.push('<script>');
+        scriptLines.push('(function(){');
+        scriptLines.push('  var t=document.querySelector("table");if(!t)return;');
+        scriptLines.push('  var h=t.querySelector("tr");if(!h)return;');
+        scriptLines.push('  var fr=document.createElement("tr");');
+        scriptLines.push('  for(var i=0;i<h.cells.length;i++){');
+        scriptLines.push('    var td=document.createElement("td");');
+        scriptLines.push('    td.style.padding="4px";td.style.background="#e8eef4";');
+        scriptLines.push('    var inp=document.createElement("input");');
+        scriptLines.push('    inp.type="text";inp.placeholder="Filter...";inp.style.width="100%";');
+        scriptLines.push('    inp.dataset.col=i;');
+        scriptLines.push('    inp.oninput=function filterRows(){');
+        scriptLines.push('      var fs=document.querySelectorAll("input[data-col]");');
+        scriptLines.push('      var rows=t.querySelectorAll("tr");');
+        scriptLines.push('      for(var i=2;i<rows.length;i++){');
+        scriptLines.push('        var r=rows[i],show=true;');
+        scriptLines.push('        for(var c=0;c<fs.length;c++){');
+        scriptLines.push('          var v=(fs[c].value||"").toLowerCase();');
+        scriptLines.push('          if(v&&r.cells[c]&&r.cells[c].textContent.toLowerCase().indexOf(v)===-1){show=false;break;}');
+        scriptLines.push('        }');
+        scriptLines.push('        r.style.display=show?"":"none";');
+        scriptLines.push('      }');
+        scriptLines.push('    };');
+        scriptLines.push('    td.appendChild(inp);fr.appendChild(td);');
+        scriptLines.push('  }');
+        scriptLines.push('  t.insertBefore(fr,h.nextSibling);');
+        scriptLines.push('})();');
+        scriptLines.push('</script>');
+        scriptLines.push('\'@');
+        scriptLines.push('$html = "<!DOCTYPE html><html><head><meta charset=\\"utf-8\\"/><style>$style</style></head><body>"+$pre+$tab+$filterScript+"</body></html>"');
     } else {
         scriptLines.push('$html = $response | ConvertTo-Html -PreContent "<h2>${cfg.name}</h2><p>${cfg.desc}</p>" -Head "<style>$style</style>"');
     }

@@ -6,9 +6,34 @@
     "To list fonts on the Pi run:",
     "python3 -c \"import pygame; pygame.init(); print(sorted(pygame.font.get_fonts())[:200])\""
   ],
+  "font_list": ["dejavusans", "dejavusansmono", "freesans", "arial", "verdana", "tahoma", "liberationsans"],
+  "color_palette": {
+    "plain": {
+      "White": [255, 255, 255],
+      "Black": [0, 0, 0],
+      "Gray": [128, 128, 128],
+      "Red": [255, 0, 0],
+      "Orange": [255, 165, 0],
+      "Amber": [255, 170, 90],
+      "Yellow": [255, 255, 0],
+      "Green": [0, 255, 0],
+      "Blue": [0, 0, 255],
+      "Purple": [128, 0, 128]
+    },
+    "neon": {
+      "Neon Green": [57, 255, 20],
+      "Neon Blue": [0, 255, 255],
+      "Neon Pink": [255, 0, 255],
+      "Neon Yellow": [255, 255, 0],
+      "Neon Orange": [255, 128, 0],
+      "Neon Cyan": [0, 255, 255],
+      "Neon Lime": [191, 255, 0],
+      "Neon Red": [255, 51, 51]
+    }
+  },
 
-  "mode": "slideshow",
-  "rotate": "leftl",
+  "mode": "news_feed",
+  "rotate": "left",
   "refresh_seconds": 15,
 
   "clock_basic": {
@@ -25,7 +50,6 @@
     "seconds_per_slide": 6,
     "shuffle": true,
     "fit": "cover",
-
     "clock": {
       "enabled": true,
       "layout": "center",
@@ -33,10 +57,7 @@
       "font_name": "dejavusans",
       "font_size": 140,
       "bold": true,
-      "color_rgb": [255, 255, 255],
-      "box": true,
-      "box_alpha": 120,
-      "box_pad": 24
+      "color_rgb": [255, 255, 255]
     }
   },
 
@@ -76,5 +97,28 @@
     "shuffle": true,
     "fit": "contain",
     "cache_dir": "web_cache"
+  },
+
+  "news_feed": {
+    "rss_feeds": [
+      "https://feeds.bbci.co.uk/news/rss.xml"
+    ],
+    "max_headlines": 10,
+    "transition": "slide_left",
+    "transition_ms": 450,
+    "tickers": ["TSLA", "IBRX"],
+
+    "item_seconds": 10,
+    "refresh_news_seconds": 600,
+    "refresh_stocks_seconds": 240,
+
+    "clock_font_name": "dejavusans",
+    "clock_font_size": 270,
+    "text_font_name": "dejavusans",
+    "text_font_size": 60,
+
+    "clock_color_rgb": [191, 255, 0],
+    "text_color_rgb": [191, 255, 0],
+    "bg_rgb": [0, 18, 0]
   }
 }

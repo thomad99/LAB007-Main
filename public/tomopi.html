@@ -150,6 +150,31 @@
     .upload-status { margin-top: 12px; font-size: 13px; }
     .upload-status.success { color: var(--success); }
     .upload-status.error { color: var(--error); }
+    .ctrl-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 16px;
+    }
+    .ctrl-item { display: flex; flex-direction: column; gap: 4px; }
+    .ctrl-item label { font-size: 12px; color: var(--muted); }
+    .ctrl-item input[type="number"] {
+      padding: 8px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #0d1117;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+    }
+    .ctrl-item input:focus { outline: none; border-color: var(--accent); }
+    .ctrl-section { margin-bottom: 20px; }
+    .ctrl-section h3 { font-size: 0.9rem; margin: 0 0 12px 0; color: var(--accent); }
+    .rss-list { margin-top: 8px; }
+    .rss-list textarea {
+      min-height: 80px;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
@@ -161,18 +186,151 @@
 
     <div class="panel">
       <h2>Display config (JSON)</h2>
-      <div class="quick-edit">
-        <label for="modeSelect">Mode:</label>
-        <select id="modeSelect">
-          <option value="clock_basic">clock_basic</option>
-          <option value="slideshow">slideshow</option>
-          <option value="nixie_clock">nixie_clock</option>
-          <option value="flip_clock">flip_clock</option>
-          <option value="analog_clock">analog_clock</option>
-          <option value="video_player">video_player</option>
-          <option value="web_images">web_images</option>
-        </select>
+
+      <div class="ctrl-section">
+        <h3>Mode &amp; rotation</h3>
+        <div class="quick-edit">
+          <label for="modeSelect">Mode:</label>
+          <select id="modeSelect">
+            <option value="clock_basic">clock_basic</option>
+            <option value="slideshow">slideshow</option>
+            <option value="nixie_clock">nixie_clock</option>
+            <option value="flip_clock">flip_clock</option>
+            <option value="analog_clock">analog_clock</option>
+            <option value="video_player">video_player</option>
+            <option value="web_images">web_images</option>
+            <option value="news_feed">news_feed</option>
+          </select>
+          <label for="rotateSelect">Screen rotation:</label>
+          <select id="rotateSelect">
+            <option value="left">left</option>
+            <option value="right">right</option>
+            <option value="none">none</option>
+            <option value="180">180</option>
+          </select>
+        </div>
       </div>
+
+      <div class="ctrl-section" id="colorFontSection">
+        <h3>Font &amp; colors</h3>
+        <div class="ctrl-grid">
+          <div class="ctrl-item">
+            <label for="fontColorSelect">Font color</label>
+            <select id="fontColorSelect">
+              <optgroup label="Plain">
+                <option value="255,255,255">White</option>
+                <option value="0,0,0">Black</option>
+                <option value="128,128,128">Gray</option>
+                <option value="255,0,0">Red</option>
+                <option value="255,165,0">Orange</option>
+                <option value="255,170,90">Amber</option>
+                <option value="255,255,0">Yellow</option>
+                <option value="0,255,0">Green</option>
+                <option value="0,0,255">Blue</option>
+                <option value="128,0,128">Purple</option>
+              </optgroup>
+              <optgroup label="Neon">
+                <option value="57,255,20">Neon Green</option>
+                <option value="0,255,255">Neon Blue</option>
+                <option value="255,0,255">Neon Pink</option>
+                <option value="191,255,0">Neon Lime</option>
+                <option value="255,128,0">Neon Orange</option>
+                <option value="255,51,51">Neon Red</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="ctrl-item">
+            <label for="bgColorSelect">Background color</label>
+            <select id="bgColorSelect">
+              <optgroup label="Plain">
+                <option value="0,0,0">Black</option>
+                <option value="255,255,255">White</option>
+                <option value="128,128,128">Gray</option>
+                <option value="0,18,0">Dark green</option>
+              </optgroup>
+              <optgroup label="Neon">
+                <option value="0,0,0">Black</option>
+                <option value="10,10,30">Dark blue</option>
+              </optgroup>
+            </select>
+          </div>
+          <div class="ctrl-item">
+            <label for="fontSelect">Font</label>
+            <select id="fontSelect">
+              <option value="dejavusans">dejavusans</option>
+              <option value="dejavusansmono">dejavusansmono</option>
+              <option value="freesans">freesans</option>
+              <option value="arial">arial</option>
+              <option value="verdana">verdana</option>
+              <option value="tahoma">tahoma</option>
+              <option value="liberationsans">liberationsans</option>
+            </select>
+          </div>
+          <div class="ctrl-item">
+            <label for="fontSizeInput">Font size</label>
+            <input type="number" id="fontSizeInput" min="12" max="400" placeholder="e.g. 220">
+          </div>
+        </div>
+      </div>
+
+      <div class="ctrl-section">
+        <h3>Refresh intervals (seconds)</h3>
+        <div class="ctrl-grid">
+          <div class="ctrl-item">
+            <label for="refreshSeconds">Global refresh</label>
+            <input type="number" id="refreshSeconds" min="1" placeholder="15">
+          </div>
+          <div class="ctrl-item">
+            <label for="secondsPerSlide">Slideshow / Web: sec per slide</label>
+            <input type="number" id="secondsPerSlide" min="1" placeholder="6">
+          </div>
+          <div class="ctrl-item">
+            <label for="refreshListSeconds">Web images: refresh list</label>
+            <input type="number" id="refreshListSeconds" min="60" placeholder="300">
+          </div>
+          <div class="ctrl-item">
+            <label for="itemSeconds">News: item display time</label>
+            <input type="number" id="itemSeconds" min="1" placeholder="10">
+          </div>
+          <div class="ctrl-item">
+            <label for="refreshNewsSeconds">News: refresh RSS</label>
+            <input type="number" id="refreshNewsSeconds" min="60" placeholder="600">
+          </div>
+          <div class="ctrl-item">
+            <label for="refreshStocksSeconds">News: refresh stocks</label>
+            <input type="number" id="refreshStocksSeconds" min="60" placeholder="240">
+          </div>
+        </div>
+      </div>
+
+      <div class="ctrl-section" id="newsFeedSection">
+        <h3>News feed</h3>
+        <div class="ctrl-grid">
+          <div class="ctrl-item">
+            <label for="transitionSelect">Transition</label>
+            <select id="transitionSelect">
+              <option value="none">none — No animation (instant switch)</option>
+              <option value="fade">fade — Crossfade from old → new</option>
+              <option value="slide_left">slide_left — Old slides off left, new from right</option>
+              <option value="slide_right">slide_right — Old slides off right, new from left</option>
+              <option value="drop_down">drop_down — Old drops down, new drops from top</option>
+            </select>
+          </div>
+          <div class="ctrl-item">
+            <label for="transitionMs">Transition (ms)</label>
+            <input type="number" id="transitionMs" min="100" placeholder="450">
+          </div>
+          <div class="ctrl-item">
+            <label for="maxHeadlines">Max headlines</label>
+            <input type="number" id="maxHeadlines" min="1" max="50" placeholder="10">
+          </div>
+        </div>
+        <div class="ctrl-item rss-list">
+          <label for="rssFeeds">RSS feeds (one URL per line)</label>
+          <textarea id="rssFeeds" placeholder="https://feeds.bbci.co.uk/news/rss.xml" rows="3"></textarea>
+        </div>
+      </div>
+
       <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--muted);">
         Edit the config below. Your Raspberry Pi fetches from <code>/tomopi/config.json</code> every <code>refresh_seconds</code>.
       </p>
@@ -204,33 +362,180 @@
     const reloadBtn = document.getElementById('reloadBtn');
     const statusEl = document.getElementById('status');
     const modeSelect = document.getElementById('modeSelect');
+    const rotateSelect = document.getElementById('rotateSelect');
+    const fontColorSelect = document.getElementById('fontColorSelect');
+    const bgColorSelect = document.getElementById('bgColorSelect');
+    const fontSelect = document.getElementById('fontSelect');
+    const fontSizeInput = document.getElementById('fontSizeInput');
+    const refreshSeconds = document.getElementById('refreshSeconds');
+    const secondsPerSlide = document.getElementById('secondsPerSlide');
+    const refreshListSeconds = document.getElementById('refreshListSeconds');
+    const itemSeconds = document.getElementById('itemSeconds');
+    const refreshNewsSeconds = document.getElementById('refreshNewsSeconds');
+    const refreshStocksSeconds = document.getElementById('refreshStocksSeconds');
+    const transitionSelect = document.getElementById('transitionSelect');
+    const transitionMs = document.getElementById('transitionMs');
+    const maxHeadlines = document.getElementById('maxHeadlines');
+    const rssFeeds = document.getElementById('rssFeeds');
 
     const CONFIG_URL = '/tomopi/config.json';
+
+    function rgbToStr(arr) { return Array.isArray(arr) ? arr.join(',') : ''; }
+    function strToRgb(s) { return s ? s.split(',').map(Number) : [0,0,0]; }
 
     function setStatus(msg, type) {
       statusEl.textContent = msg;
       statusEl.className = 'status ' + (type || '');
     }
 
-    function syncModeFromEditor() {
-      try {
-        const json = JSON.parse(editor.value);
-        const m = json.mode || '';
-        if (modeSelect.querySelector('option[value="' + m + '"]')) {
-          modeSelect.value = m;
-        }
-      } catch (_) {}
+    function getJson() {
+      try { return JSON.parse(editor.value); } catch (_) { return null; }
+    }
+
+    function applyToEditor(updater) {
+      const json = getJson();
+      if (!json) { setStatus('Invalid JSON', 'error'); return; }
+      updater(json);
+      editor.value = JSON.stringify(json, null, 2);
+    }
+
+    function ensureColorOption(sel, val, label) {
+      if (!val) return;
+      if (!sel.querySelector('option[value="' + val + '"]')) {
+        const opt = document.createElement('option');
+        opt.value = val;
+        opt.textContent = label || 'Custom';
+        sel.appendChild(opt);
+      }
+    }
+
+    function syncControlsFromJson() {
+      const json = getJson();
+      if (!json) return;
+      const m = json.mode || 'clock_basic';
+      if (modeSelect.querySelector('option[value="' + m + '"]')) modeSelect.value = m;
+      const r = json.rotate || 'left';
+      if (rotateSelect.querySelector('option[value="' + r + '"]')) rotateSelect.value = r;
+
+      refreshSeconds.value = json.refresh_seconds || '';
+      if (json.slideshow) secondsPerSlide.value = json.slideshow.seconds_per_slide || '';
+      if (json.web_images) {
+        secondsPerSlide.value = json.web_images.seconds_per_slide || secondsPerSlide.value;
+        refreshListSeconds.value = json.web_images.refresh_list_seconds || '';
+      }
+      if (json.news_feed) {
+        itemSeconds.value = json.news_feed.item_seconds || '';
+        refreshNewsSeconds.value = json.news_feed.refresh_news_seconds || '';
+        refreshStocksSeconds.value = json.news_feed.refresh_stocks_seconds || '';
+        const tr = json.news_feed.transition || 'slide_left';
+        if (transitionSelect.querySelector('option[value="' + tr + '"]')) transitionSelect.value = tr;
+        transitionMs.value = json.news_feed.transition_ms || '';
+        maxHeadlines.value = json.news_feed.max_headlines || '';
+        rssFeeds.value = (json.news_feed.rss_feeds || []).join('\n');
+        const fc = rgbToStr(json.news_feed.clock_color_rgb) || rgbToStr(json.news_feed.text_color_rgb);
+        ensureColorOption(fontColorSelect, fc, 'Custom');
+        fontColorSelect.value = fc;
+        const bc = rgbToStr(json.news_feed.bg_rgb);
+        ensureColorOption(bgColorSelect, bc, 'Custom');
+        bgColorSelect.value = bc;
+        fontSelect.value = json.news_feed.clock_font_name || json.news_feed.text_font_name || 'dejavusans';
+        fontSizeInput.value = json.news_feed.clock_font_size || '';
+      } else if (json.clock_basic) {
+        const fc = rgbToStr(json.clock_basic.color_rgb);
+        ensureColorOption(fontColorSelect, fc, 'Custom');
+        fontColorSelect.value = fc;
+        const bc = rgbToStr(json.clock_basic.bg_rgb);
+        ensureColorOption(bgColorSelect, bc, 'Custom');
+        bgColorSelect.value = bc;
+        fontSelect.value = json.clock_basic.font_name || 'dejavusans';
+        fontSizeInput.value = json.clock_basic.font_size || '';
+      } else if (json.slideshow && json.slideshow.clock) {
+        const fc = rgbToStr(json.slideshow.clock.color_rgb);
+        ensureColorOption(fontColorSelect, fc, 'Custom');
+        fontColorSelect.value = fc;
+        fontSelect.value = json.slideshow.clock.font_name || 'dejavusans';
+        fontSizeInput.value = json.slideshow.clock.font_size || '';
+      }
     }
 
     function applyModeFromDropdown() {
-      const mode = modeSelect.value;
-      try {
-        const json = JSON.parse(editor.value);
-        json.mode = mode;
-        editor.value = JSON.stringify(json, null, 2);
-      } catch (e) {
-        setStatus('Invalid JSON, cannot apply mode', 'error');
-      }
+      applyToEditor(j => { j.mode = modeSelect.value; });
+      syncControlsFromJson();
+    }
+
+    function applyRotateFromDropdown() {
+      applyToEditor(j => { j.rotate = rotateSelect.value; });
+    }
+
+    function applyFontColor() {
+      const rgb = strToRgb(fontColorSelect.value);
+      applyToEditor(j => {
+        const m = modeSelect.value;
+        if (m === 'news_feed' && j.news_feed) {
+          j.news_feed.clock_color_rgb = rgb;
+          j.news_feed.text_color_rgb = rgb;
+        } else if (m === 'clock_basic' && j.clock_basic) j.clock_basic.color_rgb = rgb;
+        else if (m === 'slideshow' && j.slideshow?.clock) j.slideshow.clock.color_rgb = rgb;
+      });
+    }
+
+    function applyBgColor() {
+      const rgb = strToRgb(bgColorSelect.value);
+      applyToEditor(j => {
+        const m = modeSelect.value;
+        if (m === 'news_feed' && j.news_feed) j.news_feed.bg_rgb = rgb;
+        else if (m === 'clock_basic' && j.clock_basic) j.clock_basic.bg_rgb = rgb;
+      });
+    }
+
+    function applyFont() {
+      const font = fontSelect.value;
+      applyToEditor(j => {
+        const m = modeSelect.value;
+        if (m === 'news_feed' && j.news_feed) {
+          j.news_feed.clock_font_name = font;
+          j.news_feed.text_font_name = font;
+        } else if (m === 'clock_basic' && j.clock_basic) j.clock_basic.font_name = font;
+        else if (m === 'slideshow' && j.slideshow?.clock) j.slideshow.clock.font_name = font;
+      });
+    }
+
+    function applyFontSize() {
+      const size = parseInt(fontSizeInput.value, 10);
+      if (isNaN(size)) return;
+      applyToEditor(j => {
+        const m = modeSelect.value;
+        if (m === 'news_feed' && j.news_feed) {
+          j.news_feed.clock_font_size = size;
+          j.news_feed.text_font_size = Math.round(size * 0.22) || 60;
+        } else if (m === 'clock_basic' && j.clock_basic) j.clock_basic.font_size = size;
+        else if (m === 'slideshow' && j.slideshow?.clock) j.slideshow.clock.font_size = size;
+      });
+    }
+
+    function applyRefreshIntervals() {
+      applyToEditor(j => {
+        if (refreshSeconds.value) j.refresh_seconds = parseInt(refreshSeconds.value, 10);
+        if (j.slideshow && secondsPerSlide.value) j.slideshow.seconds_per_slide = parseInt(secondsPerSlide.value, 10);
+        if (j.web_images) {
+          if (secondsPerSlide.value) j.web_images.seconds_per_slide = parseInt(secondsPerSlide.value, 10);
+          if (refreshListSeconds.value) j.web_images.refresh_list_seconds = parseInt(refreshListSeconds.value, 10);
+        }
+        if (j.news_feed) {
+          if (itemSeconds.value) j.news_feed.item_seconds = parseInt(itemSeconds.value, 10);
+          if (refreshNewsSeconds.value) j.news_feed.refresh_news_seconds = parseInt(refreshNewsSeconds.value, 10);
+          if (refreshStocksSeconds.value) j.news_feed.refresh_stocks_seconds = parseInt(refreshStocksSeconds.value, 10);
+          if (transitionMs.value) j.news_feed.transition_ms = parseInt(transitionMs.value, 10);
+          if (maxHeadlines.value) j.news_feed.max_headlines = parseInt(maxHeadlines.value, 10);
+          const urls = rssFeeds.value.split('\n').map(s => s.trim()).filter(Boolean);
+          if (urls.length) j.news_feed.rss_feeds = urls;
+        }
+      });
+    }
+
+    function populateFontsFromConfig(json) {
+      const list = json.font_list || ['dejavusans','dejavusansmono','freesans','arial','verdana','tahoma','liberationsans'];
+      fontSelect.innerHTML = list.map(f => '<option value="' + (f || '') + '">' + (f || 'default') + '</option>').join('');
     }
 
     async function load() {
@@ -240,10 +545,8 @@
         if (!r.ok) throw new Error(r.statusText);
         const json = await r.json();
         editor.value = JSON.stringify(json, null, 2);
-        const m = json.mode || 'clock_basic';
-        if (modeSelect.querySelector('option[value="' + m + '"]')) {
-          modeSelect.value = m;
-        }
+        populateFontsFromConfig(json);
+        syncControlsFromJson();
         setStatus('Loaded', 'success');
       } catch (e) {
         setStatus('Load failed: ' + e.message, 'error');
@@ -280,7 +583,19 @@
     saveBtn.addEventListener('click', save);
     reloadBtn.addEventListener('click', load);
     modeSelect.addEventListener('change', applyModeFromDropdown);
-    editor.addEventListener('input', syncModeFromEditor);
+    rotateSelect.addEventListener('change', applyRotateFromDropdown);
+    fontColorSelect.addEventListener('change', applyFontColor);
+    bgColorSelect.addEventListener('change', applyBgColor);
+    fontSelect.addEventListener('change', applyFont);
+    fontSizeInput.addEventListener('change', applyFontSize);
+    fontSizeInput.addEventListener('blur', applyFontSize);
+    transitionSelect.addEventListener('change', applyRefreshIntervals);
+    [refreshSeconds, secondsPerSlide, refreshListSeconds, itemSeconds, refreshNewsSeconds, refreshStocksSeconds, transitionMs, maxHeadlines].forEach(el => {
+      if (el) el.addEventListener('change', applyRefreshIntervals);
+      if (el && el.tagName === 'INPUT') el.addEventListener('blur', applyRefreshIntervals);
+    });
+    rssFeeds.addEventListener('blur', applyRefreshIntervals);
+    editor.addEventListener('input', syncControlsFromJson);
     load();
 
     // Photo upload
