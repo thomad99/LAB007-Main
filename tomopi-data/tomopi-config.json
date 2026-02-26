@@ -1,25 +1,43 @@
 {
-  "mode": "clock_basic",
+  "mode": "video_player",
   "rotate": "normal",
   "refresh_seconds": 30,
+
   "clock_basic": {
     "format": "%H:%M:%S",
-    "font_size": 140
+    "font_size": 340
   },
+
   "slideshow": {
     "folder": "images",
     "seconds_per_slide": 6,
     "shuffle": true,
     "fit": "contain"
   },
+
   "nixie_clock": {
     "folder": "nixie",
-    "scale": 1.0,
-    "format": "%H:%M"
+    "scale": 1,
+    "show_seconds": true
   },
+
   "flip_clock": {
-    "format": "%H:%M",
+    "format": "%H:%M:%S",
     "fps": 45,
     "flip_ms": 450
+  },
+
+  "analog_clock": {
+    "show_numbers": true,
+    "show_ticks": true,
+    "smooth_seconds": true
+  },
+
+  "video_player": {
+    "folder": "video",
+    "loop_first": false,
+    "audio": "on",
+    "volume": 70,
+    "shuffle": false
   }
 }
