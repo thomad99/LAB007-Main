@@ -52,6 +52,7 @@ param(
     [int]$TimeoutSeconds = 3600,     # total wait time after each reboot (default 60 min)
     [int]$PollSeconds    = 30,       # poll interval for WinRM checks (default 30s)
     [int]$OfflineWaitSeconds = 300,  # best-effort observe WinRM drop (default 5 min)
+    [int]$PostRebootStabilizeSeconds = 90,  # wait after WinRM stable for wuauserv etc. (default 90s)
 
     # Safety / behavior
     [int]$MaxReboots = 3,
@@ -212,6 +213,12 @@ function Wait-ForWinRMReboot {
         try {
             $null = Invoke-Command @invokeParams -ScriptBlock { 1 }
             Write-Host ("[{0}] [{1}] Remoting is stable." -f (Get-Date), $ComputerName) -ForegroundColor Green
+            # Phase D: post-reboot stabilization - Windows Update and other services need time to initialize
+            $stabilizeSeconds = $PostRebootStabilizeSeconds
+            if ($stabilizeSeconds -gt 0) {
+                Write-Host ("[{0}] [{1}] Waiting {2}s for endpoint services (wuauserv, etc.) to stabilize..." -f (Get-Date), $ComputerName, $stabilizeSeconds) -ForegroundColor Cyan
+                Start-Sleep -Seconds $stabilizeSeconds
+            }
             return $true
         } catch {
             Start-Sleep -Seconds $PollSeconds
@@ -305,10 +312,18 @@ catch {
 $UpdateScript = {
     param(
         [bool]$Install = $false,
-        [bool]$ReturnStatus = $false
+        [bool]$ReturnStatus = $false,
+        [string[]]$Categories = @('Security Updates')
     )
 
     $ErrorActionPreference = "Stop"
+
+    function Write-LogRemote { param([string]$Message)
+        $logFile = 'C:\ctxadmin\MSpatch.log'
+        $line = "[{0}] {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), $Message
+        try { Add-Content -LiteralPath $logFile -Value $line -ErrorAction SilentlyContinue } catch {}
+        Write-Host $line
+    }
 
     function Start-WuauservIfNeeded {
         $svc = Get-Service -Name wuauserv -ErrorAction SilentlyContinue
@@ -401,13 +416,13 @@ $UpdateScript = {
     }
 
     Write-Host ("[{0}] Checking available updates..." -f (Get-Date)) -ForegroundColor Cyan
-    Write-Log "Scanning for updates..."
+    Write-LogRemote "Scanning for updates..."
 
-    $available = Get-WindowsUpdate -Category $UpdateCategories -IgnoreUserInput -ErrorAction Stop -MicrosoftUpdate:(!$useWsus)
+    $available = Get-WindowsUpdate -Category $Categories -IgnoreUserInput -ErrorAction Stop -MicrosoftUpdate:(!$useWsus)
     $count = ($available | Measure-Object).Count
 
     Write-Host ("[{0}] Available updates: {1}" -f (Get-Date), $count) -ForegroundColor Cyan
-    Write-Log "Found $count update(s)"
+    Write-LogRemote "Found $count update(s)"
 
     if ($count -eq 0) {
         $after = Get-LatestHotfixInfo
@@ -438,9 +453,9 @@ $UpdateScript = {
     }
 
     Write-Host ("[{0}] Installing updates..." -f (Get-Date)) -ForegroundColor Magenta
-    Write-Log "Installing updates..."
+    Write-LogRemote "Installing updates..."
     # Simplified install to mirror local success
-    Install-WindowsUpdate -AcceptAll -IgnoreReboot -Verbose -ErrorAction Stop -MicrosoftUpdate:(!$useWsus) -Category $UpdateCategories | Out-Host
+    Install-WindowsUpdate -AcceptAll -IgnoreReboot -Verbose -ErrorAction Stop -MicrosoftUpdate:(!$useWsus) -Category $Categories | Out-Host
 
     $after = Get-LatestHotfixInfo
     $pending = Get-RebootRequired
@@ -490,53 +505,9 @@ function Invoke-LocalRun {
     exit 0
 }
 
-if (-not $RunLocal) {
-    # Deploy a minimal runner to the target instead of copying full script
-    $simpleScript = @"
-param(
-    [string]`$LogPath = 'C:\ctxadmin\MSpatch.log',
-    [string[]]`$Categories = @('Security Updates','Critical Updates'),
-    [int]`$SleepAfterRebootSeconds = 60
-)
-function Write-LogSimple { param(`$m) `$line = "[{0}] {1}" -f (Get-Date -Format 'yyyy-MM-dd HH:mm:ss'), `$m; Add-Content -LiteralPath `$LogPath -Value `$line -ErrorAction SilentlyContinue; Write-Host `$line }
-try {
-    if (!(Test-Path 'C:\ctxadmin')) { New-Item -ItemType Directory -Path 'C:\ctxadmin' -Force | Out-Null }
-    Write-LogSimple "Simple patch runner start. Categories: `$($Categories -join ', ')"
-    Import-Module PSWindowsUpdate -ErrorAction Stop
-    Write-LogSimple "Scanning for updates..."
-    `$scan = Get-WindowsUpdate -Category `$Categories -IgnoreUserInput -ErrorAction Stop -MicrosoftUpdate
-    `$count = (`$scan | Measure-Object).Count
-    Write-LogSimple "Found `$count update(s)"
-    if (`$count -gt 0) {
-        Write-LogSimple "Installing updates..."
-        Install-WindowsUpdate -AcceptAll -IgnoreReboot -Category `$Categories -Verbose -MicrosoftUpdate -ErrorAction Continue | Out-Host
-        Write-LogSimple "Install pass complete. Rebooting..."
-        Restart-Computer -Force
-        Write-LogSimple "Waiting for reboot..."
-        Start-Sleep -Seconds `$SleepAfterRebootSeconds
-        Write-LogSimple "Post-reboot wait complete."
-    } else {
-        Write-LogSimple "No updates to install."
-    }
-} catch {
-    Write-LogSimple "ERROR: `$($_.Exception.Message)"
-    throw
-}
-"@
-
-    Write-Host ("[{0}] Deploying minimal runner to {1}\C$\ctxadmin\mspatch-run.ps1 ..." -f (Get-Date), $ComputerName) -ForegroundColor Yellow
-    Invoke-Command -ComputerName $ComputerName -Credential $Credential -Authentication $WinRMAuthentication -UseSSL:$UseSSL -ScriptBlock {
-        param($content,$logPath)
-        $dir = 'C:\ctxadmin'
-        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-        $path = Join-Path $dir 'mspatch-run.ps1'
-        Set-Content -LiteralPath $path -Value $content -Encoding UTF8 -Force
-        Write-Host ("[{0}] Running local mspatch-run.ps1" -f (Get-Date)) -ForegroundColor Cyan
-        powershell.exe -ExecutionPolicy Bypass -File $path -LogPath $logPath
-    } -ArgumentList $simpleScript,$LogPath
-    Write-Host ("[{0}] Deployment invoked. Exiting wrapper." -f (Get-Date)) -ForegroundColor Green
-    exit 0
-}
+# Remote patching: always use the main loop below. Invoke-Command runs scan/install on target,
+# returns without rebooting. We handle Restart-Computer and Wait-ForWinRMReboot locally.
+# (The old "minimal runner" path deployed a script that rebooted the target, killing the Invoke-Command session.)
 
 $scriptStart = Get-Date
 Write-Host ("[{0}] Target: {1} (local run)" -f $scriptStart, $ComputerName) -ForegroundColor Cyan
@@ -558,7 +529,7 @@ try {
             -Level "info" `
             -Computer $env:COMPUTERNAME
 
-        $scan = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $false,$false
+        $scan = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $false,$false,$UpdateCategories
         $scan | Format-List
 
         if ($scan.Action -eq "NoUpdates") {
@@ -653,7 +624,7 @@ try {
         Write-Log "Install/reboot loop complete. Reboots performed: $rebootCount"
 
         # Final scan safety check (only shutdown if truly NoUpdates now)
-        $finalScan = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $false,$false
+        $finalScan = Invoke-Command @invokeCommon -ScriptBlock $UpdateScript -ArgumentList $false,$false,$UpdateCategories
         $finalScan | Format-List
 
         if ($finalScan.Action -eq "NoUpdates") {
@@ -704,6 +675,24 @@ try {
 catch {
     $err = $_.Exception.Message
     Write-Error $err
+    Write-Log "ERROR: $err"
+
+    # Try to read remote log for diagnosis (helps when endpoint fails mid-run)
+    try {
+        $logLines = Invoke-Command @invokeCommon -ScriptBlock {
+            $path = 'C:\ctxadmin\MSpatch.log'
+            if (Test-Path $path) {
+                Get-Content $path -Tail 25 -ErrorAction SilentlyContinue
+            } else { "Log file not found." }
+        } -ErrorAction SilentlyContinue
+        if ($logLines) {
+            Write-Host ("[{0}] --- Remote log (last 25 lines) ---" -f (Get-Date)) -ForegroundColor Yellow
+            $logLines | ForEach-Object { Write-Host $_ }
+            Write-Host ("[{0}] --- End remote log ---" -f (Get-Date)) -ForegroundColor Yellow
+        }
+    } catch {
+        Write-Host ("[{0}] Could not read remote log (target may be offline): $($_.Exception.Message)" -f (Get-Date)) -ForegroundColor DarkYellow
+    }
 
     $null = Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl `
         -Title "MSPatch ERROR" `
@@ -711,7 +700,6 @@ catch {
         -Level "error" `
         -Computer $env:COMPUTERNAME
 
-            Write-Log "ERROR: $err"
     throw
 }
 finally {

@@ -615,6 +615,45 @@ app.get('/sportsplus', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sportsplus.html'));
 });
 
+// TomoPI page
+app.get('/tomopi', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'tomopi.html'));
+});
+
+// TomoPI config API (Pi fetches this, admin saves via panel)
+const tomopiConfigPath = path.join(__dirname, 'tomopi-data', 'tomopi-config.json');
+function serveTomoPIConfig(req, res) {
+  try {
+    const raw = fs.readFileSync(tomopiConfigPath, 'utf8');
+    const json = JSON.parse(raw);
+    res.setHeader('Content-Type', 'application/json');
+    res.json(json);
+  } catch (err) {
+    console.error('TomoPI config read error:', err);
+    res.status(500).json({ error: 'Config file not found or invalid' });
+  }
+}
+// Pi fetches from https://lab007.ai/tomopi/config.json
+app.get('/tomopi/config.json', serveTomoPIConfig);
+app.get('/api/tomopi/config', serveTomoPIConfig);
+function saveTomoPIConfig(req, res) {
+  try {
+    const dir = path.dirname(tomopiConfigPath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const body = req.body;
+    if (!body || typeof body !== 'object') {
+      return res.status(400).json({ error: 'Invalid JSON body' });
+    }
+    fs.writeFileSync(tomopiConfigPath, JSON.stringify(body, null, 2), 'utf8');
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('TomoPI config write error:', err);
+    res.status(500).json({ error: err.message });
+  }
+}
+app.post('/tomopi/config.json', saveTomoPIConfig);
+app.post('/api/tomopi/config', saveTomoPIConfig);
+
 // Serve main public directory static files (for CSS, JS, images used by landing page)
 // This must come AFTER the catch-all route and AFTER all project apps
 app.use(express.static(path.join(__dirname, 'public')));
@@ -626,6 +665,7 @@ console.log(`LAB007 Unified Services`);
 console.log(`========================================`);
 console.log(`Server running on port ${PORT}`);
 console.log(`Main landing page: http://localhost:${PORT}/`);
+console.log(`TomoPI: http://localhost:${PORT}/tomopi`);
 console.log(`3D Print: http://localhost:${PORT}/3dprint`);
 console.log(`Citrix: http://localhost:${PORT}/citrix`);
 console.log(`VIN Value: http://localhost:${PORT}/vinvalue`);

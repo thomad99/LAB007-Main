@@ -1,0 +1,25 @@
+{
+  "mode": "clock_basic",
+  "rotate": "normal",
+  "refresh_seconds": 30,
+  "clock_basic": {
+    "format": "%H:%M:%S",
+    "font_size": 140
+  },
+  "slideshow": {
+    "folder": "images",
+    "seconds_per_slide": 6,
+    "shuffle": true,
+    "fit": "contain"
+  },
+  "nixie_clock": {
+    "folder": "nixie",
+    "scale": 1.0,
+    "format": "%H:%M"
+  },
+  "flip_clock": {
+    "format": "%H:%M",
+    "fps": 45,
+    "flip_ms": 450
+  }
+}
