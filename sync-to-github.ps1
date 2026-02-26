@@ -84,10 +84,12 @@ Write-Host "Local changes detected:" -ForegroundColor Yellow
 git status -s
 Write-Host ""
 
-# STEP 3: Stage all changes
+# STEP 2: Stage all changes (respecting .gitignore)
 Write-Host "Step 2: Staging all changes..." -ForegroundColor Yellow
 git add -A
-Write-Host "All changes staged." -ForegroundColor Green
+# Ensure server-only paths are never committed (tomopi images live only on web server)
+git reset HEAD -- tomopi-data/images/ 2>$null
+Write-Host "All changes staged (tomopi-data/images excluded - server-only)." -ForegroundColor Green
 Write-Host ""
 
 # STEP 3: Create commit

@@ -140,6 +140,21 @@
       cursor: pointer;
     }
     .quick-edit select:focus { outline: none; border-color: var(--accent); }
+    .upload-zone {
+      border: 2px dashed rgba(255,255,255,0.2);
+      border-radius: 12px;
+      padding: 32px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .upload-zone:hover, .upload-zone.dragover { border-color: var(--accent); background: rgba(59,130,246,0.08); }
+    .upload-zone input { display: none; }
+    .upload-zone p { margin: 0; color: var(--muted); font-size: 14px; }
+    .upload-zone .hint { font-size: 12px; margin-top: 8px; opacity: 0.8; }
+    .upload-status { margin-top: 12px; font-size: 13px; }
+    .upload-status.success { color: var(--success); }
+    .upload-status.error { color: var(--error); }
   </style>
 </head>
 <body>
@@ -162,6 +177,7 @@
           <option value="flip_clock">flip_clock</option>
           <option value="analog_clock">analog_clock</option>
           <option value="video_player">video_player</option>
+          <option value="web_images">web_images</option>
         </select>
       </div>
       <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--muted);">
@@ -173,6 +189,19 @@
         <button class="btn btn-secondary" id="reloadBtn">Reload</button>
         <span class="status" id="status"></span>
       </div>
+    </div>
+
+    <div class="panel">
+      <h2>Slideshow images</h2>
+      <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--muted);">
+        Upload photos for the slideshow. Stored at <code>/tomopi/images</code> on the server (not in git).
+      </p>
+      <div class="upload-zone" id="uploadZone">
+        <input type="file" id="photoInput" accept="image/jpeg,image/png,image/gif,image/webp" multiple>
+        <p>Drop photos here or click to browse</p>
+        <p class="hint">JPEG, PNG, GIF, WebP — max 20MB each, up to 20 at once</p>
+      </div>
+      <div class="upload-status" id="uploadStatus"></div>
     </div>
   </div>
 
@@ -262,6 +291,49 @@
     modeSelect.addEventListener('change', applyModeFromDropdown);
     editor.addEventListener('input', syncModeFromEditor);
     load();
+
+    // Photo upload
+    const uploadZone = document.getElementById('uploadZone');
+    const photoInput = document.getElementById('photoInput');
+    const uploadStatus = document.getElementById('uploadStatus');
+
+    uploadZone.addEventListener('click', () => photoInput.click());
+    uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+    uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+    uploadZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      uploadZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) doUpload(e.dataTransfer.files);
+    });
+    photoInput.addEventListener('change', (e) => {
+      if (e.target.files.length) doUpload(e.target.files);
+      e.target.value = '';
+    });
+
+    async function doUpload(files) {
+      const formData = new FormData();
+      for (let i = 0; i < Math.min(files.length, 20); i++) {
+        if (files[i].type.startsWith('image/')) formData.append('photos', files[i]);
+      }
+      if (!formData.getAll('photos').length) {
+        uploadStatus.textContent = 'No valid image files selected.';
+        uploadStatus.className = 'upload-status error';
+        return;
+      }
+      uploadStatus.textContent = 'Uploading...';
+      uploadStatus.className = 'upload-status';
+      try {
+        const r = await fetch('/tomopi/images/upload', { method: 'POST', body: formData });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(data.error || r.statusText);
+        const count = (data.uploaded || []).length;
+        uploadStatus.textContent = 'Uploaded ' + count + ' photo(s) to /tomopi/images';
+        uploadStatus.className = 'upload-status success';
+      } catch (e) {
+        uploadStatus.textContent = 'Upload failed: ' + e.message;
+        uploadStatus.className = 'upload-status error';
+      }
+    }
   </script>
 </body>
 </html>

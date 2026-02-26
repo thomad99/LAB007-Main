@@ -50,3 +50,6 @@ shots/
 !**/images/**/*.png
 !**/images/**/*.jpg
 
+# TomoPI uploaded images - server-only, never in git
+tomopi-data/images/
+

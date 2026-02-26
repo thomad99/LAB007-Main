@@ -622,6 +622,25 @@ app.get('/tomopi', (req, res) => {
 
 // TomoPI config API (Pi fetches this, admin saves via panel)
 const tomopiConfigPath = path.join(__dirname, 'tomopi-data', 'tomopi-config.json');
+const tomopiImagesDir = path.join(__dirname, 'tomopi-data', 'images');
+if (!fs.existsSync(tomopiImagesDir)) {
+  fs.mkdirSync(tomopiImagesDir, { recursive: true });
+}
+const tomopiUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, tomopiImagesDir),
+    filename: (req, file, cb) => {
+      const ext = (path.extname(file.originalname) || '.jpg').toLowerCase();
+      const safeBase = path.basename(file.originalname, path.extname(file.originalname)).replace(/[^a-zA-Z0-9_-]/g, '_') || 'photo';
+      cb(null, `${safeBase}-${Date.now()}${ext}`);
+    }
+  }),
+  limits: { fileSize: 1024 * 1024 * 20 },
+  fileFilter: (req, file, cb) => {
+    const ok = /^image\/(jpeg|jpg|png|gif|webp)$/i.test(file.mimetype);
+    cb(ok ? null : new Error('Only images (jpeg, png, gif, webp) allowed'), ok);
+  }
+});
 function serveTomoPIConfig(req, res) {
   try {
     const raw = fs.readFileSync(tomopiConfigPath, 'utf8');
@@ -653,6 +672,25 @@ function saveTomoPIConfig(req, res) {
 }
 app.post('/tomopi/config.json', saveTomoPIConfig);
 app.post('/api/tomopi/config', saveTomoPIConfig);
+
+// TomoPI images: serve at /tomopi/images/* (slideshow folder)
+app.use('/tomopi/images', express.static(tomopiImagesDir));
+function handleTomoPIImageUpload(req, res) {
+  const files = (req.files || []).map(f => ({ name: f.filename, path: `/tomopi/images/${f.filename}` }));
+  res.json({ ok: true, uploaded: files });
+}
+app.post('/tomopi/images/upload', (req, res, next) => {
+  tomopiUpload.array('photos', 20)(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    handleTomoPIImageUpload(req, res);
+  });
+});
+app.post('/api/tomopi/images/upload', (req, res, next) => {
+  tomopiUpload.array('photos', 20)(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message });
+    handleTomoPIImageUpload(req, res);
+  });
+});
 
 // Serve main public directory static files (for CSS, JS, images used by landing page)
 // This must come AFTER the catch-all route and AFTER all project apps

@@ -1,18 +1,43 @@
 {
-  "mode": "video_player",
-  "rotate": "normal",
-  "refresh_seconds": 30,
+  "_comment_fonts": [
+    "font_name uses pygame SysFont names (depends on installed fonts).",
+    "Common good ones: null (default), 'dejavusans', 'dejavusansmono',",
+    "'freesans', 'arial', 'verdana', 'tahoma', 'liberationsans'.",
+    "To list fonts on the Pi run:",
+    "python3 -c \"import pygame; pygame.init(); print(sorted(pygame.font.get_fonts())[:200])\""
+  ],
+
+  "mode": "slideshow",
+  "rotate": "leftl",
+  "refresh_seconds": 15,
 
   "clock_basic": {
     "format": "%H:%M:%S",
-    "font_size": 340
+    "font_name": "dejavusans",
+    "font_size": 220,
+    "bold": true,
+    "color_rgb": [255, 170, 90],
+    "bg_rgb": [0, 0, 0]
   },
 
   "slideshow": {
     "folder": "images",
     "seconds_per_slide": 6,
     "shuffle": true,
-    "fit": "contain"
+    "fit": "cover",
+
+    "clock": {
+      "enabled": true,
+      "layout": "center",
+      "format": "%H:%M",
+      "font_name": "dejavusans",
+      "font_size": 140,
+      "bold": true,
+      "color_rgb": [255, 255, 255],
+      "box": true,
+      "box_alpha": 120,
+      "box_pad": 24
+    }
   },
 
   "nixie_clock": {
@@ -39,5 +64,17 @@
     "audio": "on",
     "volume": 70,
     "shuffle": false
+  },
+
+  "web_images": {
+    "manifest_url": "https://www.lab007.ai/tomopi/images/images.json",
+    "index_url": "https://www.lab007.ai/tomopi/images/",
+    "seconds_per_slide": 6,
+    "refresh_list_seconds": 300,
+    "transition": "fade",
+    "fade_ms": 450,
+    "shuffle": true,
+    "fit": "contain",
+    "cache_dir": "web_cache"
   }
 }
