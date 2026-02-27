@@ -3770,6 +3770,41 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('</script>');
         scriptLines.push('\'@');
         scriptLines.push('$html = "<!DOCTYPE html><html><head><meta charset=`"utf-8`"/><style>$style</style></head><body>"+$pre+$tab+$filterScript+"</body></html>"');
+    } else if (action === 'imageDates') {
+        scriptLines.push('$cols = @("Farm","BaseImage","Snapshot","SnapshotTimestamp")');
+        scriptLines.push('$tab = $response | ConvertTo-Html -Property $cols -Fragment');
+        scriptLines.push('$pre = "<h1>HZ Image Dates Report</h1><p>Click a column header to sort. Click again to toggle ascending/descending.</p>"');
+        scriptLines.push('$sortScript = @\'');
+        scriptLines.push('<script>');
+        scriptLines.push('(function(){');
+        scriptLines.push('  var t=document.querySelector("table");if(!t)return;');
+        scriptLines.push('  var h=t.querySelector("tr");if(!h)return;');
+        scriptLines.push('  var dir=1;var lastCol=-1;');
+        scriptLines.push('  for(var i=0;i<h.cells.length;i++){');
+        scriptLines.push('    var th=h.cells[i];');
+        scriptLines.push('    th.style.cursor="pointer";th.style.userSelect="none";');
+        scriptLines.push('    th.title="Click to sort";');
+        scriptLines.push('    (function(col){');
+        scriptLines.push('      th.onclick=function(){');
+        scriptLines.push('        if(lastCol===col){dir=-dir;}else{dir=1;lastCol=col;}');
+        scriptLines.push('        var rows=Array.prototype.slice.call(t.querySelectorAll("tr"),1);');
+        scriptLines.push('        rows.sort(function(a,b){');
+        scriptLines.push('          var va=(a.cells[col]&&a.cells[col].textContent)||"";');
+        scriptLines.push('          var vb=(b.cells[col]&&b.cells[col].textContent)||"";');
+        scriptLines.push('          var na=!isNaN(parseFloat(va))&&isFinite(va);');
+        scriptLines.push('          var nb=!isNaN(parseFloat(vb))&&isFinite(vb);');
+        scriptLines.push('          if(na&&nb){return dir*(parseFloat(va)-parseFloat(vb));}');
+        scriptLines.push('          return dir*(String(va).localeCompare(vb));');
+        scriptLines.push('        });');
+        scriptLines.push('        var container=rows[0]?rows[0].parentNode:t;');
+        scriptLines.push('        rows.forEach(function(r){container.appendChild(r);});');
+        scriptLines.push('      };');
+        scriptLines.push('    })(i);');
+        scriptLines.push('  }');
+        scriptLines.push('})();');
+        scriptLines.push('</script>');
+        scriptLines.push('\'@');
+        scriptLines.push('$html = "<!DOCTYPE html><html><head><meta charset=`"utf-8`"/><style>$style</style></head><body>"+$pre+$tab+$sortScript+"</body></html>"');
     } else {
         scriptLines.push('$html = $response | ConvertTo-Html -PreContent "<h2>${cfg.name}</h2><p>${cfg.desc}</p>" -Head "<style>$style</style>"');
     }
