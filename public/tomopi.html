@@ -175,6 +175,26 @@
       min-height: 80px;
       font-size: 12px;
     }
+    .rss-presets {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 6px 16px;
+      max-height: 180px;
+      overflow-y: auto;
+      padding: 12px;
+      background: #0d1117;
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    .rss-presets label {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      cursor: pointer;
+      color: var(--text);
+    }
+    .rss-presets input[type="checkbox"] { cursor: pointer; }
   </style>
 </head>
 <body>
@@ -326,8 +346,10 @@
           </div>
         </div>
         <div class="ctrl-item rss-list">
-          <label for="rssFeeds">RSS feeds (one URL per line)</label>
-          <textarea id="rssFeeds" placeholder="https://feeds.bbci.co.uk/news/rss.xml" rows="3"></textarea>
+          <label>RSS feeds — select one or more</label>
+          <div class="rss-presets" id="rssPresets"></div>
+          <label for="rssFeeds" style="margin-top:10px;display:block;">Custom URLs (one per line)</label>
+          <textarea id="rssFeeds" placeholder="Add custom feed URLs here..." rows="2"></textarea>
         </div>
         <div class="ctrl-item rss-list">
           <label for="tickersInput">Stock tickers (one per line or comma-separated)</label>
@@ -381,9 +403,32 @@
     const transitionMs = document.getElementById('transitionMs');
     const maxHeadlines = document.getElementById('maxHeadlines');
     const rssFeeds = document.getElementById('rssFeeds');
+    const rssPresets = document.getElementById('rssPresets');
     const tickersInput = document.getElementById('tickersInput');
 
     const CONFIG_URL = '/tomopi/config.json';
+    const RSS_PRESETS_DEFAULT = {
+      'BBC News': 'https://feeds.bbci.co.uk/news/rss.xml',
+      'CNN': 'https://rss.cnn.com/rss/edition.rss',
+      'Sky News': 'https://feeds.skynews.com/feeds/rss/home.xml',
+      'Al Jazeera': 'https://www.aljazeera.com/xml/rss/all.xml',
+      'Reuters': 'https://www.reuters.com/world/rss',
+      'Ars Technica': 'https://feeds.arstechnica.com/arstechnica/index',
+      'The Verge': 'https://www.theverge.com/rss/index.xml',
+      'TechCrunch': 'https://techcrunch.com/feed/',
+      'Wired': 'https://www.wired.com/feed/rss',
+      'Engadget': 'https://www.engadget.com/rss.xml',
+      'Financial Times': 'https://www.ft.com/?format=rss',
+      'WSJ Markets': 'https://feeds.a.dj.com/rss/RSSMarketsMain.xml',
+      'Wall Street Journal': 'https://feeds.a.dj.com/rss/RSSWSJD.xml',
+      'CNBC': 'https://www.cnbc.com/id/100003114/device/rss/rss.html',
+      'New York Times': 'https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml',
+      'Washington Post': 'https://feeds.washingtonpost.com/rss/world',
+      'ABC News': 'https://abcnews.go.com/abcnews/topstories',
+      'NASA': 'https://www.nasa.gov/rss/dyn/breaking_news.rss',
+      'Science Daily': 'https://www.sciencedaily.com/rss/top.xml',
+      'Nature': 'https://www.nature.com/nature.rss'
+    };
 
     function rgbToStr(arr) { return Array.isArray(arr) ? arr.join(',') : ''; }
     function strToRgb(s) { return s ? s.split(',').map(Number) : [0,0,0]; }
@@ -436,7 +481,14 @@
         if (transitionSelect.querySelector('option[value="' + tr + '"]')) transitionSelect.value = tr;
         transitionMs.value = json.news_feed.transition_ms || '';
         maxHeadlines.value = json.news_feed.max_headlines || '';
-        rssFeeds.value = (json.news_feed.rss_feeds || []).join('\n');
+        const feeds = json.news_feed.rss_feeds || [];
+        const presets = json.rss_feed_presets || RSS_PRESETS_DEFAULT;
+        const presetUrls = Object.values(presets);
+        const customUrls = feeds.filter(u => !presetUrls.includes(u));
+        rssFeeds.value = customUrls.join('\n');
+        rssPresets.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+          cb.checked = feeds.includes(cb.dataset.url);
+        });
         tickersInput.value = (json.news_feed.tickers || []).join('\n');
         const fc = rgbToStr(json.news_feed.clock_color_rgb) || rgbToStr(json.news_feed.text_color_rgb);
         ensureColorOption(fontColorSelect, fc, 'Custom');
@@ -533,8 +585,12 @@
           if (refreshStocksSeconds.value) j.news_feed.refresh_stocks_seconds = parseInt(refreshStocksSeconds.value, 10);
           if (transitionMs.value) j.news_feed.transition_ms = parseInt(transitionMs.value, 10);
           if (maxHeadlines.value) j.news_feed.max_headlines = parseInt(maxHeadlines.value, 10);
-          const urls = rssFeeds.value.split('\n').map(s => s.trim()).filter(Boolean);
-          if (urls.length) j.news_feed.rss_feeds = urls;
+          const presetUrls = [];
+          rssPresets.querySelectorAll('input[type="checkbox"]:checked').forEach(cb => {
+            presetUrls.push(cb.dataset.url);
+          });
+          const customUrls = rssFeeds.value.split('\n').map(s => s.trim()).filter(Boolean);
+          j.news_feed.rss_feeds = presetUrls.concat(customUrls);
           const tickers = tickersInput.value.split(/[\n,]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
           j.news_feed.tickers = tickers;
         }
@@ -546,6 +602,21 @@
       fontSelect.innerHTML = list.map(f => '<option value="' + (f || '') + '">' + (f || 'default') + '</option>').join('');
     }
 
+    function populateRssPresets(json) {
+      const presets = json.rss_feed_presets || RSS_PRESETS_DEFAULT;
+      rssPresets.innerHTML = '';
+      for (const [label, url] of Object.entries(presets)) {
+        const labelEl = document.createElement('label');
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.dataset.url = url;
+        cb.addEventListener('change', applyRefreshIntervals);
+        labelEl.appendChild(cb);
+        labelEl.appendChild(document.createTextNode(label));
+        rssPresets.appendChild(labelEl);
+      }
+    }
+
     async function load() {
       setStatus('Loading...', 'loading');
       try {
@@ -554,6 +625,7 @@
         const json = await r.json();
         editor.value = JSON.stringify(json, null, 2);
         populateFontsFromConfig(json);
+        populateRssPresets(json);
         syncControlsFromJson();
         setStatus('Loaded', 'success');
       } catch (e) {
