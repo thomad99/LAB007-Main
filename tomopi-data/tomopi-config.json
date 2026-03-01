@@ -64,6 +64,12 @@
   "mode": "news_feed",
   "rotate": "left",
   "refresh_seconds": 15,
+  "screen": {
+    "brightness": 80,
+    "schedule_enabled": true,
+    "on_time": "07:00",
+    "off_time": "22:00"
+  },
   "clock_basic": {
     "format": "%H:%M:%S",
     "font_name": "dejavusans",

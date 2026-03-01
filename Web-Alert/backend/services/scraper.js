@@ -17,7 +17,34 @@ async function loadPuppeteer() {
 
 const scraper = {
     browser: null,
-    
+
+    /**
+     * Lightweight check: if server returns 304 Not Modified, skip full scrape.
+     * Returns { skipScrape: true } if unchanged, or { skipScrape: false, etag, lastModified } for full scrape.
+     */
+    async checkIfModified(url, { etag, lastModified } = {}) {
+        try {
+            const headers = {};
+            if (etag) headers['If-None-Match'] = etag;
+            if (lastModified) headers['If-Modified-Since'] = lastModified;
+            const res = await fetch(url, {
+                method: 'HEAD',
+                headers,
+                redirect: 'follow',
+                signal: AbortSignal.timeout(10000),
+            });
+            if (res.status === 304) {
+                return { skipScrape: true };
+            }
+            const newEtag = res.headers.get('etag') || null;
+            const newLastModified = res.headers.get('last-modified') || null;
+            return { skipScrape: false, etag: newEtag, lastModified: newLastModified };
+        } catch (e) {
+            // On error, proceed with full scrape
+            return { skipScrape: false, etag: null, lastModified: null };
+        }
+    },
+
     async initBrowser() {
         if (!this.browser) {
             console.log('Initializing browser...');
@@ -174,10 +201,12 @@ const scraper = {
             let content = null;
             let error = null;
 
+            let etag = null;
+            let lastModified = null;
             while (retries > 0 && !content) {
                 try {
                     // Use domcontentloaded instead of networkidle0 for faster, more reliable loading
-                    await page.goto(url, {
+                    const response = await page.goto(url, {
                         waitUntil: 'domcontentloaded',
                         timeout: 90000 // Increased to 90 seconds
                     });
@@ -186,7 +215,14 @@ const scraper = {
                     await new Promise(resolve => setTimeout(resolve, 1000));
 
                     content = await page.content();
-                    break;
+                    // Capture ETag/Last-Modified from main document response for 304 optimization
+                    try {
+                        if (response && response.headers) {
+                            const headers = response.headers();
+                            etag = headers['etag'] || null;
+                            lastModified = headers['last-modified'] || null;
+                        }
+                    } catch (_) { /* ignore */ }
                 } catch (err) {
                     error = err;
                     console.log(`Attempt failed, ${retries - 1} retries left:`, err.message);
@@ -210,7 +246,7 @@ const scraper = {
             };
 
             await page.close();
-            return { content, debug };
+            return { content, debug, etag, lastModified };
 
         } catch (error) {
             console.error(`❌ Error scraping ${url}:`, error.message);
@@ -227,7 +263,9 @@ const scraper = {
 
             return {
                 content: `Error scraping content: ${error.message}`,
-                debug: debug
+                debug: debug,
+                etag: null,
+                lastModified: null
             };
         }
     },

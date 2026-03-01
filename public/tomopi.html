@@ -42,10 +42,16 @@
       margin: 0;
       color: var(--accent);
     }
+    .header-logo-wrap {
+      display: flex;
+      align-items: center;
+      text-decoration: none;
+    }
     .header-logo {
-      height: 36px;
+      height: 48px;
       width: auto;
-      opacity: 0.9;
+      opacity: 0.95;
+      display: block;
     }
     .panel {
       background: var(--panel);
@@ -195,13 +201,26 @@
       color: var(--text);
     }
     .rss-presets input[type="checkbox"] { cursor: pointer; }
+    .ctrl-hint { font-size: 12px; color: var(--muted); margin: 8px 0 0 0; }
+    .ctrl-item input[type="time"] {
+      padding: 8px 12px;
+      font-size: 14px;
+      font-family: inherit;
+      background: #0d1117;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 6px;
+    }
+    .ctrl-item input[type="time"]:focus { outline: none; border-color: var(--accent); }
   </style>
 </head>
 <body>
   <div class="wrap">
     <header>
+      <a href="/" class="header-logo-wrap" title="LAB007">
+        <img src="/images/lab007-trans.PNG" alt="LAB007" class="header-logo">
+      </a>
       <h1>TomoPI</h1>
-      <img src="/images/lab007-trans.PNG" alt="LAB007" class="header-logo">
     </header>
 
     <div class="panel">
@@ -229,6 +248,39 @@
             <option value="180">180</option>
           </select>
         </div>
+      </div>
+
+      <div class="ctrl-section">
+        <h3>Screen</h3>
+        <div class="ctrl-grid">
+          <div class="ctrl-item">
+            <label for="brightnessSelect">Brightness</label>
+            <select id="brightnessSelect">
+              <option value="10">10% — Dim (night)</option>
+              <option value="25">25%</option>
+              <option value="50">50%</option>
+              <option value="75">75%</option>
+              <option value="80">80%</option>
+              <option value="100">100% — Full</option>
+            </select>
+          </div>
+          <div class="ctrl-item">
+            <label for="scheduleEnabled">Schedule (ON/OFF times)</label>
+            <select id="scheduleEnabled">
+              <option value="false">Always on</option>
+              <option value="true">Use schedule</option>
+            </select>
+          </div>
+          <div class="ctrl-item">
+            <label for="onTimeInput">Screen ON at</label>
+            <input type="time" id="onTimeInput" value="07:00">
+          </div>
+          <div class="ctrl-item">
+            <label for="offTimeInput">Screen OFF at</label>
+            <input type="time" id="offTimeInput" value="22:00">
+          </div>
+        </div>
+        <p class="ctrl-hint">When schedule is enabled, the display turns on at the ON time and off at the OFF time (e.g. 7:00 AM–10:00 PM).</p>
       </div>
 
       <div class="ctrl-section" id="colorFontSection">
@@ -405,6 +457,10 @@
     const rssFeeds = document.getElementById('rssFeeds');
     const rssPresets = document.getElementById('rssPresets');
     const tickersInput = document.getElementById('tickersInput');
+    const brightnessSelect = document.getElementById('brightnessSelect');
+    const scheduleEnabled = document.getElementById('scheduleEnabled');
+    const onTimeInput = document.getElementById('onTimeInput');
+    const offTimeInput = document.getElementById('offTimeInput');
 
     const CONFIG_URL = '/tomopi/config.json';
     const RSS_PRESETS_DEFAULT = {
@@ -467,6 +523,14 @@
       const r = json.rotate || 'left';
       if (rotateSelect.querySelector('option[value="' + r + '"]')) rotateSelect.value = r;
 
+      const screen = json.screen || {};
+      const b = String(screen.brightness ?? 80);
+      if (brightnessSelect.querySelector('option[value="' + b + '"]')) brightnessSelect.value = b;
+      else brightnessSelect.value = '80';
+      scheduleEnabled.value = screen.schedule_enabled ? 'true' : 'false';
+      onTimeInput.value = screen.on_time || '07:00';
+      offTimeInput.value = screen.off_time || '22:00';
+
       refreshSeconds.value = json.refresh_seconds || '';
       if (json.slideshow) secondsPerSlide.value = json.slideshow.seconds_per_slide || '';
       if (json.web_images) {
@@ -523,6 +587,16 @@
 
     function applyRotateFromDropdown() {
       applyToEditor(j => { j.rotate = rotateSelect.value; });
+    }
+
+    function applyScreenSettings() {
+      applyToEditor(j => {
+        if (!j.screen) j.screen = {};
+        j.screen.brightness = parseInt(brightnessSelect.value, 10);
+        j.screen.schedule_enabled = scheduleEnabled.value === 'true';
+        j.screen.on_time = onTimeInput.value || '07:00';
+        j.screen.off_time = offTimeInput.value || '22:00';
+      });
     }
 
     function applyFontColor() {
@@ -664,6 +738,11 @@
     reloadBtn.addEventListener('click', load);
     modeSelect.addEventListener('change', applyModeFromDropdown);
     rotateSelect.addEventListener('change', applyRotateFromDropdown);
+    brightnessSelect.addEventListener('change', applyScreenSettings);
+    scheduleEnabled.addEventListener('change', applyScreenSettings);
+    onTimeInput.addEventListener('change', applyScreenSettings);
+    offTimeInput.addEventListener('change', applyScreenSettings);
+    offTimeInput.addEventListener('blur', applyScreenSettings);
     fontColorSelect.addEventListener('change', applyFontColor);
     bgColorSelect.addEventListener('change', applyBgColor);
     fontSelect.addEventListener('change', applyFont);

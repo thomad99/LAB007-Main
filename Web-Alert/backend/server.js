@@ -2,6 +2,7 @@ if (process.env.NODE_ENV !== 'production') {
     require('dotenv').config({ path: '.env.local' });
 }
 
+const crypto = require('crypto');
 const express = require('express');
 const cors = require('cors');
 const cron = require('node-cron');
@@ -48,6 +49,18 @@ app.use(express.urlencoded({ extended: true }));
 
 // Store active monitoring tasks
 const monitoringTasks = new Map();
+
+// Change cooldown: don't alert again for same URL within this many minutes
+const CHANGE_COOLDOWN_MINUTES = parseInt(process.env.CHANGE_COOLDOWN_MINUTES || '15', 10);
+// Per-URL last alert time for cooldown
+const lastAlertAt = new Map();
+// OpenAI rate limit: only call when content length change is within this ratio (e.g. 0.3 = 30%)
+const OPENAI_LENGTH_THRESHOLD = 0.3;
+
+function contentHash(str) {
+    if (!str) return '';
+    return crypto.createHash('sha256').update(str, 'utf8').digest('hex');
+}
 
 // Function to clean/filter HTML content by removing ad-related content and dynamic/loading states
 function cleanContentForComparison(html) {
@@ -175,6 +188,25 @@ function cleanContentForComparison(html) {
     return cleaned;
 }
 
+// Extract content for comparison: try Readability.js first (article extraction), fall back to cleanContentForComparison
+function extractContentForComparison(html) {
+    if (!html) return '';
+    try {
+        const { JSDOM } = require('jsdom');
+        const { Readability } = require('@mozilla/readability');
+        const dom = new JSDOM(html, { url: 'https://example.com/' });
+        const reader = new Readability(dom.window.document);
+        const article = reader.parse();
+        if (article && (article.textContent || article.content)) {
+            const text = (article.textContent || article.content || '').replace(/\s+/g, ' ').trim();
+            if (text.length > 50) return text;
+        }
+    } catch (e) {
+        // Readability failed (e.g. not article-like page), fall through
+    }
+    return cleanContentForComparison(html);
+}
+
 // Function to check if changes are significant using OpenAI (if available)
 async function analyzeChangesWithOpenAI(contentBefore, contentAfter) {
     const openaiApiKey = process.env.OPENAI_API_KEY;
@@ -244,19 +276,25 @@ async function analyzeChangesWithOpenAI(contentBefore, contentAfter) {
 async function areChangesSignificant(contentBefore, contentAfter) {
     if (!contentBefore || !contentAfter) return true; // If one is missing, consider it significant
     
-    // Remove all the dynamic/loading patterns from both
-    const cleanedBefore = cleanContentForComparison(contentBefore);
-    const cleanedAfter = cleanContentForComparison(contentAfter);
+    // Use Readability.js when possible, else cleanContentForComparison
+    const cleanedBefore = extractContentForComparison(contentBefore);
+    const cleanedAfter = extractContentForComparison(contentAfter);
     
-    // If they're the same after cleaning, changes are not significant
-    if (cleanedBefore === cleanedAfter) {
-        return false;
-    }
+    // Hash-based comparison: robust against tiny order/attribute changes
+    const hashBefore = contentHash(cleanedBefore);
+    const hashAfter = contentHash(cleanedAfter);
+    if (hashBefore === hashAfter) return false;
     
-    // Try OpenAI analysis first (if available)
-    const openaiResult = await analyzeChangesWithOpenAI(contentBefore, contentAfter);
-    if (openaiResult !== null) {
-        return openaiResult;
+    // Rate-limit OpenAI: only call when length change is small (ambiguous cases)
+    const lenBefore = cleanedBefore.length;
+    const lenAfter = cleanedAfter.length;
+    const maxLen = Math.max(lenBefore, lenAfter, 1);
+    const lengthRatio = Math.abs(lenBefore - lenAfter) / maxLen;
+    const shouldUseOpenAI = lengthRatio <= OPENAI_LENGTH_THRESHOLD;
+    
+    if (shouldUseOpenAI) {
+        const openaiResult = await analyzeChangesWithOpenAI(contentBefore, contentAfter);
+        if (openaiResult !== null) return openaiResult;
     }
     
     // Fall back to basic text analysis
@@ -327,9 +365,11 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
                 last_content = $1, 
                 last_debug = $2,
                 check_count = 0,
-                polling_interval = $4
+                polling_interval = $4,
+                etag = $5,
+                last_modified = $6
             WHERE id = $3
-        `, [initialScrape.content, JSON.stringify(initialScrape.debug), urlId, pollingInterval]);
+        `, [initialScrape.content, JSON.stringify(initialScrape.debug), urlId, pollingInterval, initialScrape.etag || null, initialScrape.lastModified || null]);
 
         console.log(`Initial scrape completed for URL ID ${urlId} - baseline content established`);
         
@@ -351,8 +391,10 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
     }
 
     // Schedule monitoring based on polling interval
-    const cronExpression = `*/${pollingInterval} * * * *`;
-    console.log(`Scheduling cron job with expression: ${cronExpression}`);
+    // Stagger: random second within minute to avoid thundering herd on restart
+    const staggerSecond = Math.floor(Math.random() * 60);
+    const cronExpression = `${staggerSecond} */${pollingInterval} * * * *`;
+    console.log(`Scheduling cron job with expression: ${cronExpression} (staggered)`);
     const task = cron.schedule(cronExpression, async () => {
         try {
             // If task was removed from map, exit early
@@ -463,15 +505,49 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
             }
 
             console.log(`Checking URL ID ${urlId}: ${websiteUrl}`);
-            
-            // Scrape the URL
-            const { content, debug } = await scraper.scrape(websiteUrl);
 
-            // Update last check and content
-            await db.query(
-                'UPDATE monitored_urls SET last_check = NOW(), last_content = $1, last_debug = $2 WHERE id = $3',
-                [content, JSON.stringify(debug), urlId]
-            );
+            // ETag/Last-Modified: skip full scrape if server reports unchanged (saves bandwidth/CPU)
+            let modCheck = { skipScrape: false };
+            try {
+                const urlMeta = await db.query(
+                    'SELECT etag, last_modified FROM monitored_urls WHERE id = $1',
+                    [urlId]
+                );
+                const row = urlMeta.rows?.[0] || {};
+                const cachedEtag = row.etag;
+                const cachedLastModified = row.last_modified;
+                if (cachedEtag || cachedLastModified) {
+                    modCheck = await scraper.checkIfModified(websiteUrl, {
+                        etag: cachedEtag,
+                        lastModified: cachedLastModified
+                    });
+                }
+            } catch (e) {
+                // Columns may not exist yet, proceed with full scrape
+            }
+            if (modCheck.skipScrape) {
+                console.log(`URL ID ${urlId}: 304 Not Modified, skipping scrape`);
+                await db.query('UPDATE monitored_urls SET last_check = NOW() WHERE id = $1', [urlId]);
+                return;
+            }
+
+            // Scrape the URL
+            const scrapeResult = await scraper.scrape(websiteUrl);
+            const { content, debug, etag, lastModified } = scrapeResult;
+
+            // Update last check, content, and cache headers
+            try {
+                await db.query(
+                    `UPDATE monitored_urls SET last_check = NOW(), last_content = $1, last_debug = $2,
+                     etag = $4, last_modified = $5 WHERE id = $3`,
+                    [content, JSON.stringify(debug), urlId, etag || null, lastModified || null]
+                );
+            } catch (e) {
+                await db.query(
+                    'UPDATE monitored_urls SET last_check = NOW(), last_content = $1, last_debug = $2 WHERE id = $3',
+                    [content, JSON.stringify(debug), urlId]
+                );
+            }
 
             // Only increment check count and compare after the first check
             // The initial scrape establishes the baseline, subsequent checks compare against it
@@ -482,14 +558,23 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
                     [urlId]
                 );
 
-                // Clean content before comparison to filter out ad-related changes
-                const cleanedContent = cleanContentForComparison(content);
-                const cleanedPreviousContent = cleanContentForComparison(previousContent);
+                // Hash-based comparison (robust against tiny order/attribute changes)
+                const extractedContent = extractContentForComparison(content);
+                const extractedPrevious = extractContentForComparison(previousContent);
+                const hashCurrent = contentHash(extractedContent);
+                const hashPrevious = contentHash(extractedPrevious);
 
                 // Check if changes are significant (not just loading/dynamic content)
-                const isSignificant = await areChangesSignificant(previousContent, content);
-                if (cleanedContent !== cleanedPreviousContent && isSignificant) {
+                const isSignificant = hashCurrent !== hashPrevious && await areChangesSignificant(previousContent, content);
+                if (isSignificant) {
+                    // Change cooldown: don't spam alerts for same URL within X minutes
+                    const lastAlert = lastAlertAt.get(urlId);
+                    const cooldownMs = CHANGE_COOLDOWN_MINUTES * 60 * 1000;
+                    if (lastAlert && (Date.now() - lastAlert) < cooldownMs) {
+                        console.log(`Change cooldown active for URL ID ${urlId} (${CHANGE_COOLDOWN_MINUTES} min), skipping alert`);
+                    } else {
                     console.log(`Change detected for URL ID ${urlId}`);
+                    lastAlertAt.set(urlId, Date.now());
                     console.log(`Previous content length: ${previousContent ? previousContent.length : 0}`);
                     console.log(`New content length: ${content.length}`);
                     changesDetected++;
@@ -580,7 +665,7 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
                     } else {
                         console.log(`No active subscribers found for URL ID ${urlId}`);
                     }
-                    
+                    } // end cooldown else
                 } else {
                     console.log(`No change detected for URL ID ${urlId} - content matches (after filtering ads)`);
                 }
@@ -634,8 +719,20 @@ setTimeout(() => {
                     ADD COLUMN IF NOT EXISTS polling_interval INTEGER DEFAULT 3
                 `);
             } catch (error) {
-                // Column might already exist, ignore error
                 console.log('polling_interval column already exists or error adding it:', error.message);
+            }
+            // Add etag/last_modified for 304 skip-scrape optimization
+            try {
+                await db.query(`
+                    ALTER TABLE monitored_urls 
+                    ADD COLUMN IF NOT EXISTS etag VARCHAR(512)
+                `);
+                await db.query(`
+                    ALTER TABLE monitored_urls 
+                    ADD COLUMN IF NOT EXISTS last_modified VARCHAR(255)
+                `);
+            } catch (error) {
+                console.log('etag/last_modified columns already exist or error adding:', error.message);
             }
 
             // Create alert_subscribers table
