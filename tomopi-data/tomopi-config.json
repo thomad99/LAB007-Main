@@ -147,6 +147,13 @@
     "headline_font_min": 26,
     "headline_font_max": 110,
     "headline_line_spacing": 10,
+    "stock_fit_width_pct": 0.85,
+    "stock_fit_height_pct": 0.55,
+    "stock_font_min": 30,
+    "stock_font_max": 160,
+    "stock_line_spacing": 14,
+    "stock_max_lines": 8,
+    "stock_font_name": "dejavusans",
     "clock_color_rgb": [255, 128, 0],
     "text_color_rgb": [255, 128, 0],
     "bg_rgb": [0, 0, 0]

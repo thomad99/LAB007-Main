@@ -407,6 +407,45 @@
           <label for="tickersInput">Stock tickers (one per line or comma-separated)</label>
           <textarea id="tickersInput" placeholder="TSLA&#10;IBRX&#10;AAPL" rows="2"></textarea>
         </div>
+        <h4 style="margin: 16px 0 8px 0; color: var(--muted); font-size: 0.9rem;">Stock display</h4>
+        <div class="ctrl-grid">
+          <div class="ctrl-item">
+            <label for="stockFitWidth">Fit width %</label>
+            <input type="number" id="stockFitWidth" min="0" max="1" step="0.01" placeholder="0.85">
+          </div>
+          <div class="ctrl-item">
+            <label for="stockFitHeight">Fit height %</label>
+            <input type="number" id="stockFitHeight" min="0" max="1" step="0.01" placeholder="0.55">
+          </div>
+          <div class="ctrl-item">
+            <label for="stockFontMin">Font min</label>
+            <input type="number" id="stockFontMin" min="10" placeholder="30">
+          </div>
+          <div class="ctrl-item">
+            <label for="stockFontMax">Font max</label>
+            <input type="number" id="stockFontMax" min="20" placeholder="160">
+          </div>
+          <div class="ctrl-item">
+            <label for="stockLineSpacing">Line spacing</label>
+            <input type="number" id="stockLineSpacing" min="0" placeholder="14">
+          </div>
+          <div class="ctrl-item">
+            <label for="stockMaxLines">Max lines</label>
+            <input type="number" id="stockMaxLines" min="1" max="20" placeholder="8">
+          </div>
+          <div class="ctrl-item">
+            <label for="stockFontSelect">Font</label>
+            <select id="stockFontSelect">
+              <option value="dejavusans">dejavusans</option>
+              <option value="dejavusansmono">dejavusansmono</option>
+              <option value="freesans">freesans</option>
+              <option value="arial">arial</option>
+              <option value="verdana">verdana</option>
+              <option value="tahoma">tahoma</option>
+              <option value="liberationsans">liberationsans</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--muted);">
@@ -461,6 +500,13 @@
     const scheduleEnabled = document.getElementById('scheduleEnabled');
     const onTimeInput = document.getElementById('onTimeInput');
     const offTimeInput = document.getElementById('offTimeInput');
+    const stockFitWidth = document.getElementById('stockFitWidth');
+    const stockFitHeight = document.getElementById('stockFitHeight');
+    const stockFontMin = document.getElementById('stockFontMin');
+    const stockFontMax = document.getElementById('stockFontMax');
+    const stockLineSpacing = document.getElementById('stockLineSpacing');
+    const stockMaxLines = document.getElementById('stockMaxLines');
+    const stockFontSelect = document.getElementById('stockFontSelect');
 
     const CONFIG_URL = '/tomopi/config.json';
     const RSS_PRESETS_DEFAULT = {
@@ -554,6 +600,13 @@
           cb.checked = feeds.includes(cb.dataset.url);
         });
         tickersInput.value = (json.news_feed.tickers || []).join('\n');
+        stockFitWidth.value = json.news_feed.stock_fit_width_pct ?? '';
+        stockFitHeight.value = json.news_feed.stock_fit_height_pct ?? '';
+        stockFontMin.value = json.news_feed.stock_font_min ?? '';
+        stockFontMax.value = json.news_feed.stock_font_max ?? '';
+        stockLineSpacing.value = json.news_feed.stock_line_spacing ?? '';
+        stockMaxLines.value = json.news_feed.stock_max_lines ?? '';
+        stockFontSelect.value = json.news_feed.stock_font_name || 'dejavusans';
         const fc = rgbToStr(json.news_feed.clock_color_rgb) || rgbToStr(json.news_feed.text_color_rgb);
         ensureColorOption(fontColorSelect, fc, 'Custom');
         fontColorSelect.value = fc;
@@ -667,6 +720,13 @@
           j.news_feed.rss_feeds = presetUrls.concat(customUrls);
           const tickers = tickersInput.value.split(/[\n,]+/).map(s => s.trim().toUpperCase()).filter(Boolean);
           j.news_feed.tickers = tickers;
+          if (stockFitWidth.value) j.news_feed.stock_fit_width_pct = parseFloat(stockFitWidth.value);
+          if (stockFitHeight.value) j.news_feed.stock_fit_height_pct = parseFloat(stockFitHeight.value);
+          if (stockFontMin.value) j.news_feed.stock_font_min = parseInt(stockFontMin.value, 10);
+          if (stockFontMax.value) j.news_feed.stock_font_max = parseInt(stockFontMax.value, 10);
+          if (stockLineSpacing.value) j.news_feed.stock_line_spacing = parseInt(stockLineSpacing.value, 10);
+          if (stockMaxLines.value) j.news_feed.stock_max_lines = parseInt(stockMaxLines.value, 10);
+          j.news_feed.stock_font_name = stockFontSelect.value || 'dejavusans';
         }
       });
     }
@@ -674,6 +734,7 @@
     function populateFontsFromConfig(json) {
       const list = json.font_list || ['dejavusans','dejavusansmono','freesans','arial','verdana','tahoma','liberationsans'];
       fontSelect.innerHTML = list.map(f => '<option value="' + (f || '') + '">' + (f || 'default') + '</option>').join('');
+      stockFontSelect.innerHTML = list.map(f => '<option value="' + (f || '') + '">' + (f || 'default') + '</option>').join('');
     }
 
     function populateRssPresets(json) {
@@ -749,12 +810,14 @@
     fontSizeInput.addEventListener('change', applyFontSize);
     fontSizeInput.addEventListener('blur', applyFontSize);
     transitionSelect.addEventListener('change', applyRefreshIntervals);
-    [refreshSeconds, secondsPerSlide, refreshListSeconds, itemSeconds, refreshNewsSeconds, refreshStocksSeconds, transitionMs, maxHeadlines].forEach(el => {
+    const stockInputs = [stockFitWidth, stockFitHeight, stockFontMin, stockFontMax, stockLineSpacing, stockMaxLines];
+    [refreshSeconds, secondsPerSlide, refreshListSeconds, itemSeconds, refreshNewsSeconds, refreshStocksSeconds, transitionMs, maxHeadlines, ...stockInputs].forEach(el => {
       if (el) el.addEventListener('change', applyRefreshIntervals);
       if (el && el.tagName === 'INPUT') el.addEventListener('blur', applyRefreshIntervals);
     });
     rssFeeds.addEventListener('blur', applyRefreshIntervals);
     tickersInput.addEventListener('blur', applyRefreshIntervals);
+    stockFontSelect.addEventListener('change', applyRefreshIntervals);
     editor.addEventListener('input', syncControlsFromJson);
     load();
 
