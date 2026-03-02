@@ -28,6 +28,35 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Facebook Marketplace Browser Launch Endpoint
+app.post('/api/marketplace/launch', async (req, res) => {
+  try {
+    console.log('Launching visible Facebook Marketplace browser...');
+
+    // Launch visible browser for authentication
+    const browser = await launchChromium(false); // false = not headless
+    const context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    });
+    const page = await context.newPage();
+
+    // Store browser instance for later use
+    global.fbBrowser = { browser, context, page };
+
+    // Navigate to Facebook Marketplace
+    await page.goto('https://www.facebook.com/marketplace', { waitUntil: 'domcontentloaded' });
+
+    res.json({
+      message: 'Browser launched successfully. Please log into Facebook Marketplace in the opened browser window, then use the search endpoint.',
+      status: 'browser_launched'
+    });
+
+  } catch (error) {
+    console.error('Browser launch error:', error);
+    res.status(500).json({ error: 'Failed to launch browser: ' + error.message });
+  }
+});
+
 // Facebook Marketplace Search Endpoint
 app.post('/api/marketplace/search', async (req, res) => {
   try {
@@ -35,6 +64,13 @@ app.post('/api/marketplace/search', async (req, res) => {
 
     if (!make || !zipCode) {
       return res.status(400).json({ error: 'Make and ZIP code are required' });
+    }
+
+    // Check if browser is available
+    if (!global.fbBrowser || !global.fbBrowser.page) {
+      return res.status(400).json({
+        error: 'Browser not available. Please use /api/marketplace/launch first to open Facebook Marketplace and log in.'
+      });
     }
 
     console.log(`Searching Facebook Marketplace: ${make} ${model || ''} in ${zipCode}`);
@@ -45,6 +81,20 @@ app.post('/api/marketplace/search', async (req, res) => {
   } catch (error) {
     console.error('Marketplace search error:', error);
     res.status(500).json({ error: 'Search failed: ' + error.message });
+  }
+});
+
+// Facebook Marketplace Browser Close Endpoint
+app.post('/api/marketplace/close', async (req, res) => {
+  try {
+    if (global.fbBrowser) {
+      await global.fbBrowser.browser.close();
+      global.fbBrowser = null;
+    }
+    res.json({ message: 'Browser closed successfully' });
+  } catch (error) {
+    console.error('Browser close error:', error);
+    res.status(500).json({ error: 'Failed to close browser: ' + error.message });
   }
 });
 
@@ -59,31 +109,41 @@ async function ensureChromiumInstalled() {
   });
 }
 
-async function launchChromium() {
+async function launchChromium(headless = true) {
   try {
     return await chromium.launch({
-      headless: true,
-      args: [
+      headless: headless,
+      args: headless ? [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--no-zygote',
         '--single-process'
+      ] : [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu'
       ]
     });
   } catch (err) {
     // If launch fails due to missing browser, try installing once and retry
     await ensureChromiumInstalled();
     return await chromium.launch({
-      headless: true,
-      args: [
+      headless: headless,
+      args: headless ? [
         '--no-sandbox',
         '--disable-setuid-sandbox',
         '--disable-dev-shm-usage',
         '--disable-gpu',
         '--no-zygote',
         '--single-process'
+      ] : [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu'
       ]
     });
   }
@@ -91,23 +151,21 @@ async function launchChromium() {
 
 // Facebook Marketplace Search Function
 async function searchFacebookMarketplace(make, model, zipCode) {
-  let browser = null;
-  let context = null;
   try {
-    console.log('Launching browser for Facebook Marketplace...');
-    browser = await launchChromium();
+    // Use the existing authenticated browser instance
+    const { page } = global.fbBrowser;
 
-    context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
-      viewport: { width: 375, height: 667 }
-    });
-    const page = await context.newPage();
+    if (!page) {
+      throw new Error('No authenticated browser session available. Please launch browser and log in first.');
+    }
 
-    // Construct search URL - try mobile version first
+    console.log('Using authenticated browser session for Facebook Marketplace search...');
+
+    // Construct search URL - desktop version since we're authenticated
     const searchTerm = model ? `${make} ${model}` : make;
-    const searchUrl = `https://m.facebook.com/marketplace/${zipCode}/search/?query=${encodeURIComponent(searchTerm)}&exact=false`;
+    const searchUrl = `https://www.facebook.com/marketplace/${zipCode}/search/?query=${encodeURIComponent(searchTerm)}&exact=false`;
 
-    console.log('Navigating to:', searchUrl);
+    console.log('Navigating to search URL:', searchUrl);
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
     // Check if we got redirected to a login page or error page
@@ -360,14 +418,8 @@ async function searchFacebookMarketplace(make, model, zipCode) {
   } catch (error) {
     console.error('Facebook Marketplace search error:', error);
     throw new Error('Failed to search Facebook Marketplace: ' + error.message);
-  } finally {
-    if (context) {
-      await context.close();
-    }
-    if (browser) {
-      await browser.close();
-    }
   }
+  // Don't close browser - keep it open for subsequent searches
 }
 
 // Market value integration removed

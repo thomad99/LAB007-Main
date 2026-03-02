@@ -288,27 +288,55 @@
         border-color: #3b82f6;
       }
 
-      .search-btn {
-        background: #3b82f6;
-        color: white;
-        padding: 14px 30px;
-        border: none;
-        border-radius: 6px;
-        font-size: 16px;
-        font-weight: 600;
-        cursor: pointer;
-        transition: background 0.3s;
-        width: 100%;
-      }
+.button-group {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
 
-      .search-btn:hover {
-        background: #2563eb;
-      }
+.launch-btn, .search-btn, .close-btn {
+  flex: 1;
+  min-width: 120px;
+  padding: 12px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.3s;
+}
 
-      .search-btn:disabled {
-        background: #9ca3af;
-        cursor: not-allowed;
-      }
+.launch-btn {
+  background: #10b981;
+  color: white;
+}
+
+.launch-btn:hover {
+  background: #059669;
+}
+
+.search-btn {
+  background: #3b82f6;
+  color: white;
+}
+
+.search-btn:hover {
+  background: #2563eb;
+}
+
+.close-btn {
+  background: #ef4444;
+  color: white;
+}
+
+.close-btn:hover {
+  background: #dc2626;
+}
+
+.launch-btn:disabled, .search-btn:disabled, .close-btn:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
 
       /* Results */
       .results-container {
@@ -379,13 +407,54 @@
         text-decoration: underline;
       }
 
-      .error-message {
-        background: #fef2f2;
-        color: #dc2626;
-        padding: 15px;
-        border-radius: 6px;
-        border: 1px solid #fecaca;
-      }
+.error-message {
+  background: #fef2f2;
+  color: #dc2626;
+  padding: 15px;
+  border-radius: 6px;
+  border: 1px solid #fecaca;
+}
+
+.instructions {
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 20px;
+}
+
+.instructions ol {
+  margin: 10px 0 0 20px;
+  padding: 0;
+}
+
+.instructions li {
+  margin-bottom: 5px;
+}
+
+.status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px;
+  background: #d1fae5;
+  border: 1px solid #a7f3d0;
+  border-radius: 6px;
+  margin-bottom: 15px;
+}
+
+.status-dot {
+  width: 8px;
+  height: 8px;
+  background: #10b981;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-text {
+  font-weight: 500;
+  color: #065f46;
+}
 
       @media (max-width: 768px) {
         body {
@@ -519,8 +588,17 @@
     <!-- Facebook Marketplace Search Section -->
     <div class="marketplace-section">
       <div class="container">
-        <h2>Facebook Marketplace Search</h2>
-        <p class="section-subtitle">Find used cars on Facebook Marketplace</p>
+          <h2>Facebook Marketplace Search</h2>
+          <p class="section-subtitle">Find used cars on Facebook Marketplace</p>
+          <div class="instructions">
+            <p><strong>How to use:</strong></p>
+            <ol>
+              <li>Click "Launch Facebook Browser" to open a browser window</li>
+              <li>Log into Facebook in the opened browser window</li>
+              <li>Navigate to Facebook Marketplace in that browser</li>
+              <li>Return here and click "Search Marketplace" to search for cars</li>
+            </ol>
+          </div>
 
         <div class="marketplace-form">
           <div class="form-row">
@@ -566,7 +644,15 @@
               <input type="text" id="zipCode" placeholder="e.g. 34285" pattern="[0-9]{5}" maxlength="5">
             </div>
           </div>
-          <button type="button" id="searchBtn" class="search-btn">Search Marketplace</button>
+            <div id="statusIndicator" class="status-indicator" style="display: none;">
+              <span class="status-dot"></span>
+              <span class="status-text">Browser launched and ready</span>
+            </div>
+            <div class="button-group">
+              <button type="button" id="launchBtn" class="launch-btn">Launch Facebook Browser</button>
+              <button type="button" id="searchBtn" class="search-btn" disabled>Search Marketplace</button>
+              <button type="button" id="closeBtn" class="close-btn" disabled>Close Browser</button>
+            </div>
         </div>
 
         <div id="resultsContainer" class="results-container" style="display: none;">
@@ -1064,38 +1150,103 @@
       })();
 
       // Facebook Marketplace Search
-      document.addEventListener('DOMContentLoaded', function() {
-        const searchBtn = document.getElementById('searchBtn');
-        const carMake = document.getElementById('carMake');
-        const carModel = document.getElementById('carModel');
-        const zipCode = document.getElementById('zipCode');
-        const resultsContainer = document.getElementById('resultsContainer');
-        const loadingIndicator = document.getElementById('loadingIndicator');
-        const resultsBody = document.getElementById('resultsBody');
-        const errorMessage = document.getElementById('errorMessage');
+        document.addEventListener('DOMContentLoaded', function() {
+          const launchBtn = document.getElementById('launchBtn');
+          const searchBtn = document.getElementById('searchBtn');
+          const closeBtn = document.getElementById('closeBtn');
+          const statusIndicator = document.getElementById('statusIndicator');
+          const carMake = document.getElementById('carMake');
+          const carModel = document.getElementById('carModel');
+          const zipCode = document.getElementById('zipCode');
+          const resultsContainer = document.getElementById('resultsContainer');
+          const loadingIndicator = document.getElementById('loadingIndicator');
+          const resultsBody = document.getElementById('resultsBody');
+          const errorMessage = document.getElementById('errorMessage');
 
-        searchBtn.addEventListener('click', async function() {
-          const make = carMake.value.trim();
-          const model = carModel.value.trim();
-          const zip = zipCode.value.trim();
+          let browserLaunched = false;
 
-          if (!make) {
-            alert('Please select a car make');
-            return;
-          }
+          launchBtn.addEventListener('click', async function() {
+            try {
+              launchBtn.disabled = true;
+              launchBtn.textContent = 'Launching...';
 
-          if (!zip || zip.length !== 5) {
-            alert('Please enter a valid 5-digit ZIP code');
-            return;
-          }
+              const response = await fetch('/api/marketplace/launch', {
+                method: 'POST'
+              });
 
-          // Show loading state
-          resultsContainer.style.display = 'block';
-          loadingIndicator.style.display = 'block';
-          errorMessage.style.display = 'none';
-          resultsBody.innerHTML = '';
-          searchBtn.disabled = true;
-          searchBtn.textContent = 'Searching...';
+              const data = await response.json();
+
+              if (!response.ok) {
+                throw new Error(data.error || 'Failed to launch browser');
+              }
+
+              browserLaunched = true;
+              statusIndicator.style.display = 'flex';
+              searchBtn.disabled = false;
+              closeBtn.disabled = false;
+              launchBtn.textContent = 'Browser Launched ✓';
+
+            } catch (error) {
+              console.error('Launch error:', error);
+              alert('Error launching browser: ' + error.message);
+              launchBtn.disabled = false;
+              launchBtn.textContent = 'Launch Facebook Browser';
+            }
+          });
+
+          closeBtn.addEventListener('click', async function() {
+            try {
+              closeBtn.disabled = true;
+              closeBtn.textContent = 'Closing...';
+
+              const response = await fetch('/api/marketplace/close', {
+                method: 'POST'
+              });
+
+              await response.json();
+
+              browserLaunched = false;
+              statusIndicator.style.display = 'none';
+              searchBtn.disabled = true;
+              launchBtn.disabled = false;
+              launchBtn.textContent = 'Launch Facebook Browser';
+              closeBtn.textContent = 'Browser Closed ✓';
+
+            } catch (error) {
+              console.error('Close error:', error);
+              alert('Error closing browser: ' + error.message);
+              closeBtn.disabled = false;
+              closeBtn.textContent = 'Close Browser';
+            }
+          });
+
+          searchBtn.addEventListener('click', async function() {
+            const make = carMake.value.trim();
+            const model = carModel.value.trim();
+            const zip = zipCode.value.trim();
+
+            if (!browserLaunched) {
+              alert('Please launch the Facebook browser and log in first');
+              return;
+            }
+
+            if (!make) {
+              alert('Please select a car make');
+              return;
+            }
+
+            if (!zip || zip.length !== 5) {
+              alert('Please enter a valid 5-digit ZIP code');
+              return;
+            }
+
+            // Show loading state
+            resultsContainer.style.display = 'block';
+            loadingIndicator.style.display = 'block';
+            errorMessage.style.display = 'none';
+            resultsBody.innerHTML = '';
+            searchBtn.disabled = true;
+            searchBtn.textContent = 'Searching...';
 
           try {
             const response = await fetch('/api/marketplace/search', {

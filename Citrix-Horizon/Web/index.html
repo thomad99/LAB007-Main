@@ -27,7 +27,7 @@
         document.body.style.overflow = '';
     };
     window.showUagTab = function(tab){
-        ['config','debug','diagram'].forEach(t=>{
+        ['config','debug','diagram','compare'].forEach(t=>{
             const panel = document.getElementById(`uag${t.charAt(0).toUpperCase()+t.slice(1)}Panel`);
             const btn = document.getElementById(`uagTab${t.charAt(0).toUpperCase()+t.slice(1)}`);
             if (panel) panel.style.display = (t===tab)?'block':'none';
@@ -411,6 +411,7 @@
                 <button class="task-tab active" id="uagTabConfig" onclick="showUagTab('config')">Config Dashboard</button>
                 <button class="task-tab" id="uagTabDebug" onclick="showUagTab('debug')">Debug / Logs</button>
                 <button class="task-tab" id="uagTabDiagram" onclick="showUagTab('diagram')">Diagram (Manual)</button>
+                <button class="task-tab" id="uagTabCompare" onclick="showUagTab('compare')">Config Compare</button>
             </div>
 
             <div id="uagModalBody" style="flex:1 1 auto; overflow:auto; padding-right:4px;">
@@ -568,6 +569,86 @@
                 <div id="uagManualStatus" style="margin-top:8px; color:#555;"></div>
                 <div id="uagManualDiagramWrap" style="margin-top:12px; background:#fff; border:1px solid #e5e7eb; border-radius:10px; padding:10px; min-height:240px; overflow:auto;">
                     <div id="uagManualMermaid">Enter details and click Draw.</div>
+                </div>
+            </div>
+
+            <div id="uagComparePanel" class="horizon-task-panel" style="display:none;">
+                <h3>Config Compare</h3>
+                <p style="color:#555; margin-top:0;">Upload 2 or more UAG config files to compare them for differences.</p>
+
+                <div style="display:flex; gap:10px; align-items:flex-start; flex-wrap:wrap; margin-bottom:20px;">
+                    <div style="flex:1 1 auto; min-width:300px;">
+                        <label style="display:block; color:#555; margin-bottom:6px;">UAG Config Files</label>
+                        <input type="file" id="uagCompareFiles" accept=".txt,.conf,.cfg,.ini,.log,.json" multiple class="btn btn-secondary" style="background:#e5b600; color:#000; border:1px solid #e5b600; padding:10px 12px; min-height:44px; font-size:14px; height:44px; box-sizing:border-box;">
+                        <div style="margin-top:8px; color:#555; font-size:12px;">Select multiple config files (minimum 2) from different UAGs</div>
+                    </div>
+                    <div style="flex:0 0 auto;">
+                        <label style="display:block; color:#555; margin-bottom:6px;">&nbsp;</label>
+                        <button class="btn btn-primary" id="uagCompareBtn" style="min-height:44px; padding:10px 20px;">Compare Configs</button>
+                    </div>
+                </div>
+
+                <div id="uagCompareStatus" style="margin-bottom:16px; color:#555;"></div>
+
+                <div id="uagCompareResults" style="display:none;">
+                    <h4>Comparison Results</h4>
+
+                    <!-- Summary Cards -->
+                    <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(150px,1fr)); gap:8px; margin-bottom:20px;">
+                        <div class="card" style="padding:10px; min-height:60px;">
+                            <div style="font-size:12px; color:#555;">Configs Compared</div>
+                            <div id="compareStatFiles" style="font-weight:800; font-size:18px; color:#111;">0</div>
+                        </div>
+                        <div class="card" style="padding:10px; min-height:60px;">
+                            <div style="font-size:12px; color:#555;">Differences Found</div>
+                            <div id="compareStatDiffs" style="font-weight:800; font-size:18px; color:#e74c3c;">0</div>
+                        </div>
+                        <div class="card" style="padding:10px; min-height:60px;">
+                            <div style="font-size:12px; color:#555;">Identical Items</div>
+                            <div id="compareStatSame" style="font-weight:800; font-size:18px; color:#27ae60;">0</div>
+                        </div>
+                    </div>
+
+                    <!-- Differences Table -->
+                    <div style="margin-bottom:20px;">
+                        <h4 style="color:#e74c3c; margin-bottom:10px;">⚠️ Differences Found</h4>
+                        <div id="compareDiffsTable" class="table-container" style="max-height:400px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px;">
+                            <table class="data-table">
+                                <thead style="position:sticky; top:0; background:#f8f9fa; z-index:1;">
+                                    <tr>
+                                        <th style="min-width:200px;">Setting</th>
+                                        <th style="min-width:150px;">File 1</th>
+                                        <th style="min-width:150px;">Value 1</th>
+                                        <th style="min-width:150px;">File 2</th>
+                                        <th style="min-width:150px;">Value 2</th>
+                                        <th style="min-width:100px;">Concern Level</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="compareDiffsBody">
+                                    <!-- Differences will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Identical Items Table -->
+                    <div>
+                        <h4 style="color:#27ae60; margin-bottom:10px;">✅ Identical Settings</h4>
+                        <div id="compareSameTable" class="table-container" style="max-height:300px; overflow:auto; border:1px solid #e5e7eb; border-radius:8px;">
+                            <table class="data-table">
+                                <thead style="position:sticky; top:0; background:#f8f9fa; z-index:1;">
+                                    <tr>
+                                        <th style="min-width:200px;">Setting</th>
+                                        <th style="min-width:150px;">Value</th>
+                                        <th style="min-width:100px;">Files</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="compareSameBody">
+                                    <!-- Identical items will be populated here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
                 </div>
             </div>
             </div> <!-- end uagModalBody -->

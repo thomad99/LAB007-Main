@@ -5186,3 +5186,262 @@ async function saveConfigToFile(config) {
     }
 }
 
+// UAG Config Comparison Functions
+let uagCompareConfigs = [];
+let uagCompareFileNames = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    // Initialize UAG compare functionality
+    const uagCompareFiles = document.getElementById('uagCompareFiles');
+    const uagCompareBtn = document.getElementById('uagCompareBtn');
+
+    if (uagCompareFiles) {
+        uagCompareFiles.addEventListener('change', handleUagCompareFiles);
+    }
+
+    if (uagCompareBtn) {
+        uagCompareBtn.addEventListener('click', performUagConfigComparison);
+    }
+});
+
+function handleUagCompareFiles(event) {
+    const files = event.target.files;
+    if (files.length < 2) {
+        setUagCompareStatus('Please select at least 2 config files to compare.', 'error');
+        return;
+    }
+
+    uagCompareConfigs = [];
+    uagCompareFileNames = [];
+
+    Array.from(files).forEach(file => {
+        uagCompareFileNames.push(file.name);
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            try {
+                const content = e.target.result;
+                const parsed = parseUagConfig(content);
+                uagCompareConfigs.push(parsed);
+
+                // Check if all files are loaded
+                if (uagCompareConfigs.length === files.length) {
+                    setUagCompareStatus(`Loaded ${files.length} config files successfully. Click "Compare Configs" to analyze differences.`, 'success');
+                }
+            } catch (error) {
+                console.error('Error parsing config file:', error);
+                setUagCompareStatus(`Error parsing ${file.name}: ${error.message}`, 'error');
+            }
+        };
+        reader.readAsText(file);
+    });
+}
+
+function parseUagConfig(content) {
+    const config = {};
+    const lines = content.split('\n');
+
+    // Extract key UAG configuration settings
+    const patterns = {
+        'uagName': /UAG\s+Name[:\s]*([^\r\n]+)/i,
+        'uagIp': /UAG\s+IP[:\s]*([^\r\n]+)/i,
+        'connectionServerUrl': /Connection\s+Server[:\s]*([^\r\n]+)/i,
+        'connectionServerThumbprint': /Connection\s+Server\s+Thumbprint[:\s]*([^\r\n]+)/i,
+        'maxBlastConnections': /Max\s+Blast\s+Connections[:\s]*(\d+)/i,
+        'gateways': /Gateways?:?\s*([^,\r\n]+(?:,[^,\r\n]+)*)/i,
+        'externalUrls': /External\s+URLs?:?\s*([^,\r\n]+(?:,[^,\r\n]+)*)/i,
+        'connectionServers': /Connection\s+Servers?:?\s*([^,\r\n]+(?:,[^,\r\n]+)*)/i,
+        'dnsServers': /DNS\s+Servers?:?\s*([^,\r\n]+(?:,[^,\r\n]+)*)/i,
+        'adServers': /AD\s+Servers?:?\s*([^,\r\n]+(?:,[^,\r\n]+)*)/i,
+        'certificates': /Certificates?:?\s*([^,\r\n]+(?:,[^,\r\n]+)*)/i,
+        'blastSettings': /Blast\s+Settings[:\s]*([^\r\n]+)/i,
+        'tunnelSettings': /Tunnel\s+Settings[:\s]*([^\r\n]+)/i,
+        'securitySettings': /Security\s+Settings[:\s]*([^\r\n]+)/i,
+        'authenticationSettings': /Authentication\s+Settings[:\s]*([^\r\n]+)/i,
+        'loadBalancerSettings': /Load\s+Balancer\s+Settings[:\s]*([^\r\n]+)/i
+    };
+
+    // Extract values using patterns
+    for (const [key, pattern] of Object.entries(patterns)) {
+        const match = content.match(pattern);
+        if (match) {
+            config[key] = match[1].trim();
+        }
+    }
+
+    // Parse comma-separated lists
+    const listFields = ['gateways', 'externalUrls', 'connectionServers', 'dnsServers', 'adServers', 'certificates'];
+    listFields.forEach(field => {
+        if (config[field]) {
+            config[field] = config[field].split(',').map(item => item.trim()).filter(item => item);
+        }
+    });
+
+    // Extract numeric values
+    if (config.maxBlastConnections) {
+        config.maxBlastConnections = parseInt(config.maxBlastConnections);
+    }
+
+    return config;
+}
+
+function performUagConfigComparison() {
+    if (uagCompareConfigs.length < 2) {
+        setUagCompareStatus('Please select at least 2 config files to compare.', 'error');
+        return;
+    }
+
+    setUagCompareStatus('Comparing configurations...', 'loading');
+
+    try {
+        const comparison = compareUagConfigs(uagCompareConfigs, uagCompareFileNames);
+        displayComparisonResults(comparison);
+
+        setUagCompareStatus(`Comparison complete. Found ${comparison.differences.length} differences and ${comparison.identical.length} identical settings.`, 'success');
+    } catch (error) {
+        console.error('Comparison error:', error);
+        setUagCompareStatus('Error during comparison: ' + error.message, 'error');
+    }
+}
+
+function compareUagConfigs(configs, fileNames) {
+    const differences = [];
+    const identical = [];
+
+    // Get all unique keys across all configs
+    const allKeys = new Set();
+    configs.forEach(config => {
+        Object.keys(config).forEach(key => allKeys.add(key));
+    });
+
+    // Compare each key across all configs
+    for (const key of allKeys) {
+        const values = configs.map(config => config[key]);
+        const uniqueValues = [...new Set(values.map(v => JSON.stringify(v)))];
+        const concernLevel = getConcernLevel(key);
+
+        if (uniqueValues.length > 1) {
+            // Values differ - this is a difference
+            differences.push({
+                setting: key,
+                values: values.map((value, index) => ({
+                    file: fileNames[index],
+                    value: value
+                })),
+                concernLevel: concernLevel
+            });
+        } else {
+            // Values are identical
+            identical.push({
+                setting: key,
+                value: values[0],
+                files: fileNames.length
+            });
+        }
+    }
+
+    return { differences, identical };
+}
+
+function getConcernLevel(setting) {
+    // Define concern levels for different settings
+    const highConcern = ['connectionServerUrl', 'connectionServerThumbprint', 'uagIp', 'certificates', 'securitySettings'];
+    const mediumConcern = ['maxBlastConnections', 'gateways', 'externalUrls', 'authenticationSettings'];
+    const lowConcern = ['uagName', 'dnsServers', 'adServers', 'blastSettings', 'tunnelSettings', 'loadBalancerSettings'];
+
+    const settingLower = setting.toLowerCase();
+
+    if (highConcern.some(s => settingLower.includes(s.toLowerCase()))) {
+        return 'High';
+    } else if (mediumConcern.some(s => settingLower.includes(s.toLowerCase()))) {
+        return 'Medium';
+    } else if (lowConcern.some(s => settingLower.includes(s.toLowerCase()))) {
+        return 'Low';
+    } else {
+        return 'Unknown';
+    }
+}
+
+function displayComparisonResults(comparison) {
+    const resultsDiv = document.getElementById('uagCompareResults');
+    const diffsBody = document.getElementById('compareDiffsBody');
+    const sameBody = document.getElementById('compareSameBody');
+    const statFiles = document.getElementById('compareStatFiles');
+    const statDiffs = document.getElementById('compareStatDiffs');
+    const statSame = document.getElementById('compareStatSame');
+
+    // Update stats
+    statFiles.textContent = uagCompareFileNames.length;
+    statDiffs.textContent = comparison.differences.length;
+    statSame.textContent = comparison.identical.length;
+
+    // Display differences
+    if (comparison.differences.length > 0) {
+        diffsBody.innerHTML = comparison.differences.map(diff => {
+            const concernClass = diff.concernLevel === 'High' ? 'text-red-600' :
+                               diff.concernLevel === 'Medium' ? 'text-orange-600' :
+                               diff.concernLevel === 'Low' ? 'text-yellow-600' : 'text-gray-600';
+
+            // For differences, show first two files as example
+            const file1 = diff.values[0];
+            const file2 = diff.values[1];
+
+            return `
+                <tr>
+                    <td><strong>${formatSettingName(diff.setting)}</strong></td>
+                    <td>${file1.file}</td>
+                    <td>${formatValue(file1.value)}</td>
+                    <td>${file2.file}</td>
+                    <td>${formatValue(file2.value)}</td>
+                    <td><span class="${concernClass}" style="font-weight: bold;">${diff.concernLevel}</span></td>
+                </tr>
+            `;
+        }).join('');
+    } else {
+        diffsBody.innerHTML = '<tr><td colspan="6" style="text-align: center; padding: 40px; color: #6c757d;">No differences found</td></tr>';
+    }
+
+    // Display identical items
+    if (comparison.identical.length > 0) {
+        sameBody.innerHTML = comparison.identical.map(item => `
+            <tr>
+                <td><strong>${formatSettingName(item.setting)}</strong></td>
+                <td>${formatValue(item.value)}</td>
+                <td>${item.files} files</td>
+            </tr>
+        `).join('');
+    } else {
+        sameBody.innerHTML = '<tr><td colspan="3" style="text-align: center; padding: 40px; color: #6c757d;">No identical settings found</td></tr>';
+    }
+
+    resultsDiv.style.display = 'block';
+}
+
+function formatSettingName(setting) {
+    // Convert camelCase to Title Case
+    return setting
+        .replace(/([A-Z])/g, ' $1')
+        .replace(/^./, str => str.toUpperCase())
+        .trim();
+}
+
+function formatValue(value) {
+    if (Array.isArray(value)) {
+        return value.length > 0 ? value.join(', ') : 'None';
+    }
+    if (value === null || value === undefined) {
+        return 'Not set';
+    }
+    return String(value);
+}
+
+function setUagCompareStatus(message, type = '') {
+    const statusEl = document.getElementById('uagCompareStatus');
+    if (statusEl) {
+        statusEl.textContent = message;
+        statusEl.style.color = type === 'error' ? '#dc3545' :
+                             type === 'success' ? '#28a745' :
+                             type === 'loading' ? '#4a90e2' : '#6c757d';
+        statusEl.style.fontWeight = type === 'error' || type === 'success' ? 'bold' : 'normal';
+    }
+}
+
