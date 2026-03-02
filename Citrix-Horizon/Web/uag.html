@@ -91,6 +91,7 @@
 
     <div class="tabs">
         <div class="tab active" data-tab="configTab">Config Dashboard</div>
+        <div class="tab" data-tab="compareTab">Config Compare</div>
         <div class="tab" data-tab="debugTab">Debug / Logs</div>
     </div>
 
@@ -135,6 +136,44 @@
         </div>
     </div>
 
+    <div id="compareTab" class="card" style="display:none;">
+        <h2>Config Compare</h2>
+        <p>Upload two or more UAG configuration files to compare them for differences (config drift detection).</p>
+
+        <div class="section">
+            <h3>Upload Config Files</h3>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 15px; margin-bottom: 20px;">
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">UAG Config #1</label>
+                    <input type="file" id="compareFile1" accept=".txt,.conf,.cfg,.ini" class="input">
+                    <div id="compareStatus1" style="margin-top: 4px; font-size: 12px; color: var(--muted);"></div>
+                </div>
+                <div>
+                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">UAG Config #2</label>
+                    <input type="file" id="compareFile2" accept=".txt,.conf,.cfg,.ini" class="input">
+                    <div id="compareStatus2" style="margin-top: 4px; font-size: 12px; color: var(--muted);"></div>
+                </div>
+            </div>
+            <button class="btn" id="compareBtn" style="margin-bottom: 20px;">Compare Configurations</button>
+            <button class="btn" id="addFileBtn" style="margin-bottom: 20px; margin-left: 10px; background: var(--accent); color: #08111f;">Add Another File</button>
+        </div>
+
+        <div id="compareResults" style="display: none;">
+            <h3>Comparison Results</h3>
+            <div id="compareSummary" style="margin-bottom: 20px;"></div>
+
+            <div class="section">
+                <h4>Settings That Differ</h4>
+                <div id="differencesList" class="logs" style="max-height: 400px;"></div>
+            </div>
+
+            <div class="section" style="margin-top: 20px;">
+                <h4>Identical Settings</h4>
+                <div id="identicalList" class="logs" style="max-height: 200px;"></div>
+            </div>
+        </div>
+    </div>
+
     <div id="debugTab" class="card" style="display:none;">
         <h2>Debug / Logs</h2>
         <p>Import UAG log bundle (.zip). Quick search across entries.</p>
@@ -165,6 +204,7 @@ document.querySelectorAll('.tab').forEach(tab => {
         document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         document.getElementById('configTab').style.display = tab.dataset.tab === 'configTab' ? 'block':'none';
+        document.getElementById('compareTab').style.display = tab.dataset.tab === 'compareTab' ? 'block':'none';
         document.getElementById('debugTab').style.display = tab.dataset.tab === 'debugTab' ? 'block':'none';
     };
 });
@@ -173,6 +213,18 @@ document.getElementById('configFile').addEventListener('change', handleConfigFil
 document.getElementById('logFile').addEventListener('change', handleLogZip);
 document.getElementById('logSearchBtn').addEventListener('click', renderLogs);
 document.getElementById('logSearch').addEventListener('input', renderLogs);
+
+// Config Compare functionality
+let compareConfigs = [null, null]; // Initialize for 2 files
+let compareFileInputs = [document.getElementById('compareFile1'), document.getElementById('compareFile2')];
+
+document.getElementById('compareBtn').addEventListener('click', compareConfigurations);
+document.getElementById('addFileBtn').addEventListener('click', addCompareFileInput);
+
+// Initialize compare file listeners
+compareFileInputs.forEach((input, index) => {
+    input.addEventListener('change', (e) => handleCompareFile(e, index));
+});
 
 function setStatus(id,msg){ const el=document.getElementById(id); if(el) el.textContent=msg||''; }
 
@@ -314,6 +366,203 @@ function renderLogs(){
 
 function escapeHtml(str){
     return String(str||'').replace(/[&<>"]/g,s=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[s]));
+}
+
+// Config Compare Functions
+async function handleCompareFile(e, index) {
+    const file = e.target.files[0];
+    if (!file) {
+        compareConfigs[index] = null;
+        setStatus(`compareStatus${index + 1}`, '');
+        return;
+    }
+
+    setStatus(`compareStatus${index + 1}`, `Reading ${file.name}...`);
+    try {
+        const text = await file.text();
+        compareConfigs[index] = {
+            name: file.name,
+            content: text,
+            parsed: parseUagConfig(text)
+        };
+        setStatus(`compareStatus${index + 1}`, `Loaded ${file.name}`);
+    } catch (error) {
+        console.error('Error reading compare file:', error);
+        setStatus(`compareStatus${index + 1}`, `Error: ${error.message}`);
+        compareConfigs[index] = null;
+    }
+}
+
+function addCompareFileInput() {
+    const container = document.querySelector('#compareTab .section:first-child');
+    const grid = container.querySelector('div[style*="grid-template-columns"]');
+
+    const fileIndex = compareFileInputs.length + 1;
+    const fileId = `compareFile${fileIndex}`;
+
+    const fileDiv = document.createElement('div');
+    fileDiv.innerHTML = `
+        <label style="display: block; margin-bottom: 8px; font-weight: 600;">UAG Config #${fileIndex}</label>
+        <input type="file" id="${fileId}" accept=".txt,.conf,.cfg,.ini" class="input">
+        <div id="compareStatus${fileIndex}" style="margin-top: 4px; font-size: 12px; color: var(--muted);"></div>
+    `;
+
+    grid.appendChild(fileDiv);
+
+    const newInput = document.getElementById(fileId);
+    compareFileInputs.push(newInput);
+    newInput.addEventListener('change', (e) => handleCompareFile(e, fileIndex - 1));
+}
+
+async function compareConfigurations() {
+    const validConfigs = compareConfigs.filter(config => config && config.parsed);
+
+    if (validConfigs.length < 2) {
+        alert('Please upload at least 2 valid config files to compare.');
+        return;
+    }
+
+    const results = compareUagConfigs(validConfigs);
+    displayComparisonResults(results, validConfigs);
+}
+
+function compareUagConfigs(configs) {
+    const differences = [];
+    const identical = [];
+
+    // Get all unique keys from all configs
+    const allKeys = new Set();
+    configs.forEach(config => {
+        Object.keys(config.parsed).forEach(key => allKeys.add(key));
+    });
+
+    // Compare each key across all configs
+    for (const key of allKeys) {
+        const values = configs.map(config => ({
+            name: config.name,
+            value: config.parsed[key] || null
+        }));
+
+        const uniqueValues = [...new Set(values.map(v => JSON.stringify(v.value)))];
+        const allSame = uniqueValues.length === 1;
+
+        if (allSame) {
+            // All configs have the same value
+            identical.push({
+                key: key,
+                value: values[0].value,
+                configs: configs.map(c => c.name)
+            });
+        } else {
+            // Values differ between configs
+            differences.push({
+                key: key,
+                values: values
+            });
+        }
+    }
+
+    return { differences, identical };
+}
+
+function displayComparisonResults(results, configs) {
+    const resultsDiv = document.getElementById('compareResults');
+    const summaryDiv = document.getElementById('compareSummary');
+    const differencesDiv = document.getElementById('differencesList');
+    const identicalDiv = document.getElementById('identicalList');
+
+    // Summary
+    const configNames = configs.map(c => c.name).join(', ');
+    summaryDiv.innerHTML = `
+        <div class="stat" style="margin-bottom: 10px;">
+            <div class="title">Files Compared</div>
+            <div class="val">${configs.length}</div>
+        </div>
+        <div class="stat" style="margin-bottom: 10px;">
+            <div class="title">Differences Found</div>
+            <div class="val" style="color: ${results.differences.length > 0 ? '#ef4444' : '#22c55e'};">${results.differences.length}</div>
+        </div>
+        <div class="stat" style="margin-bottom: 10px;">
+            <div class="title">Identical Settings</div>
+            <div class="val">${results.identical.length}</div>
+        </div>
+        <p style="margin: 10px 0 0 0; font-size: 14px;">Comparing: ${configNames}</p>
+    `;
+
+    // Differences
+    if (results.differences.length > 0) {
+        const diffHtml = results.differences.map(diff => {
+            const valueLines = diff.values.map(v =>
+                `<strong>${escapeHtml(v.name)}</strong>: ${v.value ? escapeHtml(JSON.stringify(v.value)) : '<em>not set</em>'}`
+            ).join('<br>');
+            return `<div class="log-line" style="border-left: 3px solid #ef4444; padding-left: 10px; margin-bottom: 10px;">
+                <strong style="color: #ef4444;">${escapeHtml(diff.key)}</strong><br>
+                ${valueLines}
+            </div>`;
+        }).join('');
+        differencesDiv.innerHTML = diffHtml;
+    } else {
+        differencesDiv.innerHTML = '<div class="log-line" style="color: #22c55e;">No differences found - all configurations are identical!</div>';
+    }
+
+    // Identical settings (show first 50)
+    if (results.identical.length > 0) {
+        const identicalHtml = results.identical.slice(0, 50).map(identical => {
+            const valueStr = identical.value ? escapeHtml(JSON.stringify(identical.value)) : '<em>not set</em>';
+            return `<div class="log-line">
+                <strong>${escapeHtml(identical.key)}</strong>: ${valueStr}
+            </div>`;
+        }).join('');
+
+        if (results.identical.length > 50) {
+            identicalHtml += `<div class="log-line" style="color: var(--muted);">... and ${results.identical.length - 50} more identical settings</div>`;
+        }
+
+        identicalDiv.innerHTML = identicalHtml;
+    } else {
+        identicalDiv.innerHTML = '<div class="log-line">No identical settings found.</div>';
+    }
+
+    resultsDiv.style.display = 'block';
+    resultsDiv.scrollIntoView({ behavior: 'smooth' });
+}
+
+function parseUagConfig(text) {
+    const config = {};
+    const lines = text.split(/\r?\n/);
+
+    for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('//')) continue;
+
+        // Look for key=value patterns
+        const kvMatch = trimmed.match(/^([^=]+)=(.*)$/);
+        if (kvMatch) {
+            const key = kvMatch[1].trim();
+            const value = kvMatch[2].trim();
+            config[key] = value;
+            continue;
+        }
+
+        // Look for key: value patterns
+        const colonMatch = trimmed.match(/^([^:]+):(.*)$/);
+        if (colonMatch) {
+            const key = colonMatch[1].trim();
+            const value = colonMatch[2].trim();
+            config[key] = value;
+            continue;
+        }
+
+        // Look for XML-style attributes
+        const attrMatch = trimmed.match(/([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*["']([^"']*)["']/);
+        if (attrMatch) {
+            const key = attrMatch[1];
+            const value = attrMatch[2];
+            config[key] = value;
+        }
+    }
+
+    return config;
 }
 </script>
 </body>
