@@ -98,43 +98,154 @@ async function searchFacebookMarketplace(make, model, zipCode) {
     browser = await launchChromium();
 
     context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+      userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
+      viewport: { width: 375, height: 667 }
     });
     const page = await context.newPage();
 
-    // Construct search URL
+    // Construct search URL - try mobile version first
     const searchTerm = model ? `${make} ${model}` : make;
-    const searchUrl = `https://www.facebook.com/marketplace/${zipCode}/search/?query=${encodeURIComponent(searchTerm)}&exact=false`;
+    const searchUrl = `https://m.facebook.com/marketplace/${zipCode}/search/?query=${encodeURIComponent(searchTerm)}&exact=false`;
 
     console.log('Navigating to:', searchUrl);
     await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
+    // Check if we got redirected to a login page or error page
+    const currentUrl = page.url();
+    console.log('Current URL after navigation:', currentUrl);
+
+    // Check page title and content to see if we're on the right page
+    const pageTitle = await page.title();
+    console.log('Page title:', pageTitle);
+
+    // Check if we're on a Facebook login page or error page
+    if (pageTitle.includes('Log in') || pageTitle.includes('Login') ||
+        currentUrl.includes('login') || currentUrl.includes('checkpoint') ||
+        pageTitle.includes('Error') || pageTitle.includes('Sorry')) {
+      console.log('Detected Facebook login/error page, taking screenshot...');
+      try {
+        const shotsDir = path.join(__dirname, 'public', 'shots');
+        if (!fs.existsSync(shotsDir)) fs.mkdirSync(shotsDir, { recursive: true });
+        const name = `facebook-debug-${Date.now()}.png`;
+        const filePath = path.join(shotsDir, name);
+        await page.screenshot({ path: filePath, fullPage: true });
+        console.log(`Facebook debug screenshot saved: ${name}`);
+      } catch (_) {}
+
+      throw new Error(`Facebook Marketplace requires authentication. Please ensure you're logged into Facebook in a real browser first, or try a different approach. Page title: "${pageTitle}"`);
+    }
+
     // Wait for content to load
     await page.waitForTimeout(3000);
+
+    // Check if marketplace content actually loaded
+    const bodyText = await page.textContent('body');
+    if (bodyText.includes('Log in to Facebook') || bodyText.includes('Create new account') ||
+        bodyText.length < 1000) {
+      console.log('Body text suggests login page or empty content');
+      throw new Error('Facebook Marketplace content not accessible. This may require authentication or the page structure has changed.');
+    }
 
     // Extract listing data
     const listings = await page.evaluate(() => {
       const results = [];
 
-      // Facebook Marketplace listings are in divs with specific classes
-      const listingElements = document.querySelectorAll('[data-testid="marketplace-listing"], .marketplace-listing, [role="article"]');
+      // Try different selectors for Facebook Marketplace (both desktop and mobile)
+      const selectors = [
+        '[data-testid="marketplace-listing"]',
+        '.marketplace-listing',
+        '[role="article"]',
+        'article',
+        '.marketplace-item',
+        '[data-pagelet="FeedUnit_0"]',
+        '.story_body_container'
+      ];
+
+      let listingElements = [];
+      for (const selector of selectors) {
+        listingElements = document.querySelectorAll(selector);
+        if (listingElements.length > 0) {
+          console.log(`Found ${listingElements.length} listings using selector: ${selector}`);
+          break;
+        }
+      }
 
       listingElements.forEach((element, index) => {
         if (index >= 20) return; // Limit to 20 results
 
         try {
-          // Extract title (usually contains make, model, year)
-          const titleElement = element.querySelector('h3, [data-testid="marketplace-listing-title"], .marketplace-listing-title');
-          const title = titleElement ? titleElement.textContent.trim() : '';
+          // Try multiple approaches to find title
+          let title = '';
+          const titleSelectors = [
+            'h3',
+            '[data-testid="marketplace-listing-title"]',
+            '.marketplace-listing-title',
+            'h4',
+            'strong',
+            '.title',
+            '.listing-title',
+            'span[title]',
+            'a[title]'
+          ];
 
-          // Extract price
-          const priceElement = element.querySelector('[data-testid="marketplace-listing-price"], .marketplace-listing-price, span[content]');
-          const priceText = priceElement ? priceElement.textContent.trim() : '';
-          const price = priceText.replace(/[$,]/g, '').match(/\d+/) ? parseInt(priceText.replace(/[$,]/g, '')) : null;
+          for (const sel of titleSelectors) {
+            const el = element.querySelector(sel);
+            if (el && el.textContent && el.textContent.trim()) {
+              title = el.textContent.trim();
+              break;
+            }
+          }
+
+          // If no title found in child elements, try the element itself
+          if (!title && element.textContent) {
+            title = element.textContent.trim().split('\n')[0];
+          }
+
+          // Extract price - try multiple patterns
+          let price = null;
+          const priceSelectors = [
+            '[data-testid="marketplace-listing-price"]',
+            '.marketplace-listing-price',
+            'span[content]',
+            '.price',
+            '.listing-price'
+          ];
+
+          for (const sel of priceSelectors) {
+            const el = element.querySelector(sel);
+            if (el) {
+              const priceText = el.textContent || el.getAttribute('content') || '';
+              const priceMatch = priceText.replace(/[$,]/g, '').match(/\d+/);
+              if (priceMatch) {
+                price = parseInt(priceMatch[0]);
+                break;
+              }
+            }
+          }
+
+          // Look for price in text content
+          if (!price && element.textContent) {
+            const priceMatch = element.textContent.match(/\$[\d,]+/);
+            if (priceMatch) {
+              price = parseInt(priceMatch[0].replace(/[$,]/g, ''));
+            }
+          }
 
           // Extract location
-          const locationElement = element.querySelector('[data-testid="marketplace-listing-location"], .marketplace-listing-location');
-          const location = locationElement ? locationElement.textContent.trim() : '';
+          let location = '';
+          const locationSelectors = [
+            '[data-testid="marketplace-listing-location"]',
+            '.marketplace-listing-location',
+            '.location'
+          ];
+
+          for (const sel of locationSelectors) {
+            const el = element.querySelector(sel);
+            if (el && el.textContent) {
+              location = el.textContent.trim();
+              break;
+            }
+          }
 
           // Extract mileage from title or description
           const mileageMatch = title.match(/(\d{1,3}(?:,\d{3})*)\s*(?:miles?|mi)/i) ||
@@ -170,7 +281,9 @@ async function searchFacebookMarketplace(make, model, zipCode) {
           }
 
           // Get listing URL
-          const linkElement = element.querySelector('a[href*="/marketplace/item/"]');
+          const linkElement = element.querySelector('a[href*="/marketplace/item/"]') ||
+                             element.querySelector('a[href*="/marketplace/"]') ||
+                             element.closest('a');
           const url = linkElement ? 'https://www.facebook.com' + linkElement.getAttribute('href') : '';
 
           // Only include if we have some useful data
@@ -195,6 +308,53 @@ async function searchFacebookMarketplace(make, model, zipCode) {
     });
 
     console.log(`Found ${listings.length} listings`);
+    console.log('Sample listings:', listings.slice(0, 2));
+
+    // If no listings found, try a different approach
+    if (listings.length === 0) {
+      console.log('No listings found with current selectors, trying alternative approach...');
+
+      // Try to get raw HTML content to debug
+      const htmlContent = await page.content();
+      console.log('Page HTML length:', htmlContent.length);
+
+      // Check for common error patterns
+      if (htmlContent.includes('checkpoint') || htmlContent.includes('security check')) {
+        throw new Error('Facebook detected automated access and is showing a security checkpoint. Try using a real browser with Facebook login.');
+      }
+
+      if (htmlContent.includes('login') && htmlContent.includes('password')) {
+        throw new Error('Facebook Marketplace requires login. Please access Facebook Marketplace manually first.');
+      }
+
+      // Try a simpler scraping approach - look for any text that looks like car listings
+      const altListings = await page.evaluate(() => {
+        const results = [];
+        const bodyText = document.body.textContent || '';
+
+        // Look for price patterns in the text
+        const priceMatches = bodyText.match(/\$[\d,]+/g);
+        if (priceMatches) {
+          console.log('Found price patterns:', priceMatches.slice(0, 5));
+        }
+
+        // Look for car-related terms
+        const carTerms = ['sedan', 'suv', 'truck', 'coupe', 'convertible', 'hatchback'];
+        const foundTerms = carTerms.filter(term => bodyText.toLowerCase().includes(term));
+        if (foundTerms.length > 0) {
+          console.log('Found car terms:', foundTerms);
+        }
+
+        return results;
+      });
+
+      if (altListings.length > 0) {
+        return altListings;
+      }
+
+      throw new Error('No car listings found on Facebook Marketplace. The page may require authentication or the search returned no results.');
+    }
+
     return listings;
 
   } catch (error) {
