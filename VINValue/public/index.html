@@ -226,6 +226,167 @@
       a { color: #93c5fd; }
       .logo { display: none; }
 
+      /* Marketplace Section */
+      .marketplace-section {
+        padding: 60px 0;
+        background: #f8f9fa;
+        margin-top: 40px;
+      }
+
+      .marketplace-section h2 {
+        color: #1a365d;
+        font-size: 2.5rem;
+        margin-bottom: 10px;
+        text-align: center;
+      }
+
+      .marketplace-section .section-subtitle {
+        text-align: center;
+        color: #666;
+        margin-bottom: 40px;
+        font-size: 1.1rem;
+      }
+
+      .marketplace-form {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        margin-bottom: 30px;
+      }
+
+      .form-row {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+        margin-bottom: 20px;
+      }
+
+      .form-group {
+        display: flex;
+        flex-direction: column;
+      }
+
+      .form-group label {
+        font-weight: 600;
+        margin-bottom: 5px;
+        color: #374151;
+      }
+
+      .form-group input,
+      .form-group select {
+        padding: 12px;
+        border: 2px solid #e5e7eb;
+        border-radius: 6px;
+        font-size: 16px;
+        transition: border-color 0.3s;
+      }
+
+      .form-group input:focus,
+      .form-group select:focus {
+        outline: none;
+        border-color: #3b82f6;
+      }
+
+      .search-btn {
+        background: #3b82f6;
+        color: white;
+        padding: 14px 30px;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: background 0.3s;
+        width: 100%;
+      }
+
+      .search-btn:hover {
+        background: #2563eb;
+      }
+
+      .search-btn:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+      }
+
+      /* Results */
+      .results-container {
+        background: white;
+        padding: 30px;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      }
+
+      .results-container h3 {
+        color: #1a365d;
+        margin-bottom: 20px;
+      }
+
+      .loading {
+        text-align: center;
+        padding: 40px;
+      }
+
+      .spinner {
+        border: 4px solid #f3f4f6;
+        border-top: 4px solid #3b82f6;
+        border-radius: 50%;
+        width: 40px;
+        height: 40px;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      .results-table {
+        overflow-x: auto;
+      }
+
+      .results-table table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+
+      .results-table th,
+      .results-table td {
+        padding: 12px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+      }
+
+      .results-table th {
+        background: #f9fafb;
+        font-weight: 600;
+        color: #374151;
+      }
+
+      .results-table tbody tr:hover {
+        background: #f9fafb;
+      }
+
+      .results-table a {
+        color: #3b82f6;
+        text-decoration: none;
+      }
+
+      .results-table a:hover {
+        text-decoration: underline;
+      }
+
+      .error-message {
+        background: #fef2f2;
+        color: #dc2626;
+        padding: 15px;
+        border-radius: 6px;
+        border: 1px solid #fecaca;
+      }
+
       @media (max-width: 768px) {
         body {
           padding-top: 120px; /* Extra padding on mobile for fixed header */
@@ -352,6 +513,88 @@
           </div>
         </div>
         <div id="error" style="color: #fca5a5"></div>
+      </div>
+    </div>
+
+    <!-- Facebook Marketplace Search Section -->
+    <div class="marketplace-section">
+      <div class="container">
+        <h2>Facebook Marketplace Search</h2>
+        <p class="section-subtitle">Find used cars on Facebook Marketplace</p>
+
+        <div class="marketplace-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="carMake">Make</label>
+              <select id="carMake" required>
+                <option value="">Select Make</option>
+                <option value="acura">Acura</option>
+                <option value="audi">Audi</option>
+                <option value="bmw">BMW</option>
+                <option value="buick">Buick</option>
+                <option value="cadillac">Cadillac</option>
+                <option value="chevrolet">Chevrolet</option>
+                <option value="chrysler">Chrysler</option>
+                <option value="dodge">Dodge</option>
+                <option value="ford">Ford</option>
+                <option value="gmc">GMC</option>
+                <option value="honda">Honda</option>
+                <option value="hyundai">Hyundai</option>
+                <option value="infiniti">Infiniti</option>
+                <option value="jeep">Jeep</option>
+                <option value="kia">Kia</option>
+                <option value="lexus">Lexus</option>
+                <option value="lincoln">Lincoln</option>
+                <option value="mazda">Mazda</option>
+                <option value="mercedes-benz">Mercedes-Benz</option>
+                <option value="mini">MINI</option>
+                <option value="mitsubishi">Mitsubishi</option>
+                <option value="nissan">Nissan</option>
+                <option value="ram">Ram</option>
+                <option value="subaru">Subaru</option>
+                <option value="toyota">Toyota</option>
+                <option value="volkswagen">Volkswagen</option>
+                <option value="volvo">Volvo</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label for="carModel">Model</label>
+              <input type="text" id="carModel" placeholder="e.g. Camry, Civic, F-150">
+            </div>
+            <div class="form-group">
+              <label for="zipCode">ZIP Code</label>
+              <input type="text" id="zipCode" placeholder="e.g. 34285" pattern="[0-9]{5}" maxlength="5">
+            </div>
+          </div>
+          <button type="button" id="searchBtn" class="search-btn">Search Marketplace</button>
+        </div>
+
+        <div id="resultsContainer" class="results-container" style="display: none;">
+          <h3>Search Results</h3>
+          <div id="loadingIndicator" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>Searching Facebook Marketplace...</p>
+          </div>
+          <div id="resultsTable" class="results-table">
+            <table>
+              <thead>
+                <tr>
+                  <th>Make</th>
+                  <th>Model</th>
+                  <th>Year</th>
+                  <th>Mileage</th>
+                  <th>Price</th>
+                  <th>Location</th>
+                  <th>Link</th>
+                </tr>
+              </thead>
+              <tbody id="resultsBody">
+                <!-- Results will be inserted here -->
+              </tbody>
+            </table>
+          </div>
+          <div id="errorMessage" class="error-message" style="display: none;"></div>
+        </div>
       </div>
     </div>
 
@@ -819,6 +1062,95 @@
           emailInput.placeholder = 'Default: thomad99@gmail.com';
         }
       })();
+
+      // Facebook Marketplace Search
+      document.addEventListener('DOMContentLoaded', function() {
+        const searchBtn = document.getElementById('searchBtn');
+        const carMake = document.getElementById('carMake');
+        const carModel = document.getElementById('carModel');
+        const zipCode = document.getElementById('zipCode');
+        const resultsContainer = document.getElementById('resultsContainer');
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const resultsBody = document.getElementById('resultsBody');
+        const errorMessage = document.getElementById('errorMessage');
+
+        searchBtn.addEventListener('click', async function() {
+          const make = carMake.value.trim();
+          const model = carModel.value.trim();
+          const zip = zipCode.value.trim();
+
+          if (!make) {
+            alert('Please select a car make');
+            return;
+          }
+
+          if (!zip || zip.length !== 5) {
+            alert('Please enter a valid 5-digit ZIP code');
+            return;
+          }
+
+          // Show loading state
+          resultsContainer.style.display = 'block';
+          loadingIndicator.style.display = 'block';
+          errorMessage.style.display = 'none';
+          resultsBody.innerHTML = '';
+          searchBtn.disabled = true;
+          searchBtn.textContent = 'Searching...';
+
+          try {
+            const response = await fetch('/api/marketplace/search', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                make: make,
+                model: model,
+                zipCode: zip
+              })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+              throw new Error(data.error || 'Search failed');
+            }
+
+            // Display results
+            displayResults(data.results);
+
+          } catch (error) {
+            console.error('Search error:', error);
+            errorMessage.textContent = 'Error: ' + error.message;
+            errorMessage.style.display = 'block';
+          } finally {
+            loadingIndicator.style.display = 'none';
+            searchBtn.disabled = false;
+            searchBtn.textContent = 'Search Marketplace';
+          }
+        });
+
+        function displayResults(results) {
+          if (!results || results.length === 0) {
+            resultsBody.innerHTML = '<tr><td colspan="7" style="text-align: center; padding: 40px; color: #666;">No results found. Try different search terms.</td></tr>';
+            return;
+          }
+
+          const rows = results.map(result => `
+            <tr>
+              <td>${result.make || 'N/A'}</td>
+              <td>${result.model || 'N/A'}</td>
+              <td>${result.year || 'N/A'}</td>
+              <td>${result.mileage ? result.mileage.toLocaleString() + ' miles' : 'N/A'}</td>
+              <td>${result.price ? '$' + result.price.toLocaleString() : 'N/A'}</td>
+              <td>${result.location || 'N/A'}</td>
+              <td><a href="${result.url}" target="_blank" rel="noopener">View</a></td>
+            </tr>
+          `).join('');
+
+          resultsBody.innerHTML = rows;
+        }
+      });
     </script>
   </body>
 </html>

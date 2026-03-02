@@ -1,29 +1,11 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const { chromium } = require('playwright');
 
 // Ensure Playwright uses browsers shipped in node_modules on Render
 if (!process.env.PLAYWRIGHT_BROWSERS_PATH) {
   process.env.PLAYWRIGHT_BROWSERS_PATH = '0';
-}
-
-// Playwright will be loaded on-demand to save memory
-let playwright = null;
-let chromium = null;
-
-async function loadPlaywright() {
-    if (!playwright) {
-        try {
-            console.log('Loading Playwright on-demand...');
-            playwright = require('playwright');
-            chromium = playwright.chromium;
-            console.log('Playwright loaded successfully');
-        } catch (error) {
-            console.error('Failed to load Playwright:', error.message);
-            throw new Error('Playwright is not installed. Please install it: npm install playwright');
-        }
-    }
-    return { playwright, chromium };
 }
 
 const app = express();
@@ -46,6 +28,26 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// Facebook Marketplace Search Endpoint
+app.post('/api/marketplace/search', async (req, res) => {
+  try {
+    const { make, model, zipCode } = req.body;
+
+    if (!make || !zipCode) {
+      return res.status(400).json({ error: 'Make and ZIP code are required' });
+    }
+
+    console.log(`Searching Facebook Marketplace: ${make} ${model || ''} in ${zipCode}`);
+
+    const results = await searchFacebookMarketplace(make, model, zipCode);
+
+    res.json({ results });
+  } catch (error) {
+    console.error('Marketplace search error:', error);
+    res.status(500).json({ error: 'Search failed: ' + error.message });
+  }
+});
+
 async function ensureChromiumInstalled() {
   return new Promise((resolve) => {
     // Attempt a quick existence check on the browsers cache folder inside node_modules
@@ -58,11 +60,8 @@ async function ensureChromiumInstalled() {
 }
 
 async function launchChromium() {
-  // Load Playwright on-demand
-  const { chromium: chromiumBrowser } = await loadPlaywright();
-  
   try {
-    return await chromiumBrowser.launch({
+    return await chromium.launch({
       headless: true,
       args: [
         '--no-sandbox',
@@ -76,7 +75,7 @@ async function launchChromium() {
   } catch (err) {
     // If launch fails due to missing browser, try installing once and retry
     await ensureChromiumInstalled();
-    return await chromiumBrowser.launch({
+    return await chromium.launch({
       headless: true,
       args: [
         '--no-sandbox',
@@ -87,6 +86,127 @@ async function launchChromium() {
         '--single-process'
       ]
     });
+  }
+}
+
+// Facebook Marketplace Search Function
+async function searchFacebookMarketplace(make, model, zipCode) {
+  let browser = null;
+  let context = null;
+  try {
+    console.log('Launching browser for Facebook Marketplace...');
+    browser = await launchChromium();
+
+    context = await browser.newContext({
+      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    });
+    const page = await context.newPage();
+
+    // Construct search URL
+    const searchTerm = model ? `${make} ${model}` : make;
+    const searchUrl = `https://www.facebook.com/marketplace/${zipCode}/search/?query=${encodeURIComponent(searchTerm)}&exact=false`;
+
+    console.log('Navigating to:', searchUrl);
+    await page.goto(searchUrl, { waitUntil: 'domcontentloaded', timeout: 30000 });
+
+    // Wait for content to load
+    await page.waitForTimeout(3000);
+
+    // Extract listing data
+    const listings = await page.evaluate(() => {
+      const results = [];
+
+      // Facebook Marketplace listings are in divs with specific classes
+      const listingElements = document.querySelectorAll('[data-testid="marketplace-listing"], .marketplace-listing, [role="article"]');
+
+      listingElements.forEach((element, index) => {
+        if (index >= 20) return; // Limit to 20 results
+
+        try {
+          // Extract title (usually contains make, model, year)
+          const titleElement = element.querySelector('h3, [data-testid="marketplace-listing-title"], .marketplace-listing-title');
+          const title = titleElement ? titleElement.textContent.trim() : '';
+
+          // Extract price
+          const priceElement = element.querySelector('[data-testid="marketplace-listing-price"], .marketplace-listing-price, span[content]');
+          const priceText = priceElement ? priceElement.textContent.trim() : '';
+          const price = priceText.replace(/[$,]/g, '').match(/\d+/) ? parseInt(priceText.replace(/[$,]/g, '')) : null;
+
+          // Extract location
+          const locationElement = element.querySelector('[data-testid="marketplace-listing-location"], .marketplace-listing-location');
+          const location = locationElement ? locationElement.textContent.trim() : '';
+
+          // Extract mileage from title or description
+          const mileageMatch = title.match(/(\d{1,3}(?:,\d{3})*)\s*(?:miles?|mi)/i) ||
+                              title.match(/(\d+)\s*(?:miles?|mi)/i);
+          const mileage = mileageMatch ? parseInt(mileageMatch[1].replace(/,/g, '')) : null;
+
+          // Extract year from title
+          const yearMatch = title.match(/\b(20\d{2}|19\d{2})\b/);
+          const year = yearMatch ? parseInt(yearMatch[1]) : null;
+
+          // Parse make and model from title
+          let parsedMake = '';
+          let parsedModel = '';
+
+          const commonMakes = ['chevrolet', 'ford', 'toyota', 'honda', 'nissan', 'bmw', 'mercedes', 'audi', 'volkswagen', 'hyundai', 'kia', 'subaru', 'mazda', 'lexus', 'acura', 'infiniti', 'cadillac', 'buick', 'gmc', 'ram', 'jeep', 'chrysler', 'dodge', 'lincoln', 'volvo', 'mini', 'mitsubishi'];
+
+          const titleLower = title.toLowerCase();
+          for (const makeName of commonMakes) {
+            if (titleLower.includes(makeName)) {
+              parsedMake = makeName.charAt(0).toUpperCase() + makeName.slice(1);
+              break;
+            }
+          }
+
+          // Extract model (rough approximation)
+          if (parsedMake) {
+            const makeIndex = titleLower.indexOf(parsedMake.toLowerCase());
+            const afterMake = title.slice(makeIndex + parsedMake.length).trim();
+            const modelMatch = afterMake.match(/^([^\d]+)(?:\s+\d{4})?/);
+            if (modelMatch) {
+              parsedModel = modelMatch[1].trim();
+            }
+          }
+
+          // Get listing URL
+          const linkElement = element.querySelector('a[href*="/marketplace/item/"]');
+          const url = linkElement ? 'https://www.facebook.com' + linkElement.getAttribute('href') : '';
+
+          // Only include if we have some useful data
+          if (title || price || location) {
+            results.push({
+              title: title,
+              make: parsedMake || null,
+              model: parsedModel || null,
+              year: year,
+              mileage: mileage,
+              price: price,
+              location: location,
+              url: url
+            });
+          }
+        } catch (e) {
+          console.warn('Error parsing listing:', e.message);
+        }
+      });
+
+      return results;
+    });
+
+    console.log(`Found ${listings.length} listings`);
+    return listings;
+
+  } catch (error) {
+    console.error('Facebook Marketplace search error:', error);
+    throw new Error('Failed to search Facebook Marketplace: ' + error.message);
+  } finally {
+    if (context) {
+      await context.close();
+    }
+    if (browser) {
+      await browser.close();
+    }
   }
 }
 
