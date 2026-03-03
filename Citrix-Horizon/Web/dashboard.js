@@ -5279,9 +5279,25 @@ function parseUagConfig(content) {
         // Edge service (Horizon) details
         if (edges.length) {
             const e0 = edges[0];
-            if (e0.proxyDestinationUrl) config.connectionServerUrl = e0.proxyDestinationUrl;
-            if (e0.proxyDestinationUrlThumbprints) config.connectionServerThumbprint = e0.proxyDestinationUrlThumbprints;
-            if (e0.maxActiveBlastSessions != null) config.maxBlastConnections = Number(e0.maxActiveBlastSessions);
+            // Raw fields from first Horizon edge
+            if (e0.proxyDestinationUrl) {
+                config.connectionServerUrl = e0.proxyDestinationUrl;
+                config.proxyDestinationUrl = e0.proxyDestinationUrl;
+            }
+            if (e0.proxyDestinationUrlThumbprints) {
+                config.connectionServerThumbprint = e0.proxyDestinationUrlThumbprints;
+            }
+            if (e0.blastExternalUrl) {
+                config.blastExternalUrl = e0.blastExternalUrl;
+            }
+            if (typeof e0.blastReverseConnectionEnabled === 'boolean') {
+                config.blastReverseConnectionEnabled = e0.blastReverseConnectionEnabled;
+            }
+            if (e0.maxActiveBlastSessions != null) {
+                const maxBlast = Number(e0.maxActiveBlastSessions);
+                config.maxBlastConnections = maxBlast;
+                config.maxActiveBlastSessions = maxBlast;
+            }
         }
 
         // Gateways / external URLs
