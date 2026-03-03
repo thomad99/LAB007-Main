@@ -5370,13 +5370,31 @@ function parseUagConfig(content) {
     const config = {};
     if (!content) return config;
 
+    // Attach debug info so we can surface what we saw in the UI
+    config._debug = {
+        mode: 'unknown',
+        topKeys: [],
+        notes: []
+    };
+
     // First, try to parse as JSON (raw UAG export)
     const jsonObj = tryParseJsonLoose(content);
 
     if (jsonObj && typeof jsonObj === 'object') {
+        config._debug.mode = 'json';
+        try {
+            config._debug.topKeys = Object.keys(jsonObj || {});
+        } catch (e) {
+            config._debug.notes.push('Error reading top-level keys: ' + e.message);
+        }
+
         const sys = jsonObj.systemSettings || {};
         const general = jsonObj.generalSettings || {};
         const edges = (jsonObj.edgeServiceSettingsList && jsonObj.edgeServiceSettingsList.edgeServiceSettingsList) || [];
+
+        config._debug.notes.push(
+            `hasSystem=${!!jsonObj.systemSettings}, hasGeneral=${!!jsonObj.generalSettings}, edgeCount=${Array.isArray(edges) ? edges.length : 0}`
+        );
 
         // Basic identity
         if (general.uagName) config.uagName = general.uagName;
@@ -5523,6 +5541,12 @@ function parseUagConfig(content) {
         config.maxBlastConnections = parseInt(config.maxBlastConnections);
     }
 
+    config._debug.mode = 'text';
+    config._debug.notes.push(
+        'Text-mode matches: ' +
+        Object.keys(patterns).filter(k => config[k] !== undefined).join(', ')
+    );
+
     return config;
 }
 
@@ -5549,11 +5573,15 @@ function compareUagConfigs(configs, fileNames) {
     const differences = [];
     const identical = [];
 
-    // Get all unique keys across all configs
+    // Get all unique keys across all configs (skip internal/debug keys that start with "_")
     const allKeys = new Set();
     configs.forEach(config => {
         if (!config || typeof config !== 'object') return;
-        Object.keys(config).forEach(key => allKeys.add(key));
+        Object.keys(config).forEach(key => {
+            if (key && !key.startsWith('_')) {
+                allKeys.add(key);
+            }
+        });
     });
 
     // Compare each key across all configs
@@ -5618,7 +5646,7 @@ function displayComparisonResults(comparison) {
     statDiffs.textContent = comparison.differences.length;
     statSame.textContent = comparison.identical.length;
 
-    // Show per-file summary (UAG name, IP, key URLs) so user can see we parsed configs
+    // Show per-file summary (UAG name, IP, key URLs) and debug info so user can see what we parsed
     if (summaryDetails) {
         const lines = uagCompareConfigs.map((cfg, idx) => {
             const name = escapeHtml(uagCompareFileNames[idx] || `Config ${idx + 1}`);
@@ -5627,9 +5655,20 @@ function displayComparisonResults(comparison) {
             const conn = escapeHtml((cfg && (cfg.connectionServerUrl || cfg.proxyDestinationUrl)) || '-');
             const blast = escapeHtml((cfg && cfg.blastExternalUrl) || '-');
             const maxBlast = (cfg && (cfg.maxActiveBlastSessions ?? cfg.maxBlastConnections)) ?? '-';
-            return `<div class="log-line" style="border:none; padding:2px 0;">
-                <strong>${name}</strong> — UAG: ${uagName}, IP: ${uagIp},
-                Conn: ${conn}, Blast: ${blast}, MaxBlast: ${maxBlast}
+
+            const dbg = (cfg && cfg._debug) || {};
+            const mode = escapeHtml(dbg.mode || 'unknown');
+            const topKeys = Array.isArray(dbg.topKeys) ? dbg.topKeys.slice(0, 10).join(', ') : '';
+            const notes = Array.isArray(dbg.notes) ? dbg.notes.join(' | ') : '';
+
+            return `<div class="log-line" style="border:none; padding:4px 0; border-bottom:1px dashed #ddd;">
+                <div><strong>${name}</strong> — UAG: ${uagName}, IP: ${uagIp},
+                Conn: ${conn}, Blast: ${blast}, MaxBlast: ${maxBlast}</div>
+                <div style="font-size: 12px; color:#555; margin-top:2px;">
+                    Mode: ${mode};
+                    Top-level keys: ${escapeHtml(topKeys || 'n/a')};
+                    ${notes ? 'Notes: ' + escapeHtml(notes) : ''}
+                </div>
             </div>`;
         });
         summaryDetails.innerHTML = lines.join('') || '';
