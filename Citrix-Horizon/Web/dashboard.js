@@ -5238,9 +5238,105 @@ function handleUagCompareFiles(event) {
 
 function parseUagConfig(content) {
     const config = {};
-    const lines = content.split('\n');
+    if (!content) return config;
 
-    // Extract key UAG configuration settings
+    // First, try to parse as JSON (raw UAG export)
+    let jsonObj = null;
+    try {
+        jsonObj = JSON.parse(content);
+    } catch (e) {
+        jsonObj = null;
+    }
+
+    if (jsonObj && typeof jsonObj === 'object') {
+        const sys = jsonObj.systemSettings || {};
+        const general = jsonObj.generalSettings || {};
+        const edges = (jsonObj.edgeServiceSettingsList && jsonObj.edgeServiceSettingsList.edgeServiceSettingsList) || [];
+
+        // Basic identity
+        if (general.uagName) config.uagName = general.uagName;
+        else if (sys.uagName) config.uagName = sys.uagName;
+
+        if (general.ip0) config.uagIp = general.ip0;
+        else if (sys.ip0) config.uagIp = sys.ip0;
+
+        // DNS / AD
+        if (sys.dns) {
+            config.dnsServers = sys.dns.split(/\s+/).filter(Boolean);
+        }
+        const adServers = new Set();
+        if (sys.dnsSearch) {
+            sys.dnsSearch.split(/\s+/).filter(Boolean).forEach(v => adServers.add(v));
+        }
+        const idpList = jsonObj.idPExternalMetadataSettingsList && jsonObj.idPExternalMetadataSettingsList.idPExternalMetadataSettingsList;
+        if (Array.isArray(idpList)) {
+            idpList.forEach(i => {
+                if (i.entityID) adServers.add(i.entityID);
+            });
+        }
+        if (adServers.size) config.adServers = Array.from(adServers);
+
+        // Edge service (Horizon) details
+        if (edges.length) {
+            const e0 = edges[0];
+            if (e0.proxyDestinationUrl) config.connectionServerUrl = e0.proxyDestinationUrl;
+            if (e0.proxyDestinationUrlThumbprints) config.connectionServerThumbprint = e0.proxyDestinationUrlThumbprints;
+            if (e0.maxActiveBlastSessions != null) config.maxBlastConnections = Number(e0.maxActiveBlastSessions);
+        }
+
+        // Gateways / external URLs
+        const gateways = new Set();
+        if (sys.allowedHostHeaderValues) {
+            sys.allowedHostHeaderValues.split(/[, ]+/).filter(Boolean).forEach(v => gateways.add(v));
+        }
+        if (sys.autoAllowedHostHeaderValues) {
+            sys.autoAllowedHostHeaderValues.split(/[, ]+/).filter(Boolean).forEach(v => gateways.add(v));
+        }
+        const externalUrls = new Set();
+        const connServers = new Set();
+        edges.forEach(e => {
+            if (e.blastExternalUrl) {
+                gateways.add(e.blastExternalUrl);
+                externalUrls.add(e.blastExternalUrl);
+            }
+            if (e.tunnelExternalUrl) {
+                gateways.add(e.tunnelExternalUrl);
+                externalUrls.add(e.tunnelExternalUrl);
+            }
+            if (e.externalUrl) {
+                gateways.add(e.externalUrl);
+                externalUrls.add(e.externalUrl);
+            }
+            if (e.proxyDestinationUrl) connServers.add(e.proxyDestinationUrl);
+            if (Array.isArray(e.originHeaderDetailsList)) {
+                e.originHeaderDetailsList.forEach(o => {
+                    if (o.origin) connServers.add(o.origin);
+                });
+            }
+        });
+        if (gateways.size) config.gateways = Array.from(gateways);
+        if (externalUrls.size) config.externalUrls = Array.from(externalUrls);
+        if (connServers.size) config.connectionServers = Array.from(connServers);
+
+        // Certificates
+        if (config.connectionServerThumbprint) {
+            config.certificates = [config.connectionServerThumbprint];
+        }
+
+        // Security settings summary
+        const secParts = [];
+        if (sys.cipherSuites) secParts.push('cipherSuites=' + sys.cipherSuites);
+        edges.forEach(e => {
+            if (e.securityHeaders) {
+                secParts.push('headers=' + Object.keys(e.securityHeaders).join(','));
+            }
+        });
+        if (secParts.length) config.securitySettings = secParts.join(' | ');
+
+        return config;
+    }
+
+    // Fallback: parse plain text summary using regex patterns
     const patterns = {
         'uagName': /UAG\s+Name[:\s]*([^\r\n]+)/i,
         'uagIp': /UAG\s+IP[:\s]*([^\r\n]+)/i,
@@ -5260,7 +5356,6 @@ function parseUagConfig(content) {
         'loadBalancerSettings': /Load\s+Balancer\s+Settings[:\s]*([^\r\n]+)/i
     };
 
-    // Extract values using patterns
     for (const [key, pattern] of Object.entries(patterns)) {
         const match = content.match(pattern);
         if (match) {
@@ -5268,7 +5363,6 @@ function parseUagConfig(content) {
         }
     }
 
-    // Parse comma-separated lists
     const listFields = ['gateways', 'externalUrls', 'connectionServers', 'dnsServers', 'adServers', 'certificates'];
     listFields.forEach(field => {
         if (config[field]) {
@@ -5276,7 +5370,6 @@ function parseUagConfig(content) {
         }
     });
 
-    // Extract numeric values
     if (config.maxBlastConnections) {
         config.maxBlastConnections = parseInt(config.maxBlastConnections);
     }
@@ -5310,6 +5403,7 @@ function compareUagConfigs(configs, fileNames) {
     // Get all unique keys across all configs
     const allKeys = new Set();
     configs.forEach(config => {
+        if (!config || typeof config !== 'object') return;
         Object.keys(config).forEach(key => allKeys.add(key));
     });
 

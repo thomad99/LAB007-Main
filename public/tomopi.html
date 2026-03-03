@@ -570,9 +570,26 @@
       if (rotateSelect.querySelector('option[value="' + r + '"]')) rotateSelect.value = r;
 
       const screen = json.screen || {};
-      const b = String(screen.brightness ?? 80);
-      if (brightnessSelect.querySelector('option[value="' + b + '"]')) brightnessSelect.value = b;
-      else brightnessSelect.value = '80';
+      const dimmer = json.dimmer || {};
+
+      // Brightness now comes from dimmer.brightness (0.0–1.0). Fallback to screen.brightness (0–100) if needed.
+      let brightnessPct = 80;
+      if (typeof dimmer.brightness === 'number' && !Number.isNaN(dimmer.brightness)) {
+        brightnessPct = Math.round(dimmer.brightness * 100);
+      } else if (typeof screen.brightness === 'number' && !Number.isNaN(screen.brightness)) {
+        brightnessPct = screen.brightness;
+      }
+
+      // Snap to nearest option value in the dropdown
+      const optionValues = Array.from(brightnessSelect.options).map(o => parseInt(o.value, 10));
+      let nearest = 80;
+      let bestDiff = Infinity;
+      optionValues.forEach(v => {
+        const d = Math.abs(v - brightnessPct);
+        if (d < bestDiff) { bestDiff = d; nearest = v; }
+      });
+      brightnessSelect.value = String(nearest);
+
       scheduleEnabled.value = screen.schedule_enabled ? 'true' : 'false';
       onTimeInput.value = screen.on_time || '07:00';
       offTimeInput.value = screen.off_time || '22:00';
@@ -644,8 +661,13 @@
 
     function applyScreenSettings() {
       applyToEditor(j => {
+        if (!j.dimmer) j.dimmer = {};
+        const pct = parseInt(brightnessSelect.value, 10);
+        if (!Number.isNaN(pct)) j.dimmer.brightness = pct / 100;
+        j.dimmer.enabled = true;
+        j.dimmer.immediate = true;
+
         if (!j.screen) j.screen = {};
-        j.screen.brightness = parseInt(brightnessSelect.value, 10);
         j.screen.schedule_enabled = scheduleEnabled.value === 'true';
         j.screen.on_time = onTimeInput.value || '07:00';
         j.screen.off_time = offTimeInput.value || '22:00';
