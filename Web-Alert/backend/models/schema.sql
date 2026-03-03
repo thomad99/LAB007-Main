@@ -16,6 +16,7 @@ CREATE TABLE IF NOT EXISTS alert_subscribers (
     url_id INTEGER REFERENCES monitored_urls(id),
     email VARCHAR(255) NOT NULL,
     phone_number VARCHAR(20) NOT NULL,
+    carrier VARCHAR(64),
     polling_duration INTEGER NOT NULL,
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

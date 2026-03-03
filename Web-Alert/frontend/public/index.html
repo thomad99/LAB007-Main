@@ -214,8 +214,42 @@
                            placeholder="https://example.com" value="https://lab007-main.onrender.com/dummypage">
                 </div>
                 <div class="form-group">
-                    <label for="email">Email Address (Required)</label>
-                    <input type="email" class="form-control" id="email" name="email" required>
+                    <label for="email">Email Address</label>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="phone">Mobile Number (for SMS alerts)</label>
+                    <input type="tel" class="form-control" id="phone" name="phone" placeholder="e.g. 941 555 1234">
+                </div>
+                <div class="form-group">
+                    <label>Alert delivery method</label>
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; font-size:0.95em;">
+                        <label><input type="checkbox" id="sendEmail" checked> Email</label>
+                        <label><input type="checkbox" id="sendSms"> SMS (text message)</label>
+                    </div>
+                </div>
+                <div class="form-group" id="carrierGroup" style="display:none;">
+                    <label for="carrier">Mobile carrier (for email-to-SMS delivery)</label>
+                    <select id="carrier" class="form-control">
+                        <option value="">Select your carrier</option>
+                        <option value="att">AT&amp;T</option>
+                        <option value="firstnet">FirstNet (AT&amp;T)</option>
+                        <option value="verizon">Verizon</option>
+                        <option value="comcast">Comcast / Xfinity Mobile</option>
+                        <option value="tmobile">T-Mobile</option>
+                        <option value="mint">Mint Mobile</option>
+                        <option value="google fi">Google Fi</option>
+                        <option value="cricket">Cricket</option>
+                        <option value="us cellular">US Cellular</option>
+                        <option value="metro">Metro by T-Mobile</option>
+                        <option value="boost">Boost Mobile</option>
+                        <option value="visible">Visible</option>
+                        <option value="straight talk">Straight Talk</option>
+                        <option value="tracfone">Tracfone</option>
+                        <option value="ting">Ting</option>
+                        <option value="consumer cellular">Consumer Cellular</option>
+                    </select>
+                    <small class="text-muted">Required only if you want SMS alerts. This uses the free email-to-text gateways for your carrier.</small>
                 </div>
                 <div class="form-group">
                     <label for="pollingInterval">Polling Interval (minutes):</label>
@@ -245,6 +279,16 @@
     (function() {
         const form = document.getElementById('alertForm');
         const statusBox = document.getElementById('statusContent');
+        const sendEmailBox = document.getElementById('sendEmail');
+        const sendSmsBox = document.getElementById('sendSms');
+        const carrierGroup = document.getElementById('carrierGroup');
+
+        if (sendSmsBox && carrierGroup) {
+            sendSmsBox.addEventListener('change', () => {
+                carrierGroup.style.display = sendSmsBox.checked ? 'block' : 'none';
+            });
+        }
+
         if (!form) return;
 
         form.addEventListener('submit', async (e) => {
@@ -253,14 +297,55 @@
 
             const websiteUrl = document.getElementById('websiteUrl')?.value || '';
             const email = document.getElementById('email')?.value || '';
+            const phone = document.getElementById('phone')?.value || '';
             const pollingInterval = document.getElementById('pollingInterval')?.value || '3';
             const duration = document.getElementById('duration')?.value || '10';
+            const sendEmail = sendEmailBox ? sendEmailBox.checked : true;
+            const sendSms = sendSmsBox ? sendSmsBox.checked : false;
+            const carrier = document.getElementById('carrier')?.value || '';
+
+            // Basic validation for delivery methods
+            if (!sendEmail && !sendSms) {
+                if (statusBox) {
+                    statusBox.textContent = 'Please select at least one alert method (Email and/or SMS).';
+                }
+                return;
+            }
+            if (sendEmail && !email) {
+                if (statusBox) {
+                    statusBox.textContent = 'Please enter an email address or uncheck Email alerts.';
+                }
+                return;
+            }
+            if (sendSms) {
+                if (!phone) {
+                    if (statusBox) statusBox.textContent = 'Please enter a mobile number for SMS alerts or uncheck SMS.';
+                    return;
+                }
+                if (!carrier) {
+                    if (statusBox) statusBox.textContent = 'Please select your mobile carrier so SMS can be delivered.';
+                    return;
+                }
+            }
+
+            const payload = {
+                websiteUrl,
+                email: sendEmail ? email : '',
+                phone: sendSms ? phone : '',
+                carrier: sendSms ? carrier : '',
+                pollingInterval,
+                duration,
+                delivery: {
+                    email: sendEmail,
+                    sms: sendSms
+                }
+            };
 
             try {
                 const res = await fetch('/webalert/api/monitor', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ websiteUrl, email, pollingInterval, duration })
+                    body: JSON.stringify(payload)
                 });
                 const data = await res.json();
                 if (res.ok) {
@@ -269,7 +354,8 @@
                             <div style="color: #155724; font-weight: 600;">Job started.</div>
                             <div style="font-size: 14px; color: #333;">
                                 URL: ${websiteUrl}<br>
-                                Email: ${email || 'info@lab007.ai'}<br>
+                                Email alerts: ${sendEmail ? (email || 'using default system email') : 'disabled'}<br>
+                                SMS alerts: ${sendSms ? (phone + ' (' + carrier + ')') : 'disabled'}<br>
                                 Interval: ${pollingInterval} min<br>
                                 Duration: ${duration} min
                             </div>

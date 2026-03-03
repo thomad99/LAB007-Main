@@ -240,10 +240,11 @@ function formatPhoneNumber(phone) {
     return `+1${cleaned}`;
 }
 
-async function sendAlert(phone, websiteUrl) {
+async function sendAlert(phone, websiteUrl, carrier = null) {
     // Use email-to-SMS gateway only (Twilio removed)
+    const carrierKey = carrier || process.env.SMS_DEFAULT_CARRIER || null;
     try {
-        return await sendViaEmailGateway(phone, null, `Change detected on ${websiteUrl}`, 'Web Alert: Change Detected');
+        return await sendViaEmailGateway(phone, carrierKey, `Change detected on ${websiteUrl}`, 'Web Alert: Change Detected');
     } catch (error) {
         console.warn('Email-to-SMS gateway failed:', error.message);
         // Return a mock success object to avoid breaking the calling code
@@ -251,25 +252,27 @@ async function sendAlert(phone, websiteUrl) {
     }
 }
 
-async function sendWelcomeSMS(phone, websiteUrl, duration) {
+async function sendWelcomeSMS(phone, websiteUrl, duration, carrier = null) {
     // Use email-to-SMS gateway only (Twilio removed)
+    const carrierKey = carrier || process.env.SMS_DEFAULT_CARRIER || null;
     const message = `🎉 Welcome to Web Alert! We're now monitoring ${websiteUrl} for ${duration} minutes. Checks every 3 min.`;
     try {
-        return await sendViaEmailGateway(phone, null, message, 'Web Alert: Welcome');
+        return await sendViaEmailGateway(phone, carrierKey, message, 'Web Alert: Welcome');
     } catch (error) {
         console.warn('Email-to-SMS gateway failed:', error.message);
         return { status: 'skipped', reason: 'Email-to-SMS gateway unavailable' };
     }
 }
 
-async function sendSummarySMS(phone, websiteUrl, checkCount, changesDetected) {
+async function sendSummarySMS(phone, websiteUrl, checkCount, changesDetected, carrier = null) {
     // Use email-to-SMS gateway only (Twilio removed)
+    const carrierKey = carrier || process.env.SMS_DEFAULT_CARRIER || null;
     const summaryText = changesDetected > 0 
         ? `We detected ${changesDetected} change(s)`
         : 'No changes were detected';
     const message = `📊 Monitoring Complete: ${websiteUrl}. ${summaryText}. Total checks: ${checkCount}. Thank you for using Web Alert!`;
     try {
-        return await sendViaEmailGateway(phone, null, message, 'Web Alert: Monitoring Complete');
+        return await sendViaEmailGateway(phone, carrierKey, message, 'Web Alert: Monitoring Complete');
     } catch (error) {
         console.warn('Email-to-SMS gateway failed:', error.message);
         return { status: 'skipped', reason: 'Email-to-SMS gateway unavailable' };

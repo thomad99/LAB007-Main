@@ -375,7 +375,7 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
         
         // Get subscriber information for summary notifications
         const subscriberResult = await db.query(`
-            SELECT email, phone_number, polling_duration
+            SELECT email, phone_number, carrier, polling_duration 
             FROM alert_subscribers 
             WHERE url_id = $1 
             AND is_active = true
@@ -433,9 +433,9 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
                     // Get all subscribers for this URL to send summary
                     // Use DISTINCT ON to get only the most recent subscriber per email
                     const allSubscribers = await db.query(`
-                        SELECT DISTINCT ON (email) 
-                            id as subscriber_id, email, phone_number, polling_duration
-                        FROM alert_subscribers 
+                        SELECT DISTINCT ON (email)
+                            id as subscriber_id, email, phone_number, carrier, polling_duration
+                        FROM alert_subscribers
                         WHERE url_id = $1
                         ORDER BY email, created_at DESC
                     `, [urlId]);
@@ -477,13 +477,14 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
                         
                         if (sub.phone_number && sub.phone_number.trim() !== '' && !sentPhones.has(sub.phone_number)) {
                             sentPhones.add(sub.phone_number);
-                            console.log(`Preparing to send summary SMS to: ${sub.phone_number}`);
+                            console.log(`Preparing to send summary SMS to: ${sub.phone_number} (carrier: ${sub.carrier || 'n/a'})`);
                             summaryNotifications.push(
                                 smsService.sendSummarySMS(
                                     sub.phone_number, 
                                     websiteUrl, 
                                     checkCount, 
-                                    changesDetected
+                                    changesDetected,
+                                    sub.carrier
                                 ).then(() => console.log(`Summary SMS sent successfully to ${sub.phone_number}`))
                                 .catch(error => console.error(`Error sending summary SMS to ${sub.phone_number}:`, error))
                             );
@@ -581,11 +582,12 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
 
                     // Get all active subscribers for this URL
                     const subscribers = await db.query(`
-                        SELECT 
+                        SELECT
                             id as subscriber_id,
                             email,
-                            phone_number
-                        FROM alert_subscribers 
+                            phone_number,
+                            carrier
+                        FROM alert_subscribers
                         WHERE url_id = $1 
                         AND is_active = true
                         AND NOW() < created_at + (polling_duration || ' minutes')::interval
@@ -637,9 +639,9 @@ async function startUrlMonitoring(urlId, websiteUrl, pollingInterval = 3) {
                                 }
                                 
                                 if (subscriber.phone_number && subscriber.phone_number.trim() !== '') {
-                                    console.log(`Sending SMS alert to: ${subscriber.phone_number}`);
+                                    console.log(`Sending SMS alert to: ${subscriber.phone_number} (carrier: ${subscriber.carrier || 'n/a'})`);
                                     notifications.push(
-                                        smsService.sendAlert(subscriber.phone_number, websiteUrl)
+                                        smsService.sendAlert(subscriber.phone_number, websiteUrl, subscriber.carrier)
                                             .then(() => {
                                                 console.log(`SMS alert sent successfully to ${subscriber.phone_number}`);
                                                 return db.query(
@@ -743,6 +745,7 @@ setTimeout(() => {
                     url_id INTEGER REFERENCES monitored_urls(id),
                     email VARCHAR(255) NOT NULL,
                     phone_number VARCHAR(20),
+                    carrier VARCHAR(64),
                     polling_duration INTEGER NOT NULL,
                     is_active BOOLEAN DEFAULT true,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -766,7 +769,7 @@ setTimeout(() => {
 
             console.log('Database schema initialized successfully');
 
-            // Alter existing alert_subscribers table to make phone_number nullable
+            // Alter existing alert_subscribers table to make phone_number nullable and ensure carrier column exists
             try {
                 console.log('Updating alert_subscribers table to make phone_number nullable...');
                 await db.query(`
@@ -780,6 +783,17 @@ setTimeout(() => {
                 } else {
                     console.error('Error updating phone_number column:', error.message);
                 }
+            }
+
+            try {
+                console.log('Ensuring carrier column exists on alert_subscribers...');
+                await db.query(`
+                    ALTER TABLE alert_subscribers
+                    ADD COLUMN IF NOT EXISTS carrier VARCHAR(64)
+                `);
+                console.log('Carrier column verified/added successfully');
+            } catch (error) {
+                console.error('Error ensuring carrier column:', error.message);
             }
 
             // Verify tables were created
@@ -969,7 +983,7 @@ app.post('/api/monitor', async (req, res) => {
     console.log('[Web-Alert API] Request baseUrl:', req.baseUrl);
     console.log('[Web-Alert API] Request body:', req.body);
     
-    let { websiteUrl, email, phone, duration, pollingInterval } = req.body;
+    let { websiteUrl, email, phone, carrier, duration, pollingInterval, delivery } = req.body;
 
     try {
         // Fallback email so requests without an email still proceed
@@ -1039,12 +1053,14 @@ app.post('/api/monitor', async (req, res) => {
         // Handle phone number insertion - use conditional logic to avoid NULL constraint issues
         let subscriber;
         if (phone && phone.trim() !== '') {
+            const phoneTrimmed = phone.trim();
+            const carrierTrimmed = (carrier || '').trim() || null;
             subscriber = await db.query(`
                 INSERT INTO alert_subscribers 
-                    (url_id, email, phone_number, polling_duration) 
-                VALUES ($1, $2, $3, $4) 
+                    (url_id, email, phone_number, carrier, polling_duration) 
+                VALUES ($1, $2, $3, $4, $5) 
                 RETURNING *
-            `, [urlId, email, phone, duration]);
+            `, [urlId, email, phoneTrimmed, carrierTrimmed, duration]);
         } else {
             // For databases that still have NOT NULL constraint, we'll need to handle this differently
             // Try to insert without phone_number first
@@ -1061,10 +1077,10 @@ app.post('/api/monitor', async (req, res) => {
                     console.log('Phone number column still requires a value, using empty string...');
                     subscriber = await db.query(`
                         INSERT INTO alert_subscribers 
-                            (url_id, email, phone_number, polling_duration) 
-                        VALUES ($1, $2, $3, $4) 
+                            (url_id, email, phone_number, carrier, polling_duration) 
+                        VALUES ($1, $2, $3, $4, $5) 
                         RETURNING *
-                    `, [urlId, email, '', duration]);
+                    `, [urlId, email, '', null, duration]);
                 } else {
                     throw error;
                 }
@@ -1102,8 +1118,8 @@ app.post('/api/monitor', async (req, res) => {
                     );
                 }
                 if (phone && phone.trim() !== '') {
-                    console.log(`Preparing to send welcome SMS to: ${phone}`);
-                    notifications.push(smsService.sendWelcomeSMS(phone, websiteUrl, duration));
+                    console.log(`Preparing to send welcome SMS to: ${phone} (carrier: ${carrier || 'n/a'})`);
+                    notifications.push(smsService.sendWelcomeSMS(phone, websiteUrl, duration, carrier));
                 }
                 if (notifications.length > 0) {
                     console.log('Awaiting notification results...');
