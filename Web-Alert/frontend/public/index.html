@@ -68,6 +68,15 @@
         .btn-primary:hover {
             background-color: #0056b3;
         }
+        .btn-outline-secondary {
+            background-color: transparent;
+            color: #6c757d;
+            border: 2px solid #6c757d;
+        }
+        .btn-outline-secondary:hover {
+            background-color: #6c757d;
+            color: white;
+        }
         button[type="submit"] {
             width: 100%;
             padding: 12px 20px;
@@ -202,7 +211,7 @@
         <div class="card">
             <div class="header" style="display:flex;flex-direction:column;gap:8px;align-items:center;">
                 <div class="logo-container">
-                    <img src="lab007-trans.PNG" alt="LAB007 Logo" class="logo" style="max-width: 200px; height: auto;">
+                    <img src="https://raw.githubusercontent.com/thomad99/LAB007-Main/master/LAB007/Images/lab007-trans.PNG" alt="LAB007 Logo" class="logo" style="max-width: 200px; height: auto;">
                 </div>
                 <h1 style="margin:0;">Web-Alert Configuration</h1>
                 <a href="/webalert/status.html" style="font-weight:700;color:#007bff;text-decoration:none;">Monitor all jobs</a>
@@ -216,6 +225,7 @@
                 <div class="form-group">
                     <label for="email">Email Address</label>
                     <input type="email" class="form-control" id="email" name="email" placeholder="you@example.com">
+                    <button type="button" id="sendTestEmailBtn" class="btn btn-outline-secondary" style="margin-top:8px;">Send test email</button>
                 </div>
                 <div class="form-group">
                     <label for="phone">Mobile Number (for SMS alerts)</label>
@@ -250,6 +260,7 @@
                         <option value="consumer cellular">Consumer Cellular</option>
                     </select>
                     <small class="text-muted">Required only if you want SMS alerts. This uses the free email-to-text gateways for your carrier.</small>
+                    <button type="button" id="sendTestSmsBtn" class="btn btn-outline-secondary" style="margin-top:8px;">Send test SMS</button>
                 </div>
                 <div class="form-group">
                     <label for="pollingInterval">Polling Interval (minutes):</label>
@@ -288,6 +299,60 @@
                 carrierGroup.style.display = sendSmsBox.checked ? 'block' : 'none';
             });
         }
+
+        const basePath = window.location.pathname.startsWith('/webalert') ? '/webalert' : '';
+
+        document.getElementById('sendTestEmailBtn')?.addEventListener('click', async () => {
+            const email = document.getElementById('email')?.value?.trim();
+            if (!email) {
+                if (statusBox) statusBox.innerHTML = '<span style="color:#721c24;">Enter an email address, then click Send test email.</span>';
+                return;
+            }
+            const btn = document.getElementById('sendTestEmailBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+            if (statusBox) statusBox.innerHTML = 'Sending test email to ' + email + '…';
+            try {
+                const url = basePath + '/api/test-email?email=' + encodeURIComponent(email);
+                const res = await fetch(url);
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    if (statusBox) statusBox.innerHTML = '<span style="color:#155724;">Test email sent to ' + email + '. Check your inbox.</span>';
+                } else {
+                    if (statusBox) statusBox.innerHTML = '<span style="color:#721c24;">' + (data.error || 'Failed to send test email') + '</span>';
+                }
+            } catch (err) {
+                if (statusBox) statusBox.innerHTML = '<span style="color:#721c24;">Failed to send test email. ' + (err.message || '') + '</span>';
+            }
+            if (btn) { btn.disabled = false; btn.textContent = 'Send test email'; }
+        });
+
+        document.getElementById('sendTestSmsBtn')?.addEventListener('click', async () => {
+            const phone = document.getElementById('phone')?.value?.trim();
+            const carrier = document.getElementById('carrier')?.value || '';
+            if (!phone || !carrier) {
+                if (statusBox) statusBox.innerHTML = '<span style="color:#721c24;">Enter mobile number and select carrier, then click Send test SMS.</span>';
+                return;
+            }
+            const btn = document.getElementById('sendTestSmsBtn');
+            if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+            if (statusBox) statusBox.innerHTML = 'Sending test SMS to ' + phone + '…';
+            try {
+                const res = await fetch(basePath + '/api/test-sms-gateway', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ phone, carrier })
+                });
+                const data = await res.json();
+                if (res.ok && data.success) {
+                    if (statusBox) statusBox.innerHTML = '<span style="color:#155724;">Test SMS sent to ' + phone + '. Check your phone.</span>';
+                } else {
+                    if (statusBox) statusBox.innerHTML = '<span style="color:#721c24;">' + (data.error || 'Failed to send test SMS') + '</span>';
+                }
+            } catch (err) {
+                if (statusBox) statusBox.innerHTML = '<span style="color:#721c24;">Failed to send test SMS. ' + (err.message || '') + '</span>';
+            }
+            if (btn) { btn.disabled = false; btn.textContent = 'Send test SMS'; }
+        });
 
         if (!form) return;
 
