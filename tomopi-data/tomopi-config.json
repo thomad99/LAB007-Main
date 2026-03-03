@@ -61,15 +61,21 @@
     "Science Daily": "https://www.sciencedaily.com/rss/top.xml",
     "Nature": "https://www.nature.com/nature.rss"
   },
+
   "mode": "news_feed",
-  "rotate": "left",
+
+  "rotate": "normal",
+
   "refresh_seconds": 15,
+
   "screen": {
+    "logical_resolution": [1920, 480],
     "brightness": 80,
     "schedule_enabled": true,
     "on_time": "07:00",
     "off_time": "22:00"
   },
+
   "clock_basic": {
     "format": "%H:%M:%S",
     "font_name": "dejavusans",
@@ -78,6 +84,7 @@
     "color_rgb": [255, 170, 90],
     "bg_rgb": [0, 0, 0]
   },
+
   "slideshow": {
     "folder": "images",
     "seconds_per_slide": 6,
@@ -93,21 +100,25 @@
       "color_rgb": [255, 255, 255]
     }
   },
+
   "nixie_clock": {
     "folder": "nixie",
     "scale": 1,
     "show_seconds": true
   },
+
   "flip_clock": {
     "format": "%H:%M:%S",
     "fps": 45,
     "flip_ms": 450
   },
+
   "analog_clock": {
     "show_numbers": true,
     "show_ticks": true,
     "smooth_seconds": true
   },
+
   "video_player": {
     "folder": "video",
     "loop_first": false,
@@ -115,6 +126,7 @@
     "volume": 70,
     "shuffle": false
   },
+
   "web_images": {
     "manifest_url": "https://www.lab007.ai/tomopi/images/images.json",
     "index_url": "https://www.lab007.ai/tomopi/images/",
@@ -126,6 +138,7 @@
     "fit": "contain",
     "cache_dir": "web_cache"
   },
+
   "news_feed": {
     "rss_feeds": [
       "https://feeds.bbci.co.uk/news/rss.xml"
@@ -133,20 +146,27 @@
     "max_headlines": 10,
     "transition": "slide_left",
     "transition_ms": 450,
-    "tickers": ["TSLA", "IBRX"],
+    "tickers": [
+      "TSLA",
+      "IBRX"
+    ],
     "item_seconds": 10,
     "refresh_news_seconds": 600,
     "refresh_stocks_seconds": 240,
+
     "clock_font_name": "dejavusans",
     "clock_font_size": 270,
+
     "text_font_name": "dejavusans",
     "text_font_size": 60,
+
     "headline_fit_width_pct": 0.92,
     "headline_fit_height_pct": 0.45,
     "headline_max_lines": 3,
     "headline_font_min": 26,
     "headline_font_max": 110,
     "headline_line_spacing": 10,
+
     "stock_fit_width_pct": 0.85,
     "stock_fit_height_pct": 0.55,
     "stock_font_min": 30,
@@ -154,6 +174,7 @@
     "stock_line_spacing": 14,
     "stock_max_lines": 8,
     "stock_font_name": "dejavusans",
+
     "clock_color_rgb": [255, 128, 0],
     "text_color_rgb": [255, 128, 0],
     "bg_rgb": [0, 0, 0]

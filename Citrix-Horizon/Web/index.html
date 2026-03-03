@@ -1541,7 +1541,7 @@
     window.openUagModal = openUagModal;
     window.closeUagModal = closeUagModal;
     function showUagTab(tab) {
-        const tabs = ['config','debug','diagram'];
+        const tabs = ['config','debug','diagram','compare'];
         tabs.forEach(t => {
             const panel = document.getElementById(`uag${capitalize(t)}Panel`);
             const tabBtn = document.getElementById(`uagTab${capitalize(t)}`);
