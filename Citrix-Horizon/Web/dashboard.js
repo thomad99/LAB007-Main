@@ -5333,7 +5333,8 @@ function handleUagCompareFiles(event) {
         reader.onload = function(e) {
             try {
                 const content = e.target.result;
-                const parsed = parseUagConfig(content);
+                // Use a dedicated parser for compare to avoid clashing with the inline UAG modal parser
+                const parsed = parseUagConfigForCompare(content);
                 uagCompareConfigs.push(parsed);
 
                 // Check if all files are loaded
@@ -5366,7 +5367,8 @@ function tryParseJsonLoose(text) {
     return null;
 }
 
-function parseUagConfig(content) {
+// Dedicated parser for the UAG Config Compare tab (does not touch the inline UAG modal parser in index.html)
+function parseUagConfigForCompare(content) {
     const config = {};
     if (!content) return config;
 
