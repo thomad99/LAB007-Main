@@ -621,7 +621,8 @@ app.get('/tomopi', (req, res) => {
 });
 
 // TomoPI config API (Pi fetches this, admin saves via panel)
-const tomopiConfigPath = path.join(__dirname, 'tomopi-data', 'tomopi-config.json');
+// Backing file is tomopi-data/config.json so Pi can simply refer to "config.json"
+const tomopiConfigPath = path.join(__dirname, 'tomopi-data', 'config.json');
 const tomopiImagesDir = path.join(__dirname, 'tomopi-data', 'images');
 if (!fs.existsSync(tomopiImagesDir)) {
   fs.mkdirSync(tomopiImagesDir, { recursive: true });

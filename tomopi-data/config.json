@@ -1,0 +1,269 @@
+{
+  "_comment_fonts": [
+    "font_name uses pygame SysFont names (depends on installed fonts).",
+    "Common good ones: null (default), 'dejavusans', 'dejavusansmono',",
+    "'freesans', 'arial', 'verdana', 'tahoma', 'liberationsans'.",
+    "To list fonts on the Pi run:",
+    "python3 -c \"import pygame; pygame.init(); print(sorted(pygame.font.get_fonts())[:200])\""
+  ],
+  "font_list": [
+    "dejavusans",
+    "dejavusansmono",
+    "freesans",
+    "arial",
+    "verdana",
+    "tahoma",
+    "liberationsans"
+  ],
+  "color_palette": {
+    "plain": {
+      "White": [
+        255,
+        255,
+        255
+      ],
+      "Black": [
+        0,
+        0,
+        0
+      ],
+      "Gray": [
+        128,
+        128,
+        128
+      ],
+      "Red": [
+        255,
+        0,
+        0
+      ],
+      "Orange": [
+        255,
+        165,
+        0
+      ],
+      "Amber": [
+        255,
+        170,
+        90
+      ],
+      "Yellow": [
+        255,
+        255,
+        0
+      ],
+      "Green": [
+        0,
+        255,
+        0
+      ],
+      "Blue": [
+        0,
+        0,
+        255
+      ],
+      "Purple": [
+        128,
+        0,
+        128
+      ]
+    },
+    "neon": {
+      "Neon Green": [
+        57,
+        255,
+        20
+      ],
+      "Neon Blue": [
+        0,
+        255,
+        255
+      ],
+      "Neon Pink": [
+        255,
+        0,
+        255
+      ],
+      "Neon Yellow": [
+        255,
+        255,
+        0
+      ],
+      "Neon Orange": [
+        255,
+        128,
+        0
+      ],
+      "Neon Cyan": [
+        0,
+        255,
+        255
+      ],
+      "Neon Lime": [
+        191,
+        255,
+        0
+      ],
+      "Neon Red": [
+        255,
+        51,
+        51
+      ]
+    }
+  },
+  "rss_feed_presets": {
+    "BBC News": "https://feeds.bbci.co.uk/news/rss.xml",
+    "CNN": "https://rss.cnn.com/rss/edition.rss",
+    "Sky News": "https://feeds.skynews.com/feeds/rss/home.xml",
+    "Al Jazeera": "https://www.aljazeera.com/xml/rss/all.xml",
+    "Reuters": "https://www.reuters.com/world/rss",
+    "Ars Technica": "https://feeds.arstechnica.com/arstechnica/index",
+    "The Verge": "https://www.theverge.com/rss/index.xml",
+    "TechCrunch": "https://techcrunch.com/feed/",
+    "Wired": "https://www.wired.com/feed/rss",
+    "Engadget": "https://www.engadget.com/rss.xml",
+    "Financial Times": "https://www.ft.com/?format=rss",
+    "WSJ Markets": "https://feeds.a.dj.com/rss/RSSMarketsMain.xml",
+    "Wall Street Journal": "https://feeds.a.dj.com/rss/RSSWSJD.xml",
+    "CNBC": "https://www.cnbc.com/id/100003114/device/rss/rss.html",
+    "New York Times": "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml",
+    "Washington Post": "https://feeds.washingtonpost.com/rss/world",
+    "ABC News": "https://abcnews.go.com/abcnews/topstories",
+    "NASA": "https://www.nasa.gov/rss/dyn/breaking_news.rss",
+    "Science Daily": "https://www.sciencedaily.com/rss/top.xml",
+    "Nature": "https://www.nature.com/nature.rss"
+  },
+  "mode": "news_feed",
+  "rotate": "right",
+  "logical_resolution": [
+    1920,
+    480
+  ],
+  "refresh_seconds": 15,
+  "screen": {
+    "logical_resolution": [
+      1920,
+      480
+    ],
+    "brightness": 80,
+    "schedule_enabled": true,
+    "on_time": "07:00",
+    "off_time": "22:00"
+  },
+  "clock_basic": {
+    "format": "%H:%M:%S",
+    "font_name": "dejavusans",
+    "font_size": 220,
+    "bold": true,
+    "color_rgb": [
+      255,
+      170,
+      90
+    ],
+    "bg_rgb": [
+      0,
+      0,
+      0
+    ]
+  },
+  "slideshow": {
+    "folder": "images",
+    "seconds_per_slide": 6,
+    "shuffle": true,
+    "fit": "cover",
+    "clock": {
+      "enabled": true,
+      "layout": "center",
+      "format": "%H:%M",
+      "font_name": "dejavusans",
+      "font_size": 140,
+      "bold": true,
+      "color_rgb": [
+        255,
+        255,
+        255
+      ]
+    }
+  },
+  "nixie_clock": {
+    "folder": "nixie",
+    "scale": 1,
+    "show_seconds": true
+  },
+  "flip_clock": {
+    "format": "%H:%M:%S",
+    "fps": 45,
+    "flip_ms": 450
+  },
+  "analog_clock": {
+    "show_numbers": true,
+    "show_ticks": true,
+    "smooth_seconds": true
+  },
+  "video_player": {
+    "folder": "video",
+    "loop_first": false,
+    "audio": "on",
+    "volume": 70,
+    "shuffle": false
+  },
+  "web_images": {
+    "manifest_url": "https://www.lab007.ai/tomopi/images/images.json",
+    "index_url": "https://www.lab007.ai/tomopi/images/",
+    "seconds_per_slide": 6,
+    "refresh_list_seconds": 300,
+    "transition": "fade",
+    "fade_ms": 450,
+    "shuffle": true,
+    "fit": "contain",
+    "cache_dir": "web_cache"
+  },
+  "news_feed": {
+    "rss_feeds": [
+      "https://feeds.bbci.co.uk/news/rss.xml"
+    ],
+    "max_headlines": 10,
+    "transition": "slide_left",
+    "transition_ms": 450,
+    "tickers": [
+      "TSLA",
+      "IBRX",
+      "BTC-USD"
+    ],
+    "item_seconds": 10,
+    "refresh_news_seconds": 600,
+    "refresh_stocks_seconds": 240,
+    "clock_font_name": "dejavusans",
+    "clock_font_size": 270,
+    "text_font_name": "dejavusans",
+    "text_font_size": 60,
+    "headline_fit_width_pct": 0.92,
+    "headline_fit_height_pct": 0.45,
+    "headline_max_lines": 3,
+    "headline_font_min": 26,
+    "headline_font_max": 110,
+    "headline_line_spacing": 10,
+    "stock_fit_width_pct": 0.85,
+    "stock_fit_height_pct": 0.55,
+    "stock_font_min": 30,
+    "stock_font_max": 160,
+    "stock_line_spacing": 14,
+    "stock_max_lines": 8,
+    "stock_font_name": "dejavusans",
+    "clock_color_rgb": [
+      255,
+      128,
+      0
+    ],
+    "text_color_rgb": [
+      255,
+      128,
+      0
+    ],
+    "bg_rgb": [
+      0,
+      0,
+      0
+    ]
+  }
+}

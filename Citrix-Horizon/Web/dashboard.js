@@ -5642,38 +5642,22 @@ function displayComparisonResults(comparison) {
     const statDiffs = document.getElementById('compareStatDiffs');
     const statSame = document.getElementById('compareStatSame');
     const summaryDetails = document.getElementById('uagCompareSummaryDetails');
+    const hdrFile1 = document.getElementById('compareHeaderFile1');
+    const hdrFile2 = document.getElementById('compareHeaderFile2');
 
     // Update stats
     statFiles.textContent = uagCompareFileNames.length;
     statDiffs.textContent = comparison.differences.length;
     statSame.textContent = comparison.identical.length;
 
-    // Show per-file summary (UAG name, IP, key URLs) and debug info so user can see what we parsed
+    // Update column headers to show actual file names
+    if (hdrFile1) hdrFile1.textContent = uagCompareFileNames[0] || 'File 1';
+    if (hdrFile2) hdrFile2.textContent = uagCompareFileNames[1] || 'File 2';
+
+    // We keep debug info in the config objects for console inspection only.
+    // The UI summary area is intentionally left empty to avoid clutter above the tables.
     if (summaryDetails) {
-        const lines = uagCompareConfigs.map((cfg, idx) => {
-            const name = escapeHtml(uagCompareFileNames[idx] || `Config ${idx + 1}`);
-            const uagName = escapeHtml((cfg && cfg.uagName) || '-');
-            const uagIp = escapeHtml((cfg && cfg.uagIp) || '-');
-            const conn = escapeHtml((cfg && (cfg.connectionServerUrl || cfg.proxyDestinationUrl)) || '-');
-            const blast = escapeHtml((cfg && cfg.blastExternalUrl) || '-');
-            const maxBlast = (cfg && (cfg.maxActiveBlastSessions ?? cfg.maxBlastConnections)) ?? '-';
-
-            const dbg = (cfg && cfg._debug) || {};
-            const mode = escapeHtml(dbg.mode || 'unknown');
-            const topKeys = Array.isArray(dbg.topKeys) ? dbg.topKeys.slice(0, 10).join(', ') : '';
-            const notes = Array.isArray(dbg.notes) ? dbg.notes.join(' | ') : '';
-
-            return `<div class="log-line" style="border:none; padding:4px 0; border-bottom:1px dashed #ddd;">
-                <div><strong>${name}</strong> — UAG: ${uagName}, IP: ${uagIp},
-                Conn: ${conn}, Blast: ${blast}, MaxBlast: ${maxBlast}</div>
-                <div style="font-size: 12px; color:#555; margin-top:2px;">
-                    Mode: ${mode};
-                    Top-level keys: ${escapeHtml(topKeys || 'n/a')};
-                    ${notes ? 'Notes: ' + escapeHtml(notes) : ''}
-                </div>
-            </div>`;
-        });
-        summaryDetails.innerHTML = lines.join('') || '';
+        summaryDetails.innerHTML = '';
     }
 
     // Display differences
@@ -5682,18 +5666,11 @@ function displayComparisonResults(comparison) {
             const concernClass = diff.concernLevel === 'High' ? 'text-red-600' :
                                diff.concernLevel === 'Medium' ? 'text-orange-600' :
                                diff.concernLevel === 'Low' ? 'text-yellow-600' : 'text-gray-600';
-
-            // For differences, show first two files as example
-            const file1 = diff.values[0];
-            const file2 = diff.values[1];
-
             return `
                 <tr>
                     <td><strong>${formatSettingName(diff.setting)}</strong></td>
-                    <td>${file1.file}</td>
-                    <td>${formatValue(file1.value)}</td>
-                    <td>${file2.file}</td>
-                    <td>${formatValue(file2.value)}</td>
+                    <td>${formatValue(diff.values[0]?.value)}</td>
+                    <td>${formatValue(diff.values[1]?.value)}</td>
                     <td><span class="${concernClass}" style="font-weight: bold;">${diff.concernLevel}</span></td>
                 </tr>
             `;
