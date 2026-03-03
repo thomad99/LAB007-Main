@@ -5260,12 +5260,18 @@ function parseUagConfig(content) {
         if (general.ip0) config.uagIp = general.ip0;
         else if (sys.ip0) config.uagIp = sys.ip0;
 
+        // Core system / security knobs
+        if (sys.cipherSuites) config.cipherSuites = sys.cipherSuites;
+        if (sys.sslProvider) config.sslProvider = sys.sslProvider;
+        if (sys.ipMode) config.ipMode = sys.ipMode;
+
         // DNS / AD
         if (sys.dns) {
             config.dnsServers = sys.dns.split(/\s+/).filter(Boolean);
         }
         const adServers = new Set();
         if (sys.dnsSearch) {
+            config.dnsSearch = sys.dnsSearch;
             sys.dnsSearch.split(/\s+/).filter(Boolean).forEach(v => adServers.add(v));
         }
         const idpList = jsonObj.idPExternalMetadataSettingsList && jsonObj.idPExternalMetadataSettingsList.idPExternalMetadataSettingsList;
@@ -5478,11 +5484,29 @@ function displayComparisonResults(comparison) {
     const statFiles = document.getElementById('compareStatFiles');
     const statDiffs = document.getElementById('compareStatDiffs');
     const statSame = document.getElementById('compareStatSame');
+    const summaryDetails = document.getElementById('uagCompareSummaryDetails');
 
     // Update stats
     statFiles.textContent = uagCompareFileNames.length;
     statDiffs.textContent = comparison.differences.length;
     statSame.textContent = comparison.identical.length;
+
+    // Show per-file summary (UAG name, IP, key URLs) so user can see we parsed configs
+    if (summaryDetails) {
+        const lines = uagCompareConfigs.map((cfg, idx) => {
+            const name = escapeHtml(uagCompareFileNames[idx] || `Config ${idx + 1}`);
+            const uagName = escapeHtml((cfg && cfg.uagName) || '-');
+            const uagIp = escapeHtml((cfg && cfg.uagIp) || '-');
+            const conn = escapeHtml((cfg && (cfg.connectionServerUrl || cfg.proxyDestinationUrl)) || '-');
+            const blast = escapeHtml((cfg && cfg.blastExternalUrl) || '-');
+            const maxBlast = (cfg && (cfg.maxActiveBlastSessions ?? cfg.maxBlastConnections)) ?? '-';
+            return `<div class="log-line" style="border:none; padding:2px 0;">
+                <strong>${name}</strong> — UAG: ${uagName}, IP: ${uagIp},
+                Conn: ${conn}, Blast: ${blast}, MaxBlast: ${maxBlast}
+            </div>`;
+        });
+        summaryDetails.innerHTML = lines.join('') || '';
+    }
 
     // Display differences
     if (comparison.differences.length > 0) {
