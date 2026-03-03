@@ -5236,17 +5236,29 @@ function handleUagCompareFiles(event) {
     });
 }
 
+function tryParseJsonLoose(text) {
+    if (!text) return null;
+    try {
+        return JSON.parse(text);
+    } catch (_) {}
+    const trimmed = String(text).trim();
+    if (trimmed) {
+        try { return JSON.parse(trimmed); } catch (_) {}
+    }
+    const first = text.indexOf('{');
+    const last = text.lastIndexOf('}');
+    if (first !== -1 && last !== -1 && last > first) {
+        try { return JSON.parse(text.slice(first, last + 1)); } catch (_) {}
+    }
+    return null;
+}
+
 function parseUagConfig(content) {
     const config = {};
     if (!content) return config;
 
     // First, try to parse as JSON (raw UAG export)
-    let jsonObj = null;
-    try {
-        jsonObj = JSON.parse(content);
-    } catch (e) {
-        jsonObj = null;
-    }
+    const jsonObj = tryParseJsonLoose(content);
 
     if (jsonObj && typeof jsonObj === 'object') {
         const sys = jsonObj.systemSettings || {};
@@ -5267,7 +5279,9 @@ function parseUagConfig(content) {
 
         // DNS / AD
         if (sys.dns) {
-            config.dnsServers = sys.dns.split(/\s+/).filter(Boolean);
+            config.dnsServers = typeof sys.dns === 'string'
+                ? sys.dns.split(/\s+/).filter(Boolean)
+                : sys.dns;
         }
         const adServers = new Set();
         if (sys.dnsSearch) {
@@ -5387,7 +5401,7 @@ function parseUagConfig(content) {
 
     const listFields = ['gateways', 'externalUrls', 'connectionServers', 'dnsServers', 'adServers', 'certificates'];
     listFields.forEach(field => {
-        if (config[field]) {
+        if (typeof config[field] === 'string') {
             config[field] = config[field].split(',').map(item => item.trim()).filter(item => item);
         }
     });
