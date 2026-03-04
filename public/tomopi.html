@@ -79,6 +79,11 @@
       border-radius: 8px;
       resize: vertical;
     }
+    @media (max-width: 600px) {
+      #jsonEditorSection {
+        display: none;
+      }
+    }
     textarea:focus {
       outline: none;
       border-color: var(--accent);
@@ -375,7 +380,7 @@
         </div>
       </details>
 
-      <details class="ctrl-section" id="newsFeedSection">
+      <details class="ctrl-section" id="newsFeedSection" open>
         <summary style="cursor:pointer;font-weight:600;">News feed &amp; stocks</summary>
         <div class="ctrl-grid">
           <div class="ctrl-item">
@@ -455,15 +460,20 @@
         </div>
       </details>
 
-      <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--muted);">
-        Edit the config below. Your Raspberry Pi fetches from <code>/tomopi/config.json</code> every <code>refresh_seconds</code>.
-      </p>
-      <textarea id="configEditor" spellcheck="false" placeholder="Loading..."></textarea>
-      <div class="actions">
-        <button class="btn btn-primary" id="saveBtn">Save</button>
-        <button class="btn btn-secondary" id="reloadBtn">Reload</button>
-        <span class="status" id="status"></span>
-      </div>
+      <details id="jsonEditorSection">
+        <summary style="cursor:pointer;font-weight:600;">
+          Display config (JSON) <span style="font-weight:400;color:var(--muted);font-size:12px;">(advanced)</span>
+        </summary>
+        <p style="margin: 8px 0 12px 0; font-size: 13px; color: var(--muted);">
+          Edit the config below. Your Raspberry Pi fetches from <code>/tomopi/config.json</code> every <code>refresh_seconds</code>.
+        </p>
+        <textarea id="configEditor" spellcheck="false" placeholder="Loading..."></textarea>
+        <div class="actions">
+          <button class="btn btn-primary" id="saveBtn">Save</button>
+          <button class="btn btn-secondary" id="reloadBtn">Reload</button>
+          <span class="status" id="status"></span>
+        </div>
+      </details>
     </div>
 
     <div class="panel">
