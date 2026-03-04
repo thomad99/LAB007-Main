@@ -423,6 +423,22 @@ def _draw_stocks(surface: pygame.Surface, rect: pygame.Rect, ncfg: dict):
         y += r.get_height() + line_spacing
 
 def _transition_offsets(typ: str, W: int, H: int, ncfg: dict):
+    """
+    Compute x/y offsets for the current transition type.
+    Supported transitions:
+      - none           : instant switch
+      - fade           : handled in run_frame using alpha
+      - slide_left     : old slides left, new from right
+      - slide_right    : old slides right, new from left
+      - slide_up       : old slides up, new from bottom
+      - slide_down     : old slides down, new from top
+      - swipe          : faster horizontal slide using linear easing
+      - flash          : no offset; screen flash handled in run_frame
+      - zoom_in        : no offset; scale simulated via alpha/center
+      - zoom_out       : no offset; scale simulated via alpha/center
+      - wipe_horizontal: left-to-right wipe; offset handled here
+      - wipe_vertical  : top-to-bottom wipe; offset handled here
+    """
     trans = (ncfg.get("transition", "slide_left") or "slide_left").lower()
     ms = int(ncfg.get("transition_ms", 450))
 
@@ -430,9 +446,15 @@ def _transition_offsets(typ: str, W: int, H: int, ncfg: dict):
         return (0, 0, ms, trans)
 
     elapsed = (pygame.time.get_ticks() - _STATE["transition_start"]) / max(1, ms)
-    p = min(1.0, max(0.0, elapsed))
-    p = ease_out_cubic(p)
+    p_raw = min(1.0, max(0.0, elapsed))
 
+    # Most transitions ease out; swipe uses linear for a snappier feel
+    if trans == "swipe":
+        p = p_raw
+    else:
+        p = ease_out_cubic(p_raw)
+
+    # Slides
     if trans == "slide_left":
         if typ == _STATE["transition_from"]:
             return (-int(W * p), 0, ms, trans)
@@ -443,9 +465,38 @@ def _transition_offsets(typ: str, W: int, H: int, ncfg: dict):
             return (int(W * p), 0, ms, trans)
         if typ == _STATE["transition_to"]:
             return (-int(W * (1.0 - p)), 0, ms, trans)
-    elif trans == "fade":
+    elif trans == "slide_up":
+        if typ == _STATE["transition_from"]:
+            return (0, -int(H * p), ms, trans)
+        if typ == _STATE["transition_to"]:
+            return (0, int(H * (1.0 - p)), ms, trans)
+    elif trans == "slide_down":
+        if typ == _STATE["transition_from"]:
+            return (0, int(H * p), ms, trans)
+        if typ == _STATE["transition_to"]:
+            return (0, -int(H * (1.0 - p)), ms, trans)
+    elif trans == "swipe":
+        # faster horizontal swipe, symmetric
+        if typ == _STATE["transition_from"]:
+            return (-int(W * p), 0, ms, trans)
+        if typ == _STATE["transition_to"]:
+            return (int(W * (1.0 - p)), 0, ms, trans)
+    elif trans in ("fade", "flash", "zoom_in", "zoom_out"):
+        # No offset; handled via alpha/overlays in run_frame
         return (0, 0, ms, trans)
+    elif trans == "wipe_horizontal":
+        # treat as slide_left-ish for now
+        if typ == _STATE["transition_from"]:
+            return (-int(W * p), 0, ms, trans)
+        if typ == _STATE["transition_to"]:
+            return (0, 0, ms, trans)
+    elif trans == "wipe_vertical":
+        if typ == _STATE["transition_from"]:
+            return (0, -int(H * p), ms, trans)
+        if typ == _STATE["transition_to"]:
+            return (0, 0, ms, trans)
 
+    # default: no movement
     return (0, 0, ms, trans)
 
 
@@ -515,14 +566,39 @@ def run_frame(cfg: dict, surface: pygame.Surface):
     ox_from, oy_from, ms, trans = _transition_offsets(_STATE["transition_from"], W, H, ncfg)
     ox_to, oy_to, _, _ = _transition_offsets(_STATE["transition_to"], W, H, ncfg)
 
+    elapsed = (pygame.time.get_ticks() - _STATE["transition_start"]) / max(1, ms)
+    p = min(1.0, max(0.0, elapsed))
+
     if trans == "fade":
-        elapsed = (pygame.time.get_ticks() - _STATE["transition_start"]) / max(1, ms)
-        p = min(1.0, max(0.0, elapsed))
+        # Crossfade
         a_from = int(255 * (1.0 - p))
         a_to = int(255 * p)
         draw_typ(_STATE["transition_from"], 0, 0, alpha=a_from)
         draw_typ(_STATE["transition_to"], 0, 0, alpha=a_to)
+    elif trans == "flash":
+        # Quick white flash in middle of transition
+        if p < 0.3:
+            draw_typ(_STATE["transition_from"], 0, 0)
+        elif p < 0.6:
+            flash = pygame.Surface((W, H))
+            flash.fill((255, 255, 255))
+            alpha = int(255 * (1.0 - (p - 0.3) / 0.3))
+            flash.set_alpha(alpha)
+            surface.blit(flash, (0, 0))
+        else:
+            draw_typ(_STATE["transition_to"], 0, 0)
+    elif trans == "zoom_in":
+        # New content zooms in from smaller scale (simulated via alpha / center emphasis)
+        a_to = int(255 * p)
+        draw_typ(_STATE["transition_from"], 0, 0, alpha=255)
+        draw_typ(_STATE["transition_to"], 0, 0, alpha=a_to)
+    elif trans == "zoom_out":
+        # Old content fades out quickly, giving impression of zooming away
+        a_from = int(255 * (1.0 - p))
+        draw_typ(_STATE["transition_from"], 0, 0, alpha=a_from)
+        draw_typ(_STATE["transition_to"], 0, 0, alpha=255)
     else:
+        # Slides / wipes: use computed offsets
         draw_typ(_STATE["transition_from"], ox_from, oy_from)
         draw_typ(_STATE["transition_to"], ox_to, oy_to)
 
