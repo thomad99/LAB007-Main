@@ -2375,7 +2375,8 @@ function generateCloneScript(selectedImages, destinationFolder, moveSourceAfterC
     scriptLines.push('# Clone each selected image (one at a time)');
     scriptLines.push('$cloneCount = 0');
     scriptLines.push('$totalClones = $ImagesToClone.Count');
-    scriptLines.push('$cloneLogDir = ".\\Data"');
+    scriptLines.push('$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path');
+    scriptLines.push('$cloneLogDir = Join-Path $scriptDir "Reports"');
     scriptLines.push('if (-not (Test-Path -Path $cloneLogDir)) { New-Item -ItemType Directory -Path $cloneLogDir -Force | Out-Null }');
     scriptLines.push('$cloneLogPath = Join-Path $cloneLogDir "FarmClonesLog.json"');
     scriptLines.push('foreach ($image in $ImagesToClone) {');
@@ -3075,6 +3076,9 @@ function generateGoldenSunReportScript() {
     lines.push('');
     lines.push('Import-Module VMware.PowerCLI -ErrorAction SilentlyContinue');
     lines.push('$ErrorActionPreference = "Stop"');
+    lines.push('$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path');
+    lines.push('$ReportsDir = Join-Path $scriptDir "Reports"');
+    lines.push('if (-not (Test-Path $ReportsDir)) { New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null }');
     lines.push('');
     lines.push(`$vc = "${vcenter || GOLDEN_SUN_DEFAULT_VCENTER}"`);
     lines.push('if ([string]::IsNullOrWhiteSpace($vc)) { $vc = Read-Host "Enter vCenter server" }');
@@ -3104,8 +3108,9 @@ function generateGoldenSunReportScript() {
     lines.push('');
     lines.push('$results | Format-Table -AutoSize');
     lines.push('');
-    lines.push('# Export JSON for report');
-    lines.push('$results | ConvertTo-Json -Depth 4 | Set-Content -Path "Snapshot-Recheck.json" -Encoding UTF8');
+    lines.push('# Export JSON for report into Reports folder');
+    lines.push('$snapJson = Join-Path $ReportsDir "Snapshot-Recheck.json"');
+    lines.push('$results | ConvertTo-Json -Depth 4 | Set-Content -Path $snapJson -Encoding UTF8');
     const script = lines.join('\n');
     const out = document.getElementById('goldenSunReportScriptContent');
     const wrap = document.getElementById('goldenSunReportScriptOutput');
@@ -3381,14 +3386,17 @@ function generateHorizonAdminScript(action) {
     }
     scriptLines.push('');
     scriptLines.push('$ErrorActionPreference = "Stop"');
+    scriptLines.push('$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path');
+    scriptLines.push('$ReportsDir = Join-Path $scriptDir "Reports"');
+    scriptLines.push('if (-not (Test-Path $ReportsDir)) { New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null }');
     scriptLines.push(`$BaseUrl = "${baseUrl}"`);
     scriptLines.push(`$Endpoint = "${cfg.endpoint}"`);
-        scriptLines.push(`$OutJson = "${cfg.outfile}"`);
-        scriptLines.push(`$OutHtml = [System.IO.Path]::ChangeExtension($OutJson, ".html")`);
-        // For Image Dates, standardize HTML/JSON report names so GoldenSun can load them easily
-        if (action === 'imageDates') {
-            scriptLines.push('$OutHtml = ".\\Web\\FarmData.html"');
-        }
+    scriptLines.push(`$OutJson = Join-Path $ReportsDir "${cfg.outfile}"`);
+    scriptLines.push(`$OutHtml = [System.IO.Path]::ChangeExtension($OutJson, ".html")`);
+    // For Image Dates, standardize HTML/JSON report names in Reports so GoldenSun can load them easily
+    if (action === 'imageDates') {
+        scriptLines.push('$OutHtml = Join-Path $ReportsDir "FarmData.html"');
+    }
     scriptLines.push('$Domain = Read-Host "Domain (optional, leave blank if not needed)"');
     scriptLines.push('$cred = Get-Credential -Message "Enter Horizon credentials (REST)"');
     scriptLines.push('$user = $cred.UserName');
@@ -3700,7 +3708,7 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('}');
         scriptLines.push('');
         scriptLines.push('# Load clone log (optional) to mark cloned masters)');
-        scriptLines.push('$cloneLogPath = ".\\Data\\FarmClonesLog.json"');
+        scriptLines.push('$cloneLogPath = Join-Path $ReportsDir "FarmClonesLog.json"');
         scriptLines.push('$cloneIndex = @{}');
         scriptLines.push('if (Test-Path $cloneLogPath) {');
         scriptLines.push('    try {');
@@ -3822,8 +3830,8 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('}');
         scriptLines.push('$response = $rows');
         scriptLines.push('');
-        scriptLines.push('# Also save farm data as JSON alongside HTML so GoldenSun UI can load it');
-        scriptLines.push('$farmJsonPath = ".\\Web\\FarmData.json"');
+        scriptLines.push('# Also save farm data as JSON in Reports so GoldenSun UI can load it');
+        scriptLines.push('$farmJsonPath = Join-Path $ReportsDir "FarmData.json"');
         scriptLines.push('$rows | ConvertTo-Json -Depth 8 | Out-File -FilePath $farmJsonPath -Encoding UTF8');
     } else if (action === 'clones') {
         scriptLines.push('# Transform clones: Farm Name, Golden Image (parent_vm_path), Snapshot (snapshot_path) from inventory');
@@ -5387,11 +5395,12 @@ async function renderGoldenSunFarmReport() {
     const status = document.getElementById('goldenSunFarmStatus');
     const list = document.getElementById('goldenSunFarmList');
     const frame = document.getElementById('goldenSunFarmFrame');
+    const framePlaceholder = document.getElementById('goldenSunFarmFramePlaceholder');
     if (!list) return;
 
     if (!farmReportRows.length) {
         // Try loading FarmData.json from possible base paths
-        const candidates = ['/citrix/FarmData.json', '/FarmData.json'];
+        const candidates = ['/citrix/Reports/FarmData.json', '/Reports/FarmData.json', '/citrix/FarmData.json', '/FarmData.json'];
         let data = null;
         let basePath = null;
         for (const url of candidates) {
@@ -5419,9 +5428,18 @@ async function renderGoldenSunFarmReport() {
         }
         // Set iframe to matching HTML if we know basePath
         if (frame && basePath !== null) {
-            const htmlUrl = basePath + 'FarmData.html';
+            let htmlUrl = basePath + 'FarmData.html';
+            // Prefer Reports subfolder if present
+            if (basePath.endsWith('/Reports/') || basePath.endsWith('\\Reports\\')) {
+                htmlUrl = basePath + 'FarmData.html';
+            } else if (basePath.endsWith('/')) {
+                htmlUrl = basePath + 'Reports/FarmData.html';
+            }
             frame.src = htmlUrl;
             frame.style.display = 'block';
+            if (framePlaceholder) framePlaceholder.style.display = 'none';
+        } else if (framePlaceholder) {
+            framePlaceholder.style.display = 'block';
         }
     }
 

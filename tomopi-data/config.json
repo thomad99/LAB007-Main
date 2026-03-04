@@ -139,7 +139,7 @@
     1920,
     480
   ],
-  "refresh_seconds": 15,
+  "refresh_seconds": 120,
   "screen": {
     "logical_resolution": [
       1920,
