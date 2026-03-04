@@ -1,29 +1,38 @@
 // Email-to-SMS gateway service (Twilio removed)
 console.log('Initializing SMS service (email-to-SMS gateway only)...');
 
-// Email transport for email-to-SMS gateways (fallback)
+// Email transport for email-to-SMS gateways
 const nodemailer = require('nodemailer');
 let emailTransporter = null;
 
-// Initialize email transporter only if credentials are available (non-fatal)
-if (process.env.EMAIL_USER && process.env.EMAIL_PASSWORD) {
+// Prefer SMTP_* env (same as your other services); fallback to EMAIL_USER/EMAIL_PASSWORD or EMAIL_PASS
+const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER;
+const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS;
+const smtpFrom = process.env.SMTP_FROM || smtpUser;
+const smtpHost = process.env.SMTP_HOST || 'smtp.gmail.com';
+const smtpPort = parseInt(process.env.SMTP_PORT || '587');
+const smtpSecure = process.env.SMTP_SECURE !== undefined
+    ? process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === '1'
+    : smtpPort === 465;
+
+if (smtpUser && smtpPass) {
     try {
         emailTransporter = nodemailer.createTransport({
-            service: 'gmail',
-            auth: {
-                user: process.env.EMAIL_USER,
-                pass: process.env.EMAIL_PASSWORD
-            },
+            host: smtpHost,
+            port: smtpPort,
+            secure: smtpSecure,
+            auth: { user: smtpUser, pass: smtpPass },
+            requireTLS: !smtpSecure,
             debug: true,
             logger: true
         });
-        console.log('Email-to-SMS gateway transporter initialized successfully');
+        console.log('Email-to-SMS gateway transporter initialized (SMTP: ' + smtpHost + ':' + smtpPort + ')');
     } catch (error) {
         console.warn('Email transporter initialization failed (non-fatal):', error.message);
         console.warn('Email-to-SMS gateway will not be available');
     }
 } else {
-    console.warn('Email credentials not found (EMAIL_USER or EMAIL_PASSWORD missing)');
+    console.warn('Email credentials not found (set SMTP_USER/SMTP_PASS or EMAIL_USER/EMAIL_PASSWORD)');
     console.warn('Email-to-SMS gateway will not be available');
 }
 
@@ -123,7 +132,7 @@ function resolveGatewayAddress(phone, carrier, preferMms = true) {
 async function sendViaEmailGateway(phone, carrier, message, subject, preferMms = true, fallback = true, tryAll = false, options = {}) {
     // Check if email transporter is available
     if (!emailTransporter) {
-        throw new Error('Email transporter not initialized. Please set EMAIL_USER and EMAIL_PASSWORD environment variables.');
+        throw new Error('Email transporter not initialized. Set SMTP_USER/SMTP_PASS or EMAIL_USER/EMAIL_PASSWORD.');
     }
     
     try {
@@ -159,7 +168,7 @@ async function sendViaEmailGateway(phone, carrier, message, subject, preferMms =
             const [carrierKey, domain] = keyAndDomain.split(':');
             const toAddress = `${last10}@${domain}`;
             const mailOptions = {
-                from: `"Web Alert" <${process.env.EMAIL_USER}>`,
+                from: `"Web Alert" <${smtpFrom}>`,
                 to: toAddress,
                 subject: options.blankSubject ? '' : (subject || 'Web Alert'),
                 text: options.shortMessage ? String(message || '').slice(0, 120) : message,
@@ -285,7 +294,7 @@ async function testConnection() {
     if (!emailTransporter) {
         return {
             status: 'error',
-            error: 'Email transporter not initialized. Please set EMAIL_USER and EMAIL_PASSWORD environment variables.'
+            error: 'Email transporter not initialized. Set SMTP_USER/SMTP_PASS or EMAIL_USER/EMAIL_PASSWORD.'
         };
     }
     

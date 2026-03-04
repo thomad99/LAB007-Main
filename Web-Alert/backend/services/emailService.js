@@ -13,6 +13,12 @@ if (process.env.SENDGRID_API_KEY) {
 }
 
 // SMTP configuration (same as 3D Print)
+// Use SMTP_* first; fall back to EMAIL_USER/EMAIL_PASSWORD so one set of vars configures both email and SMS
+const smtpUser = process.env.SMTP_USER || process.env.EMAIL_USER || '';
+const smtpPass = process.env.SMTP_PASS || process.env.EMAIL_PASSWORD || process.env.EMAIL_PASS || '';
+
+const smtpFrom = process.env.SMTP_FROM || smtpUser;
+
 const smtpPort = parseInt(process.env.SMTP_PORT || '587');
 const smtpSecure = process.env.SMTP_SECURE !== undefined 
     ? process.env.SMTP_SECURE === 'true' || process.env.SMTP_SECURE === '1'
@@ -23,8 +29,8 @@ const smtpConfig = {
     port: smtpPort,
     secure: smtpSecure, // true = SSL/TLS, false = STARTTLS
     auth: {
-        user: process.env.SMTP_USER || '',
-        pass: process.env.SMTP_PASS || ''
+        user: smtpUser,
+        pass: smtpPass
     },
     requireTLS: !smtpSecure, // Require TLS upgrade for STARTTLS (port 587 with secure: false)
     connectionTimeout: 30000,
@@ -38,9 +44,9 @@ const smtpConfig = {
     }
 };
 
-// Create transporter (only if SMTP credentials are available)
+// Create transporter (only if SMTP/email credentials are available)
 let transporter = null;
-if (process.env.SMTP_USER && process.env.SMTP_PASS) {
+if (smtpUser && smtpPass) {
     try {
         transporter = nodemailer.createTransport(smtpConfig);
         console.log('[Web-Alert Email] SMTP transporter initialized');
@@ -48,7 +54,7 @@ if (process.env.SMTP_USER && process.env.SMTP_PASS) {
         console.warn('[Web-Alert Email] Failed to initialize SMTP transporter:', error.message);
     }
 } else {
-    console.warn('[Web-Alert Email] SMTP credentials not configured (SMTP_USER or SMTP_PASS missing)');
+    console.warn('[Web-Alert Email] SMTP/email credentials not configured (set SMTP_USER/SMTP_PASS or EMAIL_USER/EMAIL_PASSWORD)');
 }
 
 async function sendAlert(email, websiteUrl, contentBefore, contentAfter, subscriberId = null) {
@@ -102,7 +108,7 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter, subscri
         `;
         
         const mailOptions = {
-            from: `"LAB007 Web Alert" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
+            from: `"LAB007 Web Alert" <${smtpFrom}>`,
             to: email,
             subject: emailSubject,
             text: `Page Change Detected\n\nURL: ${websiteUrl}\n\nText changes detected:\n${changesText || 'Content has changed'}\n\nDate and time: ${new Date().toLocaleString()}`,
@@ -156,7 +162,7 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter, subscri
             console.log('[Web-Alert Email] Using SendGrid API...');
             const msg = {
                 to: email,
-                from: process.env.SMTP_USER || process.env.EMAIL_USER,
+                from: smtpFrom,
                 subject: emailSubject,
                 text: mailOptions.text,
                 html: mailOptions.html
@@ -170,7 +176,7 @@ async function sendAlert(email, websiteUrl, contentBefore, contentAfter, subscri
             console.log('[Web-Alert Email] Email sent successfully via SMTP:', info.messageId);
             return info;
         } else {
-            throw new Error('Email service not configured. Please set SMTP_USER/SMTP_PASS or SENDGRID_API_KEY');
+            throw new Error('Email service not configured. Please set SMTP_USER/SMTP_PASS or EMAIL_USER/EMAIL_PASSWORD (or SENDGRID_API_KEY)');
         }
     } catch (error) {
         console.error('[Web-Alert Email] Error sending email:', error.message);
@@ -190,7 +196,7 @@ async function sendWelcomeEmail(email, websiteUrl, duration, subscriberId = null
         const endTime = new Date(startTime.getTime() + duration * 60 * 1000);
         
         const mailOptions = {
-            from: `"Web Alert Service" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
+            from: `"Web Alert Service" <${smtpFrom}>`,
             to: email,
             subject: 'LAB007-ALERTS-STARTED',
             text: `Web Alerts Activated\n\nURL: ${websiteUrl}\nPoll Period: Every ${pollingInterval} minutes\nDuration: ${duration} minutes\nStart Time: ${startTime.toLocaleString()}\nEnd Time: ${endTime.toLocaleString()}`,
@@ -227,7 +233,7 @@ async function sendWelcomeEmail(email, websiteUrl, duration, subscriberId = null
             console.log('[Web-Alert Email] Using SendGrid API...');
             const msg = {
                 to: email,
-                from: process.env.SMTP_USER || process.env.EMAIL_USER,
+                from: smtpFrom,
                 subject: mailOptions.subject,
                 text: mailOptions.text,
                 html: mailOptions.html
@@ -241,8 +247,8 @@ async function sendWelcomeEmail(email, websiteUrl, duration, subscriberId = null
             console.log('[Web-Alert Email] Welcome email sent successfully via SMTP:', info.messageId);
             return info;
         } else {
-            console.error('[Web-Alert Email] Email service not configured - SMTP_USER/SMTP_PASS or SENDGRID_API_KEY required');
-            throw new Error('Email service not configured. Please set SMTP_USER/SMTP_PASS or SENDGRID_API_KEY');
+            console.error('[Web-Alert Email] Email service not configured - set SMTP_USER/SMTP_PASS or EMAIL_USER/EMAIL_PASSWORD (or SENDGRID_API_KEY)');
+            throw new Error('Email service not configured. Please set SMTP_USER/SMTP_PASS or EMAIL_USER/EMAIL_PASSWORD (or SENDGRID_API_KEY)');
         }
     } catch (error) {
         console.error('[Web-Alert Email] Error sending welcome email:', error.message);
@@ -278,7 +284,7 @@ async function sendSummaryEmail(email, websiteUrl, duration, checkCount, changes
         `;
         
         const mailOptions = {
-            from: `"Web Alert Service" <${process.env.SMTP_USER || process.env.EMAIL_USER}>`,
+            from: `"Web Alert Service" <${smtpFrom}>`,
             to: email,
             subject: 'LAB007-ALERTS-ENDED',
             text: `Monitoring completed for ${websiteUrl}. Total checks: ${checkCount}. Changes detected: ${changesDetected}.`,
@@ -318,7 +324,7 @@ async function sendSummaryEmail(email, websiteUrl, duration, checkCount, changes
         if (sendgrid) {
             const msg = {
                 to: email,
-                from: process.env.SMTP_USER || process.env.EMAIL_USER,
+                from: smtpFrom,
                 subject: mailOptions.subject,
                 text: mailOptions.text,
                 html: mailOptions.html
