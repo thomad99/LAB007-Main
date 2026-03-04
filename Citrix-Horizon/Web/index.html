@@ -1013,17 +1013,18 @@
     </div>
 
     <!-- Modal for GoldenSun Tools -->
-    <div id="goldenSunModal" class="modal" style="display: none;">
+            <div id="goldenSunModal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 95%; width: 95%; margin-top: 120px;">
             <span class="modal-close" onclick="closeGoldenSunModal()">&times;</span>
             <h2>GoldenSun - Master Images</h2>
             <p style="color: #666;">Use this section to manage cloning of master images. Group names create files named &lt;Group&gt;-Master-Images.json.</p>
 
-            <div style="border-bottom: 2px solid #ddd; margin-bottom: 20px; display: flex; gap: 10px; justify-content: flex-start;">
-                <button class="task-tab active" id="goldenSunTabSearch" onclick="showGoldenSunTab('search')">Build Master List</button>
-                <button class="task-tab" id="goldenSunTabClone" onclick="showGoldenSunTab('clone')">Clone Master Images</button>
-                <button class="task-tab" id="goldenSunTabReport" onclick="showGoldenSunTab('report')">Image Report</button>
-            </div>
+                    <div style="border-bottom: 2px solid #ddd; margin-bottom: 20px; display: flex; gap: 10px; justify-content: flex-start;">
+                        <button class="task-tab active" id="goldenSunTabSearch" onclick="showGoldenSunTab('search')">Build Master List</button>
+                        <button class="task-tab" id="goldenSunTabClone" onclick="showGoldenSunTab('clone')">Clone Master Images</button>
+                        <button class="task-tab" id="goldenSunTabReport" onclick="showGoldenSunTab('report')">Image Report</button>
+                        <button class="task-tab" id="goldenSunTabFarm" onclick="showGoldenSunTab('farm')">Farm Report</button>
+                    </div>
 
             <!-- Clone Tab -->
             <div id="goldenSunClonePanel" class="horizon-task-panel active" style="display: block;">
@@ -1167,6 +1168,34 @@
                     </div>
                 </div>
                 <div id="goldenSunReportList" style="max-height:400px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:10px; background:#f8f9fa;"></div>
+            </div>
+            <!-- Farm Report Tab -->
+            <div id="goldenSunFarmPanel" class="horizon-task-panel" style="display: none;">
+                <h3>Farm Report</h3>
+                <p style="color:#666;">Uses the Horizon Admin Image Dates script output (FarmData.html / FarmData.json) to show HZ farms and mapped VMware masters, and to build clone scripts from selected masters.</p>
+                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;">
+                    <button class="btn btn-secondary" onclick="renderGoldenSunFarmReport()">Load Farm Report</button>
+                    <span id="goldenSunFarmStatus" style="color:#666;"></span>
+                    <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+                        <button class="btn btn-sm" onclick="goldenSunFarmSelectAll()">Select All</button>
+                        <button class="btn btn-sm" onclick="goldenSunFarmDeselectAll()">Deselect All</button>
+                    </div>
+                </div>
+                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; margin-top:8px;">
+                    <div style="flex:1 1 55%; min-width:320px; height:380px; border:1px solid #ddd; border-radius:4px; overflow:hidden; background:#f8f9fa;">
+                        <iframe id="goldenSunFarmFrame" title="FarmData Report" style="width:100%; height:100%; border:0; display:none;"></iframe>
+                        <div id="goldenSunFarmFramePlaceholder" style="padding:10px; color:#666;">
+                            Run the Horizon Admin <strong>Image Dates</strong> script first to generate <code>FarmData.html</code> and <code>FarmData.json</code>. Then click <strong>Load Farm Report</strong>.
+                        </div>
+                    </div>
+                    <div style="flex:1 1 40%; min-width:280px;">
+                        <h4 style="margin:0 0 6px 0;">Selectable VMware Masters</h4>
+                        <div id="goldenSunFarmList" style="max-height:360px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:8px; background:#f8f9fa;"></div>
+                        <div style="margin-top:10px; text-align:right;">
+                            <button class="btn btn-primary" onclick="generateFarmCloneScriptFromReport()">Generate Clone Script</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

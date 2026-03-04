@@ -24,6 +24,9 @@ let goldenSunReportSort = 'name';
 let goldenSunSelectedImages = new Set();
 let goldenSunActiveTab = 'search';
 let goldenSunFileOptions = [];
+// Farm report (Horizon + VMware master images)
+let farmReportRows = [];
+let farmSelectedMasters = new Set();
 const GOLDEN_SUN_DEFAULT_VCENTER = 'shcvcsacx01v.ccr.cchcs.org';
 const HZ_ADMIN_DEFAULT_BASE = 'https://shchrznconap04v.ccr.cchcs.org';
 
@@ -137,16 +140,21 @@ document.addEventListener('DOMContentLoaded', async function() {
         const clonePanel = document.getElementById('goldenSunClonePanel');
         const searchPanel = document.getElementById('goldenSunSearchPanel');
         const reportPanel = document.getElementById('goldenSunReportPanel');
+        const farmPanel = document.getElementById('goldenSunFarmPanel');
         const tabClone = document.getElementById('goldenSunTabClone');
         const tabSearch = document.getElementById('goldenSunTabSearch');
         const tabReport = document.getElementById('goldenSunTabReport');
+        const tabFarm = document.getElementById('goldenSunTabFarm');
         if (clonePanel) clonePanel.style.display = tab === 'clone' ? 'block' : 'none';
         if (searchPanel) searchPanel.style.display = tab === 'search' ? 'block' : 'none';
         if (reportPanel) reportPanel.style.display = tab === 'report' ? 'block' : 'none';
+        if (farmPanel) farmPanel.style.display = tab === 'farm' ? 'block' : 'none';
         if (tabClone) tabClone.classList.toggle('active', tab === 'clone');
         if (tabSearch) tabSearch.classList.toggle('active', tab === 'search');
         if (tabReport) tabReport.classList.toggle('active', tab === 'report');
+        if (tabFarm) tabFarm.classList.toggle('active', tab === 'farm');
         if (tab === 'report') renderGoldenSunReport();
+        if (tab === 'farm') renderGoldenSunFarmReport();
     };
 
     // GoldenSun search generate
@@ -3375,12 +3383,12 @@ function generateHorizonAdminScript(action) {
     scriptLines.push('$ErrorActionPreference = "Stop"');
     scriptLines.push(`$BaseUrl = "${baseUrl}"`);
     scriptLines.push(`$Endpoint = "${cfg.endpoint}"`);
-    scriptLines.push(`$OutJson = "${cfg.outfile}"`);
-    scriptLines.push(`$OutHtml = [System.IO.Path]::ChangeExtension($OutJson, ".html")`);
-    // For Image Dates, standardize HTML report name so GoldenSun can load it easily
-    if (action === 'imageDates') {
-        scriptLines.push('$OutHtml = "FarmData.html"');
-    }
+        scriptLines.push(`$OutJson = "${cfg.outfile}"`);
+        scriptLines.push(`$OutHtml = [System.IO.Path]::ChangeExtension($OutJson, ".html")`);
+        // For Image Dates, standardize HTML/JSON report names so GoldenSun can load them easily
+        if (action === 'imageDates') {
+            scriptLines.push('$OutHtml = ".\\Web\\FarmData.html"');
+        }
     scriptLines.push('$Domain = Read-Host "Domain (optional, leave blank if not needed)"');
     scriptLines.push('$cred = Get-Credential -Message "Enter Horizon credentials (REST)"');
     scriptLines.push('$user = $cred.UserName');
@@ -3676,6 +3684,9 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('        $snapName = $m.LatestSnapshot.Name');
         scriptLines.push('        $snapTime = $m.LatestSnapshot.Created');
         scriptLines.push('    }');
+        scriptLines.push('    # Some JSONs flatten snapshot fields to top-level LatestSnapshotName/LatestSnapshotTimestamp');
+        scriptLines.push('    if (-not $snapName -and $m.LatestSnapshotName) { $snapName = $m.LatestSnapshotName }');
+        scriptLines.push('    if (-not $snapTime -and $m.LatestSnapshotTimestamp) { $snapTime = $m.LatestSnapshotTimestamp }');
         scriptLines.push('    if (-not $snapName -and $m.Snapshot) { $snapName = $m.Snapshot }');
         scriptLines.push('    if (-not $snapName -and $m.SnapshotName) { $snapName = $m.SnapshotName }');
         scriptLines.push('    if (-not $snapTime -and $m.SnapshotTimestamp) { $snapTime = $m.SnapshotTimestamp }');
@@ -3810,6 +3821,10 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('    $source[0].PSObject.Properties.Name | ForEach-Object { Write-Host " - $_" }');
         scriptLines.push('}');
         scriptLines.push('$response = $rows');
+        scriptLines.push('');
+        scriptLines.push('# Also save farm data as JSON alongside HTML so GoldenSun UI can load it');
+        scriptLines.push('$farmJsonPath = ".\\Web\\FarmData.json"');
+        scriptLines.push('$rows | ConvertTo-Json -Depth 8 | Out-File -FilePath $farmJsonPath -Encoding UTF8');
     } else if (action === 'clones') {
         scriptLines.push('# Transform clones: Farm Name, Golden Image (parent_vm_path), Snapshot (snapshot_path) from inventory');
         scriptLines.push('$tasks = $response.tasks; $farms = $response.farms');
@@ -5366,6 +5381,171 @@ function displayCloneMasterImages() {
     });
 
     container.innerHTML = html;
+}
+
+async function renderGoldenSunFarmReport() {
+    const status = document.getElementById('goldenSunFarmStatus');
+    const list = document.getElementById('goldenSunFarmList');
+    const frame = document.getElementById('goldenSunFarmFrame');
+    if (!list) return;
+
+    if (!farmReportRows.length) {
+        // Try loading FarmData.json from possible base paths
+        const candidates = ['/citrix/FarmData.json', '/FarmData.json'];
+        let data = null;
+        let basePath = null;
+        for (const url of candidates) {
+            try {
+                const res = await fetch(url, { cache: 'no-cache' });
+                if (res.ok) {
+                    data = await res.json();
+                    basePath = url.replace(/FarmData\.json$/i, '');
+                    break;
+                }
+            } catch (e) {
+                console.warn('Farm report fetch failed for', url, e);
+            }
+        }
+        if (!data) {
+            list.innerHTML = '<p style="color:#666;">FarmData.json not found. Run the Horizon Admin Image Dates script first.</p>';
+            if (status) status.textContent = '';
+            if (frame) frame.style.display = 'none';
+            return;
+        }
+        // Normalize to array
+        farmReportRows = Array.isArray(data) ? data : (data.rows || data.Farms || []);
+        if (!Array.isArray(farmReportRows)) {
+            farmReportRows = [];
+        }
+        // Set iframe to matching HTML if we know basePath
+        if (frame && basePath !== null) {
+            const htmlUrl = basePath + 'FarmData.html';
+            frame.src = htmlUrl;
+            frame.style.display = 'block';
+        }
+    }
+
+    if (!farmReportRows.length) {
+        list.innerHTML = '<p style="color:#666;">No farm rows found in FarmData.json.</p>';
+        if (status) status.textContent = '';
+        return;
+    }
+
+    // Build selection list for VMware master images
+    const rowsWithVm = farmReportRows.filter(r => r.VmMasterImage);
+    let html = '';
+    rowsWithVm.forEach((row, idx) => {
+        const key = row.VmMasterImage;
+        if (!key) return;
+        const checked = farmSelectedMasters.has(key) ? 'checked' : '';
+        const safeKey = String(key).replace(/'/g, "\\'");
+        html += `
+            <div style="border:1px solid #ddd;border-radius:4px;padding:8px;margin-bottom:6px;background:#fff;font-size:12px;">
+                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
+                    <input type="checkbox" style="margin-top:2px;" ${checked}
+                           onchange="toggleFarmMasterSelection('${safeKey}')">
+                    <div style="flex:1;">
+                        <div><strong>${escapeHtml(row.HzFarm || '')}</strong></div>
+                        <div style="color:#555;margin-top:2px;">
+                            HZ Base: ${escapeHtml(row.HzBaseImage || '')}<br>
+                            HZ Snap: ${escapeHtml(row.HzSnapshot || '')}
+                        </div>
+                        <div style="color:#333;margin-top:2px;">
+                            VM Master: ${escapeHtml(row.VmMasterImage || '')}<br>
+                            VM Snap: ${escapeHtml(row.VmMasterSnapshot || '')}${row.VmSnapshotTimestamp ? ' @ ' + escapeHtml(row.VmSnapshotTimestamp) : ''}
+                        </div>
+                        <div style="margin-top:2px;">
+                            Clone State: <span style="font-weight:600;${row.CloneState ? 'color:#0a7f2e;' : 'color:#999;'}">${escapeHtml(row.CloneState || 'Not cloned')}</span>
+                        </div>
+                    </div>
+                </label>
+            </div>
+        `;
+    });
+
+    if (!html) {
+        html = '<p style="color:#666;">No VMware master image matches found in FarmData.json.</p>';
+    }
+    list.innerHTML = html;
+    if (status) {
+        status.textContent = `${rowsWithVm.length} farm rows with VMware master images. Selected: ${farmSelectedMasters.size}.`;
+    }
+}
+
+function toggleFarmMasterSelection(name) {
+    if (!name) return;
+    if (farmSelectedMasters.has(name)) {
+        farmSelectedMasters.delete(name);
+    } else {
+        farmSelectedMasters.add(name);
+    }
+    renderGoldenSunFarmReport();
+}
+
+function goldenSunFarmSelectAll() {
+    farmSelectedMasters.clear();
+    farmReportRows.forEach(row => {
+        if (row.VmMasterImage) {
+            farmSelectedMasters.add(row.VmMasterImage);
+        }
+    });
+    renderGoldenSunFarmReport();
+}
+
+function goldenSunFarmDeselectAll() {
+    farmSelectedMasters.clear();
+    renderGoldenSunFarmReport();
+}
+
+function generateFarmCloneScriptFromReport() {
+    if (farmSelectedMasters.size === 0) {
+        alert('Please select at least one VMware master image in the Farm Report.');
+        return;
+    }
+    const selectedImages = [];
+    farmReportRows.forEach(row => {
+        if (row.VmMasterImage && farmSelectedMasters.has(row.VmMasterImage)) {
+            selectedImages.push({
+                Name: row.VmMasterImage,
+                Cluster: 'Unknown',
+                Host: 'Unknown',
+                Datastore: 'Unknown'
+            });
+        }
+    });
+    if (!selectedImages.length) {
+        alert('No valid VMware master images found for selection.');
+        return;
+    }
+
+    // Reuse GoldenSun clone configuration inputs
+    const enableVMwareFolders = document.getElementById('goldenSunVmwareToggle')?.checked || false;
+    const destinationFolder = enableVMwareFolders ? (document.getElementById('goldenSunDestinationFolder')?.value || '').trim() : '';
+    const moveSourceAfterClone = enableVMwareFolders ? !!document.getElementById('goldenSunMoveSource')?.checked : false;
+    const sourceMoveFolder = enableVMwareFolders ? (document.getElementById('goldenSunSourceFolder')?.value || '').trim() : '';
+    const pushWindowsUpdate = document.getElementById('goldenSunPushWindowsUpdateToggle')?.checked !== false;
+
+    if (enableVMwareFolders) {
+        if (!destinationFolder) {
+            alert('Please specify a destination folder for the cloned VMs.');
+            return;
+        }
+        if (moveSourceAfterClone && !sourceMoveFolder) {
+            alert('Please specify a folder to move source VMs to.');
+            return;
+        }
+    }
+
+    const script = generateCloneScript(selectedImages, destinationFolder, moveSourceAfterClone, sourceMoveFolder, enableVMwareFolders, pushWindowsUpdate);
+    const output = document.getElementById('goldenSunScriptContent');
+    if (output) {
+        output.value = script;
+    }
+    const wrapper = document.getElementById('goldenSunScriptOutput');
+    if (wrapper) {
+        wrapper.style.display = 'block';
+        wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 }
 
 let selectedCloneImages = new Set();
