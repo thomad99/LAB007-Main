@@ -1020,14 +1020,14 @@
             <p style="color: #666;">Use this section to manage cloning of master images. Group names create files named &lt;Group&gt;-Master-Images.json.</p>
 
                     <div style="border-bottom: 2px solid #ddd; margin-bottom: 20px; display: flex; gap: 10px; justify-content: flex-start;">
-                        <button class="task-tab active" id="goldenSunTabSearch" onclick="showGoldenSunTab('search')">Build Master List</button>
+                        <button class="task-tab active" id="goldenSunTabFarm" onclick="showGoldenSunTab('farm')">Farm Report</button>
+                        <button class="task-tab" id="goldenSunTabSearch" onclick="showGoldenSunTab('search')">Build Master List</button>
                         <button class="task-tab" id="goldenSunTabClone" onclick="showGoldenSunTab('clone')">Clone Master Images</button>
                         <button class="task-tab" id="goldenSunTabReport" onclick="showGoldenSunTab('report')">Image Report</button>
-                        <button class="task-tab" id="goldenSunTabFarm" onclick="showGoldenSunTab('farm')">Farm Report</button>
                     </div>
 
             <!-- Clone Tab -->
-            <div id="goldenSunClonePanel" class="horizon-task-panel active" style="display: block;">
+            <div id="goldenSunClonePanel" class="horizon-task-panel" style="display: none;">
                 <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 15px 0;">
                     <label for="goldenSunFileSelect" style="font-weight: 600;">Master List File:</label>
                     <button class="btn btn-secondary" onclick="openGoldenSunFileDialog()">Load Images</button>
@@ -1170,7 +1170,7 @@
                 <div id="goldenSunReportList" style="max-height:400px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:10px; background:#f8f9fa;"></div>
             </div>
             <!-- Farm Report Tab -->
-            <div id="goldenSunFarmPanel" class="horizon-task-panel" style="display: none;">
+            <div id="goldenSunFarmPanel" class="horizon-task-panel active" style="display: block;">
                 <h3>Farm Report</h3>
                 <p style="color:#666;">Uses the Horizon Admin Image Dates script output (FarmData.html / FarmData.json) to show HZ farms and mapped VMware masters, and to build clone scripts from selected masters.</p>
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;">

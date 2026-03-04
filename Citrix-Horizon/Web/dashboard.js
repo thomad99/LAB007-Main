@@ -3386,8 +3386,9 @@ function generateHorizonAdminScript(action) {
     }
     scriptLines.push('');
     scriptLines.push('$ErrorActionPreference = "Stop"');
-    scriptLines.push('$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path');
-    scriptLines.push('$ReportsDir = Join-Path $scriptDir "Reports"');
+    // Use current working directory for Reports so all scripts drop output next to where they are run
+    scriptLines.push('$cwd = Get-Location');
+    scriptLines.push('$ReportsDir = Join-Path $cwd.Path "Reports"');
     scriptLines.push('if (-not (Test-Path $ReportsDir)) { New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null }');
     scriptLines.push(`$BaseUrl = "${baseUrl}"`);
     scriptLines.push(`$Endpoint = "${cfg.endpoint}"`);

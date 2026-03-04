@@ -22,9 +22,11 @@ app.use(cors());
 // Middleware
 app.use(express.json());
 
-// Serve static files - images first (higher priority), then Web directory
+// Serve static files - images first (higher priority), then Web directory and Reports
 app.use('/images', express.static(path.join(__dirname, 'images')));
 app.use(express.static(path.join(__dirname, 'Web')));
+// Reports folder (for Horizon Admin scripts output like FarmData.html / FarmData.json)
+app.use('/Reports', express.static(path.join(__dirname, 'Reports')));
 
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, 'uploads');

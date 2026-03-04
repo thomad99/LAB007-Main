@@ -48,7 +48,7 @@
       text-decoration: none;
     }
     .header-logo {
-      height: 48px;
+      height: 240px; /* 5x original size */
       width: auto;
       opacity: 0.95;
       display: block;
@@ -345,8 +345,8 @@
         </div>
       </div>
 
-      <div class="ctrl-section">
-        <h3>Refresh intervals (seconds)</h3>
+      <details class="ctrl-section" id="refreshSection">
+        <summary style="cursor:pointer;font-weight:600;">Refresh intervals (seconds)</summary>
         <div class="ctrl-grid">
           <div class="ctrl-item">
             <label for="refreshSeconds">Global refresh</label>
@@ -373,10 +373,10 @@
             <input type="number" id="refreshStocksSeconds" min="60" placeholder="240">
           </div>
         </div>
-      </div>
+      </details>
 
-      <div class="ctrl-section" id="newsFeedSection">
-        <h3>News feed</h3>
+      <details class="ctrl-section" id="newsFeedSection">
+        <summary style="cursor:pointer;font-weight:600;">News feed &amp; stocks</summary>
         <div class="ctrl-grid">
           <div class="ctrl-item">
             <label for="transitionSelect">Transition</label>
@@ -400,8 +400,8 @@
         <div class="ctrl-item rss-list">
           <label>RSS feeds — select one or more</label>
           <div class="rss-presets" id="rssPresets"></div>
-          <label for="rssFeeds" style="margin-top:10px;display:block;">Custom URLs (one per line)</label>
-          <textarea id="rssFeeds" placeholder="Add custom feed URLs here..." rows="2"></textarea>
+          <label for="rssFeeds" style="margin-top:10px;display:block;" class="custom-url-label">Custom URLs (one per line)</label>
+          <textarea id="rssFeeds" placeholder="Add custom feed URLs here..." rows="2" class="custom-url-box"></textarea>
         </div>
         <div class="ctrl-item rss-list">
           <label for="tickersInput">Stock tickers (one per line or comma-separated)</label>
@@ -446,7 +446,7 @@
             </select>
           </div>
         </div>
-      </div>
+      </details>
 
       <p style="margin: 0 0 12px 0; font-size: 13px; color: var(--muted);">
         Edit the config below. Your Raspberry Pi fetches from <code>/tomopi/config.json</code> every <code>refresh_seconds</code>.
@@ -885,6 +885,20 @@
         uploadStatus.className = 'upload-status error';
       }
     }
+  </script>
+  <script>
+    // Hide custom URL box on narrow/mobile screens for a simpler UI
+    (function() {
+      function updateCustomUrlVisibility() {
+        const isMobile = window.matchMedia('(max-width: 600px)').matches;
+        document.querySelectorAll('.custom-url-label, .custom-url-box').forEach(el => {
+          if (!el) return;
+          el.style.display = isMobile ? 'none' : '';
+        });
+      }
+      window.addEventListener('load', updateCustomUrlVisibility);
+      window.addEventListener('resize', updateCustomUrlVisibility);
+    })();
   </script>
 </body>
 </html>
