@@ -5401,7 +5401,6 @@ function displayCloneMasterImages() {
 async function renderGoldenSunFarmReport() {
     const status = document.getElementById('goldenSunFarmStatus');
     const list = document.getElementById('goldenSunFarmList');
-    const frame = document.getElementById('goldenSunFarmFrame');
     const framePlaceholder = document.getElementById('goldenSunFarmFramePlaceholder');
     const masterPanel = document.getElementById('goldenSunFarmMasterPanel');
     if (!list) return;
@@ -5426,8 +5425,8 @@ async function renderGoldenSunFarmReport() {
         if (!data) {
             list.innerHTML = '<p style="color:#666;">FarmData.json not found via HTTP. You can either run the Horizon Admin Image Dates script on this server, or load a local JSON file with the \"Load FarmData.json (file)\" button.</p>';
             if (status) status.textContent = '';
-            if (frame) frame.style.display = 'none';
             if (framePlaceholder) framePlaceholder.style.display = 'block';
+            if (masterPanel) masterPanel.style.display = 'none';
             return;
         }
         // Normalize to array
@@ -5435,26 +5434,14 @@ async function renderGoldenSunFarmReport() {
         if (!Array.isArray(farmReportRows)) {
             farmReportRows = [];
         }
-        // Set iframe to matching HTML if we know basePath
-        if (frame && basePath !== null) {
-            let htmlUrl = basePath + 'FarmData.html';
-            // Prefer Reports subfolder if present
-            if (basePath.endsWith('/Reports/') || basePath.endsWith('\\Reports\\')) {
-                htmlUrl = basePath + 'FarmData.html';
-            } else if (basePath.endsWith('/')) {
-                htmlUrl = basePath + 'Reports/FarmData.html';
-            }
-            frame.src = htmlUrl;
-            frame.style.display = 'block';
-            if (framePlaceholder) framePlaceholder.style.display = 'none';
-        } else if (framePlaceholder) {
-            framePlaceholder.style.display = 'block';
-        }
+        // When loading via HTTP, just hide the placeholder once data exists
+        if (framePlaceholder) framePlaceholder.style.display = 'none';
     }
 
     if (!farmReportRows.length) {
         list.innerHTML = '<p style="color:#666;">No farm rows found in FarmData.json.</p>';
         if (status) status.textContent = '';
+        if (framePlaceholder) framePlaceholder.style.display = 'block';
         if (masterPanel) masterPanel.style.display = 'none';
         return;
     }
@@ -5473,13 +5460,15 @@ async function renderGoldenSunFarmReport() {
                     <input type="checkbox" style="margin-top:2px;" ${checked}
                            onchange="toggleFarmMasterSelection('${safeKey}')">
                     <div style="flex:1;">
-                        <div><strong>${escapeHtml(row.HzFarm || '')}</strong></div>
+                        <div>
+                            <strong>${escapeHtml(row.VmMasterImage || row.HzBaseImage || 'Unknown')}</strong>
+                            ${row.HzSnapshot ? ' — HZ Snap: ' + escapeHtml(row.HzSnapshot) : ''}
+                        </div>
                         <div style="color:#555;margin-top:2px;">
-                            HZ Base: ${escapeHtml(row.HzBaseImage || '')}<br>
-                            HZ Snap: ${escapeHtml(row.HzSnapshot || '')}
+                            Farm: ${escapeHtml(row.HzFarm || '')}<br>
+                            HZ Base: ${escapeHtml(row.HzBaseImage || '')}
                         </div>
                         <div style="color:#333;margin-top:2px;">
-                            VM Master: ${escapeHtml(row.VmMasterImage || '')}<br>
                             VM Snap: ${escapeHtml(row.VmMasterSnapshot || '')}${row.VmSnapshotTimestamp ? ' @ ' + escapeHtml(row.VmSnapshotTimestamp) : ''}
                         </div>
                         <div style="margin-top:2px;">
@@ -5616,6 +5605,10 @@ function generateFarmCloneScriptFromReport() {
     const wrapper = document.getElementById('goldenSunScriptOutput');
     if (wrapper) {
         wrapper.style.display = 'block';
+    }
+    // Switch to Clone tab so the user sees the script and can copy/download it
+    showGoldenSunTab('clone');
+    if (wrapper) {
         wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 }

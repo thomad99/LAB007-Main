@@ -1146,15 +1146,11 @@
                         <button class="btn btn-sm" onclick="goldenSunFarmDeselectAll()">Deselect All</button>
                     </div>
                 </div>
-                <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; margin-top:8px;">
-                    <div style="flex:1 1 55%; min-width:320px; height:380px; border:1px solid #ddd; border-radius:4px; overflow:hidden; background:#f8f9fa;">
-                        <iframe id="goldenSunFarmFrame" title="FarmData Report" style="width:100%; height:100%; border:0; display:none;"></iframe>
-                        <div id="goldenSunFarmFramePlaceholder" style="padding:10px; color:#666;">
-                            Run the Horizon Admin <strong>Image Dates</strong> script first to generate <code>FarmData.html</code> and <code>FarmData.json</code>. Then click <strong>Load Farm Report</strong>.
-                        </div>
+                <div style="margin-top:8px;">
+                    <div id="goldenSunFarmFramePlaceholder" style="padding:10px; color:#666;">
+                        Load a <code>FarmData.json</code> file produced by the Horizon Admin Image Dates script, then select VMware masters below to build a clone script.
                     </div>
-                    <div id="goldenSunFarmMasterPanel" style="flex:1 1 40%; min-width:280px; display:none;">
-                        <h4 style="margin:0 0 6px 0;">Selectable VMware Masters</h4>
+                    <div id="goldenSunFarmMasterPanel" style="margin-top:8px; display:none;">
                         <div id="goldenSunFarmList" style="max-height:360px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:8px; background:#f8f9fa;"></div>
                         <div style="margin-top:10px; text-align:right;">
                             <button class="btn btn-primary" onclick="generateFarmCloneScriptFromReport()">Generate Clone Script</button>
