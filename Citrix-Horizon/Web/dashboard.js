@@ -171,6 +171,16 @@ document.addEventListener('DOMContentLoaded', async function() {
         gsPicker.addEventListener('change', handleGoldenSunFilePick);
     }
 
+    // Farm report JSON file picker (local file to avoid CORS)
+    const farmPicker = document.getElementById('goldenSunFarmFilePicker');
+    if (farmPicker) {
+        farmPicker.addEventListener('change', handleGoldenSunFarmFilePick);
+    }
+    window.openFarmFileDialog = function() {
+        const picker = document.getElementById('goldenSunFarmFilePicker');
+        if (picker) picker.click();
+    };
+
     // Pre-fill GoldenSun vCenter if empty
     const gsVcInput = document.getElementById('goldenSunSearchVCenter');
     if (gsVcInput && !gsVcInput.value) {
@@ -5400,7 +5410,7 @@ async function renderGoldenSunFarmReport() {
     if (!list) return;
 
     if (!farmReportRows.length) {
-        // Try loading FarmData.json from possible base paths
+        // Try loading FarmData.json from possible base paths (server mode)
         const candidates = ['/citrix/Reports/FarmData.json', '/Reports/FarmData.json', '/citrix/FarmData.json', '/FarmData.json'];
         let data = null;
         let basePath = null;
@@ -5417,9 +5427,10 @@ async function renderGoldenSunFarmReport() {
             }
         }
         if (!data) {
-            list.innerHTML = '<p style="color:#666;">FarmData.json not found. Run the Horizon Admin Image Dates script first.</p>';
+            list.innerHTML = '<p style="color:#666;">FarmData.json not found via HTTP. You can either run the Horizon Admin Image Dates script on this server, or load a local JSON file with the \"Load FarmData.json (file)\" button.</p>';
             if (status) status.textContent = '';
             if (frame) frame.style.display = 'none';
+            if (framePlaceholder) framePlaceholder.style.display = 'block';
             return;
         }
         // Normalize to array
@@ -5489,6 +5500,45 @@ async function renderGoldenSunFarmReport() {
     if (status) {
         status.textContent = `${rowsWithVm.length} farm rows with VMware master images. Selected: ${farmSelectedMasters.size}.`;
     }
+}
+
+function handleGoldenSunFarmFilePick(event) {
+    const file = event.target.files && event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const text = String(e.target?.result || '');
+            const obj = JSON.parse(text || '{}');
+            let rows = Array.isArray(obj) ? obj : (obj.rows || obj.Farms || []);
+            if (!Array.isArray(rows)) {
+                rows = [];
+            }
+            farmReportRows = rows;
+            farmSelectedMasters.clear();
+
+            const status = document.getElementById('goldenSunFarmStatus');
+            if (status) {
+                status.textContent = `Loaded ${farmReportRows.length} rows from ${file.name} (local file).`;
+            }
+
+            // When loading from file we don't have HTML; show placeholder instead of iframe
+            const frame = document.getElementById('goldenSunFarmFrame');
+            const framePlaceholder = document.getElementById('goldenSunFarmFramePlaceholder');
+            if (frame) frame.style.display = 'none';
+            if (framePlaceholder) framePlaceholder.style.display = 'block';
+
+            renderGoldenSunFarmReport();
+        } catch (err) {
+            console.error('Failed to parse FarmData.json from file:', err);
+            const list = document.getElementById('goldenSunFarmList');
+            if (list) {
+                list.innerHTML = '<p style="color:#b00020;">Failed to parse JSON file. Ensure it is a valid FarmData.json.</p>';
+            }
+        }
+    };
+    reader.readAsText(file, 'utf-8');
 }
 
 function toggleFarmMasterSelection(name) {

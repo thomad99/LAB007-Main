@@ -380,7 +380,8 @@ def _draw_stocks(surface: pygame.Surface, rect: pygame.Rect, ncfg: dict):
         main_size = size_min
 
     main_font = pygame.font.SysFont(font_name, main_size, bold=bold)
-    pct_font = pygame.font.SysFont(font_name, max(10, int(main_size * 0.5)), bold=bold)
+    # Make percentage text larger (80% of main font size, minimum 10px)
+    pct_font = pygame.font.SysFont(font_name, max(10, int(main_size * 0.8)), bold=bold)
 
     rendered_lines = []
     total_h = 0
@@ -391,8 +392,8 @@ def _draw_stocks(surface: pygame.Surface, rect: pygame.Rect, ncfg: dict):
             left_part = ln.split("(")[0].rstrip()
             pct_part = "(" + ln.split("(")[1]
 
-            # Color green/red based on sign
-            pct_color = (0, 255, 0) if "+" in pct_part else (255, 0, 0)
+            # Color green/red based on sign (duller tones for small 8\" screen)
+            pct_color = (0, 150, 0) if "+" in pct_part else (180, 40, 40)
 
             main_surface = main_font.render(left_part, True, base_color)
             pct_surface = pct_font.render(pct_part, True, pct_color)

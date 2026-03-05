@@ -1174,7 +1174,9 @@
                 <h3>Farm Report</h3>
                 <p style="color:#666;">Uses the Horizon Admin Image Dates script output (FarmData.html / FarmData.json) to show HZ farms and mapped VMware masters, and to build clone scripts from selected masters.</p>
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;">
-                    <button class="btn btn-secondary" onclick="renderGoldenSunFarmReport()">Load Farm Report</button>
+                    <button class="btn btn-secondary" onclick="renderGoldenSunFarmReport()">Load Farm Report (server)</button>
+                    <button class="btn btn-secondary" onclick="openFarmFileDialog()">Load FarmData.json (file)</button>
+                    <input type="file" id="goldenSunFarmFilePicker" accept=".json,application/json" style="display:none;">
                     <span id="goldenSunFarmStatus" style="color:#666;"></span>
                     <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
                         <button class="btn btn-sm" onclick="goldenSunFarmSelectAll()">Select All</button>
