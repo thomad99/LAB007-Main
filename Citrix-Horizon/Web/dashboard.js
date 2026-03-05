@@ -138,19 +138,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     window.showGoldenSunTab = function(tab) {
         goldenSunActiveTab = tab;
         const clonePanel = document.getElementById('goldenSunClonePanel');
-        const searchPanel = document.getElementById('goldenSunSearchPanel');
         const reportPanel = document.getElementById('goldenSunReportPanel');
         const farmPanel = document.getElementById('goldenSunFarmPanel');
         const tabClone = document.getElementById('goldenSunTabClone');
-        const tabSearch = document.getElementById('goldenSunTabSearch');
         const tabReport = document.getElementById('goldenSunTabReport');
         const tabFarm = document.getElementById('goldenSunTabFarm');
         if (clonePanel) clonePanel.style.display = tab === 'clone' ? 'block' : 'none';
-        if (searchPanel) searchPanel.style.display = tab === 'search' ? 'block' : 'none';
         if (reportPanel) reportPanel.style.display = tab === 'report' ? 'block' : 'none';
         if (farmPanel) farmPanel.style.display = tab === 'farm' ? 'block' : 'none';
         if (tabClone) tabClone.classList.toggle('active', tab === 'clone');
-        if (tabSearch) tabSearch.classList.toggle('active', tab === 'search');
         if (tabReport) tabReport.classList.toggle('active', tab === 'report');
         if (tabFarm) tabFarm.classList.toggle('active', tab === 'farm');
         if (tab === 'report') renderGoldenSunReport();
@@ -5407,6 +5403,7 @@ async function renderGoldenSunFarmReport() {
     const list = document.getElementById('goldenSunFarmList');
     const frame = document.getElementById('goldenSunFarmFrame');
     const framePlaceholder = document.getElementById('goldenSunFarmFramePlaceholder');
+    const masterPanel = document.getElementById('goldenSunFarmMasterPanel');
     if (!list) return;
 
     if (!farmReportRows.length) {
@@ -5458,6 +5455,7 @@ async function renderGoldenSunFarmReport() {
     if (!farmReportRows.length) {
         list.innerHTML = '<p style="color:#666;">No farm rows found in FarmData.json.</p>';
         if (status) status.textContent = '';
+        if (masterPanel) masterPanel.style.display = 'none';
         return;
     }
 
@@ -5500,6 +5498,9 @@ async function renderGoldenSunFarmReport() {
     if (status) {
         status.textContent = `${rowsWithVm.length} farm rows with VMware master images. Selected: ${farmSelectedMasters.size}.`;
     }
+    if (masterPanel) {
+        masterPanel.style.display = rowsWithVm.length ? 'block' : 'none';
+    }
 }
 
 function handleGoldenSunFarmFilePick(event) {
@@ -5526,8 +5527,10 @@ function handleGoldenSunFarmFilePick(event) {
             // When loading from file we don't have HTML; show placeholder instead of iframe
             const frame = document.getElementById('goldenSunFarmFrame');
             const framePlaceholder = document.getElementById('goldenSunFarmFramePlaceholder');
+            const masterPanel = document.getElementById('goldenSunFarmMasterPanel');
             if (frame) frame.style.display = 'none';
             if (framePlaceholder) framePlaceholder.style.display = 'block';
+            if (masterPanel) masterPanel.style.display = farmReportRows.length ? 'block' : 'none';
 
             renderGoldenSunFarmReport();
         } catch (err) {

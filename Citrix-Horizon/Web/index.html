@@ -1021,7 +1021,6 @@
 
                     <div style="border-bottom: 2px solid #ddd; margin-bottom: 20px; display: flex; gap: 10px; justify-content: flex-start;">
                         <button class="task-tab active" id="goldenSunTabFarm" onclick="showGoldenSunTab('farm')">Farm Report</button>
-                        <button class="task-tab" id="goldenSunTabSearch" onclick="showGoldenSunTab('search')">Build Master List</button>
                         <button class="task-tab" id="goldenSunTabClone" onclick="showGoldenSunTab('clone')">Clone Master Images</button>
                         <button class="task-tab" id="goldenSunTabReport" onclick="showGoldenSunTab('report')">Image Report</button>
                     </div>
@@ -1106,42 +1105,7 @@
             </div>
             </div>
 
-            <!-- Search / Build Tab -->
-            <div id="goldenSunSearchPanel" class="horizon-task-panel" style="display: none;">
-                <h3>Build Master Image List</h3>
-                <p style="color: #666;">Searches for VMs matching each name. Only the latest version per base name is output (e.g. SHC-M-MAIN-T, SHC-M-MAIN-TV3, SHC-M-MAIN-T-V4 → only SHC-M-MAIN-T-V4).</p>
-
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin: 15px 0;">
-                    <div>
-                        <label for="goldenSunSearchVCenter" style="display: block; font-weight: 600; margin-bottom: 6px;">vCenter Server</label>
-                        <input type="text" id="goldenSunSearchVCenter" placeholder="vcenter.domain.local" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                        <small style="color: #666;">Script prompts for credentials if not connected.</small>
-                    </div>
-                    <div>
-                        <label for="goldenSunSearchGroup" style="display: block; font-weight: 600; margin-bottom: 6px;">Group Name</label>
-                        <input type="text" id="goldenSunSearchGroup" placeholder="e.g., ProdApps" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                        <small style="color: #666;">Used in output file name: &lt;Group&gt;-Master-Images.json</small>
-                    </div>
-                </div>
-
-                <div style="margin: 15px 0;">
-                    <label for="goldenSunSearchVMs" style="display: block; font-weight: 600; margin-bottom: 6px;">Master VM Names (semicolon delimited)</label>
-                    <textarea id="goldenSunSearchVMs" placeholder="vm1; vm2; vm3" style="width: 100%; height: 110px; padding: 10px; border: 1px solid #ddd; border-radius: 4px;"></textarea>
-                </div>
-
-                <div style="text-align: right; margin-top: 10px;">
-                    <button class="btn btn-primary" onclick="generateGoldenSunSearchScript()">Generate Search Script</button>
-                </div>
-
-                <div id="goldenSunSearchScriptOutput" style="display: none; margin-top: 20px;">
-                    <h4>Generated Search Script:</h4>
-                    <textarea id="goldenSunSearchScriptContent" readonly style="width: 100%; height: 320px; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
-                    <div style="margin-top: 10px; text-align: right;">
-                        <button class="btn btn-secondary" onclick="copyGoldenSunSearchScript()">Copy Script</button>
-                        <button class="btn btn-secondary" onclick="downloadGoldenSunSearchScript()">Download Script</button>
-                    </div>
-                </div>
-            </div>
+            <!-- Search / Build Tab moved to HZ Tasks (panel removed from GoldenSun) -->
 
             <!-- Image Report Tab -->
             <div id="goldenSunReportPanel" class="horizon-task-panel" style="display: none;">
@@ -1174,7 +1138,6 @@
                 <h3>Farm Report</h3>
                 <p style="color:#666;">Uses the Horizon Admin Image Dates script output (FarmData.html / FarmData.json) to show HZ farms and mapped VMware masters, and to build clone scripts from selected masters.</p>
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;">
-                    <button class="btn btn-secondary" onclick="renderGoldenSunFarmReport()">Load Farm Report (server)</button>
                     <button class="btn btn-secondary" onclick="openFarmFileDialog()">Load FarmData.json (file)</button>
                     <input type="file" id="goldenSunFarmFilePicker" accept=".json,application/json" style="display:none;">
                     <span id="goldenSunFarmStatus" style="color:#666;"></span>
@@ -1190,7 +1153,7 @@
                             Run the Horizon Admin <strong>Image Dates</strong> script first to generate <code>FarmData.html</code> and <code>FarmData.json</code>. Then click <strong>Load Farm Report</strong>.
                         </div>
                     </div>
-                    <div style="flex:1 1 40%; min-width:280px;">
+                    <div id="goldenSunFarmMasterPanel" style="flex:1 1 40%; min-width:280px; display:none;">
                         <h4 style="margin:0 0 6px 0;">Selectable VMware Masters</h4>
                         <div id="goldenSunFarmList" style="max-height:360px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:8px; background:#f8f9fa;"></div>
                         <div style="margin-top:10px; text-align:right;">
