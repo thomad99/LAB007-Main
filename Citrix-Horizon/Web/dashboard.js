@@ -3425,20 +3425,52 @@ function generateHorizonAdminScript(action) {
     if (action === 'imageDates') {
         scriptLines.push('$OutHtml = Join-Path $ReportsDir "FarmData.html"');
     }
+    if (action === 'imageDates') {
+        scriptLines.push('Write-Host "[DEBUG] Image Dates - Will prompt for Domain, Horizon credentials, then vCenter." -ForegroundColor Magenta');
+    }
     scriptLines.push('$Domain = Read-Host "Domain (optional, leave blank if not needed)"');
     scriptLines.push('$cred = Get-Credential -Message "Enter Horizon credentials (REST)"');
     scriptLines.push('$user = $cred.UserName');
     scriptLines.push('$pass = $cred.GetNetworkCredential().Password');
     scriptLines.push('');
     scriptLines.push('# --- Login to get bearer token ---');
+    if (action === 'imageDates') {
+        scriptLines.push('Write-Host "[DEBUG] Image Dates - Calling Horizon login API..." -ForegroundColor Magenta');
+    }
     scriptLines.push('$loginBody = @{ username = $user; password = $pass }');
     scriptLines.push('if ($Domain) { $loginBody.domain = $Domain }');
     scriptLines.push('$tokenResp = Invoke-RestMethod -Method Post -Uri "$BaseUrl/login" -ContentType "application/json" -Body ($loginBody | ConvertTo-Json)');
     scriptLines.push('$token = $tokenResp.access_token');
     scriptLines.push('if (-not $token) { throw "Login did not return access_token" }');
     scriptLines.push('$headers = @{ Authorization = "Bearer $token"; Accept = "application/json" }');
+    if (action === 'imageDates') {
+        scriptLines.push('Write-Host "[DEBUG] Horizon login OK. Image Dates Step 1: Starting vCenter/VMware block..." -ForegroundColor Magenta');
+    }
     scriptLines.push('');
     if (action === 'imageDates') {
+        scriptLines.push('# --- Image Dates: ensure vCenter connection for VMware master image data ---');
+        scriptLines.push('Write-Host "[DEBUG] Step 2: Importing VMware PowerCLI..." -ForegroundColor Magenta');
+        scriptLines.push('Import-Module VMware.PowerCLI -ErrorAction SilentlyContinue');
+        scriptLines.push('Set-PowerCLIConfiguration -InvalidCertificateAction Ignore -Confirm:$false -Scope Session -ErrorAction SilentlyContinue | Out-Null');
+        scriptLines.push('$vcDefault = "' + (GOLDEN_SUN_DEFAULT_VCENTER ? GOLDEN_SUN_DEFAULT_VCENTER.replace(/"/g, '""') : '') + '"');
+        scriptLines.push('$existingConnection = $global:DefaultVIServers | Where-Object { $_.IsConnected } | Select-Object -First 1');
+        scriptLines.push('$viserver = $null');
+        scriptLines.push('if ($existingConnection) {');
+        scriptLines.push('    $viserver = $existingConnection');
+        scriptLines.push('    Write-Host "Using existing vCenter connection: $($viserver.Name)" -ForegroundColor Cyan');
+        scriptLines.push('} else {');
+        scriptLines.push('    $vc = Read-Host "Enter vCenter Server name (or press Enter for default: $vcDefault)"');
+        scriptLines.push('    if ([string]::IsNullOrWhiteSpace($vc) -and -not [string]::IsNullOrWhiteSpace($vcDefault)) { $vc = $vcDefault }');
+        scriptLines.push('    if ([string]::IsNullOrWhiteSpace($vc)) { throw "vCenter Server name is required for Image Dates." }');
+        scriptLines.push('    $vcCred = Get-Credential -Message "Enter vCenter credentials for $vc"');
+        scriptLines.push('    Write-Host "Connecting to vCenter: $vc ..." -ForegroundColor Yellow');
+        scriptLines.push('    Connect-VIServer -Server $vc -Credential $vcCred -ErrorAction Stop | Out-Null');
+        scriptLines.push('    $viserver = Get-VIServer -Server $vc -ErrorAction SilentlyContinue');
+        scriptLines.push('    Write-Host "Connected to $vc" -ForegroundColor Green');
+        scriptLines.push('}');
+        scriptLines.push('if (-not $viserver) { throw "Failed to establish vCenter connection." }');
+        scriptLines.push('Write-Host "[DEBUG] Step 3: vCenter ready. Fetching farm list from Horizon REST..." -ForegroundColor Magenta');
+        scriptLines.push('');
         scriptLines.push('# --- Image Dates: use inventory/v7/farms (most data) + monitor/farms per VMware Horizon REST API ---');
         scriptLines.push('# Ref: https://developer.broadcom.com/xapis/vmware-horizon-server-api (List Farms V4, List Farm Monitors)');
         scriptLines.push('$invFarms = $null; $monFarms = $null;');
@@ -3459,12 +3491,15 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('    }');
         scriptLines.push('}');
         scriptLines.push('if (-not $invFarms) { throw "Could not fetch farms from any endpoint" }');
+        scriptLines.push('Write-Host "[DEBUG] Step 4: Got $($invFarms.Count) farm(s). Fetching per-farm details..." -ForegroundColor Magenta');
         scriptLines.push('');
         scriptLines.push('# Per-farm detail from inventory/v7/farms/{id} for base image and snapshot');
         scriptLines.push('$details = @()');
+        scriptLines.push('$farmIdx = 0');
         scriptLines.push('foreach ($farm in $invFarms) {');
         scriptLines.push('    $fid = $farm.id; if (-not $fid) { $fid = $farm.farmId }');
         scriptLines.push('    if (-not $fid) { continue }');
+        scriptLines.push('    $farmIdx++; Write-Host "[DEBUG]   Farm $farmIdx/$($invFarms.Count): $fid" -ForegroundColor DarkGray');
         scriptLines.push('    foreach ($detailEp in @("/inventory/v7/farms/$fid", "/inventory/v4/farms/$fid")) {');
         scriptLines.push('        $detailUri = "$BaseUrl$detailEp"');
         scriptLines.push('        try {');
@@ -3474,6 +3509,7 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('        } catch { }');
         scriptLines.push('    }');
         scriptLines.push('}');
+        scriptLines.push('Write-Host "[DEBUG] Step 5: Per-farm details done. Transforming response..." -ForegroundColor Magenta');
         scriptLines.push('$response = $invFarms');
     } else if (action === 'clones') {
         scriptLines.push('# --- Clones: use monitor/v1/tasks + inventory/v7/farms for provisioning status (VMware Horizon REST API) ---');
@@ -3667,6 +3703,7 @@ function generateHorizonAdminScript(action) {
     }
     scriptLines.push('');
     if (action === 'imageDates') {
+        scriptLines.push('Write-Host "[DEBUG] Step 6: Transform - normalizing source..." -ForegroundColor Magenta');
         scriptLines.push('# Transform for farm + image dates view (source: inventory/v7 or v4 farms + per-farm detail)');
         scriptLines.push('$source = $response');
         scriptLines.push('if ($response -is [hashtable] -and $response.ContainsKey("items")) { $source = $response.items }');
@@ -3674,10 +3711,12 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('if ($source -isnot [array]) { $source = @($source) }');
         scriptLines.push('');
         scriptLines.push('# Save raw response for debugging mappings');
+        scriptLines.push('Write-Host "[DEBUG] Step 7: Saving raw JSON (may take a moment for large responses)..." -ForegroundColor Magenta');
         scriptLines.push('$RawOutJson = [System.IO.Path]::ChangeExtension($OutJson, ".raw.json")');
         scriptLines.push('$response | ConvertTo-Json -Depth 12 | Out-File -FilePath $RawOutJson -Encoding UTF8');
         scriptLines.push('Write-Host "Saved raw response to $RawOutJson" -ForegroundColor DarkGray');
         scriptLines.push('');
+        scriptLines.push('Write-Host "[DEBUG] Step 8: Loading VMware master JSON files..." -ForegroundColor Magenta');
         scriptLines.push('# Load VMware master image lists for Prod/Test (if available)');
         scriptLines.push('$vmMasters = @()');
         scriptLines.push('$masterFiles = @(');
@@ -3703,6 +3742,7 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('        }');
         scriptLines.push('    }');
         scriptLines.push('}');
+        scriptLines.push('Write-Host "[DEBUG] Step 9: Building vmMasterIndex ($($vmMasters.Count) masters)..." -ForegroundColor Magenta');
         scriptLines.push('');
         scriptLines.push('# Normalize VMware masters into lookup by VM name');
         scriptLines.push('$vmMasterIndex = @{}');
@@ -3734,6 +3774,7 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('        SnapshotTimestamp = $snapTime');
         scriptLines.push('    }');
         scriptLines.push('}');
+        scriptLines.push('Write-Host "[DEBUG] Step 10: Loading clone log (optional)..." -ForegroundColor Magenta');
         scriptLines.push('');
         scriptLines.push('# Load clone log (optional) to mark cloned masters)');
         scriptLines.push('$cloneLogPath = Join-Path $ReportsDir "FarmClonesLog.json"');
@@ -3753,8 +3794,11 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('    }');
         scriptLines.push('}');
         scriptLines.push('');
+        scriptLines.push('Write-Host "[DEBUG] Step 11: Building rows ($($source.Count) farms)..." -ForegroundColor Magenta');
         scriptLines.push('$rows = @()');
+        scriptLines.push('$rowIdx = 0');
         scriptLines.push('foreach ($farm in $source) {');
+        scriptLines.push('    $rowIdx++; if ($rowIdx % 5 -eq 0 -or $rowIdx -eq $source.Count) { Write-Host "[DEBUG]     Row $rowIdx/$($source.Count)" -ForegroundColor DarkGray }');
         scriptLines.push('    $imgName = $null; $snapName = $null; $snapTime = $null');
         scriptLines.push('    $fid = $farm.id; if (-not $fid) { $fid = $farm.farmId }');
         scriptLines.push('');
@@ -3857,6 +3901,7 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('    $source[0].PSObject.Properties.Name | ForEach-Object { Write-Host " - $_" }');
         scriptLines.push('}');
         scriptLines.push('$response = $rows');
+        scriptLines.push('Write-Host "[DEBUG] Step 12: Saving FarmData.json..." -ForegroundColor Magenta');
         scriptLines.push('');
         scriptLines.push('# Also save farm data as JSON in Reports so GoldenSun UI can load it');
         scriptLines.push('$farmJsonPath = Join-Path $ReportsDir "FarmData.json"');
@@ -3985,10 +4030,16 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('$response = $rows');
     }
     scriptLines.push('');
+    if (action === 'imageDates') {
+        scriptLines.push('Write-Host "[DEBUG] Step 13: Saving main JSON and building HTML..." -ForegroundColor Magenta');
+    }
     scriptLines.push('# --- Save JSON ---');
     scriptLines.push('$response | ConvertTo-Json -Depth 8 | Out-File -FilePath $OutJson -Encoding UTF8');
     scriptLines.push('Write-Host "Saved JSON to $OutJson" -ForegroundColor Green');
     scriptLines.push('');
+    if (action === 'imageDates') {
+        scriptLines.push('Write-Host "[DEBUG] Step 14: Building HTML report..." -ForegroundColor Magenta');
+    }
     scriptLines.push('# --- Build simple HTML report ---');
     scriptLines.push('$style = @\'');
     scriptLines.push('body{font-family:Segoe UI,Arial,sans-serif;margin:20px;}');
@@ -4096,9 +4147,15 @@ function generateHorizonAdminScript(action) {
     scriptLines.push('$html | Out-File -FilePath $OutHtml -Encoding UTF8');
     scriptLines.push('Write-Host "Saved HTML to $OutHtml" -ForegroundColor Green');
     scriptLines.push('');
+    if (action === 'imageDates') {
+        scriptLines.push('Write-Host "[DEBUG] Step 15: Opening HTML in browser..." -ForegroundColor Magenta');
+    }
     scriptLines.push('# Auto-launch HTML report');
     scriptLines.push('try { Start-Process $OutHtml } catch { Write-Warning "Could not open HTML automatically: $($_.Exception.Message)" }');
     scriptLines.push('');
+    if (action === 'imageDates') {
+        scriptLines.push('Write-Host "[DEBUG] Step 16: Image Dates complete." -ForegroundColor Green');
+    }
     scriptLines.push('Write-Host "Done." -ForegroundColor Cyan');
 
     const script = scriptLines.join('\n');
