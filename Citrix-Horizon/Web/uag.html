@@ -63,6 +63,80 @@
         #mermaidGraph { min-height: 260px; }
         .logs { max-height: 280px; overflow-y: auto; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 8px; }
         .log-line { font-family: Consolas, monospace; font-size: 13px; color: #cbd5e1; padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,0.05); }
+        .log-file-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 10px;
+            padding: 10px;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 8px;
+            margin-bottom: 8px;
+            background: rgba(8,17,31,0.75);
+            color: #f8fafc;
+        }
+        .log-file-meta { color: #cbd5e1; font-size: 12px; margin-top: 4px; }
+        .btn-secondary {
+            background: #1e293b;
+            color: #f8fafc;
+            border: 1px solid rgba(255,255,255,0.18);
+        }
+        .btn-secondary:hover { background: #334155; }
+        .log-viewer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.75);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            padding: 20px;
+        }
+        .log-viewer-modal {
+            width: 80vw;
+            height: 80vh;
+            background: #0b1020;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        .log-viewer-header {
+            padding: 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.14);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            align-items: center;
+            background: #111827;
+            color: #f8fafc;
+        }
+        .log-viewer-title {
+            font-weight: 700;
+            margin-right: auto;
+            max-width: 40%;
+            overflow: hidden;
+            white-space: nowrap;
+            text-overflow: ellipsis;
+        }
+        .log-viewer-body {
+            flex: 1;
+            overflow: auto;
+            padding: 12px;
+            background: #020617;
+            color: #f8fafc;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 12px;
+            line-height: 1.45;
+            white-space: pre;
+        }
+        .log-viewer-body mark {
+            background: #facc15;
+            color: #111827;
+            padding: 0;
+        }
         .spinner-eye {
             display: inline-block;
             width: 22px;
@@ -187,11 +261,27 @@
         <p>Import UAG log bundle (.zip). Quick search across entries.</p>
         <input type="file" id="logFile" accept=".zip" class="input">
         <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
-            <input id="logSearch" class="input" style="max-width:260px;" placeholder="Search text in logs...">
-            <button class="btn" id="logSearchBtn">Search</button>
+            <input id="logSearch" class="input" style="max-width:280px;" placeholder="Filter file list by name/text...">
+            <button class="btn" id="logSearchBtn">Filter</button>
         </div>
         <div id="logStatus" style="margin-top:8px;color:var(--muted);"></div>
         <div class="logs" id="logResults"></div>
+    </div>
+</div>
+
+<div id="logViewerOverlay" class="log-viewer-overlay">
+    <div class="log-viewer-modal">
+        <div class="log-viewer-header">
+            <div id="logViewerTitle" class="log-viewer-title">Log Viewer</div>
+            <input id="logViewerSearch" class="input" style="max-width:280px;" placeholder="Search inside this log...">
+            <label style="display:inline-flex;align-items:center;gap:6px;color:#f8fafc;font-size:13px;">
+                <input type="checkbox" id="logViewerReverse">
+                Reverse order
+            </label>
+            <button class="btn btn-secondary" id="logViewerCopyBtn">Copy</button>
+            <button class="btn btn-secondary" id="logViewerCloseBtn">Close</button>
+        </div>
+        <div id="logViewerBody" class="log-viewer-body"></div>
     </div>
 </div>
 
@@ -259,6 +349,13 @@ document.getElementById('configFile').addEventListener('change', handleConfigFil
 document.getElementById('logFile').addEventListener('change', handleLogZip);
 document.getElementById('logSearchBtn').addEventListener('click', renderLogs);
 document.getElementById('logSearch').addEventListener('input', renderLogs);
+document.getElementById('logViewerSearch').addEventListener('input', renderLogViewerContent);
+document.getElementById('logViewerReverse').addEventListener('change', renderLogViewerContent);
+document.getElementById('logViewerCloseBtn').addEventListener('click', closeLogViewer);
+document.getElementById('logViewerCopyBtn').addEventListener('click', copyCurrentLog);
+document.getElementById('logViewerOverlay').addEventListener('click', (e) => {
+    if (e.target.id === 'logViewerOverlay') closeLogViewer();
+});
 
 // Config Compare functionality
 let compareConfigs = [null, null]; // Initialize for 2 files
@@ -272,7 +369,10 @@ compareFileInputs.forEach((input, index) => {
     input.addEventListener('change', (e) => handleCompareFile(e, index));
 });
 
-function setStatus(id,msg){ const el=document.getElementById(id); if(el) el.textContent=msg||''; }
+function setStatus(id,msg){
+    const el=document.getElementById(id);
+    if(el) el.innerHTML=msg||'';
+}
 
 async function handleConfigFile(e){
     const file = e.target.files[0];
@@ -392,22 +492,100 @@ async function handleLogZip(e){
     if(!file) return;
     setStatus('logStatus',`<span class="spinner-eye"></span>Reading ${file.name}...`);
     const zip = await JSZip.loadAsync(file);
-    const entries=[];
+    const files=[];
+    let totalLines = 0;
     for(const [name,entry] of Object.entries(zip.files)){
         if(entry.dir) continue;
         const txt = await entry.async('text');
-        entries.push(...txt.split(/\r?\n/).map(line=>({file:name,line})));
+        const lines = txt.split(/\r?\n/);
+        totalLines += lines.length;
+        files.push({ file: name, text: txt, lines });
     }
-    window.uagLogs = entries;
-    setStatus('logStatus',`Loaded ${entries.length} log lines from ${file.name}`);
+    window.uagLogFiles = files;
+    window.currentLogFileIndex = -1;
+    setStatus('logStatus',`Loaded ${files.length} file(s), ${totalLines} total line(s) from ${file.name}`);
     renderLogs();
 }
 function renderLogs(){
     const q = (document.getElementById('logSearch').value||'').toLowerCase();
     const target = document.getElementById('logResults');
-    const entries = (window.uagLogs||[]);
-    const filtered = q ? entries.filter(e=>e.line.toLowerCase().includes(q)) : entries.slice(0,300);
-    target.innerHTML = filtered.slice(0,300).map(e=>`<div class="log-line"><strong>${escapeHtml(e.file)}:</strong> ${escapeHtml(e.line)}</div>`).join('') || '<div class="log-line">No log lines.</div>';
+    const files = (window.uagLogFiles||[]);
+    if(!files.length){
+        target.innerHTML = '<div class="log-line">No logs loaded yet.</div>';
+        return;
+    }
+    const filtered = q
+        ? files.filter(f => f.file.toLowerCase().includes(q) || f.text.toLowerCase().includes(q))
+        : files;
+    target.innerHTML = filtered.map((f)=>{
+        const preview = f.lines.find(l => l && (!q || l.toLowerCase().includes(q))) || '';
+        const idx = files.indexOf(f);
+        return `<div class="log-file-row">
+            <div style="min-width:0;">
+                <div style="font-weight:700; color:#ffffff; word-break:break-all;">${escapeHtml(f.file)}</div>
+                <div class="log-file-meta">${f.lines.length} line(s)</div>
+                ${preview ? `<div class="log-file-meta">Preview: ${escapeHtml(preview.slice(0,180))}</div>` : ''}
+            </div>
+            <button class="btn btn-secondary" onclick="openLogViewer(${idx})">Open</button>
+        </div>`;
+    }).join('') || '<div class="log-line">No matching log files.</div>';
+}
+
+function openLogViewer(index){
+    const files = window.uagLogFiles || [];
+    if(index < 0 || index >= files.length) return;
+    window.currentLogFileIndex = index;
+    document.getElementById('logViewerTitle').textContent = files[index].file;
+    document.getElementById('logViewerSearch').value = '';
+    document.getElementById('logViewerReverse').checked = false;
+    document.getElementById('logViewerOverlay').style.display = 'flex';
+    renderLogViewerContent();
+}
+
+function closeLogViewer(){
+    document.getElementById('logViewerOverlay').style.display = 'none';
+}
+
+function renderLogViewerContent(){
+    const index = window.currentLogFileIndex;
+    const files = window.uagLogFiles || [];
+    const body = document.getElementById('logViewerBody');
+    if(index === undefined || index < 0 || index >= files.length || !body){
+        if(body) body.textContent = '';
+        return;
+    }
+    const q = (document.getElementById('logViewerSearch').value || '').trim();
+    const reverse = document.getElementById('logViewerReverse').checked;
+    let lines = files[index].lines.slice();
+    if(reverse) lines = lines.reverse();
+    if(q){
+        const lower = q.toLowerCase();
+        lines = lines.filter(line => line.toLowerCase().includes(lower));
+    }
+    const maxLines = 12000;
+    if(lines.length > maxLines){
+        lines = lines.slice(0, maxLines);
+    }
+    let content = escapeHtml(lines.join('\n'));
+    if(q){
+        const escapedQ = q.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const regex = new RegExp(escapedQ, 'gi');
+        content = content.replace(regex, (m) => `<mark>${m}</mark>`);
+    }
+    body.innerHTML = content || 'No matching lines in this log file.';
+}
+
+async function copyCurrentLog(){
+    const index = window.currentLogFileIndex;
+    const files = window.uagLogFiles || [];
+    if(index === undefined || index < 0 || index >= files.length) return;
+    const text = files[index].text || '';
+    try{
+        await navigator.clipboard.writeText(text);
+        setStatus('logStatus', `Copied ${files[index].file} to clipboard.`);
+    } catch(err){
+        setStatus('logStatus', `Copy failed: ${escapeHtml(err.message || err)}`);
+    }
 }
 
 function escapeHtml(str){
