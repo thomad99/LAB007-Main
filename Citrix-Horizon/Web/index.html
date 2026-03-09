@@ -58,11 +58,12 @@
         margin-right:6px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
-    .log-entry { border:1px solid rgba(255,255,255,0.08); border-radius:8px; margin-bottom:6px; background:#0f172a; }
-    .log-head { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; cursor:pointer; font-weight:700; }
-    .log-toggle { font-weight:900; color:#e5b600; margin-left:10px; }
-    .log-body { display:none; border-top:1px solid rgba(255,255,255,0.08); max-height:80vh; overflow:auto; }
-    .log-body pre { white-space:pre; max-height:none; overflow:visible; font-size:12px; color:#cbd5e1; margin:0; padding:8px 10px; }
+    .log-entry { border:1px solid rgba(255,255,255,0.15); border-radius:8px; margin-bottom:6px; background:#1e293b; color:#ffffff !important; }
+    .log-head { display:flex; justify-content:space-between; align-items:center; padding:8px 10px; cursor:pointer; font-weight:700; color:#ffffff !important; }
+    .log-head span { color:#ffffff !important; }
+    .log-toggle, .log-group-toggle { font-weight:900; color:#e5b600 !important; margin-left:10px; }
+    .log-body { display:none; border-top:1px solid rgba(255,255,255,0.15); max-height:80vh; overflow:auto; background:#0f172a; }
+    .log-body pre { white-space:pre-wrap; word-break:break-all; max-height:none; overflow:visible; font-size:12px; color:#e2e8f0 !important; margin:0; padding:8px 10px; }
     .log-match { background:#fde047; color:#111; font-weight:700; padding:1px 2px; border-radius:3px; }
     .log-match.active { background:#22d3ee; color:#0b1020; }
     </style>
@@ -1834,7 +1835,7 @@
         const wrap = document.getElementById('csBundleResults');
         const summary = document.getElementById('csBundleSummary');
         if (summary) {
-            summary.innerHTML = Object.entries(csBundleGroups).map(([k,v])=> `<div class="card" style="padding:8px 10px; background:#11182a; color:#e5e8f0; border-radius:8px; border:1px solid rgba(255,255,255,0.08); font-size:13px;">${k.toUpperCase()} <span style="color:#e5b600;font-weight:700;">${v.length}</span></div>`).join('');
+            summary.innerHTML = Object.entries(csBundleGroups).map(([k,v])=> `<div class="card" style="padding:8px 10px; background:#1e293b; color:#ffffff; border-radius:8px; border:1px solid rgba(255,255,255,0.15); font-size:13px;">${k.toUpperCase()} <span style="color:#e5b600;font-weight:700;">${v.length}</span></div>`).join('');
         }
         if (!wrap) return;
         let html = '';
@@ -1844,8 +1845,8 @@
                         <div>`;
             files.sort().forEach((f,i)=>{
                 const id = `csfile-${cat}-${i}`;
-                html += `<div class="log-entry" style="margin-bottom:6px;">
-                            <div class="log-head" onclick="loadCsFile('${cat}','${f}','${id}')">
+                html += `<div class="log-entry" style="margin-bottom:6px; color:#ffffff;">
+                            <div class="log-head" onclick="loadCsFile('${cat}','${f}','${id}')" style="color:#ffffff;">
                                 <span>${escapeHtml(f)}</span>
                                 <span class="log-toggle">+</span>
                             </div>
@@ -1878,7 +1879,7 @@
             const entry = zip.file(filename);
             if (!entry) throw new Error('File missing in zip');
             const text = await entry.async('string');
-            body.innerHTML = `<pre style="white-space:pre-wrap; font-size:12px; color:#cbd5e1; margin:0;">${escapeHtml(text)}</pre>`;
+            body.innerHTML = `<pre style="white-space:pre-wrap; font-size:12px; color:#e2e8f0 !important; margin:0; background:transparent;">${escapeHtml(text)}</pre>`;
         }catch(err){
             console.error('CS file load error', err);
             body.innerHTML = `<div style="color:#f87171;">Error loading file: ${escapeHtml(err.message||'unknown')}</div>`;
@@ -1976,7 +1977,8 @@
             const entries = [];
             await Promise.all(Object.keys(zip.files).map(async (k)=>{
                 if (zip.files[k].dir) return;
-                const txt = await zip.files[k].async('text');
+                let txt = '';
+                try { txt = await zip.files[k].async('string'); } catch (e) { txt = ''; }
                 entries.push({ name:k, text:txt });
             }));
             uagLogEntries = entries;
@@ -2004,21 +2006,8 @@
             if (icon) icon.textContent = '+';
             return;
         }
-        // show spinner while expanding large content
-        const spinner = document.createElement('div');
-        spinner.innerHTML = '<span class="spinner-eye"></span> Loading...';
-        spinner.style.color = '#94a3b8';
-        body.innerHTML = '';
-        body.appendChild(spinner);
         body.style.display = 'block';
-        setTimeout(()=> {
-            const pre = entry.querySelector('pre');
-            if (pre) {
-                // already populated
-            }
-            if (icon) icon.textContent = '−';
-            if (body.contains(spinner)) body.removeChild(spinner);
-        }, 10); // allow repaint
+        if (icon) icon.textContent = '−';
     }
 
     function highlightText(text, query){
@@ -2094,8 +2083,8 @@
             const bodyDisplay = hasMatch && query ? 'block' : 'none';
             const toggleSymbol = bodyDisplay === 'block' ? '−' : '+';
             html += `
-            <div class="log-group" data-group="priority" style="border:1px solid rgba(255,255,255,0.12); border-radius:10px; margin-bottom:10px; background:#0c1326;">
-                <div class="log-head" style="font-size:15px;" onclick="toggleLogGroup('priority')">
+            <div class="log-group" data-group="priority" style="border:1px solid rgba(255,255,255,0.2); border-radius:10px; margin-bottom:10px; background:#1e293b; color:#ffffff;">
+                <div class="log-head" style="font-size:15px; color:#ffffff;" onclick="toggleLogGroup('priority')">
                     <span>Top Logs <span style="color:#94a3b8;font-weight:500;">(${priorityEntries.length})</span></span>
                     <span class="log-group-toggle">${toggleSymbol}</span>
                 </div>
@@ -2132,8 +2121,8 @@
             const bodyDisplay = hasMatchInGroup && query ? 'block' : 'none';
             const toggleSymbol = bodyDisplay === 'block' ? '−' : '+';
             html += `
-            <div class="log-group" data-group="${gi}" style="border:1px solid rgba(255,255,255,0.12); border-radius:10px; margin-bottom:10px; background:#0c1326;">
-                <div class="log-head" style="font-size:15px;" onclick="toggleLogGroup(${gi})">
+            <div class="log-group" data-group="${gi}" style="border:1px solid rgba(255,255,255,0.2); border-radius:10px; margin-bottom:10px; background:#1e293b; color:#ffffff;">
+                <div class="log-head" style="font-size:15px; color:#ffffff;" onclick="toggleLogGroup(${gi})">
                     <span>${escapeHtml(g)} <span style="color:#94a3b8;font-weight:500;">(${items.length})</span></span>
                     <span class="log-group-toggle">${toggleSymbol}</span>
                 </div>

@@ -615,6 +615,11 @@ app.get('/sportsplus', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sportsplus.html'));
 });
 
+// SRQ Cleaning - Sarasota cleaning services
+app.get('/SRQCleaning', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'SRQCleaning', 'index.html'));
+});
+
 // TomoPI page
 app.get('/tomopi', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'tomopi.html'));
