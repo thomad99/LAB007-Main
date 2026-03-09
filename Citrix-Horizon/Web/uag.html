@@ -356,6 +356,22 @@ document.getElementById('logViewerCopyBtn').addEventListener('click', copyCurren
 document.getElementById('logViewerOverlay').addEventListener('click', (e) => {
     if (e.target.id === 'logViewerOverlay') closeLogViewer();
 });
+document.addEventListener('keydown', (e) => {
+    if (e.key !== 'Escape') return;
+    let closedAny = false;
+    const overlay = document.getElementById('logViewerOverlay');
+    if (overlay && getComputedStyle(overlay).display !== 'none') {
+        closeLogViewer();
+        closedAny = true;
+    }
+    document.querySelectorAll('.modal').forEach((modal) => {
+        if (modal && getComputedStyle(modal).display !== 'none') {
+            modal.style.display = 'none';
+            closedAny = true;
+        }
+    });
+    if (closedAny) e.preventDefault();
+});
 
 // Config Compare functionality
 let compareConfigs = [null, null]; // Initialize for 2 files

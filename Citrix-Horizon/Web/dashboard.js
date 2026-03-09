@@ -1570,6 +1570,30 @@ function closeAllModals(exceptId) {
     });
 }
 
+function closeAllVisibleModalsOnEscape() {
+    const modals = document.querySelectorAll('.modal');
+    let closedAny = false;
+    modals.forEach((modal) => {
+        const isOpen = modal && getComputedStyle(modal).display !== 'none';
+        if (isOpen) {
+            modal.style.display = 'none';
+            closedAny = true;
+        }
+    });
+    if (closedAny) {
+        document.body.style.overflow = '';
+    }
+    return closedAny;
+}
+
+document.addEventListener('keydown', function(event) {
+    if (event.key !== 'Escape') return;
+    const closed = closeAllVisibleModalsOnEscape();
+    if (closed) {
+        event.preventDefault();
+    }
+});
+
 async function testConnection() {
     const testBtn = document.getElementById('testConnectionBtn');
     const originalText = testBtn.innerHTML;
