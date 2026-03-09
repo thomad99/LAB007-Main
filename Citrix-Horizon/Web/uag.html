@@ -61,21 +61,22 @@
         .tab.active { background: var(--accent); color: #08111f; border-color: var(--accent); box-shadow: 0 2px 4px rgba(34,211,238,0.2); }
         #diagramWrap { background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 10px; overflow-x: auto; }
         #mermaidGraph { min-height: 260px; }
-        .logs { max-height: 280px; overflow-y: auto; background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.08); border-radius: 10px; padding: 8px; }
-        .log-line { font-family: Consolas, monospace; font-size: 13px; color: #cbd5e1; padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,0.05); }
+        .logs { max-height: 280px; overflow-y: auto; background: #1e293b; border: 1px solid rgba(255,255,255,0.15); border-radius: 10px; padding: 8px; color: #ffffff !important; }
+        .log-line { font-family: Consolas, monospace; font-size: 13px; color: #ffffff !important; padding: 2px 0; border-bottom: 1px dashed rgba(255,255,255,0.15); }
         .log-file-row {
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 10px;
             padding: 10px;
-            border: 1px solid rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.15);
             border-radius: 8px;
             margin-bottom: 8px;
-            background: rgba(8,17,31,0.75);
-            color: #f8fafc;
+            background: #0f172a;
+            color: #ffffff !important;
         }
-        .log-file-meta { color: #cbd5e1; font-size: 12px; margin-top: 4px; }
+        .log-file-row * { color: #ffffff !important; }
+        .log-file-meta { color: #e2e8f0 !important; font-size: 12px; margin-top: 4px; }
         .btn-secondary {
             background: #1e293b;
             color: #f8fafc;
@@ -123,14 +124,16 @@
         }
         .log-viewer-body {
             flex: 1;
+            min-height: 0;
             overflow: auto;
             padding: 12px;
-            background: #020617;
-            color: #f8fafc;
+            background: #0f172a;
+            color: #ffffff !important;
             font-family: Consolas, "Courier New", monospace;
-            font-size: 12px;
-            line-height: 1.45;
-            white-space: pre;
+            font-size: 13px;
+            line-height: 1.5;
+            white-space: pre-wrap;
+            word-break: break-all;
         }
         .log-viewer-body mark {
             background: #facc15;
@@ -512,8 +515,14 @@ async function handleLogZip(e){
     let totalLines = 0;
     for(const [name,entry] of Object.entries(zip.files)){
         if(entry.dir) continue;
-        const txt = await entry.async('text');
-        const lines = txt.split(/\r?\n/);
+        let txt = '';
+        try {
+            txt = await entry.async('string');
+        } catch (err) {
+            console.warn('Could not read as text:', name, err);
+            continue;
+        }
+        const lines = (txt || '').split(/\r?\n/);
         totalLines += lines.length;
         files.push({ file: name, text: txt, lines });
     }
@@ -527,7 +536,7 @@ function renderLogs(){
     const target = document.getElementById('logResults');
     const files = (window.uagLogFiles||[]);
     if(!files.length){
-        target.innerHTML = '<div class="log-line">No logs loaded yet.</div>';
+        target.innerHTML = '<div class="log-line" style="color:#ffffff !important;">No logs loaded yet. Import a .zip log bundle above.</div>';
         return;
     }
     const filtered = q
@@ -538,13 +547,13 @@ function renderLogs(){
         const idx = files.indexOf(f);
         return `<div class="log-file-row">
             <div style="min-width:0;">
-                <div style="font-weight:700; color:#ffffff; word-break:break-all;">${escapeHtml(f.file)}</div>
+                <div style="font-weight:700; color:#ffffff !important; word-break:break-all;">${escapeHtml(f.file)}</div>
                 <div class="log-file-meta">${f.lines.length} line(s)</div>
                 ${preview ? `<div class="log-file-meta">Preview: ${escapeHtml(preview.slice(0,180))}</div>` : ''}
             </div>
-            <button class="btn btn-secondary" onclick="openLogViewer(${idx})">Open</button>
+            <button class="btn btn-secondary" type="button" onclick="openLogViewer(${idx})">Open</button>
         </div>`;
-    }).join('') || '<div class="log-line">No matching log files.</div>';
+    }).join('') || '<div class="log-line" style="color:#ffffff !important;">No matching log files.</div>';
 }
 
 function openLogViewer(index){
@@ -588,7 +597,8 @@ function renderLogViewerContent(){
         const regex = new RegExp(escapedQ, 'gi');
         content = content.replace(regex, (m) => `<mark>${m}</mark>`);
     }
-    body.innerHTML = content || 'No matching lines in this log file.';
+    body.innerHTML = content || '<span style="color:#94a3b8;">No matching lines in this log file.</span>';
+    body.scrollTop = 0;
 }
 
 async function copyCurrentLog(){
