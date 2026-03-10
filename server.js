@@ -389,6 +389,38 @@ error: 'Failed to send message. Please try again later or contact us directly at
 }
 });
 
+// SRQ Cleaning contact form - sends to info@lab007.ai
+app.post('/api/srq-contact', async (req, res) => {
+  const { name, email, phone, message } = req.body || {};
+  if (!email || !message) {
+    return res.status(400).json({ error: 'Email and message are required' });
+  }
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email address' });
+  }
+  if (!emailTransporter) {
+    return res.status(500).json({ error: 'Email service not configured. Please email us directly at info@lab007.ai' });
+  }
+  const fromAddr = process.env.SMTP_USER || 'noreply@lab007.ai';
+  const text = `SRQ Cleaning Contact Form\n\nName: ${name || '—'}\nEmail: ${email}\nPhone: ${phone || '—'}\n\nMessage:\n${message}`;
+  const html = `<h2>SRQ Cleaning Contact Form</h2><p><strong>Name:</strong> ${name || '—'}</p><p><strong>Email:</strong> ${email}</p><p><strong>Phone:</strong> ${phone || '—'}</p><p><strong>Message:</strong></p><p>${(message || '').replace(/\n/g, '<br>')}</p>`;
+  try {
+    await emailTransporter.sendMail({
+      from: fromAddr,
+      replyTo: email,
+      to: 'info@lab007.ai',
+      subject: 'SRQ Cleaning – Contact form',
+      text,
+      html
+    });
+    res.json({ success: true, message: 'Message sent successfully' });
+  } catch (error) {
+    console.error('SRQ contact form error:', error);
+    res.status(500).json({ error: 'Failed to send message. Please try again or email info@lab007.ai directly.' });
+  }
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
 res.json({
@@ -618,6 +650,9 @@ app.get('/sportsplus', (req, res) => {
 // SRQ Cleaning - Sarasota cleaning services
 app.get('/SRQCleaning', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'SRQCleaning', 'index.html'));
+});
+app.get('/SRQCleaning/contact', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'SRQCleaning', 'contact.html'));
 });
 
 // TomoPI page

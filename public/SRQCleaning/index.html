@@ -1,6 +1,14 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SDLJQHH25Q"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SDLJQHH25Q');
+    </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sarasota Cleaning Services | Professional House Cleaning in Sarasota, Venice, Osprey, Palmer Ranch FL</title>
@@ -14,6 +22,7 @@
     <meta name="zipcodes" content="34229,34230,34231,34232,34233,34234,34235,34236,34237,34238,34239,34240,34241,34242,34243,34260,34276,34277,34278,34285,34292,34293">
     <link rel="canonical" href="/SRQCleaning">
     <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
@@ -73,8 +82,8 @@
             background: linear-gradient(135deg, #0f766e 0%, #0d9488 50%, #14b8a6 100%);
             color: white; padding: 60px 20px; text-align: center;
         }
-        .hero h1 { font-size: 2.25rem; margin-bottom: 12px; font-weight: 800; }
-        .hero p { font-size: 1.125rem; opacity: 0.95; max-width: 600px; margin: 0 auto 24px; }
+        .hero h1 { font-size: 2.25rem; margin-bottom: 12px; font-weight: 800; color: #1e40af; }
+        .hero p { font-size: 1.125rem; opacity: 0.95; max-width: 600px; margin: 0 auto 24px; color: #1e40af; }
         .hero-img {
             width: 100%; max-height: 400px; object-fit: cover; border-radius: 12px; margin-top: 24px;
             box-shadow: var(--shadow-lg);
@@ -138,16 +147,21 @@
             .hero h1 { font-size: 1.75rem; }
             .slot-grid { grid-template-columns: 1fr; }
         }
+        /* Flatpickr: grey out non-Monday dates */
+        .flatpickr-day.flatpickr-disabled { color: #cbd5e1 !important; cursor: not-allowed; }
     </style>
 </head>
 <body>
     <header>
         <div class="header-inner">
-            <span class="logo">SRQ Cleaning</span>
+            <a href="/SRQCleaning" class="logo-wrap" style="display:flex; align-items:center; gap:12px; text-decoration:none; color:inherit;">
+                <img src="/SRQCleaning/logo.png" alt="SRQ Cleaning - Professional house cleaning Sarasota Florida" class="logo-img" style="height:52px; width:auto;">
+            </a>
             <nav class="nav">
                 <a href="#prices">Pricing</a>
                 <a href="#service-area">Service Area</a>
-                <a href="#book">Book Now</a>
+                <a href="#" onclick="openBookingModal(); return false;">Book Now</a>
+                <a href="/SRQCleaning/contact">Contact</a>
             </nav>
         </div>
     </header>
@@ -156,24 +170,15 @@
         <div class="container">
             <h1>Professional House Cleaning in Sarasota, Florida</h1>
             <p>Trusted local cleaning company serving Sarasota, Osprey, Venice & Palmer Ranch. Sparkling clean homes, every time.</p>
-            <a href="#book" class="btn btn-accent">Book a Service</a>
+            <a href="#" onclick="openBookingModal(); return false;" class="btn btn-accent">Book a Service</a>
             <img src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?w=800&q=80" alt="Professional house cleaning service in Sarasota Florida" class="hero-img">
-        </div>
-    </section>
-
-    <section>
-        <div class="container">
-            <div class="local-badge">✓ Local Sarasota company serving the area</div>
-            <h2>We Serve Your Neighborhood</h2>
-            <p>We are a local Sarasota cleaning company proudly serving Sarasota, Osprey, Venice, and Palmer Ranch. Our team knows the area and delivers reliable, thorough cleaning to homes throughout Sarasota County.</p>
-            <p class="zip-list">Service areas include ZIP codes: 34229, 34230, 34231, 34232, 34233, 34234, 34235, 34236, 34237, 34238, 34239, 34240, 34241, 34242, 34243, 34260, 34276, 34277, 34278, 34285, 34292, 34293</p>
         </div>
     </section>
 
     <section id="prices">
         <div class="container">
             <h2>Clear, Simple Pricing</h2>
-            <p>3 hours of professional cleaning per visit. No hidden fees.</p>
+            <p>Recurring plans: 3 hours per visit. Single deep clean: 4 hours. No hidden fees.</p>
             <div class="price-grid">
                 <div class="price-card">
                     <div class="period">Weekly</div>
@@ -191,9 +196,9 @@
                     <div class="hours">3 hours per month</div>
                 </div>
                 <div class="price-card">
-                    <div class="period">One-Off</div>
+                    <div class="period">Single Deep Clean</div>
                     <div class="amount">$199</div>
-                    <div class="hours">3 hours (same as monthly)</div>
+                    <div class="hours">4 hours</div>
                 </div>
             </div>
         </div>
@@ -202,12 +207,20 @@
     <section>
         <div class="container">
             <h2>Why Choose SRQ Cleaning</h2>
+            <ul class="benefits-list" style="margin: 20px 0; padding-left: 24px; line-height: 1.8; color: var(--text);">
+                <li>Local Sarasota company serving the area</li>
+                <li>Local US Staff</li>
+                <li>English Speaking</li>
+                <li>Quality Products</li>
+                <li>Reliable</li>
+                <li>Professional and polite</li>
+            </ul>
             <div class="gallery">
                 <img src="https://images.unsplash.com/photo-1584622650111-993a426fbf0a?w=400&q=80" alt="Clean kitchen Sarasota">
-                <img src="https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=400&q=80" alt="Professional cleaning service">
+                <img src="https://images.unsplash.com/photo-1600566753190-17f0baa2a6c3?w=400&q=80" alt="Cleaning spray and supplies for house cleaning">
                 <img src="https://images.unsplash.com/photo-1563453392212-326f5e854473?w=400&q=80" alt="Spotless home cleaning">
             </div>
-            <p style="margin-top: 20px;">Our experienced team brings attention to detail and eco-friendly products to every home. We offer flexible scheduling—Mondays between 9am and 4pm in 3-hour slots.</p>
+            <p style="margin-top: 20px;">Our experienced team brings attention to detail and eco-friendly products to every home. We operate weekdays 9am–5pm with flexible scheduling.</p>
         </div>
     </section>
 
@@ -215,7 +228,16 @@
         <div class="container">
             <h2>Service Area</h2>
             <p>Sarasota • Osprey • Venice • Palmer Ranch</p>
-            <p>Enter your ZIP code when booking to confirm we serve your area. We currently service every Monday between 9am and 4pm in 3-hour time slots.</p>
+            <p>Enter your ZIP code when booking to confirm we serve your area. We operate weekdays 9am–5pm.</p>
+        </div>
+    </section>
+
+    <section>
+        <div class="container">
+            <div class="local-badge">✓ Local Sarasota company serving the area</div>
+            <h2>We Serve Your Neighborhood</h2>
+            <p>We are a local Sarasota cleaning company proudly serving Sarasota, Osprey, Venice, and Palmer Ranch. Our team knows the area and delivers reliable, thorough cleaning to homes throughout Sarasota County.</p>
+            <p class="zip-list">Service areas include ZIP codes: 34229, 34230, 34231, 34232, 34233, 34234, 34235, 34236, 34237, 34238, 34239, 34240, 34241, 34242, 34243, 34260, 34276, 34277, 34278, 34285, 34292, 34293</p>
         </div>
     </section>
 
@@ -237,26 +259,26 @@
                         <option value="weekly">Weekly - $99</option>
                         <option value="biweekly">Bi-Weekly (Fortnight) - $129</option>
                         <option value="monthly">Monthly - $199</option>
-                        <option value="oneoff">One-Off - $199</option>
+                        <option value="oneoff">Single deep clean (4 hours) - $199</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Preferred Date</label>
-                    <input type="date" id="preferredDate" min="">
+                    <label>Preferred Date (Mondays only)</label>
+                    <input type="text" id="preferredDate" placeholder="Click to pick a Monday..." readonly>
                 </div>
+                <button class="btn" onclick="continueFromStep1()">Continue</button>
+            </div>
+            <div id="bookingStep2" class="step">
                 <div class="form-group">
                     <label>Your ZIP Code</label>
                     <input type="text" id="zipCode" placeholder="e.g. 34232" maxlength="5" pattern="[0-9]{5}">
                 </div>
-                <button class="btn" onclick="checkZipAndContinue()">Continue</button>
-            </div>
-            <div id="bookingStep2" class="step">
                 <p><strong>We service your area!</strong></p>
                 <p>In your area we offer cleaning every <strong>Monday between 9am and 4pm</strong> in 3-hour slots. Please select your preferred time slot:</p>
                 <div class="slot-grid" id="slotGrid"></div>
                 <div class="booking-nav">
                     <button class="btn btn-outline" onclick="showStep(1)">Back</button>
-                    <button class="btn" onclick="showStep(3)" id="continueToDetails">Continue</button>
+                    <button class="btn" onclick="continueFromStep2()">Continue</button>
                 </div>
             </div>
             <div id="bookingStep3" class="step">
@@ -295,19 +317,31 @@
     <footer>
         <div class="container">
             <p>© SRQ Cleaning Services. Sarasota, Osprey, Venice, Palmer Ranch FL.</p>
-            <p style="margin-top: 8px;"><a href="/contact">Contact</a> | <a href="/">LAB007</a></p>
+            <p style="margin-top: 8px;"><a href="/SRQCleaning/contact">Contact</a> | <a href="/">LAB007</a></p>
         </div>
     </footer>
 
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script>
         const SERVICE_ZIPS = ['34229','34230','34231','34232','34233','34234','34235','34236','34237','34238','34239','34240','34241','34242','34243','34260','34276','34277','34278','34285','34292','34293'];
         const SLOTS = ['9:00 AM - 12:00 PM', '12:00 PM - 3:00 PM'];
         let bookingData = { serviceType: '', date: '', zip: '', slot: '', name: '', address: '', phone: '', email: '' };
+        let datePicker = null;
 
-        document.getElementById('preferredDate').min = new Date().toISOString().split('T')[0];
+        function initDatePicker() {
+            const el = document.getElementById('preferredDate');
+            if (!el || datePicker) return;
+            datePicker = flatpickr(el, {
+                dateFormat: 'Y-m-d',
+                disable: [function(date) { return date.getDay() !== 1; }],
+                minDate: 'today'
+            });
+        }
 
         function openBookingModal() {
             document.getElementById('bookingOverlay').classList.add('active');
+            if (!datePicker) initDatePicker();
+            if (datePicker) datePicker.clear();
             showStep(1);
         }
         function closeBookingModal() {
@@ -326,26 +360,34 @@
             if (n === 2) renderSlots();
         }
 
-        function checkZipAndContinue() {
-            const zip = (document.getElementById('zipCode').value || '').trim();
+        function continueFromStep1() {
             const date = document.getElementById('preferredDate').value;
             const service = document.getElementById('serviceType').value;
-            if (!zip || zip.length !== 5) {
-                alert('Please enter a valid 5-digit ZIP code.');
-                return;
-            }
             if (!date) {
                 alert('Please select a preferred date.');
+                return;
+            }
+            bookingData.serviceType = service;
+            bookingData.date = date;
+            showStep(2);
+        }
+
+        function continueFromStep2() {
+            const zip = (document.getElementById('zipCode').value || '').trim();
+            if (!zip || zip.length !== 5) {
+                alert('Please enter a valid 5-digit ZIP code.');
                 return;
             }
             if (!SERVICE_ZIPS.includes(zip)) {
                 alert('Sorry, we do not currently serve ZIP code ' + zip + '. Please check our service area: Sarasota, Osprey, Venice, Palmer Ranch.');
                 return;
             }
-            bookingData.serviceType = service;
-            bookingData.date = date;
+            if (!bookingData.slot) {
+                alert('Please select a time slot.');
+                return;
+            }
             bookingData.zip = zip;
-            showStep(2);
+            showStep(3);
         }
 
         function renderSlots() {

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SDLJQHH25Q"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SDLJQHH25Q');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contact Us | SRQ Cleaning – Sarasota Florida</title>
+    <meta name="description" content="Contact SRQ Cleaning. Get in touch for house cleaning in Sarasota, Osprey, Venice, Palmer Ranch. We'll reply to info@lab007.ai.">
+    <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
+    <link rel="canonical" href="/SRQCleaning/contact">
+    <style>
+        :root {
+            --primary: #0d9488;
+            --primary-dark: #0f766e;
+            --accent: #f59e0b;
+            --text: #1e293b;
+            --text-muted: #64748b;
+            --bg: #f8fafc;
+            --white: #ffffff;
+            --shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -2px rgba(0,0,0,0.1);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif; line-height: 1.6; color: var(--text); background: var(--bg); }
+        img { max-width: 100%; height: auto; display: block; }
+        a { color: var(--primary); text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .container { max-width: 640px; margin: 0 auto; padding: 0 20px; }
+        .btn {
+            display: inline-block; padding: 14px 28px; background: var(--primary); color: white; border: none; border-radius: 8px;
+            font-weight: 600; font-size: 16px; cursor: pointer; transition: background 0.2s;
+        }
+        .btn:hover { background: var(--primary-dark); }
+        .btn:disabled { opacity: 0.7; cursor: not-allowed; }
+        header {
+            background: var(--white); box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100;
+        }
+        .header-inner { display: flex; justify-content: space-between; align-items: center; padding: 16px 20px; max-width: 1100px; margin: 0 auto; }
+        .nav a { margin-left: 24px; font-weight: 500; color: var(--text); }
+        .nav a:hover { color: var(--primary); }
+        section { padding: 48px 20px; background: var(--white); margin: 24px auto; max-width: 640px; border-radius: 12px; box-shadow: var(--shadow); }
+        h1 { font-size: 1.75rem; margin-bottom: 8px; color: var(--text); }
+        p { color: var(--text-muted); margin-bottom: 24px; }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-weight: 600; margin-bottom: 8px; color: var(--text); }
+        .form-group input, .form-group textarea {
+            width: 100%; padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 16px;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(13,148,136,0.2);
+        }
+        .form-group textarea { min-height: 120px; resize: vertical; }
+        .success-msg { background: #d1fae5; color: #065f46; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
+        .error-msg { background: #fee2e2; color: #991b1b; padding: 16px; border-radius: 8px; margin-bottom: 20px; }
+        footer { text-align: center; padding: 24px 20px; color: var(--text-muted); font-size: 14px; }
+        footer a { color: var(--primary); }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="header-inner">
+            <a href="/SRQCleaning" style="display:flex; align-items:center; text-decoration:none;">
+                <img src="/SRQCleaning/logo.png" alt="SRQ Cleaning" style="height:52px; width:auto;">
+            </a>
+            <nav class="nav">
+                <a href="/SRQCleaning#prices">Pricing</a>
+                <a href="/SRQCleaning#service-area">Service Area</a>
+                <a href="#" onclick="window.location='/SRQCleaning'; return false;">Book Now</a>
+                <a href="/SRQCleaning/contact">Contact</a>
+            </nav>
+        </div>
+    </header>
+
+    <section>
+        <div class="container">
+            <h1>Contact Us</h1>
+            <p>Questions about our cleaning services in Sarasota, Osprey, Venice or Palmer Ranch? Send us a message and we’ll get back to you.</p>
+            <div id="formSuccess" class="success-msg" style="display:none;"></div>
+            <div id="formError" class="error-msg" style="display:none;"></div>
+            <form id="contactForm">
+                <div class="form-group">
+                    <label for="contactName">Name</label>
+                    <input type="text" id="contactName" name="name" placeholder="Your name">
+                </div>
+                <div class="form-group">
+                    <label for="contactEmail">Email *</label>
+                    <input type="email" id="contactEmail" name="email" required placeholder="you@example.com">
+                </div>
+                <div class="form-group">
+                    <label for="contactPhone">Phone</label>
+                    <input type="tel" id="contactPhone" name="phone" placeholder="(941) 555-1234">
+                </div>
+                <div class="form-group">
+                    <label for="contactMessage">Message *</label>
+                    <textarea id="contactMessage" name="message" required placeholder="Your message or question..."></textarea>
+                </div>
+                <button type="submit" class="btn" id="submitBtn">Send Message</button>
+            </form>
+            <p style="margin-top: 20px; font-size: 14px;">You can also email us directly at <a href="mailto:info@lab007.ai">info@lab007.ai</a>.</p>
+        </div>
+    </section>
+
+    <footer>
+        <p>© SRQ Cleaning Services. Sarasota, Osprey, Venice, Palmer Ranch FL.</p>
+        <p><a href="/SRQCleaning">Home</a> | <a href="/contact">LAB007</a></p>
+    </footer>
+
+    <script>
+        const form = document.getElementById('contactForm');
+        const submitBtn = document.getElementById('submitBtn');
+        const formSuccess = document.getElementById('formSuccess');
+        const formError = document.getElementById('formError');
+
+        form.addEventListener('submit', async function(e) {
+            e.preventDefault();
+            formSuccess.style.display = 'none';
+            formError.style.display = 'none';
+            const name = (document.getElementById('contactName').value || '').trim();
+            const email = (document.getElementById('contactEmail').value || '').trim();
+            const phone = (document.getElementById('contactPhone').value || '').trim();
+            const message = (document.getElementById('contactMessage').value || '').trim();
+            if (!email || !message) {
+                formError.textContent = 'Please enter your email and message.';
+                formError.style.display = 'block';
+                return;
+            }
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Sending...';
+            try {
+                const res = await fetch('/api/srq-contact', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, email, phone, message })
+                });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.success) {
+                    formSuccess.textContent = 'Message sent successfully. We\'ll get back to you soon.';
+                    formSuccess.style.display = 'block';
+                    form.reset();
+                } else {
+                    formError.textContent = data.error || 'Something went wrong. Please try again or email info@lab007.ai.';
+                    formError.style.display = 'block';
+                }
+            } catch (err) {
+                formError.textContent = 'Failed to send. Please try again or email info@lab007.ai directly.';
+                formError.style.display = 'block';
+            }
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Send Message';
+        });
+    </script>
+</body>
+</html>
