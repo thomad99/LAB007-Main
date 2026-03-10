@@ -82,6 +82,11 @@ app.get('/todo', (req, res) => {
     res.sendFile(path.join(__dirname, 'Web', 'todo.html'));
 });
 
+// DiagCreator page
+app.get('/diagcreator', (req, res) => {
+    res.sendFile(path.join(__dirname, 'Web', 'diagcreator.html'));
+});
+
 // Upload JSON file
 app.post('/api/upload', upload.single('jsonFile'), (req, res) => {
     try {
