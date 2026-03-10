@@ -169,13 +169,157 @@
         @media (max-width: 640px) {
             .mock .body { grid-template-columns: 1fr; }
         }
+        .demo-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-top: 10px;
+            align-items: flex-end;
+        }
+        .demo-form-group {
+            flex: 1 1 180px;
+            min-width: 0;
+        }
+        .demo-form-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+        .demo-input {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 10px;
+            border: 1px solid rgba(148,163,184,0.6);
+            background: rgba(15,23,42,0.8);
+            color: var(--text);
+            font-size: 14px;
+        }
+        .demo-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 1px rgba(34,211,238,0.7);
+        }
+        .demo-button {
+            padding: 9px 16px;
+            border-radius: 10px;
+            border: none;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+            background: linear-gradient(135deg,#22d3ee,#0ea5e9);
+            color: #020617;
+            box-shadow: 0 10px 24px rgba(14,165,233,0.35);
+            white-space: nowrap;
+        }
+        .demo-button:hover {
+            filter: brightness(1.05);
+        }
+        .demo-preview {
+            margin-top: 16px;
+            border-radius: 14px;
+            background: radial-gradient(circle at 0 0, rgba(15,23,42,0.65), transparent 55%), #020617;
+            padding: 16px;
+            border: 1px solid rgba(148,163,184,0.4);
+        }
+        .demo-preview-inner {
+            max-width: 960px;
+            margin: 0 auto;
+            border-radius: 14px;
+            background: #f9fafb;
+            box-shadow: 0 18px 45px rgba(15,23,42,0.65);
+            overflow: hidden;
+        }
+        .demo-page-bar {
+            height: 26px;
+            background: #e5e7eb;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 10px;
+        }
+        .demo-page-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
+        .demo-page-dot:nth-child(2){ background:#f59e0b; }
+        .demo-page-dot:nth-child(3){ background:#22c55e; }
+        .demo-page-body {
+            display: grid;
+            grid-template-columns: 1.2fr 0.9fr;
+            gap: 18px;
+            padding: 18px 20px 20px;
+        }
+        .demo-hero {
+            background: linear-gradient(135deg,#e0f2fe,#e0f2fe);
+            border-radius: 14px;
+            padding: 18px 18px 16px;
+        }
+        .demo-hero h1 {
+            font-size: 20px;
+            color: #0f172a;
+            margin-bottom: 6px;
+        }
+        .demo-hero p {
+            font-size: 13px;
+            color: #4b5563;
+            margin-bottom: 10px;
+        }
+        .demo-hero-cta {
+            display: inline-flex;
+            padding: 8px 14px;
+            border-radius: 999px;
+            background: #0f766e;
+            color: #f9fafb;
+            font-size: 13px;
+            font-weight: 600;
+        }
+        .demo-section {
+            margin-top: 10px;
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 12px 14px;
+            border: 1px solid #e5e7eb;
+        }
+        .demo-section h2 {
+            font-size: 14px;
+            margin-bottom: 6px;
+            color: #111827;
+        }
+        .demo-section p {
+            font-size: 12px;
+            color: #6b7280;
+        }
+        .demo-side {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .demo-side-card {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 10px 12px;
+            border: 1px solid #e5e7eb;
+            font-size: 12px;
+            color: #374151;
+        }
+        .demo-side-card strong {
+            display: block;
+            margin-bottom: 3px;
+            color: #111827;
+        }
+        @media (max-width: 780px) {
+            .demo-page-body { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
     <div class="wrap">
         <header>
             <div style="display:flex;align-items:center;gap:10px;">
-                <img src="/images/lab007-trans.PNG" alt="LAB007" style="height:40px;width:auto;">
+                <img src="/images/lab007-trans.PNG" alt="LAB007" style="height:200px;width:auto;">
                 <div>
                     <div style="font-weight:800;letter-spacing:0.5px;">LAB007 Website Design</div>
                     <div style="color:var(--muted);font-size:13px;">Clean. Modern. Built for Sarasota.</div>
@@ -285,9 +429,111 @@
             </div>
         </div>
 
+        <div class="card" style="margin-top:22px;">
+            <h3>Create a quick demo page</h3>
+            <p style="color:var(--muted);margin:6px 0 10px;font-size:14px;">Sketch a clean, modern layout that could live on a laptop or phone—no code needed.</p>
+            <div class="demo-form">
+                <div class="demo-form-group">
+                    <label for="demoName">Website name</label>
+                    <input id="demoName" class="demo-input" type="text" placeholder="e.g. Gulf Coast Dental Studio">
+                </div>
+                <div class="demo-form-group">
+                    <label for="demoType">Business type</label>
+                    <input id="demoType" class="demo-input" type="text" placeholder="e.g. family dentist in Sarasota">
+                </div>
+                <button id="demoCreateBtn" type="button" class="demo-button">Create demo page</button>
+            </div>
+            <div id="demoPreview" class="demo-preview">
+                <div style="color:var(--muted);font-size:13px;">Enter a website name and business type, then click “Create demo page” to see a tailored layout.</div>
+            </div>
+        </div>
+
         <footer>
             © 2026 LAB007 — Website Design | Sarasota, FL
         </footer>
     </div>
+    <script>
+        (function() {
+            const nameInput = document.getElementById('demoName');
+            const typeInput = document.getElementById('demoType');
+            const btn = document.getElementById('demoCreateBtn');
+            const preview = document.getElementById('demoPreview');
+
+            function capitalise(str) {
+                if (!str) return '';
+                return str.charAt(0).toUpperCase() + str.slice(1);
+            }
+
+            function buildDemo() {
+                const name = (nameInput.value || 'Coastal Studio').trim();
+                const type = (typeInput.value || 'creative studio in Sarasota').trim();
+                const safeName = name.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                const safeType = type.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+                const heroTitle = `${safeName} — ${capitalise(safeType)}`;
+
+                const heroSub = `Clean, modern website designed to showcase your ${safeType || 'business'} and turn visitors into enquiries.`;
+
+                const primaryCta = 'Book a free call';
+                const secondaryCta = 'View services';
+
+                const servicesTitle = 'What you get';
+                const servicesCopy = [
+                    'Mobile‑first layout that looks great on phones and laptops.',
+                    'Clear calls‑to‑action so visitors know how to contact or book.',
+                    'Fast, SEO‑ready pages with simple copy that matches your brand.'
+                ];
+
+                const highlightTitle = 'Why this layout works';
+                const highlightCopy = 'Hero section for first impressions, a simple services block to set expectations, and a clear call‑to‑action pinned above the fold.';
+
+                const contactTitle = 'Ready to launch';
+                const contactCopy = 'Swap in your logo, photos and copy, then connect a contact form or booking link. This layout is intentionally simple so you can grow it later.';
+
+                preview.innerHTML = `
+                    <div class="demo-preview-inner" aria-label="Generated demo website mockup">
+                        <div class="demo-page-bar">
+                            <span class="demo-page-dot"></span>
+                            <span class="demo-page-dot"></span>
+                            <span class="demo-page-dot"></span>
+                        </div>
+                        <div class="demo-page-body">
+                            <div>
+                                <div class="demo-hero">
+                                    <h1>${heroTitle}</h1>
+                                    <p>${heroSub}</p>
+                                    <div class="demo-hero-cta">${primaryCta}</div>
+                                </div>
+                                <div class="demo-section">
+                                    <h2>${servicesTitle}</h2>
+                                    <p>• ${servicesCopy[0]}<br>
+                                       • ${servicesCopy[1]}<br>
+                                       • ${servicesCopy[2]}</p>
+                                </div>
+                            </div>
+                            <div class="demo-side">
+                                <div class="demo-side-card">
+                                    <strong>${highlightTitle}</strong>
+                                    <span>${highlightCopy}</span>
+                                </div>
+                                <div class="demo-side-card">
+                                    <strong>${contactTitle}</strong>
+                                    <span>${contactCopy}</span>
+                                </div>
+                                <div class="demo-side-card">
+                                    <strong>CTA ideas</strong>
+                                    <span>“${primaryCta}” or “${secondaryCta}” in the header, plus a simple contact section further down the page.</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            if (btn && preview) {
+                btn.addEventListener('click', buildDemo);
+            }
+        })();
+    </script>
 </body>
 </html>
