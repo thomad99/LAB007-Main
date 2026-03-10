@@ -31,12 +31,6 @@
             margin-bottom: 16px;
         }
         .diagcreator-hero .logo-row img.logo { height: 80px; width: auto; }
-        .diagcreator-hero .loader-spinner {
-            width: 80px;
-            height: 80px;
-            animation: spin 8s linear infinite;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
         .spinner-eye { display:inline-block; width:18px; height:18px; border-radius:50%; border:2px solid rgba(229,182,0,0.3); border-top-color:#e5b600; animation: spin 0.8s linear infinite; vertical-align:middle; margin-right:6px; }
         .diagcreator-hero h1 { color: #ffffff; font-size: 1.8rem; margin: 0 0 8px 0; }
         .diagcreator-hero p { color: #94a3b8; margin: 0; font-size: 1rem; }
@@ -58,7 +52,13 @@
         .diag-stat { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; text-align: center; }
         .diag-stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
         .diag-stat .val { font-size: 18px; font-weight: 800; color: var(--gold); }
-        .diag-section { margin-top: 24px; }
+        .diag-section {
+            margin-top: 24px;
+            background: #020617;
+            border-radius: 12px;
+            padding: 16px 18px;
+            border: 1px solid rgba(148,163,184,0.35);
+        }
         .diag-section h3 { color: #e2e8f0; margin-bottom: 12px; font-size: 1.1rem; }
         .diag-chips { display: flex; flex-wrap: wrap; gap: 6px; }
         .diag-chip { padding: 6px 10px; border-radius: 8px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: #e2e8f0; }
@@ -93,8 +93,8 @@
 
         <div id="statusArea" style="margin-top: 12px; color: #94a3b8; min-height: 24px;"></div>
 
-        <div id="resultArea" style="display: none;">
-            <h2 style="color: #e2e8f0; margin-top: 24px;">
+        <div id="resultArea" style="display: none; margin-top: 24px; background:#020617; border-radius:16px; padding:20px; border:1px solid rgba(148,163,184,0.45);">
+            <h2 style="color: #e2e8f0; margin-top: 0;">
                 Analysis
                 <span id="configTypeBadge" class="config-type-badge"></span>
             </h2>
