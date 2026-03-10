@@ -1,0 +1,617 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SDLJQHH25Q"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SDLJQHH25Q');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AEROCOAST Ebike Rentals | Beach & Coastal Bike Hire Sarasota, Florida</title>
+    <meta name="description" content="AEROCOAST Ebike Rentals – coastal ebike and cruiser rentals for Florida beach days. Sunrise rides, sunset cruises and all‑day beach exploring with delivery to Sarasota barrier islands.">
+    <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
+    <style>
+        :root {
+            --shell: #F4F1EA;
+            --abyss: #0A2328;
+            --spray: #98B4B0;
+            --flare: #FF5C00;
+            --text-main: #041014;
+            --muted: #5f6f73;
+            --card: #0f2730;
+            --radius-lg: 20px;
+            --shadow-lg: 0 26px 70px rgba(0,0,0,0.45);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background:
+                radial-gradient(circle at 15% 0%, rgba(255,92,0,0.14), transparent 55%),
+                radial-gradient(circle at 90% 12%, rgba(152,180,176,0.18), transparent 55%),
+                linear-gradient(180deg, #020b0f 0%, #03161c 40%, #071f26 100%);
+            color: var(--shell);
+            min-height: 100vh;
+            padding: 22px 16px 40px;
+        }
+        .wrap {
+            max-width: 1120px;
+            margin: 0 auto;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .brand img {
+            height: 40px;
+            width: auto;
+        }
+        .brand-title {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .brand-title span:first-child {
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            font-size: 13px;
+        }
+        .brand-title span:last-child {
+            font-size: 11px;
+            color: var(--spray);
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+        }
+        nav {
+            display: flex;
+            gap: 16px;
+            align-items: center;
+            font-size: 13px;
+        }
+        nav a {
+            color: var(--spray);
+            text-decoration: none;
+            text-transform: uppercase;
+            letter-spacing: 0.14em;
+            font-weight: 600;
+        }
+        nav a:hover { color: var(--shell); }
+        .compass-pill {
+            border-radius: 999px;
+            border: 1px solid rgba(255,255,255,0.16);
+            padding: 6px 12px;
+            font-size: 11px;
+            color: var(--spray);
+        }
+        .hero {
+            margin-top: 10px;
+            border-radius: var(--radius-lg);
+            background:
+                linear-gradient(135deg, rgba(244,241,234,0.08), rgba(152,180,176,0.08)),
+                url("https://images.unsplash.com/photo-1485962398705-ef6a13c41e8f?w=1600&q=80&auto=format&fit=crop") center/cover no-repeat;
+            position: relative;
+            overflow: hidden;
+            box-shadow: var(--shadow-lg);
+        }
+        .hero::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: radial-gradient(circle at 12% 10%, rgba(244,241,234,0.8), transparent 45%),
+                        linear-gradient(135deg, rgba(10,35,40,0.92), rgba(10,35,40,0.35));
+            mix-blend-mode: soft-light;
+        }
+        .hero-inner {
+            position: relative;
+            z-index: 1;
+            display: grid;
+            grid-template-columns: 1.2fr 0.9fr;
+            gap: 26px;
+            padding: 30px 30px 26px;
+        }
+        .hero-kicker {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.18em;
+            color: var(--spray);
+            margin-bottom: 8px;
+        }
+        .hero-title {
+            font-size: clamp(28px, 4vw, 34px);
+            line-height: 1.1;
+            letter-spacing: 0.02em;
+            margin-bottom: 10px;
+        }
+        .hero-title span.accent {
+            color: var(--flare);
+        }
+        .hero-copy {
+            font-size: 14px;
+            color: rgba(244,241,234,0.86);
+            max-width: 420px;
+            margin-bottom: 14px;
+        }
+        .hero-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        .hero-tag {
+            font-size: 11px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(244,241,234,0.25);
+            background: rgba(3,20,24,0.78);
+            color: var(--spray);
+        }
+        .hero-ctas {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+        .btn-primary {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 18px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, var(--flare), #ff8a00);
+            color: #150b03;
+            font-weight: 700;
+            font-size: 13px;
+            border: none;
+            cursor: pointer;
+            box-shadow: 0 18px 40px rgba(255,92,0,0.45);
+        }
+        .btn-secondary {
+            display: inline-flex;
+            align-items: center;
+            padding: 9px 14px;
+            border-radius: 999px;
+            border: 1px solid rgba(244,241,234,0.25);
+            background: rgba(3,22,26,0.82);
+            color: var(--shell);
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .hero-note {
+            font-size: 11px;
+            color: rgba(244,241,234,0.8);
+        }
+        .hero-card {
+            background: rgba(3,20,24,0.86);
+            border-radius: 18px;
+            border: 1px solid rgba(244,241,234,0.14);
+            padding: 16px 16px 14px;
+            backdrop-filter: blur(10px);
+        }
+        .hero-card h3 {
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            margin-bottom: 6px;
+            color: var(--spray);
+        }
+        .hero-metrics {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 10px 0 4px;
+        }
+        .metric {
+            flex: 1 1 80px;
+        }
+        .metric .label {
+            font-size: 11px;
+            color: var(--spray);
+            margin-bottom: 2px;
+        }
+        .metric .value {
+            font-size: 18px;
+            font-weight: 800;
+            color: var(--shell);
+        }
+        .fleet {
+            margin-top: 26px;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 18px;
+        }
+        .section-label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.16em;
+            color: var(--spray);
+            margin-bottom: 4px;
+        }
+        .section-title {
+            font-size: 18px;
+            margin-bottom: 6px;
+        }
+        .section-copy {
+            font-size: 13px;
+            color: var(--spray);
+            margin-bottom: 10px;
+        }
+        .fleet-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+        .fleet-card {
+            background: var(--card);
+            border-radius: 16px;
+            padding: 12px 12px 10px;
+            border: 1px solid rgba(244,241,234,0.08);
+        }
+        .fleet-card h3 {
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+        .fleet-card .badge {
+            font-size: 11px;
+            color: var(--spray);
+            margin-bottom: 4px;
+        }
+        .fleet-card .price {
+            font-size: 14px;
+            font-weight: 700;
+            color: var(--flare);
+            margin-bottom: 4px;
+        }
+        .fleet-card p {
+            font-size: 12px;
+            color: var(--spray);
+        }
+        .zones {
+            background: radial-gradient(circle at 0 0, rgba(152,180,176,0.35), transparent 55%);
+            border-radius: var(--radius-lg);
+            border: 1px solid rgba(244,241,234,0.1);
+            padding: 18px 16px;
+            margin-top: 22px;
+            display: grid;
+            grid-template-columns: 1.1fr 1fr;
+            gap: 14px;
+        }
+        .zone-pills {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 6px;
+        }
+        .zone-pill {
+            padding: 7px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(244,241,234,0.18);
+            font-size: 11px;
+            cursor: default;
+            background: rgba(10,35,40,0.9);
+        }
+        .zone-pill span {
+            opacity: 0.8;
+        }
+        .zone-pill strong {
+            color: var(--flare);
+            margin-right: 4px;
+        }
+        .zone-note {
+            font-size: 11px;
+            color: var(--spray);
+            margin-top: 6px;
+        }
+        .zone-card {
+            background: rgba(3,12,16,0.9);
+            border-radius: 16px;
+            border: 1px solid rgba(244,241,234,0.12);
+            padding: 10px 12px;
+            font-size: 12px;
+            color: var(--spray);
+        }
+        .zone-card strong { color: var(--shell); }
+        .booking {
+            margin-top: 26px;
+            display: grid;
+            grid-template-columns: 1.1fr 0.9fr;
+            gap: 18px;
+        }
+        .booking-form {
+            background: rgba(3,12,16,0.96);
+            border-radius: 18px;
+            padding: 16px 16px 14px;
+            border: 1px solid rgba(244,241,234,0.16);
+        }
+        .booking-form h3 {
+            font-size: 15px;
+            margin-bottom: 6px;
+        }
+        .form-row {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .form-group {
+            flex: 1 1 140px;
+            min-width: 0;
+            margin-top: 8px;
+        }
+        .form-group label {
+            display: block;
+            font-size: 11px;
+            color: var(--spray);
+            margin-bottom: 3px;
+        }
+        .input, select {
+            width: 100%;
+            padding: 7px 9px;
+            border-radius: 9px;
+            border: 1px solid rgba(148,163,184,0.7);
+            background: #020b0f;
+            color: var(--shell);
+            font-size: 12px;
+        }
+        .input:focus, select:focus {
+            outline: none;
+            border-color: var(--flare);
+            box-shadow: 0 0 0 1px rgba(255,92,0,0.7);
+        }
+        .booking-footnote {
+            font-size: 11px;
+            color: var(--spray);
+            margin-top: 8px;
+        }
+        .atmos {
+            margin-top: 26px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            font-size: 11px;
+            color: var(--spray);
+        }
+        .atmos span {
+            padding: 6px 10px;
+            border-radius: 999px;
+            border: 1px solid rgba(244,241,234,0.16);
+            background: rgba(3,20,24,0.9);
+        }
+        footer {
+            margin-top: 24px;
+            font-size: 11px;
+            color: var(--spray);
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+        footer a {
+            color: var(--spray);
+            text-decoration: none;
+        }
+        footer a:hover { color: var(--shell); }
+        @media (max-width: 860px) {
+            .hero-inner,
+            .fleet,
+            .zones,
+            .booking {
+                grid-template-columns: 1fr;
+            }
+        }
+        @media (max-width: 640px) {
+            header { flex-direction: column; align-items: flex-start; gap: 8px; }
+            nav { width: 100%; justify-content: space-between; }
+            .hero-inner { padding: 22px 18px 18px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <header>
+            <div class="brand">
+                <img src="/images/lab007-trans.PNG" alt="LAB007">
+                <div class="brand-title">
+                    <span>AEROCOAST</span>
+                    <span>EBIKE & COASTAL RENTALS</span>
+                </div>
+            </div>
+            <nav>
+                <a href="#fleet">Fleet</a>
+                <a href="#zones">Beach zones</a>
+                <a href="#booking">Book</a>
+                <span class="compass-pill">N · NE · SE · S · W</span>
+            </nav>
+        </header>
+
+        <section class="hero">
+            <div class="hero-inner">
+                <div>
+                    <div class="hero-kicker">Sunrise to sunset rentals</div>
+                    <h1 class="hero-title">
+                        Coastal <span class="accent">ebike rentals</span> for golden‑hour riders.
+                    </h1>
+                    <p class="hero-copy">
+                        Glide along Florida’s barrier islands on quiet, powerful ebikes tuned for boardwalks, beach roads and sunset cruises.
+                    </p>
+                    <div class="hero-tags">
+                        <span class="hero-tag">Sunrise & sunset slots</span>
+                        <span class="hero-tag">Helmets & locks included</span>
+                        <span class="hero-tag">Delivery to beach condos</span>
+                    </div>
+                    <div class="hero-ctas">
+                        <button class="btn-primary" onclick="document.getElementById('booking').scrollIntoView({behavior:'smooth'})">Book a ride</button>
+                        <button class="btn-secondary" onclick="document.getElementById('fleet').scrollIntoView({behavior:'smooth'})">View fleet</button>
+                        <span class="hero-note">From $39 for 2 hours · Sarasota coast</span>
+                    </div>
+                </div>
+                <aside class="hero-card">
+                    <h3>Today’s beach conditions</h3>
+                    <div class="hero-metrics">
+                        <div class="metric">
+                            <div class="label">UV now</div>
+                            <div class="value">6</div>
+                        </div>
+                        <div class="metric">
+                            <div class="label">Wind</div>
+                            <div class="value">9 kt</div>
+                        </div>
+                        <div class="metric">
+                            <div class="label">Sunset slots</div>
+                            <div class="value">3</div>
+                        </div>
+                    </div>
+                    <p style="font-size:11px;color:var(--spray);">
+                        We’ll recommend the best time window for your ride when you reserve — usually 8–10am or golden hour.
+                    </p>
+                </aside>
+            </div>
+        </section>
+
+        <section id="fleet" class="fleet">
+            <div>
+                <div class="section-label">Fleet</div>
+                <h2 class="section-title">Pick your ride style.</h2>
+                <p class="section-copy">
+                    All ebikes include helmets, locks and quick on‑the‑sand tips. Choose a cruiser for slow rolls, a step‑through for condo hopping, or a fat‑tire for dune‑side trails.
+                </p>
+            </div>
+            <div class="fleet-grid">
+                <article class="fleet-card">
+                    <h3>Beach Cruiser Ebike</h3>
+                    <div class="badge">Best for boardwalks</div>
+                    <div class="price">$39 · 2 hours</div>
+                    <p>Upright, comfortable ride with basket. Perfect for sunrise coffee runs and flat coastal paths.</p>
+                </article>
+                <article class="fleet-card">
+                    <h3>Step‑Through City Ebike</h3>
+                    <div class="badge">Best for condo‑to‑condo</div>
+                    <div class="price">$69 · half day</div>
+                    <p>Easy hop‑on frame with smooth assist. Glide between shops, condos and beach access points.</p>
+                </article>
+                <article class="fleet-card">
+                    <h3>Fat‑Tire Trail Ebike</h3>
+                    <div class="badge">Best for dunes & trails</div>
+                    <div class="price">$89 · full day</div>
+                    <p>Wide tires and extra torque for packed sand paths and scenic causeway routes.</p>
+                </article>
+            </div>
+        </section>
+
+        <section id="zones" class="zones">
+            <div>
+                <div class="section-label">Beach zones</div>
+                <h2 class="section-title">Where we ride.</h2>
+                <p class="section-copy">
+                    We focus on low‑traffic, high‑view coastlines. Pick your launch zone and we’ll confirm exact routes and delivery options.
+                </p>
+                <div class="zone-pills">
+                    <div class="zone-pill"><strong>Zone A</strong><span> Siesta Key village & beachfront</span></div>
+                    <div class="zone-pill"><strong>Zone B</strong><span> Lido & St. Armands loops</span></div>
+                    <div class="zone-pill"><strong>Zone C</strong><span> Casey Key causeway</span></div>
+                    <div class="zone-pill"><strong>Zone D</strong><span> Bayfront & downtown paths</span></div>
+                </div>
+                <p class="zone-note">We’ll route you on bike‑friendly paths and give you a quick safety and etiquette rundown before you roll.</p>
+            </div>
+            <div class="zone-card">
+                <strong>Sample ride · Golden hour Siesta loop</strong><br>
+                Meet near public beach access, roll north along the coast, pause at the point for sunset photos, then cruise back through the village lights.
+            </div>
+        </section>
+
+        <section id="booking" class="booking">
+            <div class="booking-form">
+                <div class="section-label">Reservation</div>
+                <h3>Book your AEROCOAST ride.</h3>
+                <p class="section-copy" style="margin-bottom:6px;">
+                    This is a demo form — on a live site it would send your details to confirm availability and payment.
+                </p>
+                <form>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="name">Name</label>
+                            <input id="name" class="input" type="text" placeholder="Alex Rivera">
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input id="email" class="input" type="email" placeholder="you@example.com">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="date">Preferred date</label>
+                            <input id="date" class="input" type="date">
+                        </div>
+                        <div class="form-group">
+                            <label for="slot">Time of day</label>
+                            <select id="slot">
+                                <option>Sunrise (7–9am)</option>
+                                <option>Daytime (11am–3pm)</option>
+                                <option>Golden hour (5–7pm)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="fleetType">Bike type</label>
+                            <select id="fleetType">
+                                <option>Beach Cruiser Ebike</option>
+                                <option>Step‑Through City Ebike</option>
+                                <option>Fat‑Tire Trail Ebike</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="zoneSelect">Zone</label>
+                            <select id="zoneSelect">
+                                <option>Zone A – Siesta Key</option>
+                                <option>Zone B – Lido & St. Armands</option>
+                                <option>Zone C – Casey Key causeway</option>
+                                <option>Zone D – Bayfront paths</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group" style="margin-top:10px;">
+                        <label for="notes">Notes (guests, delivery, etc.)</label>
+                        <textarea id="notes" class="input" rows="3" style="resize:vertical;" placeholder="Tell us where you’re staying and how many riders."></textarea>
+                    </div>
+                    <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <button type="button" class="btn-primary">Send reservation request</button>
+                        <span class="booking-footnote">No payment is taken on this demo page.</span>
+                    </div>
+                </form>
+            </div>
+            <aside>
+                <div class="section-label">Contact</div>
+                <h2 class="section-title">Questions before you ride?</h2>
+                <p class="section-copy">
+                    Ask about delivery, child seats, or group rides. For a real deployment, this panel would list phone, email and a quick FAQ.
+                </p>
+                <div class="demo-side-card" style="margin-top:8px;">
+                    <strong>Example contact</strong>
+                    <span>Email: rides@aerocoast-ebikes.com<br>Phone: (941) 555‑0EBK</span>
+                </div>
+            </aside>
+        </section>
+
+        <section class="atmos">
+            <span>Salt‑air minimalism</span>
+            <span>Golden‑hour gradients</span>
+            <span>Keyboard‑friendly, mobile‑ready layout</span>
+        </section>
+
+        <footer>
+            <span>Demo concept: AEROCOAST — coastal ebike rentals by LAB007.</span>
+            <span>Back to <a href="/">LAB007</a></span>
+        </footer>
+    </div>
+</body>
+</html>
+

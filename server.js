@@ -663,6 +663,11 @@ app.get('/SRQCleaning/contact', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'SRQCleaning', 'contact.html'));
 });
 
+// AEROCOAST bike rentals demo page
+app.get('/BIKE', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'BIKE.html'));
+});
+
 // TomoPI page
 app.get('/tomopi', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'tomopi.html'));
