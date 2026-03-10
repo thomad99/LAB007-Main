@@ -234,6 +234,14 @@ res.sendFile(todoPath);
 res.status(404).send('Todo page not found');
 }
 });
+app.get('/citrix/diagcreator', (req, res) => {
+const diagPath = path.join(__dirname, 'Citrix-Horizon', 'Web', 'diagcreator.html');
+if (fs.existsSync(diagPath)) {
+res.sendFile(diagPath);
+} else {
+res.status(404).send('DiagCreator not found');
+}
+});
 }
 
 // VINValue Project

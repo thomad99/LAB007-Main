@@ -868,6 +868,43 @@ section h2 {
     display: block;
 }
 
+/* UAG Config - stat and meta card boxes: title on top, value below, centered, white text */
+#uagConfigPanel .uag-stat-card,
+#uagConfigPanel .uag-meta-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 12px 10px;
+    min-height: 70px;
+    gap: 6px;
+}
+#uagConfigPanel .uag-stat-card .uag-card-title,
+#uagConfigPanel .uag-meta-card .uag-card-title {
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff !important;
+    margin: 0;
+    line-height: 1.2;
+}
+#uagConfigPanel .uag-stat-card .uag-card-value,
+#uagConfigPanel .uag-meta-card .uag-card-value {
+    font-weight: 700;
+    color: #ffffff !important;
+    margin: 0;
+    line-height: 1.2;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    max-width: 100%;
+}
+#uagConfigPanel .uag-stat-card .uag-card-value {
+    font-size: clamp(14px, 2.5vw, 20px);
+}
+#uagConfigPanel .uag-meta-card .uag-card-value {
+    font-size: clamp(12px, 2vw, 15px);
+}
+
 .master-image-clone-item {
     padding: 10px;
     margin: 5px 0;

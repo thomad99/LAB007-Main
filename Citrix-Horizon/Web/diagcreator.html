@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DiagCreator - Infrastructure Diagram | LAB007</title>
+    <link rel="icon" type="image/png" href="/citrix/images/lab007%20Icon.PNG">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/citrix/styles.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/viz.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/full.render.js"></script>
+    <style>
+        :root { --gold: #e5b600; }
+        .diagcreator-hero {
+            text-align: center;
+            padding: 40px 20px;
+            background: linear-gradient(135deg, #1a1f3a 0%, #2d3561 50%, #1a1f3a 100%);
+            border-radius: 16px;
+            margin-bottom: 24px;
+            border: 1px solid rgba(229,182,0,0.2);
+        }
+        .diagcreator-hero .logo-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 24px;
+            margin-bottom: 16px;
+        }
+        .diagcreator-hero .logo-row img.logo { height: 80px; width: auto; }
+        .diagcreator-hero .loader-spinner {
+            width: 80px;
+            height: 80px;
+            animation: spin 8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner-eye { display:inline-block; width:18px; height:18px; border-radius:50%; border:2px solid rgba(229,182,0,0.3); border-top-color:#e5b600; animation: spin 0.8s linear infinite; vertical-align:middle; margin-right:6px; }
+        .diagcreator-hero h1 { color: #ffffff; font-size: 1.8rem; margin: 0 0 8px 0; }
+        .diagcreator-hero p { color: #94a3b8; margin: 0; font-size: 1rem; }
+        .upload-zone {
+            border: 2px dashed var(--gold);
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            background: rgba(229,182,0,0.06);
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .upload-zone:hover { background: rgba(229,182,0,0.12); border-color: #f0c014; }
+        .upload-zone.dragover { background: rgba(229,182,0,0.15); }
+        .upload-zone input[type="file"] { display: none; }
+        .upload-zone .upload-text { color: #e2e8f0; font-size: 1.1rem; margin-bottom: 8px; }
+        .upload-zone .upload-hint { color: #94a3b8; font-size: 0.9rem; }
+        .diag-dashboard { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin: 16px 0; }
+        .diag-stat { background: #1e293b; border: 1px solid rgba(255,255,255,0.1); border-radius: 8px; padding: 12px; text-align: center; }
+        .diag-stat .label { font-size: 11px; color: #94a3b8; text-transform: uppercase; }
+        .diag-stat .val { font-size: 18px; font-weight: 800; color: var(--gold); }
+        .diag-section { margin-top: 24px; }
+        .diag-section h3 { color: #e2e8f0; margin-bottom: 12px; font-size: 1.1rem; }
+        .diag-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .diag-chip { padding: 6px 10px; border-radius: 8px; background: #1e293b; border: 1px solid rgba(255,255,255,0.1); font-size: 12px; color: #e2e8f0; }
+        .diag-diagram { background: #0f172a; border-radius: 12px; padding: 20px; margin-top: 16px; min-height: 300px; overflow: auto; }
+        .diag-diagram .mermaid { display: flex; justify-content: center; }
+        .back-link { display: inline-flex; align-items: center; gap: 8px; color: var(--gold); text-decoration: none; font-weight: 600; margin-bottom: 20px; }
+        .back-link:hover { text-decoration: underline; }
+        .config-type-badge { display: inline-block; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; margin-left: 10px; }
+        .config-type-badge.uag { background: #22d3ee; color: #0b1020; }
+        .config-type-badge.netscaler { background: #a78bfa; color: #0b1020; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <a href="/" class="back-link">← Back to LAB007</a>
+        <a href="/citrix" class="back-link" style="margin-left: 16px;">Citrix Dashboard</a>
+
+        <div class="diagcreator-hero">
+            <div class="logo-row">
+                <img src="/citrix/images/LAB007-LOGO-GOLD.png" alt="LAB007 Logo" class="logo" style="opacity: 1;">
+                <img src="/citrix/images/LAB007-Loader.png" alt="" class="loader-spinner">
+            </div>
+            <h1>DiagCreator</h1>
+            <p>Infrastructure diagram from UAG or NetScaler config</p>
+        </div>
+
+        <div class="upload-zone" id="uploadZone" onclick="document.getElementById('configFile').click()">
+            <input type="file" id="configFile" accept=".txt,.conf,.cfg,.ini,.json,.ns.conf,.zip">
+            <div class="upload-text">Upload UAG or NetScaler config</div>
+            <div class="upload-hint">Supports: .txt, .conf, .cfg, .json, .ns.conf, .zip</div>
+        </div>
+
+        <div id="statusArea" style="margin-top: 12px; color: #94a3b8; min-height: 24px;"></div>
+
+        <div id="resultArea" style="display: none;">
+            <h2 style="color: #e2e8f0; margin-top: 24px;">
+                Analysis
+                <span id="configTypeBadge" class="config-type-badge"></span>
+            </h2>
+
+            <div id="dashboardArea"></div>
+            <div id="diagramArea" class="diag-section">
+                <h3>Infrastructure Diagram <span id="dotDownloadSpan" style="display:none;"><button type="button" class="btn btn-secondary" id="dotDownloadBtn" style="font-size:12px;padding:6px 12px;" title="Download Graphviz DOT file. Run: dot -Tpng file.dot -o diagram.png">Download .dot</button></span></h3>
+                <div id="mermaidContainer" class="diag-diagram"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        mermaid.initialize({ startOnLoad: false, securityLevel: 'loose', theme: 'dark' });
+
+        const uploadZone = document.getElementById('uploadZone');
+        const configFile = document.getElementById('configFile');
+        const statusArea = document.getElementById('statusArea');
+        const resultArea = document.getElementById('resultArea');
+        const dashboardArea = document.getElementById('dashboardArea');
+        const mermaidContainer = document.getElementById('mermaidContainer');
+        const configTypeBadge = document.getElementById('configTypeBadge');
+        const dotDownloadSpan = document.getElementById('dotDownloadSpan');
+        const dotDownloadBtn = document.getElementById('dotDownloadBtn');
+        let lastDotString = '';
+
+        uploadZone.addEventListener('dragover', (e) => { e.preventDefault(); uploadZone.classList.add('dragover'); });
+        uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('dragover'));
+        uploadZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadZone.classList.remove('dragover');
+            const file = e.dataTransfer?.files?.[0];
+            if (file) processFile(file);
+        });
+        configFile.addEventListener('change', (e) => {
+            const file = e.target.files?.[0];
+            if (file) processFile(file);
+        });
+        if (dotDownloadBtn) {
+            dotDownloadBtn.addEventListener('click', () => {
+                if (!lastDotString) return;
+                const blob = new Blob([lastDotString], { type: 'text/plain' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'netscaler_topology.dot';
+                a.click();
+                URL.revokeObjectURL(a.href);
+            });
+        }
+
+        function setStatus(msg) { statusArea.innerHTML = msg; }
+        function escapeHtml(s) {
+            if (s == null) return '';
+            return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+        function escapeMermaid(s) {
+            return (s||'').replace(/[\[\]\(\)\{\}]/g,'').replace(/[^a-zA-Z0-9 .:\/_\-]/g,'');
+        }
+
+        function detectConfigType(text) {
+            const t = (text || '').trim();
+            if (t.startsWith('{')) {
+                try {
+                    const j = JSON.parse(t);
+                    if (j.generalSettings || j.edgeServiceSettingsList || j.systemSettings) return 'uag';
+                } catch (_) {}
+            }
+            if (/\badd\s+lb\s+vserver\b/i.test(t) || /\badd\s+service\s+\S+/i.test(t) || /\badd\s+vpn\s+vserver\b/i.test(t)) return 'netscaler';
+            if (/UAG\s+Name|Connection\s+Server|edgeServiceSettings/i.test(t)) return 'uag';
+            return null;
+        }
+
+        async function processFile(file) {
+            setStatus('<span class="spinner-eye"></span> Reading ' + escapeHtml(file.name) + '...');
+            resultArea.style.display = 'none';
+            configFile.value = '';
+
+            let text = '';
+            try {
+                if (file.name.toLowerCase().endsWith('.zip')) {
+                    const buf = await file.arrayBuffer();
+                    const zip = await JSZip.loadAsync(buf);
+                    const names = Object.keys(zip.files || {}).filter(n => !zip.files[n].dir);
+                    const cfgName = names.find(n => /\.(conf|cfg|txt|ns\.conf|json)$/i.test(n)) || names[0];
+                    if (!cfgName) throw new Error('No config file in archive');
+                    text = await zip.files[cfgName].async('string');
+                } else {
+                    text = await file.text();
+                }
+            } catch (err) {
+                setStatus('<span style="color:#f87171;">Error: ' + escapeHtml(err.message) + '</span>');
+                return;
+            }
+
+            const type = detectConfigType(text);
+            if (!type) {
+                setStatus('<span style="color:#f87171;">Could not detect config type. Expected UAG (JSON/text) or NetScaler (.conf).</span>');
+                return;
+            }
+
+            setStatus('Detected: ' + (type === 'uag' ? 'UAG' : 'NetScaler') + ' — parsing...');
+            configTypeBadge.textContent = type === 'uag' ? 'UAG' : 'NetScaler';
+            configTypeBadge.className = 'config-type-badge ' + type;
+
+            if (type === 'uag') {
+                const data = parseUagConfig(text);
+                renderUagDashboard(data);
+                renderUagDiagram(data);
+                dotDownloadSpan.style.display = 'none';
+            } else {
+                const data = parseNetscalerConfig(text);
+                renderNsDashboard(data);
+                lastDotString = createNsGraphvizDot(data);
+                renderNsDiagram(data);
+                dotDownloadSpan.style.display = 'inline';
+            }
+
+            resultArea.style.display = 'block';
+            setStatus('Done.');
+        }
+
+        function parseUagConfig(text) {
+            const data = { gateways: [], conn: [], dns: [], ad: [], certs: [], external: [], meta: {} };
+            try {
+                const obj = JSON.parse(text);
+                if (obj.generalSettings || obj.edgeServiceSettingsList) {
+                    const gs = obj.generalSettings || {};
+                    const sys = obj.systemSettings || {};
+                    if (gs.ip0) data.meta.uagIp = gs.ip0;
+                    if (sys.uagName) data.meta.uagName = sys.uagName;
+                    (sys.dns || '').split(/\s+/).filter(Boolean).forEach(v => data.dns.push(v));
+                    (sys.dnsSearch || '').split(/\s+/).filter(Boolean).forEach(v => data.ad.push(v));
+                    const svcList = obj.edgeServiceSettingsList?.edgeServiceSettingsList || obj.edgeServiceSettingsList || [];
+                    (Array.isArray(svcList) ? svcList : []).forEach(svc => {
+                        [svc.blastExternalUrl, svc.tunnelExternalUrl].filter(Boolean).forEach(u => data.external.push(u));
+                        if (svc.proxyDestinationUrl) {
+                            data.conn.push(svc.proxyDestinationUrl);
+                            data.meta.csUrl = svc.proxyDestinationUrl;
+                        }
+                    });
+                    data.gateways.push(gs.ip0, sys.uagName, gs.defaultGateway);
+                    data.gateways = [...new Set(data.gateways.filter(Boolean))];
+                    return data;
+                }
+            } catch (_) {}
+            const lines = text.split(/\r?\n/);
+            lines.forEach(line => {
+                (line.match(/https?:\/\/[^\s"']+/gi) || []).forEach(u => {
+                    if (/gateway|uag/i.test(line)) data.gateways.push(u);
+                    data.external.push(u);
+                });
+                const hosts = (line.match(/\b(?:[A-Za-z0-9-]+\.)+[A-Za-z]{2,}\b/g) || []).concat(line.match(/\b\d{1,3}(\.\d{1,3}){3}\b/g) || []);
+                if (/gateway|uag/i.test(line)) hosts.forEach(h => data.gateways.push(h));
+                if (/connection|conn/i.test(line)) hosts.forEach(h => data.conn.push(h));
+                if (/dns|nameserver/i.test(line)) hosts.forEach(h => data.dns.push(h));
+                if (/(ad|ldap|entra)/i.test(line)) hosts.forEach(h => data.ad.push(h));
+                if (/cert/i.test(line)) hosts.forEach(h => data.certs.push(h));
+            });
+            data.gateways = [...new Set(data.gateways.filter(Boolean))];
+            data.conn = [...new Set(data.conn.filter(Boolean))];
+            data.dns = [...new Set(data.dns.filter(Boolean))];
+            data.ad = [...new Set(data.ad.filter(Boolean))];
+            data.certs = [...new Set(data.certs.filter(Boolean))];
+            data.external = [...new Set(data.external.filter(Boolean))];
+            return data;
+        }
+
+        function parseNetscalerConfig(text) {
+            const vservers = {};
+            const services = {};
+            const serviceGroups = {};
+            const bindings = [];
+            const servers = {};
+            const monitors = {};
+            const lines = text.split(/\r?\n/);
+            for (const line of lines) {
+                const l = line.trim();
+                if (!l || l.startsWith('#')) continue;
+                let m;
+                if ((m = l.match(/add\s+lb\s+vserver\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)/i))) {
+                    vservers[m[1]] = { name: m[1], type: 'lb_vserver', protocol: m[2], ip: m[3], port: m[4] };
+                } else if ((m = l.match(/add\s+cs\s+vserver\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)/i))) {
+                    vservers[m[1]] = { name: m[1], type: 'cs_vserver', protocol: m[2], ip: m[3], port: m[4] };
+                } else if ((m = l.match(/add\s+service\s+(\S+)\s+(\S+)\s+(\S+)\s+(\S+)/i))) {
+                    services[m[1]] = { name: m[1], type: 'service', ip: m[2], protocol: m[3], port: m[4] };
+                } else if ((m = l.match(/add\s+serviceGroup\s+(\S+)\s+(\S+)/i))) {
+                    serviceGroups[m[1]] = { name: m[1], type: 'service_group', protocol: m[2], members: [] };
+                } else if ((m = l.match(/add\s+server\s+(\S+)\s+(\S+)/i))) {
+                    servers[m[1]] = { name: m[1], type: 'server', ip: m[2] };
+                } else if ((m = l.match(/bind\s+lb\s+vserver\s+(\S+)\s+(\S+)/i))) {
+                    bindings.push({ src: m[1], dst: m[2], type: 'bind' });
+                } else if ((m = l.match(/bind\s+lb\s+vserver\s+(\S+)\s+-serviceGroup\s+(\S+)/i))) {
+                    bindings.push({ src: m[1], dst: m[2], type: 'bind' });
+                } else if ((m = l.match(/bind\s+serviceGroup\s+(\S+)\s+(\S+)\s+(\d+)/i))) {
+                    if (serviceGroups[m[1]]) serviceGroups[m[1]].members.push({ name: m[2], port: m[3] });
+                    bindings.push({ src: m[1], dst: m[2], type: 'group_member' });
+                } else if ((m = l.match(/add\s+lb\s+monitor\s+(\S+)\s+(\S+)/i))) {
+                    monitors[m[1]] = { name: m[1], type: 'monitor', monitor_type: m[2] };
+                } else if ((m = l.match(/add\s+vpn\s+vserver\s+(\S+)\s+(\S+)\s+([\d.]+)\s+(\d+)/i))) {
+                    vservers[m[1]] = { name: m[1], type: 'vpn_vserver', protocol: m[2], ip: m[3], port: m[4] };
+                } else if ((m = l.match(/add\s+ssl\s+certKey\s+(\S+)/i))) {
+                    /* certs tracked in dashboard only */
+                } else if ((m = l.match(/add\s+dns\s+nameserver\s+([\d.]+)/i))) {
+                    /* dns tracked in dashboard only */
+                }
+            }
+            return { vservers, services, serviceGroups, bindings, servers, monitors };
+        }
+
+        function renderUagDashboard(data) {
+            const stats = [
+                { label: 'Gateways', val: data.gateways.length },
+                { label: 'Conn Servers', val: data.conn.length },
+                { label: 'DNS', val: data.dns.length },
+                { label: 'AD/Entra', val: data.ad.length },
+                { label: 'Certs', val: data.certs.length },
+                { label: 'External URLs', val: data.external.length }
+            ];
+            dashboardArea.innerHTML = `
+                <div class="diag-dashboard">
+                    ${stats.map(s => `<div class="diag-stat"><div class="label">${s.label}</div><div class="val">${s.val}</div></div>`).join('')}
+                </div>
+                ${data.meta.uagName ? `<div class="diag-section"><h3>UAG Name</h3><div class="diag-chips"><span class="diag-chip">${escapeHtml(data.meta.uagName)}</span></div></div>` : ''}
+                ${data.meta.uagIp ? `<div class="diag-section"><h3>UAG IP</h3><div class="diag-chips"><span class="diag-chip">${escapeHtml(data.meta.uagIp)}</span></div></div>` : ''}
+                <div class="diag-section"><h3>Gateways / External</h3><div class="diag-chips">${data.gateways.slice(0,20).map(g=>`<span class="diag-chip">${escapeHtml(g)}</span>`).join('')}${data.gateways.length>20 ? ' <span class="diag-chip">+' + (data.gateways.length-20) + ' more</span>' : ''}</div></div>
+                <div class="diag-section"><h3>Connection Servers</h3><div class="diag-chips">${data.conn.map(c=>`<span class="diag-chip">${escapeHtml(c)}</span>`).join('') || '<span class="diag-chip">None</span>'}</div></div>
+                <div class="diag-section"><h3>DNS / AD</h3><div class="diag-chips">${[...data.dns,...data.ad].map(x=>`<span class="diag-chip">${escapeHtml(x)}</span>`).join('') || '<span class="diag-chip">None</span>'}</div></div>
+            `;
+        }
+
+        function renderUagDiagram(data) {
+            const lines = ['flowchart TB'];
+            data.gateways.forEach((g,i) => lines.push(`gw${i}([Gateway ${i+1}\\n${escapeMermaid(g)}])`));
+            data.conn.forEach((c,i) => lines.push(`cs${i}([Conn ${i+1}\\n${escapeMermaid(c)}])`));
+            data.dns.forEach((d,i) => lines.push(`dns${i}([DNS ${i+1}\\n${escapeMermaid(d)}])`));
+            data.ad.forEach((a,i) => lines.push(`ad${i}([AD ${i+1}\\n${escapeMermaid(a)}])`));
+            if (data.gateways.length && (data.conn.length || data.external.length)) {
+                data.gateways.forEach((_,gi) => {
+                    data.conn.forEach((_,ci) => lines.push(`gw${gi} --> cs${ci}`));
+                    data.external.forEach((ext,ei) => {
+                        lines.push(`ext${ei}([External ${ei+1}\\n${escapeMermaid(ext)}])`);
+                        lines.push(`ext${ei} --> gw${gi}`);
+                    });
+                });
+            }
+            if (data.conn.length && data.dns.length) data.conn.forEach((_,ci) => data.dns.forEach((_,di) => lines.push(`cs${ci} --> dns${di}`)));
+            if (data.conn.length && data.ad.length) data.conn.forEach((_,ci) => data.ad.forEach((_,ai) => lines.push(`cs${ci} --> ad${ai}`)));
+            renderMermaid(lines);
+        }
+
+        function renderNsDashboard(data) {
+            const vsList = Object.values(data.vservers || {});
+            const lbList = vsList.filter(v => v.type === 'lb_vserver' || v.type === 'cs_vserver');
+            const vpnList = vsList.filter(v => v.type === 'vpn_vserver');
+            const svcList = Object.values(data.services || {});
+            const sgList = Object.values(data.serviceGroups || {});
+            const srvList = Object.values(data.servers || {});
+            const stats = [
+                { label: 'vServers', val: vsList.length },
+                { label: 'Services', val: svcList.length },
+                { label: 'Service Groups', val: sgList.length },
+                { label: 'Servers', val: srvList.length },
+                { label: 'Bindings', val: data.bindings.length },
+                { label: 'Monitors', val: Object.keys(data.monitors || {}).length }
+            ];
+            dashboardArea.innerHTML = `
+                <div class="diag-dashboard">
+                    ${stats.map(s => `<div class="diag-stat"><div class="label">${s.label}</div><div class="val">${s.val}</div></div>`).join('')}
+                </div>
+                <div class="diag-section"><h3>LB / CS vServers</h3><div class="diag-chips">${lbList.map(v=>`<span class="diag-chip">${escapeHtml(v.name)} (${v.protocol}) ${v.ip}:${v.port}</span>`).join('') || '<span class="diag-chip">None</span>'}</div></div>
+                <div class="diag-section"><h3>Services</h3><div class="diag-chips">${svcList.slice(0,15).map(s=>`<span class="diag-chip">${escapeHtml(s.name)} ${s.ip}:${s.port}</span>`).join('')}${svcList.length>15?' <span class="diag-chip">+'+(svcList.length-15)+' more</span>':''}</div></div>
+                <div class="diag-section"><h3>VPN vServers</h3><div class="diag-chips">${vpnList.map(v=>`<span class="diag-chip">${escapeHtml(v.name)} ${v.ip}:${v.port}</span>`).join('') || '<span class="diag-chip">None</span>'}</div></div>
+            `;
+        }
+
+        function createNsGraphvizDot(data) {
+            const esc = s => (s||'').replace(/"/g, '\\"').replace(/\n/g, '\\n');
+            const lines = [
+                'digraph NetScalerTopology {',
+                '    rankdir=LR;',
+                '    bgcolor="#0f172a";',
+                '    node [style=filled, fontname="Arial", fontsize=10];',
+                '    edge [fontname="Arial", fontsize=9, color="#94a3b8"];',
+                ''
+            ];
+            const styles = {
+                lb_vserver: 'shape=ellipse, fillcolor="#87CEEB", color="#2d3561", fontcolor="#1a1f3a"',
+                cs_vserver: 'shape=ellipse, fillcolor="#87CEEB", color="#2d3561", fontcolor="#1a1f3a"',
+                vpn_vserver: 'shape=ellipse, fillcolor="#a78bfa", color="#2d3561", fontcolor="#1a1f3a"',
+                service: 'shape=box, fillcolor="#90EE90", color="#2d3561", fontcolor="#1a1f3a"',
+                service_group: 'shape=box, fillcolor="#98FB98", color="#2d3561", fontcolor="#1a1f3a"',
+                server: 'shape=box3d, fillcolor="#FFD700", color="#2d3561", fontcolor="#1a1f3a"',
+                monitor: 'shape=diamond, fillcolor="#FFA07A", color="#2d3561", fontcolor="#1a1f3a"',
+                client: 'shape=component, fillcolor="#DDA0DD", color="#2d3561", fontcolor="#1a1f3a"'
+            };
+            Object.values(data.vservers || {}).forEach(vs => {
+                const style = styles[vs.type] || styles.lb_vserver;
+                const label = vs.type === 'vpn_vserver' ? `${vs.name}\\n(VPN ${vs.ip}:${vs.port})` : `${vs.name}\\n(${vs.type.replace('_',' ')} ${vs.ip}:${vs.port})`;
+                lines.push(`    "${esc(vs.name)}" [${style}, label="${label}"];`);
+            });
+            Object.values(data.services || {}).forEach(sv => {
+                const srv = data.servers[sv.ip];
+                const ip = srv ? srv.ip : sv.ip;
+                lines.push(`    "${esc(sv.name)}" [${styles.service}, label="${esc(sv.name)}\\n(Service ${ip}:${sv.port})"];`);
+            });
+            Object.values(data.serviceGroups || {}).forEach(sg => {
+                lines.push(`    "${esc(sg.name)}" [${styles.service_group}, label="${esc(sg.name)}\\n(Service Group)"];`);
+            });
+            Object.values(data.servers || {}).forEach(srv => {
+                lines.push(`    "${esc(srv.name)}" [${styles.server}, label="${esc(srv.name)}\\n(Server ${srv.ip})"];`);
+            });
+            Object.values(data.monitors || {}).forEach(m => {
+                lines.push(`    "${esc(m.name)}" [${styles.monitor}, label="${esc(m.name)}\\n(Monitor)"];`);
+            });
+            lines.push(`    "Client" [${styles.client}, label="Client\\n(Users)"];`);
+            lines.push('');
+            const addedEdges = new Set();
+            (data.bindings || []).forEach(b => {
+                const key = b.src + '->' + b.dst;
+                if (addedEdges.has(key)) return;
+                addedEdges.add(key);
+                const attr = b.type === 'group_member' ? ' [label="member", style=dashed]' : ' [label="bind"]';
+                lines.push(`    "${esc(b.src)}" -> "${esc(b.dst)}"${attr};`);
+            });
+            Object.keys(data.vservers || {}).forEach(vsName => {
+                lines.push(`    "Client" -> "${esc(vsName)}" [label="connect"];`);
+            });
+            lines.push('}');
+            return lines.join('\n');
+        }
+
+        function renderNsDiagram(data) {
+            const dot = createNsGraphvizDot(data);
+            if (!dot || dot.length < 50) {
+                mermaidContainer.innerHTML = '<div style="padding:20px;color:#94a3b8;">No diagram data. Config may be empty.</div>';
+                return;
+            }
+            setStatus('<span class="spinner-eye"></span> Rendering Graphviz diagram...');
+            if (typeof Viz !== 'undefined') {
+                const viz = new Viz();
+                viz.renderSVGElement(dot, { engine: 'dot' })
+                    .then(el => {
+                        mermaidContainer.innerHTML = '';
+                        mermaidContainer.appendChild(el);
+                        setStatus('Done.');
+                    })
+                    .catch(err => {
+                        console.error('Viz.js error', err);
+                        mermaidContainer.innerHTML = '<div style="padding:20px;color:#f87171;">Graphviz render failed. Falling back to Mermaid.</div>' + (err.message ? '<pre style="font-size:11px;color:#94a3b8;">' + escapeHtml(err.message) + '</pre>' : '');
+                        renderNsDiagramMermaid(data);
+                        setStatus('Done (Mermaid fallback).');
+                    });
+            } else {
+                renderNsDiagramMermaid(data);
+                setStatus('Done.');
+            }
+        }
+
+        function renderNsDiagramMermaid(data) {
+            const lines = ['flowchart TD'];
+            const cleanId = s => 'n' + (s||'').replace(/[^a-zA-Z0-9]/g, '_');
+            const added = new Set();
+            const addNode = (id, label) => {
+                if (added.has(id)) return;
+                added.add(id);
+                lines.push(`${id}["${label.replace(/"/g, '\\"')}"]`);
+            };
+            Object.values(data.vservers || {}).forEach(v => {
+                addNode(cleanId('vs'+v.name), `${v.type}: ${v.name}\\n${v.ip}:${v.port}`);
+            });
+            Object.values(data.services || {}).forEach(s => {
+                addNode(cleanId('svc'+s.name), `SVC: ${s.name}\\n${s.ip}:${s.port}`);
+            });
+            Object.values(data.serviceGroups || {}).forEach(sg => {
+                addNode(cleanId('sg'+sg.name), `SG: ${sg.name}`);
+            });
+            Object.values(data.servers || {}).forEach(s => {
+                addNode(cleanId('srv'+s.name), `Server: ${s.name}\\n${s.ip}`);
+            });
+            const getId = (name, type) => {
+                if (data.vservers[name]) return cleanId('vs'+name);
+                if (data.services[name]) return cleanId('svc'+name);
+                if (data.serviceGroups[name]) return cleanId('sg'+name);
+                if (data.servers[name]) return cleanId('srv'+name);
+                return cleanId(name);
+            };
+            (data.bindings || []).forEach(b => {
+                const srcId = getId(b.src);
+                const dstId = getId(b.dst);
+                if (added.has(srcId) && added.has(dstId)) lines.push(`${srcId} --> ${dstId}`);
+            });
+            if (lines.length <= 1) {
+                mermaidContainer.innerHTML = '<div style="padding:20px;color:#94a3b8;">No bindings to diagram.</div>';
+                return;
+            }
+            renderMermaid(lines);
+        }
+
+        function renderMermaid(lines) {
+            if (lines.length <= 1) {
+                mermaidContainer.innerHTML = '<div style="padding:20px;color:#94a3b8;">No diagram data. Config may be empty or format not recognized.</div>';
+                return;
+            }
+            const graph = lines.join('\n');
+            try {
+                mermaid.render('diagGraph', graph, (svg) => {
+                    mermaidContainer.innerHTML = svg;
+                });
+            } catch (err) {
+                console.error('Mermaid error', err);
+                mermaidContainer.innerHTML = '<div style="padding:20px;color:#f87171;">Could not render diagram.</div>';
+            }
+        }
+    </script>
+</body>
+</html>

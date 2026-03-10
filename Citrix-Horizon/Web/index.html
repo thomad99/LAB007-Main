@@ -431,35 +431,20 @@
                 <div id="uagConfigStatus" style="margin-top:8px; color:#555;"></div>
 
                 <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(160px,1fr)); gap:8px; margin:12px 0;">
-                    <div class="card" style="padding:10px; min-height:60px;"><div style="font-size:12px; color:#555;">Gateways</div><div id="uagStatGateways" style="font-weight:800; font-size:18px; color:#111;">0</div></div>
-                    <div class="card" style="padding:10px; min-height:60px;"><div style="font-size:12px; color:#555;">Connection Servers</div><div id="uagStatConn" style="font-weight:800; font-size:18px; color:#111;">0</div></div>
-                    <div class="card" style="padding:10px; min-height:60px;"><div style="font-size:12px; color:#555;">DNS</div><div id="uagStatDns" style="font-weight:800; font-size:18px; color:#111;">0</div></div>
-                    <div class="card" style="padding:10px; min-height:60px;"><div style="font-size:12px; color:#555;">AD / Entra</div><div id="uagStatAd" style="font-weight:800; font-size:18px; color:#111;">0</div></div>
-                    <div class="card" style="padding:10px; min-height:60px;"><div style="font-size:12px; color:#555;">Certs</div><div id="uagStatCerts" style="font-weight:800; font-size:18px; color:#111;">0</div></div>
-                    <div class="card" style="padding:10px; min-height:60px;"><div style="font-size:12px; color:#555;">External URLs</div><div id="uagStatExt" style="font-weight:800; font-size:18px; color:#111;">0</div></div>
+                    <div class="card uag-stat-card"><div class="uag-card-title">Gateways</div><div id="uagStatGateways" class="uag-card-value">0</div></div>
+                    <div class="card uag-stat-card"><div class="uag-card-title">Connection Servers</div><div id="uagStatConn" class="uag-card-value">0</div></div>
+                    <div class="card uag-stat-card"><div class="uag-card-title">DNS</div><div id="uagStatDns" class="uag-card-value">0</div></div>
+                    <div class="card uag-stat-card"><div class="uag-card-title">AD / Entra</div><div id="uagStatAd" class="uag-card-value">0</div></div>
+                    <div class="card uag-stat-card"><div class="uag-card-title">Certs</div><div id="uagStatCerts" class="uag-card-value">0</div></div>
+                    <div class="card uag-stat-card"><div class="uag-card-title">External URLs</div><div id="uagStatExt" class="uag-card-value">0</div></div>
                 </div>
 
                 <div style="display:grid; grid-template-columns: repeat(auto-fit,minmax(220px,1fr)); gap:8px; margin-bottom:12px;">
-                    <div class="card" style="padding:10px; min-height:60px;">
-                        <div style="font-size:12px; color:#555;">UAG Name</div>
-                        <div id="uagMetaName" style="font-weight:700; font-size:15px; color:#111; overflow-wrap:anywhere;">-</div>
-                    </div>
-                    <div class="card" style="padding:10px; min-height:60px;">
-                        <div style="font-size:12px; color:#555;">UAG IP</div>
-                        <div id="uagMetaIp" style="font-weight:700; font-size:15px; color:#111; overflow-wrap:anywhere;">-</div>
-                    </div>
-                    <div class="card" style="padding:10px; min-height:60px;">
-                        <div style="font-size:12px; color:#555;">Connection Server</div>
-                        <div id="uagMetaCsUrl" style="font-weight:700; font-size:15px; color:#111; overflow-wrap:anywhere;">-</div>
-                    </div>
-                    <div class="card" style="padding:10px; min-height:60px;">
-                        <div style="font-size:12px; color:#555;">Conn Server Thumbprint</div>
-                        <div id="uagMetaThumb" style="font-weight:700; font-size:15px; color:#111; overflow-wrap:anywhere;">-</div>
-                    </div>
-                    <div class="card" style="padding:10px; min-height:60px;">
-                        <div style="font-size:12px; color:#555;">Max Blast Connections</div>
-                        <div id="uagMetaBlast" style="font-weight:700; font-size:15px; color:#111; overflow-wrap:anywhere;">-</div>
-                    </div>
+                    <div class="card uag-meta-card"><div class="uag-card-title">UAG Name</div><div id="uagMetaName" class="uag-card-value">-</div></div>
+                    <div class="card uag-meta-card"><div class="uag-card-title">UAG IP</div><div id="uagMetaIp" class="uag-card-value">-</div></div>
+                    <div class="card uag-meta-card"><div class="uag-card-title">Connection Server</div><div id="uagMetaCsUrl" class="uag-card-value">-</div></div>
+                    <div class="card uag-meta-card"><div class="uag-card-title">Conn Server Thumbprint</div><div id="uagMetaThumb" class="uag-card-value">-</div></div>
+                    <div class="card uag-meta-card"><div class="uag-card-title">Max Blast Connections</div><div id="uagMetaBlast" class="uag-card-value">-</div></div>
                 </div>
 
                 <div style="display:grid; grid-template-columns:1fr; gap:10px; margin-top:10px;">
@@ -1954,6 +1939,10 @@
     if (logSearchBtn) {
         logSearchBtn.addEventListener('click', () => filterLogs());
     }
+    const logSearchInput = document.getElementById('uagLogSearch');
+    if (logSearchInput) {
+        logSearchInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') filterLogs(); });
+    }
     if (logLevelSel) {
         logLevelSel.addEventListener('change', () => {
             uagLogLevel = logLevelSel.value || 'all';
@@ -2057,10 +2046,33 @@
         if (icon) icon.textContent = open ? '+' : '−';
     }
 
+    const UAG_LOG_MAX_LINES = 50000;
+    const UAG_LOG_BATCH_SIZE = 3;
+
+    function processOneLogEntry(entry, idx, qLower, query){
+        let snippet = entry.text || '';
+        const lines = snippet.split(/\r?\n/);
+        const truncated = lines.length > UAG_LOG_MAX_LINES;
+        let workLines = truncated ? (uagLogReverse ? lines.slice(-UAG_LOG_MAX_LINES) : lines.slice(0, UAG_LOG_MAX_LINES)) : lines;
+        const levelRegex = (uagLogLevel && uagLogLevel !== 'all') ? new RegExp(`\\[${uagLogLevel}\\]`,'i') : null;
+        let filtered = levelRegex ? workLines.filter(l=> levelRegex.test(l)) : workLines;
+        if (uagLogReverse) filtered.reverse();
+        snippet = filtered.join('\n');
+        if (truncated) snippet += '\n\n[Truncated - file has ' + lines.length + ' lines, showing first ' + UAG_LOG_MAX_LINES + ']';
+        const hasMatchEntry = qLower ? snippet.toLowerCase().includes(qLower) : false;
+        const rendered = highlightText(snippet, query);
+        const entryDisplay = hasMatchEntry && query ? 'block' : 'none';
+        const toggleSymbolEntry = entryDisplay === 'block' ? '−' : '+';
+        return { entry, idx, hasMatchEntry, rendered, entryDisplay, toggleSymbolEntry };
+    }
+
     function renderLogResults(list, query = ''){
         const wrap = document.getElementById('uagLogResults');
+        const countEl = document.getElementById('uagLogCount');
         if (!wrap) return;
         if (!list.length){ wrap.innerHTML = '<div style="color:#94a3b8;">No entries</div>'; return;}
+        if (countEl) countEl.textContent = 'Searching...';
+        wrap.innerHTML = '<div style="color:#94a3b8; padding:20px;"><span class="spinner-eye"></span> Searching large logs...</div>';
         const qLower = query.toLowerCase();
         const priorityNames = [
             'esmanager.log','horizon.log','admin.log','audit.log','reverseproxy.log',
@@ -2073,7 +2085,6 @@
             const isPriority = priorityNames.some(p=> n.endsWith(p));
             if (isPriority) priorityEntries.push({entry, idx:i}); else remaining.push({entry, idx:i});
         });
-        // group by top-level prefix before '/'
         const groups = [];
         const grouped = {};
         remaining.forEach(({entry, idx}) => {
@@ -2081,105 +2092,103 @@
             if (!grouped[g]) { grouped[g] = []; groups.push(g); }
             grouped[g].push({ entry, idx });
         });
-        // Sort the "Other" group alphabetically by filename for easier scan
         if (grouped['Other']) {
             grouped['Other'].sort((a,b)=> (a.entry.name||'').localeCompare(b.entry.name||''));
         }
-        let html = '';
-        if (priorityEntries.length){
-            const hasMatch = query ? priorityEntries.some(({entry}) => (entry.text||'').toLowerCase().includes(qLower)) : false;
-            const bodyDisplay = hasMatch && query ? 'block' : 'none';
-            const toggleSymbol = bodyDisplay === 'block' ? '−' : '+';
-            html += `
-            <div class="log-group" data-group="priority" style="border:1px solid rgba(255,255,255,0.2); border-radius:10px; margin-bottom:10px; background:#1e293b; color:#ffffff;">
-                <div class="log-head" style="font-size:15px; color:#ffffff;" onclick="toggleLogGroup('priority')">
-                    <span>Top Logs <span style="color:#94a3b8;font-weight:500;">(${priorityEntries.length})</span></span>
-                    <span class="log-group-toggle">${toggleSymbol}</span>
-                </div>
-                <div class="log-group-body" style="display:${bodyDisplay}; padding:6px 8px; border-top:1px solid rgba(255,255,255,0.08);">
-            `;
-            priorityEntries.forEach(({entry, idx})=>{
-                let snippet = entry.text || '';
-                const lines = snippet.split(/\r?\n/);
-                const levelRegex = (uagLogLevel && uagLogLevel !== 'all') ? new RegExp(`\\[${uagLogLevel}\\]`,'i') : null;
-                const filtered = levelRegex ? lines.filter(l=> levelRegex.test(l)) : lines;
-                if (uagLogReverse) filtered.reverse();
-                snippet = filtered.join('\n');
-                const hasMatchEntry = qLower ? snippet.toLowerCase().includes(qLower) : false;
-                const rendered = highlightText(snippet, query);
-                const entryDisplay = hasMatchEntry && query ? 'block' : 'none';
-                const toggleSymbolEntry = entryDisplay === 'block' ? '−' : '+';
-                html += `
-                    <div class="log-entry" data-idx="${idx}" style="margin-bottom:6px;">
-                        <div class="log-head" onclick="toggleLogEntry(${idx})">
-                            <span>${escapeHtml(entry.name)}</span>
-                            <span class="log-toggle">${toggleSymbolEntry}</span>
-                        </div>
-                        <div class="log-body" style="display:${entryDisplay};">
-                            <pre>${rendered}</pre>
-                        </div>
-                    </div>
-                `;
-            });
-            html += `</div></div>`;
-        }
+        const allWork = [];
+        priorityEntries.forEach(({entry, idx}) => allWork.push({ type:'priority', entry, idx }));
         groups.forEach((g, gi) => {
-            const items = grouped[g];
-            const hasMatchInGroup = query ? items.some(({entry}) => (entry.text||'').toLowerCase().includes(qLower)) : false;
-            const bodyDisplay = hasMatchInGroup && query ? 'block' : 'none';
-            const toggleSymbol = bodyDisplay === 'block' ? '−' : '+';
-            html += `
-            <div class="log-group" data-group="${gi}" style="border:1px solid rgba(255,255,255,0.2); border-radius:10px; margin-bottom:10px; background:#1e293b; color:#ffffff;">
-                <div class="log-head" style="font-size:15px; color:#ffffff;" onclick="toggleLogGroup(${gi})">
-                    <span>${escapeHtml(g)} <span style="color:#94a3b8;font-weight:500;">(${items.length})</span></span>
-                    <span class="log-group-toggle">${toggleSymbol}</span>
-                </div>
-                <div class="log-group-body" style="display:${bodyDisplay}; padding:6px 8px; border-top:1px solid rgba(255,255,255,0.08);">
-            `;
-            items.forEach(({entry, idx}) => {
-                let snippet = entry.text || '';
-                const lines = snippet.split(/\r?\n/);
-                const levelRegex = (uagLogLevel && uagLogLevel !== 'all') ? new RegExp(`\\[${uagLogLevel}\\]`,'i') : null;
-                const filtered = levelRegex ? lines.filter(l=> levelRegex.test(l)) : lines;
-                if (uagLogReverse) filtered.reverse();
-                snippet = filtered.join('\n');
-                const hasMatch = qLower ? snippet.toLowerCase().includes(qLower) : false;
-                const rendered = highlightText(snippet, query);
-                const entryDisplay = hasMatch && query ? 'block' : 'none';
-                const toggleSymbolEntry = entryDisplay === 'block' ? '−' : '+';
-                html += `
-                    <div class="log-entry" data-idx="${idx}" style="margin-bottom:6px;">
-                        <div class="log-head" onclick="toggleLogEntry(${idx})">
-                            <span>${escapeHtml(entry.name)}</span>
-                            <span class="log-toggle">${toggleSymbolEntry}</span>
-                        </div>
-                        <div class="log-body" style="display:${entryDisplay};">
-                            <pre>${rendered}</pre>
-                        </div>
-                    </div>
-                `;
-            });
-            html += `</div></div>`;
+            (grouped[g]||[]).forEach(({entry, idx}) => allWork.push({ type:'group', g, gi, entry, idx }));
         });
-        wrap.innerHTML = html;
-        uagLogMatches = Array.from(wrap.querySelectorAll('.log-match'));
-        if (uagLogMatches.length) {
-            uagLogMatchIndex = 0;
-            uagLogMatches[0].classList.add('active');
-            const entry = uagLogMatches[0].closest('.log-entry');
-            if (entry) {
-                const body = entry.querySelector('.log-body');
-                const icon = entry.querySelector('.log-toggle');
-                if (body) body.style.display = 'block';
-                if (icon) icon.textContent = '−';
+        let processed = [];
+        let i = 0;
+        function doBatch(){
+            const end = Math.min(i + UAG_LOG_BATCH_SIZE, allWork.length);
+            for (; i < end; i++) {
+                const w = allWork[i];
+                processed.push({ ...processOneLogEntry(w.entry, w.idx, qLower, query), ...w });
             }
-            uagLogMatches[0].scrollIntoView({ behavior:'smooth', block:'center' });
-        } else {
-            uagLogMatchIndex = -1;
+            if (i < allWork.length) {
+                if (countEl) countEl.textContent = 'Searching... ' + Math.round(100*i/allWork.length) + '%';
+                setTimeout(doBatch, 0);
+                return;
+            }
+            let html = '';
+            const pri = processed.filter(p=> p.type==='priority');
+            if (pri.length){
+                const hasMatch = query ? pri.some(p=> p.hasMatchEntry) : false;
+                const bodyDisplay = hasMatch && query ? 'block' : 'none';
+                const toggleSymbol = bodyDisplay === 'block' ? '−' : '+';
+                html += `
+                <div class="log-group" data-group="priority" style="border:1px solid rgba(255,255,255,0.2); border-radius:10px; margin-bottom:10px; background:#1e293b; color:#ffffff;">
+                    <div class="log-head" style="font-size:15px; color:#ffffff;" onclick="toggleLogGroup('priority')">
+                        <span>Top Logs <span style="color:#94a3b8;font-weight:500;">(${pri.length})</span></span>
+                        <span class="log-group-toggle">${toggleSymbol}</span>
+                    </div>
+                    <div class="log-group-body" style="display:${bodyDisplay}; padding:6px 8px; border-top:1px solid rgba(255,255,255,0.08);">
+                `;
+                pri.forEach(({entry, idx, rendered, entryDisplay, toggleSymbolEntry})=>{
+                    html += `
+                        <div class="log-entry" data-idx="${idx}" style="margin-bottom:6px;">
+                            <div class="log-head" onclick="toggleLogEntry(${idx})">
+                                <span>${escapeHtml(entry.name)}</span>
+                                <span class="log-toggle">${toggleSymbolEntry}</span>
+                            </div>
+                            <div class="log-body" style="display:${entryDisplay};">
+                                <pre>${rendered}</pre>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div></div>`;
+            }
+            groups.forEach((g, gi) => {
+                const items = processed.filter(p=> p.type==='group' && p.gi===gi);
+                const hasMatchInGroup = query ? items.some(p=> p.hasMatchEntry) : false;
+                const bodyDisplay = hasMatchInGroup && query ? 'block' : 'none';
+                const toggleSymbol = bodyDisplay === 'block' ? '−' : '+';
+                html += `
+                <div class="log-group" data-group="${gi}" style="border:1px solid rgba(255,255,255,0.2); border-radius:10px; margin-bottom:10px; background:#1e293b; color:#ffffff;">
+                    <div class="log-head" style="font-size:15px; color:#ffffff;" onclick="toggleLogGroup(${gi})">
+                        <span>${escapeHtml(g)} <span style="color:#94a3b8;font-weight:500;">(${items.length})</span></span>
+                        <span class="log-group-toggle">${toggleSymbol}</span>
+                    </div>
+                    <div class="log-group-body" style="display:${bodyDisplay}; padding:6px 8px; border-top:1px solid rgba(255,255,255,0.08);">
+                `;
+                items.forEach(({entry, idx, rendered, entryDisplay, toggleSymbolEntry})=>{
+                    html += `
+                        <div class="log-entry" data-idx="${idx}" style="margin-bottom:6px;">
+                            <div class="log-head" onclick="toggleLogEntry(${idx})">
+                                <span>${escapeHtml(entry.name)}</span>
+                                <span class="log-toggle">${toggleSymbolEntry}</span>
+                            </div>
+                            <div class="log-body" style="display:${entryDisplay};">
+                                <pre>${rendered}</pre>
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div></div>`;
+            });
+            wrap.innerHTML = html;
+            uagLogMatches = Array.from(wrap.querySelectorAll('.log-match'));
+            if (uagLogMatches.length) {
+                uagLogMatchIndex = 0;
+                uagLogMatches[0].classList.add('active');
+                const entry = uagLogMatches[0].closest('.log-entry');
+                if (entry) {
+                    const body = entry.querySelector('.log-body');
+                    const icon = entry.querySelector('.log-toggle');
+                    if (body) body.style.display = 'block';
+                    if (icon) icon.textContent = '−';
+                }
+                uagLogMatches[0].scrollIntoView({ behavior:'smooth', block:'center' });
+            } else {
+                uagLogMatchIndex = -1;
+            }
+            if (countEl) countEl.textContent = uagLogMatches.length ? `${uagLogMatchIndex+1}/${uagLogMatches.length}` : '0';
         }
-        const countEl = document.getElementById('uagLogCount');
-        if (countEl) countEl.textContent = uagLogMatches.length ? `${uagLogMatchIndex+1}/${uagLogMatches.length}` : '0';
-
+        setTimeout(doBatch, 0);
     }
 
     async function analyzeLogAi(){
