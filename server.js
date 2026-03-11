@@ -739,6 +739,72 @@ app.post('/tomopi/images/upload', (req, res, next) => {
     handleTomoPIImageUpload(req, res);
   });
 });
+
+// BIKE rentals order request - sends basket details to info@lab007.ai
+app.post('/api/bike-order', async (req, res) => {
+  const { name, email, startDate, endDate, zone, notes, basket } = req.body || {};
+
+  if (!name || !email || !startDate || !endDate || !Array.isArray(basket) || basket.length === 0) {
+    return res.status(400).json({ error: 'Name, email, dates and at least one bike are required.' });
+  }
+
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (!emailRegex.test(email)) {
+    return res.status(400).json({ error: 'Invalid email address' });
+  }
+
+  if (!emailTransporter) {
+    console.error('Bike order submission failed: Email transporter not configured');
+    return res.status(500).json({ error: 'Email service not configured. Please email info@lab007.ai directly.' });
+  }
+
+  const fromAddr = process.env.SMTP_USER || 'noreply@lab007.ai';
+  const itemsText = basket.map(item => `${item.quantity} x ${item.type}`).join('\n');
+  const itemsHtml = basket.map(item => `<li>${item.quantity} × ${item.type}</li>`).join('');
+
+  const text = `BIKE Rental Request
+
+Name: ${name}
+Email: ${email}
+Zone: ${zone || '—'}
+Start date: ${startDate}
+End date: ${endDate}
+
+Requested bikes:
+${itemsText}
+
+Notes:
+${notes || '—'}
+`;
+
+  const html = `
+    <h2>BIKE Rental Request</h2>
+    <p><strong>Name:</strong> ${name}</p>
+    <p><strong>Email:</strong> ${email}</p>
+    <p><strong>Zone:</strong> ${zone || '—'}</p>
+    <p><strong>Start date:</strong> ${startDate}</p>
+    <p><strong>End date:</strong> ${endDate}</p>
+    <h3>Requested bikes</h3>
+    <ul>${itemsHtml}</ul>
+    <h3>Notes</h3>
+    <p>${(notes || '—').replace(/\n/g, '<br>')}</p>
+  `;
+
+  try {
+    await emailTransporter.sendMail({
+      from: fromAddr,
+      replyTo: email,
+      to: 'info@lab007.ai',
+      subject: 'BIKE – Rental request',
+      text,
+      html
+    });
+    res.json({ success: true, message: 'Request sent successfully' });
+  } catch (error) {
+    console.error('BIKE order email error:', error);
+    res.status(500).json({ error: 'Failed to send request. Please try again or email info@lab007.ai directly.' });
+  }
+});
 app.post('/api/tomopi/images/upload', (req, res, next) => {
   tomopiUpload.array('photos', 20)(req, res, (err) => {
     if (err) return res.status(400).json({ error: err.message });

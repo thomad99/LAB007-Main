@@ -97,15 +97,42 @@
             position: relative;
             overflow: hidden;
             box-shadow: var(--shadow-lg);
+            display: flex;
+            justify-content: center;
         }
         .hero::before { display:none; }
         .hero-inner {
             position: relative;
             z-index: 1;
-            display: grid;
-            grid-template-columns: 1.2fr 0.9fr;
-            gap: 26px;
-            padding: 30px 30px 26px;
+            width: 80vw;
+            max-width: 1000px;
+        }
+        .hero-media {
+            position: relative;
+            border-radius: 24px;
+            overflow: hidden;
+        }
+        .hero-media img {
+            width: 100%;
+            display: block;
+            border-radius: 24px;
+            box-shadow: 0 18px 45px rgba(0,0,0,0.45);
+        }
+        .hero-overlay {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            pointer-events: none;
+        }
+        .hero-overlay-text {
+            font-size: clamp(32px, 6vw, 56px);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            color: #f9fafb;
+            text-align: center;
+            text-shadow: 0 12px 35px rgba(0,0,0,0.75);
         }
         .hero-kicker {
             font-size: 12px;
@@ -430,7 +457,9 @@
         }
         footer a:hover { color: var(--shell); }
         @media (max-width: 860px) {
-            .hero-inner,
+            .hero-inner {
+                width: 100%;
+            }
             .fleet,
             .zones,
             .booking {
@@ -462,21 +491,68 @@
 
         <section class="hero">
             <div class="hero-inner">
-                <div style="display:flex;flex-direction:column;gap:12px;justify-content:center;">
-                    <img src="/Images/Bike/bike wheel.png" alt="Siesta Key Ebike Rentals" style="max-width:520px;width:100%;border-radius:20px;box-shadow:0 18px 45px rgba(0,0,0,0.45);">
-                    <div>
-                        <p class="hero-copy" style="max-width:460px;">
-                            Siesta Key e‑bike rentals for beach paths, piers and golden‑hour cruises. Pick your bike, choose your week, and we’ll have it ready by the sand.
-                        </p>
-                        <div class="hero-ctas">
-                            <button class="btn-primary" onclick="document.getElementById('booking').scrollIntoView({behavior:'smooth'})">Book now</button>
-                        </div>
+                <div class="hero-media">
+                    <img src="/Images/Bike/bike wheel.png" alt="Siesta Key Ebike Rentals">
+                    <div class="hero-overlay">
+                        <div class="hero-overlay-text">Ebike Rentals</div>
                     </div>
                 </div>
             </div>
         </section>
 
-        <!-- Fleet section removed per user request -->
+        <section class="fleet" id="bikes">
+            <div>
+                <div class="section-label">Choose your ride</div>
+                <h2 class="section-title">Three ebike styles for your beach week.</h2>
+                <p class="section-copy">
+                    Pick as many bikes as you need — mix Standard, Premium and Kids ebikes in one basket, then send your request and we’ll confirm availability by email.
+                </p>
+            </div>
+            <div class="fleet-grid">
+                <article class="fleet-card" data-bike-id="Standard Ebike">
+                    <img src="/Images/Bike/ebike-mens.png" alt="Standard Ebike" class="fleet-img">
+                    <h3>Standard Ebike</h3>
+                    <div class="badge">Comfort cruiser · 7–speed</div>
+                    <div class="price">$295 / week</div>
+                    <p>Relaxed upright ride, ideal for beach paths and slow sunset cruises around Siesta Key.</p>
+                    <div class="form-row" style="margin-top:8px;align-items:center;">
+                        <div class="form-group" style="margin-top:0;max-width:90px;">
+                            <label for="qty-standard">Qty</label>
+                            <input id="qty-standard" class="input" type="number" min="1" value="1">
+                        </div>
+                        <button type="button" class="btn-primary" data-add-bike="Standard Ebike" style="padding:8px 14px;font-size:12px;">Add to basket</button>
+                    </div>
+                </article>
+                <article class="fleet-card" data-bike-id="Premium Ebike">
+                    <img src="/Images/Bike/juiced ebike rental.png" alt="Premium Ebike" class="fleet-img">
+                    <h3>Premium Ebike</h3>
+                    <div class="badge">Long‑range · higher power</div>
+                    <div class="price">$355 / week</div>
+                    <p>Extra range and punch for riders who want to explore further along the coast with confidence.</p>
+                    <div class="form-row" style="margin-top:8px;align-items:center;">
+                        <div class="form-group" style="margin-top:0;max-width:90px;">
+                            <label for="qty-premium">Qty</label>
+                            <input id="qty-premium" class="input" type="number" min="1" value="1">
+                        </div>
+                        <button type="button" class="btn-primary" data-add-bike="Premium Ebike" style="padding:8px 14px;font-size:12px;">Add to basket</button>
+                    </div>
+                </article>
+                <article class="fleet-card" data-bike-id="Kids Ebike">
+                    <img src="/Images/Bike/razor e-bike.png" alt="Kids Ebike" class="fleet-img">
+                    <h3>Kids Ebike</h3>
+                    <div class="badge">Smaller frame · family rides</div>
+                    <div class="price">$225 / week</div>
+                    <p>Scaled for younger riders so the whole family can roll together on the same coastal routes.</p>
+                    <div class="form-row" style="margin-top:8px;align-items:center;">
+                        <div class="form-group" style="margin-top:0;max-width:90px;">
+                            <label for="qty-kids">Qty</label>
+                            <input id="qty-kids" class="input" type="number" min="1" value="1">
+                        </div>
+                        <button type="button" class="btn-primary" data-add-bike="Kids Ebike" style="padding:8px 14px;font-size:12px;">Add to basket</button>
+                    </div>
+                </article>
+            </div>
+        </section>
 
         <section id="booking" class="booking">
             <div class="booking-form" style="max-width:520px;">
@@ -485,7 +561,7 @@
                 <p class="section-copy" style="margin-bottom:6px;">
                     This is a demo form — on a live site it would send your details to confirm availability and payment.
                 </p>
-                <form>
+                <form id="bookingForm">
                     <div class="form-row">
                         <div class="form-group">
                             <label for="name">Name</label>
@@ -535,9 +611,18 @@
                     </div>
                     <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
                         <button id="bookBtn" type="button" class="btn-primary">Reserve now</button>
-                        <span class="booking-footnote">No payment is taken on this demo page.</span>
+                        <span class="booking-footnote">No payment is taken on this page — we’ll email you back to confirm.</span>
                     </div>
                 </form>
+            </div>
+            <div class="booking-form" style="max-width:520px;">
+                <div class="section-label">Your basket</div>
+                <h3>Selected bikes.</h3>
+                <p class="section-copy" style="margin-bottom:6px;">
+                    Add bikes from the cards above. You can adjust quantities or remove items before you send your request.
+                </p>
+                <div id="basketEmpty" class="booking-footnote">No bikes in your basket yet.</div>
+                <ul id="basketList" style="list-style:none;padding:0;margin-top:8px;"></ul>
             </div>
         </section>
 
@@ -548,13 +633,76 @@
     </div>
     <script>
         (function() {
+            const basket = [];
+
+            function renderBasket() {
+                const list = document.getElementById('basketList');
+                const empty = document.getElementById('basketEmpty');
+                list.innerHTML = '';
+                if (!basket.length) {
+                    empty.style.display = 'block';
+                    return;
+                }
+                empty.style.display = 'none';
+                basket.forEach((item, index) => {
+                    const li = document.createElement('li');
+                    li.style.display = 'flex';
+                    li.style.justifyContent = 'space-between';
+                    li.style.alignItems = 'center';
+                    li.style.padding = '6px 0';
+                    li.style.borderBottom = '1px solid rgba(148,163,184,0.4)';
+                    li.innerHTML = `<span>${item.quantity} × ${item.type}</span><button type="button" data-remove="${index}" class="btn-secondary" style="padding:4px 10px;font-size:11px;">Remove</button>`;
+                    list.appendChild(li);
+                });
+                list.addEventListener('click', (e) => {
+                    const btn = e.target.closest('button[data-remove]');
+                    if (!btn) return;
+                    const idx = parseInt(btn.getAttribute('data-remove'), 10);
+                    if (!isNaN(idx)) {
+                        basket.splice(idx, 1);
+                        renderBasket();
+                    }
+                }, { once: true });
+            }
+
+            // Wire "Add to basket" buttons
+            document.querySelectorAll('button[data-add-bike]').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const type = btn.getAttribute('data-add-bike');
+                    let qtyInputId = '';
+                    if (type === 'Standard Ebike') qtyInputId = 'qty-standard';
+                    else if (type === 'Premium Ebike') qtyInputId = 'qty-premium';
+                    else if (type === 'Kids Ebike') qtyInputId = 'qty-kids';
+                    const qtyEl = document.getElementById(qtyInputId);
+                    const quantity = parseInt((qtyEl && qtyEl.value) || '0', 10);
+                    if (!quantity || quantity < 1) {
+                        alert('Please enter a quantity of at least 1.');
+                        return;
+                    }
+                    const existing = basket.find(item => item.type === type);
+                    if (existing) {
+                        existing.quantity += quantity;
+                    } else {
+                        basket.push({ type, quantity });
+                    }
+                    renderBasket();
+                });
+            });
+
             const bookBtn = document.getElementById('bookBtn');
             if (!bookBtn) return;
-            bookBtn.addEventListener('click', () => {
+            bookBtn.addEventListener('click', async () => {
+                const name = document.getElementById('name').value.trim();
+                const email = document.getElementById('email').value.trim();
                 const start = document.getElementById('startDate').value;
                 const end = document.getElementById('endDate').value;
-                const bike = document.getElementById('fleetType').value;
-                const qty = parseInt(document.getElementById('qty').value || '0', 10);
+                const zone = document.getElementById('zoneSelect').value;
+                const notes = document.getElementById('notes').value.trim();
+
+                if (!name || !email) {
+                    alert('Please enter your name and email.');
+                    return;
+                }
                 if (!start || !end) {
                     alert('Please choose both start and end dates for your weekly rental.');
                     return;
@@ -566,15 +714,37 @@
                     alert('Weekly rentals only: end date must be at least 7 days after start date.');
                     return;
                 }
-                if (!bike) {
-                    alert('Please choose a bike type.');
+                if (!basket.length) {
+                    alert('Please add at least one bike to your basket.');
                     return;
                 }
-                if (!qty || qty < 1) {
-                    alert('Please enter a quantity of at least 1 bike.');
-                    return;
+
+                try {
+                    const response = await fetch('/api/bike-order', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            name,
+                            email,
+                            startDate: start,
+                            endDate: end,
+                            zone,
+                            notes,
+                            basket
+                        })
+                    });
+                    const data = await response.json();
+                    if (!response.ok || !data.success) {
+                        throw new Error(data.error || 'Failed to send booking request.');
+                    }
+                    alert('Thanks, your request has been sent. We will email you from info@lab007.ai to confirm availability.');
+                    document.getElementById('bookingForm').reset();
+                    basket.splice(0, basket.length);
+                    renderBasket();
+                } catch (err) {
+                    console.error(err);
+                    alert('Sorry, something went wrong sending your request. Please try again later or email info@lab007.ai directly.');
                 }
-                alert('Demo only: this would submit a booking for ' + qty + ' ' + bike + '(s) from ' + start + ' to ' + end + '.');
             });
         })();
     </script>
