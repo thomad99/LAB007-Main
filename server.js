@@ -742,7 +742,7 @@ app.post('/tomopi/images/upload', (req, res, next) => {
 
 // BIKE rentals order request - sends basket details to info@lab007.ai
 app.post('/api/bike-order', async (req, res) => {
-  const { name, email, startDate, endDate, zone, notes, basket, weeks, weeklySubtotal, totalAmount } = req.body || {};
+  const { name, email, phone, startDate, endDate, zone, notes, basket, weeks, weeklySubtotal, totalAmount } = req.body || {};
 
   if (!name || !email || !startDate || !endDate || !Array.isArray(basket) || basket.length === 0) {
     return res.status(400).json({ error: 'Name, email, dates and at least one bike are required.' });
@@ -770,6 +770,7 @@ app.post('/api/bike-order', async (req, res) => {
 
 Name: ${name}
 Email: ${email}
+Phone: ${phone || '—'}
 Zone: ${zone || '—'}
 Start date: ${startDate}
 End date: ${endDate}
@@ -788,6 +789,7 @@ ${notes || '—'}
     <h2>BIKE Rental Request</h2>
     <p><strong>Name:</strong> ${name}</p>
     <p><strong>Email:</strong> ${email}</p>
+    <p><strong>Phone:</strong> ${phone || '—'}</p>
     <p><strong>Zone:</strong> ${zone || '—'}</p>
     <p><strong>Start date:</strong> ${startDate}</p>
     <p><strong>End date:</strong> ${endDate}</p>

@@ -497,45 +497,57 @@
             </div>
             <div class="fleet-grid">
                 <article class="fleet-card" data-bike-id="Standard Ebike">
-                    <img src="/Images/Bike/ebike-mens.png" alt="Standard Ebike" class="fleet-img">
+                    <!-- Pic 1 -->
+                    <img src="/Images/Bike/juiced ebike rental.png" alt="Standard Ebike" class="fleet-img">
                     <h3>Standard Ebike</h3>
                     <div class="badge">Comfort cruiser · 7–speed</div>
                     <div class="price">$295 / week</div>
-                    <p>Relaxed upright ride, ideal for beach paths and slow sunset cruises around Siesta Key.</p>
+                    <p>Great all‑round ebike for beach paths and everyday cruising.</p>
                     <div class="form-row" style="margin-top:8px;align-items:center;">
                         <div class="form-group" style="margin-top:0;max-width:90px;">
-                            <label for="qty-standard">Qty</label>
-                            <input id="qty-standard" class="input" type="number" min="1" value="1">
+                            <label for="qty-standard">Qty (max 2)</label>
+                            <select id="qty-standard" class="input">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                            </select>
                         </div>
                         <button type="button" class="btn-primary" data-add-bike="Standard Ebike" style="padding:8px 14px;font-size:12px;">Add to basket</button>
                     </div>
                 </article>
-                <article class="fleet-card" data-bike-id="Premium Ebike">
-                    <img src="/Images/Bike/juiced ebike rental.png" alt="Premium Ebike" class="fleet-img">
-                    <h3>Premium Ebike</h3>
-                    <div class="badge">Long‑range · higher power</div>
-                    <div class="price">$355 / week</div>
-                    <p>Extra range and punch for riders who want to explore further along the coast with confidence.</p>
-                    <div class="form-row" style="margin-top:8px;align-items:center;">
-                        <div class="form-group" style="margin-top:0;max-width:90px;">
-                            <label for="qty-premium">Qty</label>
-                            <input id="qty-premium" class="input" type="number" min="1" value="1">
-                        </div>
-                        <button type="button" class="btn-primary" data-add-bike="Premium Ebike" style="padding:8px 14px;font-size:12px;">Add to basket</button>
-                    </div>
-                </article>
                 <article class="fleet-card" data-bike-id="Kids Ebike">
-                    <img src="/Images/Bike/razor e-bike.png" alt="Kids Ebike" class="fleet-img">
+                    <!-- Pic 2 -->
+                    <img src="/Images/Bike/ebike-mens.png" alt="Kids Ebike" class="fleet-img">
                     <h3>Kids Ebike</h3>
                     <div class="badge">Smaller frame · family rides</div>
                     <div class="price">$225 / week</div>
-                    <p>Scaled for younger riders so the whole family can roll together on the same coastal routes.</p>
+                    <p>Scaled for younger riders so the whole family can ride together.</p>
                     <div class="form-row" style="margin-top:8px;align-items:center;">
                         <div class="form-group" style="margin-top:0;max-width:90px;">
-                            <label for="qty-kids">Qty</label>
-                            <input id="qty-kids" class="input" type="number" min="1" value="1">
+                            <label for="qty-kids">Qty (max 2)</label>
+                            <select id="qty-kids" class="input">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                            </select>
                         </div>
                         <button type="button" class="btn-primary" data-add-bike="Kids Ebike" style="padding:8px 14px;font-size:12px;">Add to basket</button>
+                    </div>
+                </article>
+                <article class="fleet-card" data-bike-id="Premium Ebike">
+                    <!-- Pic 3 -->
+                    <img src="/Images/Bike/razor e-bike.png" alt="Premium Ebike" class="fleet-img">
+                    <h3>Premium Ebike</h3>
+                    <div class="badge">Sporty feel · extra fun</div>
+                    <div class="price">$355 / week</div>
+                    <p>More punch and style for riders who want a livelier ebike.</p>
+                    <div class="form-row" style="margin-top:8px;align-items:center;">
+                        <div class="form-group" style="margin-top:0;max-width:90px;">
+                            <label for="qty-premium">Qty (max 2)</label>
+                            <select id="qty-premium" class="input">
+                                <option value="1">1</option>
+                                <option value="2">2</option>
+                            </select>
+                        </div>
+                        <button type="button" class="btn-primary" data-add-bike="Premium Ebike" style="padding:8px 14px;font-size:12px;">Add to basket</button>
                     </div>
                 </article>
             </div>
@@ -558,6 +570,10 @@
                             <label for="email">Email</label>
                             <input id="email" class="input" type="email" placeholder="you@example.com">
                         </div>
+                        <div class="form-group">
+                            <label for="phone">Mobile (optional)</label>
+                            <input id="phone" class="input" type="tel" placeholder="+1 555 123 4567">
+                        </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
@@ -570,18 +586,6 @@
                         </div>
                     </div>
                     <div class="form-row">
-                        <div class="form-group">
-                            <label for="fleetType">Bike type</label>
-                            <select id="fleetType">
-                                <option>Standard Ebike</option>
-                                <option>Premium Ebike</option>
-                                <option>Kids Ebike</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="qty">Quantity</label>
-                            <input id="qty" class="input" type="number" min="1" value="1">
-                        </div>
                         <div class="form-group">
                             <label for="zoneSelect">Zone</label>
                             <select id="zoneSelect">
@@ -694,6 +698,7 @@
             bookBtn.addEventListener('click', async () => {
                 const name = document.getElementById('name').value.trim();
                 const email = document.getElementById('email').value.trim();
+                const phone = document.getElementById('phone').value.trim();
                 const start = document.getElementById('startDate').value;
                 const end = document.getElementById('endDate').value;
                 const zone = document.getElementById('zoneSelect').value;
@@ -736,6 +741,7 @@
                         body: JSON.stringify({
                             name,
                             email,
+                            phone,
                             startDate: start,
                             endDate: end,
                             zone,
