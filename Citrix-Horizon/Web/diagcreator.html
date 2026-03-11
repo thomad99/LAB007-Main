@@ -11,6 +11,7 @@
     <link rel="stylesheet" href="/citrix/styles.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
     <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/pako@2.1.0/dist/pako.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/viz.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/viz.js/2.1.2/full.render.js"></script>
     <style>
@@ -184,13 +185,26 @@
 
             let text = '';
             try {
-                if (file.name.toLowerCase().endsWith('.zip')) {
+                const name = (file.name || '').toLowerCase();
+                if (name.endsWith('.zip')) {
                     const buf = await file.arrayBuffer();
                     const zip = await JSZip.loadAsync(buf);
                     const names = Object.keys(zip.files || {}).filter(n => !zip.files[n].dir);
                     const cfgName = names.find(n => /\.(conf|cfg|txt|ns\.conf|json)$/i.test(n)) || names[0];
                     if (!cfgName) throw new Error('No config file in archive');
                     text = await zip.files[cfgName].async('string');
+                } else if (name.endsWith('.tgz') || name.endsWith('.tar.gz') || name.endsWith('.tar')) {
+                    if (typeof pako === 'undefined') throw new Error('pako (gzip library) not loaded');
+                    const buffer = await file.arrayBuffer();
+                    let tarBytes = new Uint8Array(buffer);
+                    if (!name.endsWith('.tar')) {
+                        setStatus('<span class="spinner-eye"></span> Decompressing tgz...');
+                        tarBytes = pako.ungzip(tarBytes);
+                    }
+                    setStatus('<span class="spinner-eye"></span> Extracting ns.conf from archive...');
+                    const confBytes = extractFileFromTar(tarBytes, 'ns.conf');
+                    if (!confBytes) throw new Error('ns.conf not found in archive');
+                    text = new TextDecoder().decode(confBytes);
                 } else {
                     text = await file.text();
                 }
@@ -270,6 +284,27 @@
             data.certs = [...new Set(data.certs.filter(Boolean))];
             data.external = [...new Set(data.external.filter(Boolean))];
             return data;
+        }
+
+        function extractFileFromTar(bytes, targetName) {
+            const dec = new TextDecoder();
+            const block = 512;
+            let offset = 0;
+            while (offset + block <= bytes.length) {
+                const header = bytes.slice(offset, offset + block);
+                const name = dec.decode(header.slice(0, 100)).replace(/\0.*$/, '');
+                if (!name) break;
+                const sizeOct = dec.decode(header.slice(124, 136)).replace(/\0.*$/, '').trim();
+                const size = parseInt(sizeOct, 8) || 0;
+                const dataStart = offset + block;
+                const dataEnd = dataStart + size;
+                if (name.toLowerCase().endsWith(targetName.toLowerCase()) || name === targetName) {
+                    return bytes.slice(dataStart, dataEnd);
+                }
+                const padded = Math.ceil(size / block) * block;
+                offset = dataStart + padded;
+            }
+            return null;
         }
 
         function parseNetscalerConfig(text) {
