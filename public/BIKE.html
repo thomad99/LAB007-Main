@@ -93,17 +93,12 @@
         .hero {
             margin-top: 10px;
             border-radius: var(--radius-lg);
-            background: url("https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=1600&q=80&auto=format&fit=crop") center/cover no-repeat;
+            background: #f3eee1;
             position: relative;
             overflow: hidden;
             box-shadow: var(--shadow-lg);
         }
-        .hero::before {
-            content: "";
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(180deg, rgba(0,0,0,0.05), rgba(0,0,0,0.35));
-        }
+        .hero::before { display:none; }
         .hero-inner {
             position: relative;
             z-index: 1;
@@ -470,7 +465,7 @@
         <section class="hero">
             <div class="hero-inner">
                 <div style="display:flex;flex-direction:column;gap:12px;justify-content:center;">
-                    <img src="/Bike/Siesta%20Key%20EBike%20rental%20Logo.png" alt="Siesta Key Ebike Rentals" style="max-width:380px;width:100%;border-radius:20px;box-shadow:0 18px 45px rgba(0,0,0,0.45);">
+                    <img src="/Bike/bike%20wheel.png" alt="Siesta Key Ebike Rentals" style="max-width:520px;width:100%;border-radius:20px;box-shadow:0 18px 45px rgba(0,0,0,0.45);">
                     <div>
                         <p class="hero-copy" style="max-width:460px;">
                             Siesta Key e‑bike rentals for beach paths, piers and golden‑hour cruises. Pick your bike, choose your week, and we’ll have it ready by the sand.
@@ -535,61 +530,6 @@
                     <div class="price">$149 / week</div>
                     <p>Scaled‑down ebike sized for younger riders so families can cruise Siesta Key together.</p>
                 </article>
-            </div>
-        </section>
-
-        <section class="media-strip">
-            <div class="section-label">Atmosphere</div>
-            <h2 class="section-title">How AEROCOAST feels.</h2>
-            <p class="section-copy">
-                These are example visuals only — on a live site you’d swap in your own photography. The layout is tuned for full‑width laptop and mobile views.
-            </p>
-            <div class="media-grid">
-                <figure class="media-item">
-                    <img src="https://images.unsplash.com/photo-1511739001486-6bfe10ce785f?w=800&q=80&auto=format&fit=crop" alt="Hero beach bike at golden hour">
-                    <figcaption class="media-label">Hero beach bike</figcaption>
-                </figure>
-                <figure class="media-item">
-                    <img src="https://images.unsplash.com/photo-1581579188871-45ea61f2a0c8?w=800&q=80&auto=format&fit=crop" alt="Ebike sand tire macro detail">
-                    <figcaption class="media-label">Sand tire macro</figcaption>
-                </figure>
-                <figure class="media-item">
-                    <img src="https://images.unsplash.com/photo-1500375592092-40eb2168fd21?w=800&q=80&auto=format&fit=crop" alt="Wide beach landscape with coastline path">
-                    <figcaption class="media-label">Beach landscape</figcaption>
-                </figure>
-                <figure class="media-item">
-                    <img src="https://images.unsplash.com/photo-1529424301806-4be0bb154e3a?w=800&q=80&auto=format&fit=crop" alt="Closeup of cruiser bike handlebars and basket">
-                    <figcaption class="media-label">Cruiser detail</figcaption>
-                </figure>
-                <figure class="media-item">
-                    <img src="https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800&q=80&auto=format&fit=crop" alt="Dunes trail with bike track at sunset">
-                    <figcaption class="media-label">Dunes trail</figcaption>
-                </figure>
-                <figure class="media-item">
-                    <img src="https://images.unsplash.com/photo-1518837695005-2083093ee35b?w=800&q=80&auto=format&fit=crop" alt="Silhouette of pier and rider at dusk">
-                    <figcaption class="media-label">Pier silhouette</figcaption>
-                </figure>
-            </div>
-        </section>
-
-        <section id="zones" class="zones">
-            <div>
-                <div class="section-label">Beach zones</div>
-                <h2 class="section-title">Where we ride.</h2>
-                <p class="section-copy">
-                    We focus on low‑traffic, high‑view coastlines. Pick your launch zone and we’ll confirm exact routes and delivery options.
-                </p>
-                <div class="zone-pills">
-                    <div class="zone-pill"><strong>Zone A</strong><span> Siesta Key village & beachfront</span></div>
-                    <div class="zone-pill"><strong>Zone B</strong><span> Lido & St. Armands loops</span></div>
-                    <div class="zone-pill"><strong>Zone C</strong><span> Casey Key causeway</span></div>
-                    <div class="zone-pill"><strong>Zone D</strong><span> Bayfront & downtown paths</span></div>
-                </div>
-                <p class="zone-note">We’ll route you on bike‑friendly paths and give you a quick safety and etiquette rundown before you roll.</p>
-            </div>
-            <div class="zone-card">
-                <strong>Sample ride · Golden hour Siesta loop</strong><br>
-                Meet near public beach access, roll north along the coast, pause at the point for sunset photos, then cruise back through the village lights.
             </div>
         </section>
 
@@ -665,12 +605,6 @@
                     <span>Email: rides@aerocoast-ebikes.com<br>Phone: (941) 555‑0EBK</span>
                 </div>
             </aside>
-        </section>
-
-        <section class="atmos">
-            <span>Salt‑air minimalism</span>
-            <span>Golden‑hour gradients</span>
-            <span>Keyboard‑friendly, mobile‑ready layout</span>
         </section>
 
         <footer>
