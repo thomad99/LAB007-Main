@@ -240,11 +240,11 @@
             margin-top: 26px;
         }
         .section-label {
-            font-size: 11px;
+            font-size: 32px;
             text-transform: uppercase;
             letter-spacing: 0.16em;
             color: var(--spray);
-            margin-bottom: 4px;
+            margin-bottom: 10px;
         }
         .section-title {
             font-size: 18px;
@@ -269,10 +269,11 @@
         }
         .fleet-img {
             width: 100%;
-            height: 180px;
-            object-fit: cover;
+            height: 200px;
+            object-fit: contain;
             border-radius: 14px;
             margin-bottom: 8px;
+            background: #f3eee1;
         }
         .fleet-card h3 {
             font-size: 14px;
@@ -801,7 +802,7 @@
                     if (!response.ok || !data.success) {
                         throw new Error(data.error || 'Failed to send booking request.');
                     }
-                    alert('Thanks, your request has been sent. We will email you from info@lab007.ai to confirm availability.');
+                    alert('Thanks for your booking, we will confirm and send payment request.\nRegards');
                     document.getElementById('bookingForm').reset();
                     basket.splice(0, basket.length);
                     renderBasket();
