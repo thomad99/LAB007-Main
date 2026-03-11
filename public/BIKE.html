@@ -251,6 +251,13 @@
             border: 1px solid rgba(15,23,42,0.06);
             box-shadow: 0 18px 35px rgba(15,23,42,0.08);
         }
+        .fleet-img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 14px;
+            margin-bottom: 8px;
+        }
         .fleet-card h3 {
             font-size: 14px;
             margin-bottom: 2px;
@@ -462,23 +469,17 @@
 
         <section class="hero">
             <div class="hero-inner">
-                <div>
-                    <div class="hero-kicker">Sunrise to sunset rentals</div>
-                    <h1 class="hero-title">
-                        Coastal <span class="accent">ebike rentals</span> for golden‑hour riders.
-                    </h1>
-                    <p class="hero-copy">
-                        Glide along Florida’s barrier islands on quiet, powerful ebikes tuned for boardwalks, beach roads and sunset cruises.
-                    </p>
-                    <div class="hero-tags">
-                        <span class="hero-tag">Sunrise & sunset slots</span>
-                        <span class="hero-tag">Helmets & locks included</span>
-                        <span class="hero-tag">Delivery to beach condos</span>
-                    </div>
-                    <div class="hero-ctas">
-                        <button class="btn-primary" onclick="document.getElementById('booking').scrollIntoView({behavior:'smooth'})">Book a ride</button>
-                        <button class="btn-secondary" onclick="document.getElementById('fleet').scrollIntoView({behavior:'smooth'})">View fleet</button>
-                        <span class="hero-note">From $39 for 2 hours · Sarasota coast</span>
+                <div style="display:flex;flex-direction:column;gap:12px;justify-content:center;">
+                    <img src="/Bike/Siesta%20Key%20EBike%20rental%20Logo.png" alt="Siesta Key Ebike Rentals" style="max-width:380px;width:100%;border-radius:20px;box-shadow:0 18px 45px rgba(0,0,0,0.45);">
+                    <div>
+                        <p class="hero-copy" style="max-width:460px;">
+                            Siesta Key e‑bike rentals for beach paths, piers and golden‑hour cruises. Pick your bike, choose your week, and we’ll have it ready by the sand.
+                        </p>
+                        <div class="hero-ctas">
+                            <button class="btn-primary" onclick="document.getElementById('booking').scrollIntoView({behavior:'smooth'})">Book now</button>
+                            <button class="btn-secondary" onclick="document.getElementById('fleet').scrollIntoView({behavior:'smooth'})">View bikes</button>
+                            <span class="hero-note">Weekly rentals · Helmets & locks included</span>
+                        </div>
                     </div>
                 </div>
                 <aside class="hero-card">
@@ -507,29 +508,32 @@
         <section id="fleet" class="fleet">
             <div>
                 <div class="section-label">Fleet</div>
-                <h2 class="section-title">Pick your ride style.</h2>
+                <h2 class="section-title">Built for the coast.</h2>
                 <p class="section-copy">
-                    All ebikes include helmets, locks and quick on‑the‑sand tips. Choose a cruiser for slow rolls, a step‑through for condo hopping, or a fat‑tire for dune‑side trails.
+                    Three simple options: a standard cruiser, a premium step‑through and a kids ebike for smaller riders.
                 </p>
             </div>
             <div class="fleet-grid">
                 <article class="fleet-card">
-                    <h3>Beach Cruiser Ebike</h3>
-                    <div class="badge">Best for boardwalks</div>
-                    <div class="price">$39 · 2 hours</div>
-                    <p>Upright, comfortable ride with basket. Perfect for sunrise coffee runs and flat coastal paths.</p>
+                    <img src="/Bike/juiced%20ebike%20rental.png" alt="Standard Ebike – Juiced rental" class="fleet-img">
+                    <h3>Standard Ebike</h3>
+                    <div class="badge">Juiced beach cruiser</div>
+                    <div class="price">$199 / week</div>
+                    <p>Comfortable upright cruiser with electric assist – ideal for condo‑to‑beach rides and flat coastal paths.</p>
                 </article>
                 <article class="fleet-card">
-                    <h3>Step‑Through City Ebike</h3>
-                    <div class="badge">Best for condo‑to‑condo</div>
-                    <div class="price">$69 · half day</div>
-                    <p>Easy hop‑on frame with smooth assist. Glide between shops, condos and beach access points.</p>
+                    <img src="/Bike/ebike-mens.png" alt="Premium Mens Ebike" class="fleet-img">
+                    <h3>Premium Ebike</h3>
+                    <div class="badge">Mens performance frame</div>
+                    <div class="price">$249 / week</div>
+                    <p>Lighter, faster ebike with extra range – perfect for longer coastal runs and exploring multiple beach zones.</p>
                 </article>
                 <article class="fleet-card">
-                    <h3>Fat‑Tire Trail Ebike</h3>
-                    <div class="badge">Best for dunes & trails</div>
-                    <div class="price">$89 · full day</div>
-                    <p>Wide tires and extra torque for packed sand paths and scenic causeway routes.</p>
+                    <img src="/Bike/razor%20e-bike.png" alt="Kids Razor E‑Bike" class="fleet-img">
+                    <h3>Kids Ebike</h3>
+                    <div class="badge">Razor e‑bike</div>
+                    <div class="price">$149 / week</div>
+                    <p>Scaled‑down ebike sized for younger riders so families can cruise Siesta Key together.</p>
                 </article>
             </div>
         </section>
@@ -609,26 +613,26 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="date">Preferred date</label>
-                            <input id="date" class="input" type="date">
+                            <label for="startDate">Start date (pickup)</label>
+                            <input id="startDate" class="input" type="date">
                         </div>
                         <div class="form-group">
-                            <label for="slot">Time of day</label>
-                            <select id="slot">
-                                <option>Sunrise (7–9am)</option>
-                                <option>Daytime (11am–3pm)</option>
-                                <option>Golden hour (5–7pm)</option>
-                            </select>
+                            <label for="endDate">End date (return) · min 7 nights</label>
+                            <input id="endDate" class="input" type="date">
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
                             <label for="fleetType">Bike type</label>
                             <select id="fleetType">
-                                <option>Beach Cruiser Ebike</option>
-                                <option>Step‑Through City Ebike</option>
-                                <option>Fat‑Tire Trail Ebike</option>
+                                <option>Standard Ebike</option>
+                                <option>Premium Ebike</option>
+                                <option>Kids Ebike</option>
                             </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="qty">Quantity</label>
+                            <input id="qty" class="input" type="number" min="1" value="1">
                         </div>
                         <div class="form-group">
                             <label for="zoneSelect">Zone</label>
@@ -645,7 +649,7 @@
                         <textarea id="notes" class="input" rows="3" style="resize:vertical;" placeholder="Tell us where you’re staying and how many riders."></textarea>
                     </div>
                     <div style="margin-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-                        <button type="button" class="btn-primary">Send reservation request</button>
+                        <button id="bookBtn" type="button" class="btn-primary">Reserve now</button>
                         <span class="booking-footnote">No payment is taken on this demo page.</span>
                     </div>
                 </form>
@@ -674,6 +678,38 @@
             <span>Back to <a href="/">LAB007</a></span>
         </footer>
     </div>
+    <script>
+        (function() {
+            const bookBtn = document.getElementById('bookBtn');
+            if (!bookBtn) return;
+            bookBtn.addEventListener('click', () => {
+                const start = document.getElementById('startDate').value;
+                const end = document.getElementById('endDate').value;
+                const bike = document.getElementById('fleetType').value;
+                const qty = parseInt(document.getElementById('qty').value || '0', 10);
+                if (!start || !end) {
+                    alert('Please choose both start and end dates for your weekly rental.');
+                    return;
+                }
+                const startDate = new Date(start);
+                const endDate = new Date(end);
+                const diffDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
+                if (isNaN(diffDays) || diffDays < 7) {
+                    alert('Weekly rentals only: end date must be at least 7 days after start date.');
+                    return;
+                }
+                if (!bike) {
+                    alert('Please choose a bike type.');
+                    return;
+                }
+                if (!qty || qty < 1) {
+                    alert('Please enter a quantity of at least 1 bike.');
+                    return;
+                }
+                alert('Demo only: this would submit a booking for ' + qty + ' ' + bike + '(s) from ' + start + ' to ' + end + '.');
+            });
+        })();
+    </script>
 </body>
 </html>
 
