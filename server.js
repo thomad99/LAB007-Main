@@ -742,7 +742,7 @@ app.post('/tomopi/images/upload', (req, res, next) => {
 
 // BIKE rentals order request - sends basket details to info@lab007.ai
 app.post('/api/bike-order', async (req, res) => {
-  const { name, email, startDate, endDate, zone, notes, basket } = req.body || {};
+  const { name, email, startDate, endDate, zone, notes, basket, weeks, weeklySubtotal, totalAmount } = req.body || {};
 
   if (!name || !email || !startDate || !endDate || !Array.isArray(basket) || basket.length === 0) {
     return res.status(400).json({ error: 'Name, email, dates and at least one bike are required.' });
@@ -762,6 +762,10 @@ app.post('/api/bike-order', async (req, res) => {
   const itemsText = basket.map(item => `${item.quantity} x ${item.type}`).join('\n');
   const itemsHtml = basket.map(item => `<li>${item.quantity} × ${item.type}</li>`).join('');
 
+  const safeWeeks = weeks && Number.isFinite(weeks) ? weeks : 1;
+  const safeWeeklySubtotal = typeof weeklySubtotal === 'number' ? weeklySubtotal : 0;
+  const safeTotalAmount = typeof totalAmount === 'number' ? totalAmount : safeWeeklySubtotal * safeWeeks;
+
   const text = `BIKE Rental Request
 
 Name: ${name}
@@ -769,6 +773,9 @@ Email: ${email}
 Zone: ${zone || '—'}
 Start date: ${startDate}
 End date: ${endDate}
+Chargeable weeks: ${safeWeeks}
+Weekly bikes subtotal: $${safeWeeklySubtotal.toFixed(2)}
+Total charge (weeks rounded up): $${safeTotalAmount.toFixed(2)}
 
 Requested bikes:
 ${itemsText}
@@ -784,6 +791,9 @@ ${notes || '—'}
     <p><strong>Zone:</strong> ${zone || '—'}</p>
     <p><strong>Start date:</strong> ${startDate}</p>
     <p><strong>End date:</strong> ${endDate}</p>
+    <p><strong>Chargeable weeks:</strong> ${safeWeeks}</p>
+    <p><strong>Weekly bikes subtotal:</strong> $${safeWeeklySubtotal.toFixed(2)}</p>
+    <p><strong>Total charge (weeks rounded up):</strong> $${safeTotalAmount.toFixed(2)}</p>
     <h3>Requested bikes</h3>
     <ul>${itemsHtml}</ul>
     <h3>Notes</h3>

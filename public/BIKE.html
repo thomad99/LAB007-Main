@@ -11,8 +11,8 @@
     </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AEROCOAST Ebike Rentals | Beach & Coastal Bike Hire Sarasota, Florida</title>
-    <meta name="description" content="AEROCOAST Ebike Rentals – coastal ebike and cruiser rentals for Florida beach days. Sunrise rides, sunset cruises and all‑day beach exploring with delivery to Sarasota barrier islands.">
+    <title>Siesta Key Ebike Rentals | Beach & Coastal Bike Hire Sarasota, Florida</title>
+    <meta name="description" content="Siesta Key Ebike Rentals – coastal ebike and cruiser rentals for Florida beach days. Sunrise rides, sunset cruises and all‑day beach exploring with delivery to Sarasota barrier islands.">
     <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
     <style>
         :root {
@@ -97,15 +97,12 @@
             position: relative;
             overflow: hidden;
             box-shadow: var(--shadow-lg);
-            display: flex;
-            justify-content: center;
         }
         .hero::before { display:none; }
         .hero-inner {
             position: relative;
             z-index: 1;
-            width: 80vw;
-            max-width: 1000px;
+            width: 100%;
         }
         .hero-media {
             position: relative;
@@ -457,9 +454,6 @@
         }
         footer a:hover { color: var(--shell); }
         @media (max-width: 860px) {
-            .hero-inner {
-                width: 100%;
-            }
             .fleet,
             .zones,
             .booking {
@@ -494,7 +488,7 @@
                 <div class="hero-media">
                     <img src="/Images/Bike/bike wheel.png" alt="Siesta Key Ebike Rentals">
                     <div class="hero-overlay">
-                        <div class="hero-overlay-text">Ebike Rentals</div>
+                        <div class="hero-overlay-text">Siesta Key Ebike Rentals</div>
                     </div>
                 </div>
             </div>
@@ -599,9 +593,6 @@
                             <label for="zoneSelect">Zone</label>
                             <select id="zoneSelect">
                                 <option>Zone A – Siesta Key</option>
-                                <option>Zone B – Lido & St. Armands</option>
-                                <option>Zone C – Casey Key causeway</option>
-                                <option>Zone D – Bayfront paths</option>
                             </select>
                         </div>
                     </div>
@@ -623,6 +614,9 @@
                 </p>
                 <div id="basketEmpty" class="booking-footnote">No bikes in your basket yet.</div>
                 <ul id="basketList" style="list-style:none;padding:0;margin-top:8px;"></ul>
+                <div id="basketTotalRow" class="booking-footnote" style="margin-top:10px; font-weight:600;">
+                    Weekly bike subtotal: <span id="basketTotal">$0</span>
+                </div>
             </div>
         </section>
 
@@ -634,17 +628,27 @@
     <script>
         (function() {
             const basket = [];
+            const weeklyPrices = {
+                'Standard Ebike': 295,
+                'Premium Ebike': 355,
+                'Kids Ebike': 225
+            };
 
             function renderBasket() {
                 const list = document.getElementById('basketList');
                 const empty = document.getElementById('basketEmpty');
                 list.innerHTML = '';
+                const totalEl = document.getElementById('basketTotal');
                 if (!basket.length) {
                     empty.style.display = 'block';
+                    if (totalEl) totalEl.textContent = '$0';
                     return;
                 }
                 empty.style.display = 'none';
+                let subtotal = 0;
                 basket.forEach((item, index) => {
+                    const price = weeklyPrices[item.type] || 0;
+                    subtotal += price * item.quantity;
                     const li = document.createElement('li');
                     li.style.display = 'flex';
                     li.style.justifyContent = 'space-between';
@@ -654,6 +658,9 @@
                     li.innerHTML = `<span>${item.quantity} × ${item.type}</span><button type="button" data-remove="${index}" class="btn-secondary" style="padding:4px 10px;font-size:11px;">Remove</button>`;
                     list.appendChild(li);
                 });
+                if (totalEl) {
+                    totalEl.textContent = '$' + subtotal.toLocaleString(undefined, { minimumFractionDigits: 0 });
+                }
                 list.addEventListener('click', (e) => {
                     const btn = e.target.closest('button[data-remove]');
                     if (!btn) return;
@@ -704,20 +711,30 @@
                     return;
                 }
                 if (!start || !end) {
-                    alert('Please choose both start and end dates for your weekly rental.');
+                    alert('Please choose both start and end dates.');
                     return;
                 }
                 const startDate = new Date(start);
                 const endDate = new Date(end);
-                const diffDays = (endDate - startDate) / (1000 * 60 * 60 * 24);
-                if (isNaN(diffDays) || diffDays < 7) {
-                    alert('Weekly rentals only: end date must be at least 7 days after start date.');
+                const diffMs = endDate - startDate;
+                const diffDays = diffMs / (1000 * 60 * 60 * 24);
+                if (isNaN(diffDays) || diffDays <= 0) {
+                    alert('End date must be after start date.');
                     return;
                 }
                 if (!basket.length) {
                     alert('Please add at least one bike to your basket.');
                     return;
                 }
+
+                // Round rental length up to whole weeks
+                const weeks = Math.ceil(diffDays / 7);
+                let weeklySubtotal = 0;
+                basket.forEach(item => {
+                    const price = weeklyPrices[item.type] || 0;
+                    weeklySubtotal += price * item.quantity;
+                });
+                const totalAmount = weeklySubtotal * weeks;
 
                 try {
                     const response = await fetch('/api/bike-order', {
@@ -730,7 +747,10 @@
                             endDate: end,
                             zone,
                             notes,
-                            basket
+                            basket,
+                            weeks,
+                            weeklySubtotal,
+                            totalAmount
                         })
                     });
                     const data = await response.json();
