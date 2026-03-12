@@ -271,6 +271,79 @@
             font-size: 12px;
             color: var(--spray);
         }
+        .bike-lightbox {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        .bike-lightbox.active {
+            display: flex;
+        }
+        .bike-lightbox-inner {
+            position: relative;
+            max-width: 900px;
+            width: 92%;
+            max-height: 90vh;
+            background: #020617;
+            border-radius: 18px;
+            padding: 10px;
+            box-shadow: 0 25px 60px rgba(0,0,0,0.7);
+        }
+        .bike-lightbox-img {
+            width: 100%;
+            max-height: 70vh;
+            object-fit: contain;
+            border-radius: 14px;
+            background: #020617;
+        }
+        .bike-lightbox-close {
+            position: absolute;
+            top: 10px;
+            right: 12px;
+            border: none;
+            background: rgba(15,23,42,0.9);
+            color: #e5e7eb;
+            border-radius: 999px;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .bike-lightbox-nav {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: rgba(15,23,42,0.9);
+            color: #e5e7eb;
+            border-radius: 999px;
+            width: 34px;
+            height: 34px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+        }
+        .bike-lightbox-nav.prev {
+            left: 10px;
+        }
+        .bike-lightbox-nav.next {
+            right: 10px;
+        }
+        .bike-lightbox-caption {
+            margin-top: 6px;
+            font-size: 12px;
+            color: #9ca3af;
+            text-align: center;
+        }
         .media-strip {
             margin-top: 22px;
         }
@@ -493,7 +566,7 @@
                     <img src="/Images/Bike/razor e-bike.png" alt="Kids Ebike" class="fleet-img">
                     <h3>Kids Ebike</h3>
                     <div class="badge">Suitable 8+ · 12&quot; wheels</div>
-                    <div class="price">$225 / week</div>
+                    <div class="price">$150 / week</div>
                     <p>Suitable 8+ · Top speed 12mph · 12&quot; wheels · Range: about 20 miles.</p>
                     <div class="form-row" style="margin-top:8px;align-items:center;">
                         <div class="form-group" style="margin-top:0;max-width:90px;">
@@ -529,10 +602,10 @@
                 <div class="section-label">Pedal bikes</div>
             </div>
             <div class="fleet-grid">
-                <article class="fleet-card" data-bike-id="Pedal Bike">
+                <article class="fleet-card" data-bike-id="Beach Comber Pedal Bike">
                     <!-- Pedal: beach cruiser -->
-                    <img src="/Images/Bike/Pedal Beach cruiser.png" alt="Pedal Beach Cruiser" class="fleet-img">
-                    <h3>Pedal Bike</h3>
+                    <img src="/Images/Bike/Pedal Beach cruiser.png" alt="Beach Comber Pedal Bike" class="fleet-img">
+                    <h3>Beach Comber Pedal Bike</h3>
                     <div class="badge">Old skool · no gears</div>
                     <div class="price">$50 / week</div>
                     <p>Feeling fit? Try our pedal bike — no gears, easy to ride, pedal back to brake and keep it old skool.</p>
@@ -552,7 +625,7 @@
                     <img src="/Images/Bike/siesta key bike rental pedal bikes TREK.png" alt="Trek Pedal Bike" class="fleet-img">
                     <h3>Trek Pedal Bike</h3>
                     <div class="badge">24‑speed hybrid · disc brakes</div>
-                    <div class="price">$100 / week</div>
+                    <div class="price">$75 / week</div>
                     <p>High‑quality Trek hybrid bike with 24 speeds, disc brakes and premium feel for longer rides.</p>
                     <div class="form-row" style="margin-top:8px;align-items:center;">
                         <div class="form-group" style="margin-top:0;max-width:90px;">
@@ -565,6 +638,24 @@
                         <button type="button" class="btn-primary" data-add-bike="Trek Pedal Bike" style="padding:8px 14px;font-size:12px;">Add to basket</button>
                     </div>
                 </article>
+            </div>
+        </section>
+
+        <section class="fleet" id="how-it-works">
+            <div>
+                <div class="section-label">How It Works</div>
+                <p class="section-copy">
+                    Reserve your bike on the system or email <a href="mailto:info@lab007.ai">info@lab007.ai</a>.
+                </p>
+                <p class="section-copy">
+                    We deliver your bikes to your chosen address on Siesta Key.
+                </p>
+                <p class="section-copy">
+                    All bikes will arrive including bike locks and chargers for E‑Bikes. Bike helmets are available on request.
+                </p>
+                <p class="section-copy">
+                    Payment is taken upon booking. We only accept credit card payments. A holding deposit will be taken to cover any damage or theft.
+                </p>
             </div>
         </section>
 
@@ -592,12 +683,22 @@
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="startDate">Start date (pickup)</label>
+                            <label for="startDate">Start date (delivery)</label>
                             <input id="startDate" class="input" type="date">
                         </div>
                         <div class="form-group">
+                            <label for="startTime">Delivery time</label>
+                            <input id="startTime" class="input" type="time">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
                             <label for="endDate">End date (return) · min 7 nights</label>
                             <input id="endDate" class="input" type="date">
+                        </div>
+                        <div class="form-group">
+                            <label for="endTime">Return time</label>
+                            <input id="endTime" class="input" type="time">
                         </div>
                     </div>
                     <div class="form-row">
@@ -637,16 +738,116 @@
             <span>Back to <a href="/">LAB007</a></span>
         </footer>
     </div>
+
+    <div class="bike-lightbox" id="bikeLightbox" aria-hidden="true">
+        <div class="bike-lightbox-inner">
+            <button class="bike-lightbox-close" type="button" aria-label="Close gallery">&times;</button>
+            <button class="bike-lightbox-nav prev" type="button" aria-label="Previous image">&#8249;</button>
+            <button class="bike-lightbox-nav next" type="button" aria-label="Next image">&#8250;</button>
+            <img id="bikeLightboxImg" class="bike-lightbox-img" src="" alt="">
+            <div id="bikeLightboxCaption" class="bike-lightbox-caption"></div>
+        </div>
+    </div>
+
     <script>
         (function() {
             const basket = [];
             const weeklyPrices = {
                 'Standard Ebike': 295,
                 'Premium Ebike': 355,
-                'Kids Ebike': 225,
-                'Pedal Bike': 50,
-                'Trek Pedal Bike': 100
+                'Kids Ebike': 150,
+                'Beach Comber Pedal Bike': 50,
+                'Trek Pedal Bike': 75
             };
+
+            const bikeGalleries = {
+                'Standard Ebike': [
+                    { src: '/Images/Bike/ebike-mens.png', alt: 'Standard Ebike' }
+                ],
+                'Kids Ebike': [
+                    { src: '/Images/Bike/razor e-bike.png', alt: 'Kids Ebike' }
+                ],
+                'Premium Ebike': [
+                    { src: '/Images/Bike/juiced ebike rental.png', alt: 'Premium Ebike' }
+                ],
+                'Beach Comber Pedal Bike': [
+                    { src: '/Images/Bike/Pedal Beach cruiser.png', alt: 'Beach Comber Pedal Bike' }
+                ],
+                'Trek Pedal Bike': [
+                    { src: '/Images/Bike/siesta key bike rental pedal bikes TREK.png', alt: 'Trek Pedal Bike' }
+                ]
+            };
+
+            const lightbox = document.getElementById('bikeLightbox');
+            const lightboxImg = document.getElementById('bikeLightboxImg');
+            const lightboxCaption = document.getElementById('bikeLightboxCaption');
+            const closeBtn = lightbox.querySelector('.bike-lightbox-close');
+            const prevBtn = lightbox.querySelector('.bike-lightbox-nav.prev');
+            const nextBtn = lightbox.querySelector('.bike-lightbox-nav.next');
+
+            let currentBikeId = null;
+            let currentIndex = 0;
+
+            function openLightbox(bikeId, startIndex) {
+                const gallery = bikeGalleries[bikeId];
+                if (!gallery || !gallery.length) return;
+                currentBikeId = bikeId;
+                currentIndex = startIndex || 0;
+                const img = gallery[currentIndex];
+                lightboxImg.src = img.src;
+                lightboxImg.alt = img.alt || bikeId;
+                lightboxCaption.textContent = `${bikeId} — ${currentIndex + 1} of ${gallery.length}`;
+                lightbox.classList.add('active');
+                lightbox.setAttribute('aria-hidden', 'false');
+            }
+
+            function closeLightbox() {
+                lightbox.classList.remove('active');
+                lightbox.setAttribute('aria-hidden', 'true');
+                lightboxImg.src = '';
+                currentBikeId = null;
+                currentIndex = 0;
+            }
+
+            function changeImage(delta) {
+                if (!currentBikeId) return;
+                const gallery = bikeGalleries[currentBikeId];
+                if (!gallery || !gallery.length) return;
+                currentIndex = (currentIndex + delta + gallery.length) % gallery.length;
+                const img = gallery[currentIndex];
+                lightboxImg.src = img.src;
+                lightboxImg.alt = img.alt || currentBikeId;
+                lightboxCaption.textContent = `${currentBikeId} — ${currentIndex + 1} of ${gallery.length}`;
+            }
+
+            document.querySelectorAll('.fleet-card .fleet-img').forEach(imgEl => {
+                const card = imgEl.closest('.fleet-card');
+                if (!card) return;
+                const bikeId = card.getAttribute('data-bike-id');
+                imgEl.style.cursor = 'pointer';
+                imgEl.addEventListener('click', () => openLightbox(bikeId, 0));
+            });
+
+            closeBtn.addEventListener('click', closeLightbox);
+            prevBtn.addEventListener('click', () => changeImage(-1));
+            nextBtn.addEventListener('click', () => changeImage(1));
+
+            lightbox.addEventListener('click', (e) => {
+                if (e.target === lightbox) {
+                    closeLightbox();
+                }
+            });
+
+            document.addEventListener('keydown', (e) => {
+                if (!lightbox.classList.contains('active')) return;
+                if (e.key === 'Escape') {
+                    closeLightbox();
+                } else if (e.key === 'ArrowLeft') {
+                    changeImage(-1);
+                } else if (e.key === 'ArrowRight') {
+                    changeImage(1);
+                }
+            });
 
             function renderBasket() {
                 const list = document.getElementById('basketList');
@@ -694,7 +895,7 @@
                     if (type === 'Standard Ebike') qtyInputId = 'qty-standard';
                     else if (type === 'Premium Ebike') qtyInputId = 'qty-premium';
                     else if (type === 'Kids Ebike') qtyInputId = 'qty-kids';
-                    else if (type === 'Pedal Bike') qtyInputId = 'qty-pedal';
+                    else if (type === 'Beach Comber Pedal Bike') qtyInputId = 'qty-pedal';
                     else if (type === 'Trek Pedal Bike') qtyInputId = 'qty-trek';
                     const qtyEl = document.getElementById(qtyInputId);
                     const quantity = parseInt((qtyEl && qtyEl.value) || '0', 10);
@@ -720,6 +921,8 @@
                 const phone = document.getElementById('phone').value.trim();
                 const start = document.getElementById('startDate').value;
                 const end = document.getElementById('endDate').value;
+                const startTime = document.getElementById('startTime').value;
+                const endTime = document.getElementById('endTime').value;
                 const zone = document.getElementById('zoneSelect').value;
                 const notes = document.getElementById('notes').value.trim();
 
@@ -729,6 +932,10 @@
                 }
                 if (!start || !end) {
                     alert('Please choose both start and end dates.');
+                    return;
+                }
+                if (!startTime || !endTime) {
+                    alert('Please choose both delivery and return times.');
                     return;
                 }
                 const startDate = new Date(start);
@@ -763,6 +970,8 @@
                             phone,
                             startDate: start,
                             endDate: end,
+                            startTime,
+                            endTime,
                             zone,
                             notes,
                             basket,
