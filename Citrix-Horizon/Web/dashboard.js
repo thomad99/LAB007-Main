@@ -3910,6 +3910,7 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('');
         scriptLines.push('    $rows += [PSCustomObject]@{');
         scriptLines.push('        HzFarm             = $farm.name');
+        scriptLines.push('        HzFarmType         = $farm.type');
         scriptLines.push('        HzBaseImage        = $imgName');
         scriptLines.push('        HzSnapshot         = $snapName');
         scriptLines.push('        VmMasterImage      = $vmImageName');
@@ -5548,49 +5549,64 @@ async function renderGoldenSunFarmReport() {
         return;
     }
 
-    // Build selection list for all farm rows that have any usable image reference
-    const visibleRows = farmReportRows.filter(r => r.VmMasterImage || r.HzBaseImage || r.HzFarm);
-    let html = '';
-    visibleRows.forEach((row) => {
-        // Prefer VmMasterImage as the clone key; fall back to HzBaseImage
-        const key = row.VmMasterImage || row.HzBaseImage || row.HzFarm || '';
-        if (!key) return;
-        const checked = farmSelectedMasters.has(key) ? 'checked' : '';
-        const safeKey = String(key).replace(/'/g, "\\'");
-        const imageLabel = row.VmMasterImage || row.HzBaseImage || 'Unknown';
-        html += `
-            <div style="border:1px solid #ddd;border-radius:4px;padding:8px;margin-bottom:6px;background:#fff;font-size:12px;">
-                <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
-                    <input type="checkbox" style="margin-top:2px;" ${checked}
-                           onchange="toggleFarmMasterSelection('${safeKey}')">
-                    <div style="flex:1;">
-                        <div>
-                            <strong>${escapeHtml(imageLabel)}</strong>
-                            ${row.HzSnapshot ? ' — HZ Snap: ' + escapeHtml(row.HzSnapshot) : ''}
-                        </div>
-                        <div style="color:#555;margin-top:2px;">
-                            Farm: ${escapeHtml(row.HzFarm || '')}
-                            ${row.HzBaseImage && row.VmMasterImage ? '<br>HZ Base: ' + escapeHtml(row.HzBaseImage) : ''}
-                        </div>
-                        ${row.VmMasterSnapshot || row.VmSnapshotTimestamp ? `
-                        <div style="color:#333;margin-top:2px;">
-                            VM Snap: ${escapeHtml(row.VmMasterSnapshot || '')}${row.VmSnapshotTimestamp ? ' @ ' + escapeHtml(row.VmSnapshotTimestamp) : ''}
-                        </div>` : ''}
-                        <div style="margin-top:2px;">
-                            Clone State: <span style="font-weight:600;${row.CloneState ? 'color:#0a7f2e;' : 'color:#999;'}">${escapeHtml(row.CloneState || 'Not cloned')}</span>
-                        </div>
-                    </div>
-                </label>
-            </div>
-        `;
+    // Filter to automated farms only; exclude MANUAL type and "(Manual farm)" placeholder images
+    const visibleRows = farmReportRows.filter(r => {
+        if (r.HzFarmType && r.HzFarmType.toUpperCase() !== 'AUTOMATED') return false;
+        if ((r.HzBaseImage || '').trim() === '(Manual farm)') return false;
+        return r.VmMasterImage || r.HzBaseImage || r.HzFarm;
     });
 
-    if (!html) {
-        html = '<p style="color:#666;">No farm rows found in FarmData.json.</p>';
+    let html = '';
+    if (visibleRows.length) {
+        html = `
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+                <tr style="background:#f0f0f0;border-bottom:2px solid #ccc;">
+                    <th style="width:28px;padding:6px 4px;"></th>
+                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Farm</th>
+                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Image</th>
+                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Snapshot</th>
+                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">State</th>
+                </tr>
+            </thead>
+            <tbody>`;
+
+        visibleRows.forEach((row) => {
+            const key = row.VmMasterImage || row.HzBaseImage || row.HzFarm || '';
+            if (!key) return;
+            const checked = farmSelectedMasters.has(key) ? 'checked' : '';
+            const safeKey = String(key).replace(/'/g, "\\'");
+
+            const farmName = escapeHtml(row.HzFarm || '');
+            // Strip folder path — keep only the segment after the last /
+            const rawImage = row.VmMasterImage || row.HzBaseImage || '';
+            const imageName = escapeHtml(rawImage.replace(/^.*\//, ''));
+            const rawSnap = row.HzSnapshot || row.VmMasterSnapshot || '';
+            const snapName = escapeHtml(rawSnap.replace(/^.*\//, '') + (row.VmSnapshotTimestamp ? ' @ ' + row.VmSnapshotTimestamp : ''));
+            const cloneState = escapeHtml(row.CloneState || 'Not cloned');
+            const stateStyle = row.CloneState ? 'color:#0a7f2e;font-weight:600;' : 'color:#999;';
+
+            html += `
+                <tr style="border-bottom:1px solid #eee;cursor:pointer;"
+                    onmouseover="this.style.background='#f0f6ff'" onmouseout="this.style.background=''">
+                    <td style="padding:8px 4px;text-align:center;">
+                        <input type="checkbox" ${checked} onchange="toggleFarmMasterSelection('${safeKey}')">
+                    </td>
+                    <td style="padding:8px 10px;font-weight:600;">${farmName}</td>
+                    <td style="padding:8px 10px;">${imageName}</td>
+                    <td style="padding:8px 10px;color:#555;">${snapName}</td>
+                    <td style="padding:8px 10px;${stateStyle}">${cloneState}</td>
+                </tr>`;
+        });
+
+        html += '</tbody></table>';
+    } else {
+        html = '<p style="color:#666;">No automated farm rows found in FarmData.json.</p>';
     }
+
     list.innerHTML = html;
     if (status) {
-        status.textContent = `${visibleRows.length} of ${farmReportRows.length} farm rows shown. Selected: ${farmSelectedMasters.size}.`;
+        status.textContent = `${visibleRows.length} automated farm(s) of ${farmReportRows.length} total. Selected: ${farmSelectedMasters.size}.`;
     }
     if (masterPanel) {
         masterPanel.style.display = visibleRows.length ? 'block' : 'none';
@@ -5651,6 +5667,8 @@ function toggleFarmMasterSelection(name) {
 function goldenSunFarmSelectAll() {
     farmSelectedMasters.clear();
     farmReportRows.forEach(row => {
+        if (row.HzFarmType && row.HzFarmType.toUpperCase() !== 'AUTOMATED') return;
+        if ((row.HzBaseImage || '').trim() === '(Manual farm)') return;
         const key = row.VmMasterImage || row.HzBaseImage || row.HzFarm || '';
         if (key) farmSelectedMasters.add(key);
     });

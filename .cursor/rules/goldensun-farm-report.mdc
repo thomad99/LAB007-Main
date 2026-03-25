@@ -1,0 +1,40 @@
+---
+description: GoldenSun Farm Report display and data conventions
+globs: Citrix-Horizon/Web/dashboard.js
+alwaysApply: false
+---
+
+# GoldenSun Farm Report
+
+## FarmData.json Fields
+
+Rows produced by the PowerShell collection script have these fields:
+
+| Field | Description |
+|---|---|
+| `HzFarm` | Horizon farm display name |
+| `HzFarmType` | Farm type: `AUTOMATED` or `MANUAL` |
+| `HzBaseImage` | Image path from Horizon provisioning settings |
+| `HzSnapshot` | Snapshot path from Horizon |
+| `VmMasterImage` | Matched VMware master VM name |
+| `VmMasterSnapshot` | Matched VMware snapshot name |
+| `VmSnapshotTimestamp` | Snapshot timestamp |
+| `CloneState` | Current clone operation state |
+
+## Display Rules
+
+- **Filter**: Only show `AUTOMATED` farms. Exclude rows where `HzFarmType !== 'AUTOMATED'` (when field exists) and exclude rows where `HzBaseImage === '(Manual farm)'`.
+- **Path stripping**: Strip folder paths from image and snapshot names using `.replace(/^.*\//, '')` — show only the last segment after `/`.
+- **Column layout**: Render as a table with columns: Farm | Image | Snapshot | State.
+- **Farm name**: Always use `HzFarm` as the row heading / first column.
+- **Image key for clone**: Prefer `VmMasterImage`, fall back to `HzBaseImage`, then `HzFarm`.
+
+## Status Bar Format
+
+```
+N automated farm(s) of Total total. Selected: M.
+```
+
+## PowerShell Script Output
+
+Always include `HzFarmType = $farm.type` in the `$rows` PSCustomObject so the UI can filter by farm type.
