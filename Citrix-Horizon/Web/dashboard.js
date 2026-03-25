@@ -5548,14 +5548,16 @@ async function renderGoldenSunFarmReport() {
         return;
     }
 
-    // Build selection list for VMware master images
-    const rowsWithVm = farmReportRows.filter(r => r.VmMasterImage);
+    // Build selection list for all farm rows that have any usable image reference
+    const visibleRows = farmReportRows.filter(r => r.VmMasterImage || r.HzBaseImage || r.HzFarm);
     let html = '';
-    rowsWithVm.forEach((row, idx) => {
-        const key = row.VmMasterImage;
+    visibleRows.forEach((row) => {
+        // Prefer VmMasterImage as the clone key; fall back to HzBaseImage
+        const key = row.VmMasterImage || row.HzBaseImage || row.HzFarm || '';
         if (!key) return;
         const checked = farmSelectedMasters.has(key) ? 'checked' : '';
         const safeKey = String(key).replace(/'/g, "\\'");
+        const imageLabel = row.VmMasterImage || row.HzBaseImage || 'Unknown';
         html += `
             <div style="border:1px solid #ddd;border-radius:4px;padding:8px;margin-bottom:6px;background:#fff;font-size:12px;">
                 <label style="display:flex;align-items:flex-start;gap:8px;cursor:pointer;">
@@ -5563,16 +5565,17 @@ async function renderGoldenSunFarmReport() {
                            onchange="toggleFarmMasterSelection('${safeKey}')">
                     <div style="flex:1;">
                         <div>
-                            <strong>${escapeHtml(row.VmMasterImage || row.HzBaseImage || 'Unknown')}</strong>
+                            <strong>${escapeHtml(imageLabel)}</strong>
                             ${row.HzSnapshot ? ' — HZ Snap: ' + escapeHtml(row.HzSnapshot) : ''}
                         </div>
                         <div style="color:#555;margin-top:2px;">
-                            Farm: ${escapeHtml(row.HzFarm || '')}<br>
-                            HZ Base: ${escapeHtml(row.HzBaseImage || '')}
+                            Farm: ${escapeHtml(row.HzFarm || '')}
+                            ${row.HzBaseImage && row.VmMasterImage ? '<br>HZ Base: ' + escapeHtml(row.HzBaseImage) : ''}
                         </div>
+                        ${row.VmMasterSnapshot || row.VmSnapshotTimestamp ? `
                         <div style="color:#333;margin-top:2px;">
                             VM Snap: ${escapeHtml(row.VmMasterSnapshot || '')}${row.VmSnapshotTimestamp ? ' @ ' + escapeHtml(row.VmSnapshotTimestamp) : ''}
-                        </div>
+                        </div>` : ''}
                         <div style="margin-top:2px;">
                             Clone State: <span style="font-weight:600;${row.CloneState ? 'color:#0a7f2e;' : 'color:#999;'}">${escapeHtml(row.CloneState || 'Not cloned')}</span>
                         </div>
@@ -5583,14 +5586,14 @@ async function renderGoldenSunFarmReport() {
     });
 
     if (!html) {
-        html = '<p style="color:#666;">No VMware master image matches found in FarmData.json.</p>';
+        html = '<p style="color:#666;">No farm rows found in FarmData.json.</p>';
     }
     list.innerHTML = html;
     if (status) {
-        status.textContent = `${rowsWithVm.length} farm rows with VMware master images. Selected: ${farmSelectedMasters.size}.`;
+        status.textContent = `${visibleRows.length} of ${farmReportRows.length} farm rows shown. Selected: ${farmSelectedMasters.size}.`;
     }
     if (masterPanel) {
-        masterPanel.style.display = rowsWithVm.length ? 'block' : 'none';
+        masterPanel.style.display = visibleRows.length ? 'block' : 'none';
     }
 }
 
@@ -5648,9 +5651,8 @@ function toggleFarmMasterSelection(name) {
 function goldenSunFarmSelectAll() {
     farmSelectedMasters.clear();
     farmReportRows.forEach(row => {
-        if (row.VmMasterImage) {
-            farmSelectedMasters.add(row.VmMasterImage);
-        }
+        const key = row.VmMasterImage || row.HzBaseImage || row.HzFarm || '';
+        if (key) farmSelectedMasters.add(key);
     });
     renderGoldenSunFarmReport();
 }
@@ -5666,13 +5668,16 @@ function generateFarmCloneScriptFromReport() {
         return;
     }
     const selectedImages = [];
+    const seenKeys = new Set();
     farmReportRows.forEach(row => {
-        if (row.VmMasterImage && farmSelectedMasters.has(row.VmMasterImage)) {
+        const key = row.VmMasterImage || row.HzBaseImage || row.HzFarm || '';
+        if (key && farmSelectedMasters.has(key) && !seenKeys.has(key)) {
+            seenKeys.add(key);
             selectedImages.push({
-                Name: row.VmMasterImage,
-                Cluster: 'Unknown',
-                Host: 'Unknown',
-                Datastore: 'Unknown'
+                Name: key,
+                Cluster: row.Cluster || 'Unknown',
+                Host: row.Host || 'Unknown',
+                Datastore: row.Datastore || 'Unknown'
             });
         }
     });
