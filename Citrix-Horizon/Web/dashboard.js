@@ -3493,10 +3493,10 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('    Write-Host "Connected to $vc" -ForegroundColor Green');
         scriptLines.push('}');
         scriptLines.push('if (-not $viserver) { throw "Failed to establish vCenter connection." }');
-        scriptLines.push('Write-Host "[DEBUG] Step 3: vCenter ready. Fetching farm list from Horizon REST..." -ForegroundColor Magenta');
+        scriptLines.push('Write-Host "[DEBUG] Step 3: vCenter ready. Fetching farms and desktop pools from Horizon REST..." -ForegroundColor Magenta');
         scriptLines.push('');
-        scriptLines.push('# --- Image Dates: use inventory/v7/farms (most data) + monitor/farms per VMware Horizon REST API ---');
-        scriptLines.push('# Ref: https://developer.broadcom.com/xapis/vmware-horizon-server-api (List Farms V4, List Farm Monitors)');
+        scriptLines.push('# --- Image Dates: fetch RDS farms + VDI desktop pools (VMware Horizon REST API) ---');
+        scriptLines.push('# Ref: https://developer.broadcom.com/xapis/vmware-horizon-server-api');
         scriptLines.push('$invFarms = $null; $monFarms = $null;');
         scriptLines.push('foreach ($ep in @("/inventory/v7/farms", "/inventory/v4/farms", "/monitor/farms", "/monitor/v1/farms")) {');
         scriptLines.push('    $uri = "$BaseUrl$ep"');
@@ -3514,8 +3514,28 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('        Write-Warning "  $ep failed: $($_.Exception.Message)"');
         scriptLines.push('    }');
         scriptLines.push('}');
-        scriptLines.push('if (-not $invFarms) { throw "Could not fetch farms from any endpoint" }');
-        scriptLines.push('Write-Host "[DEBUG] Step 4: Got $($invFarms.Count) farm(s). Fetching per-farm details..." -ForegroundColor Magenta');
+        scriptLines.push('if (-not $invFarms) { $invFarms = @(); Write-Warning "No farms found from any endpoint - continuing with desktop pools only." }');
+        scriptLines.push('Write-Host "[DEBUG] Step 3b: Got $($invFarms.Count) farm(s). Now fetching desktop pools..." -ForegroundColor Magenta');
+        scriptLines.push('');
+        scriptLines.push('# Fetch VDI desktop pools');
+        scriptLines.push('$invDesktops = $null');
+        scriptLines.push('foreach ($ep in @("/inventory/v7/desktop-pools", "/inventory/v4/desktop-pools", "/inventory/v1/desktop-pools")) {');
+        scriptLines.push('    $uri = "$BaseUrl$ep"');
+        scriptLines.push('    Write-Host "Trying $uri ..." -ForegroundColor Cyan');
+        scriptLines.push('    try {');
+        scriptLines.push('        $r = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers');
+        scriptLines.push('        if ($r -is [hashtable] -and $r.ContainsKey("items")) { $invDesktops = $r.items }');
+        scriptLines.push('        elseif ($r -is [pscustomobject] -and $r.PSObject.Properties.Name -contains "items") { $invDesktops = $r.items }');
+        scriptLines.push('        elseif ($r -is [array]) { $invDesktops = $r }');
+        scriptLines.push('        else { $invDesktops = @($r) }');
+        scriptLines.push('        Write-Host "  Got $($invDesktops.Count) desktop pool(s) from $ep" -ForegroundColor Green');
+        scriptLines.push('        break');
+        scriptLines.push('    } catch {');
+        scriptLines.push('        Write-Warning "  $ep failed: $($_.Exception.Message)"');
+        scriptLines.push('    }');
+        scriptLines.push('}');
+        scriptLines.push('if (-not $invDesktops) { $invDesktops = @(); Write-Warning "No desktop pools found from any endpoint." }');
+        scriptLines.push('Write-Host "[DEBUG] Step 4: Got $($invDesktops.Count) desktop pool(s). Fetching per-item details..." -ForegroundColor Magenta');
         scriptLines.push('');
         scriptLines.push('# Per-farm detail from inventory/v7/farms/{id} for base image and snapshot');
         scriptLines.push('$details = @()');
@@ -3533,7 +3553,24 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('        } catch { }');
         scriptLines.push('    }');
         scriptLines.push('}');
-        scriptLines.push('Write-Host "[DEBUG] Step 5: Per-farm details done. Transforming response..." -ForegroundColor Magenta');
+        scriptLines.push('');
+        scriptLines.push('# Per-desktop-pool detail from inventory/v7/desktop-pools/{id}');
+        scriptLines.push('$desktopDetails = @()');
+        scriptLines.push('$dpIdx = 0');
+        scriptLines.push('foreach ($dp in $invDesktops) {');
+        scriptLines.push('    $dpid = $dp.id');
+        scriptLines.push('    if (-not $dpid) { continue }');
+        scriptLines.push('    $dpIdx++; Write-Host "[DEBUG]   Desktop Pool $dpIdx/$($invDesktops.Count): $dpid" -ForegroundColor DarkGray');
+        scriptLines.push('    foreach ($detailEp in @("/inventory/v7/desktop-pools/$dpid", "/inventory/v4/desktop-pools/$dpid")) {');
+        scriptLines.push('        $detailUri = "$BaseUrl$detailEp"');
+        scriptLines.push('        try {');
+        scriptLines.push('            $d = Invoke-RestMethod -Method Get -Uri $detailUri -Headers $headers');
+        scriptLines.push('            $desktopDetails += @{ id = $dpid; detail = $d }');
+        scriptLines.push('            break');
+        scriptLines.push('        } catch { }');
+        scriptLines.push('    }');
+        scriptLines.push('}');
+        scriptLines.push('Write-Host "[DEBUG] Step 5: Per-item details done ($($details.Count) farm details, $($desktopDetails.Count) desktop details). Transforming..." -ForegroundColor Magenta');
         scriptLines.push('$response = $invFarms');
     } else if (action === 'clones') {
         scriptLines.push('# --- Clones: use monitor/v1/tasks + inventory/v7/farms for provisioning status (VMware Horizon REST API) ---');
@@ -3911,6 +3948,101 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('    $rows += [PSCustomObject]@{');
         scriptLines.push('        HzFarm             = $farm.name');
         scriptLines.push('        HzFarmType         = $farm.type');
+        scriptLines.push('        HzSourceType       = "Farm"');
+        scriptLines.push('        HzBaseImage        = $imgName');
+        scriptLines.push('        HzSnapshot         = $snapName');
+        scriptLines.push('        VmMasterImage      = $vmImageName');
+        scriptLines.push('        VmMasterSnapshot   = $vmSnapName');
+        scriptLines.push('        VmSnapshotTimestamp = $vmSnapTime');
+        scriptLines.push('        CloneState         = $cloneState');
+        scriptLines.push('    }');
+        scriptLines.push('}');
+        scriptLines.push('');
+        scriptLines.push('# --- Process VDI desktop pools ---');
+        scriptLines.push('Write-Host "[DEBUG] Step 11b: Building rows for $($invDesktops.Count) desktop pool(s)..." -ForegroundColor Magenta');
+        scriptLines.push('foreach ($dp in $invDesktops) {');
+        scriptLines.push('    $imgName = $null; $snapName = $null; $snapTime = $null');
+        scriptLines.push('    $dpid = $dp.id');
+        scriptLines.push('    $dpName = $dp.display_name; if (-not $dpName) { $dpName = $dp.name }');
+        scriptLines.push('    $dpType = $dp.type');
+        scriptLines.push('');
+        scriptLines.push('    # automated_desktop_settings.vmware_desktop_settings.vmware_desktop_vcenter_settings');
+        scriptLines.push('    $ads = $dp.automated_desktop_settings');
+        scriptLines.push('    if ($ads) {');
+        scriptLines.push('        $vcs = $null');
+        scriptLines.push('        if ($ads.vmware_desktop_settings) { $vcs = $ads.vmware_desktop_settings.vmware_desktop_vcenter_settings }');
+        scriptLines.push('        if ($vcs) {');
+        scriptLines.push('            if (-not $imgName -and $vcs.parent_vm_path) { $imgName = $vcs.parent_vm_path }');
+        scriptLines.push('            if (-not $imgName -and $vcs.parent_vm_id)   { $imgName = $vcs.parent_vm_id }');
+        scriptLines.push('            if (-not $snapName -and $vcs.snapshot_path) { $snapName = $vcs.snapshot_path }');
+        scriptLines.push('            if (-not $snapName -and $vcs.base_snapshot_id) { $snapName = $vcs.base_snapshot_id }');
+        scriptLines.push('        }');
+        scriptLines.push('        # provisioning_settings fallback (older API versions)');
+        scriptLines.push('        if ($ads.provisioning_settings) {');
+        scriptLines.push('            $ps = $ads.provisioning_settings');
+        scriptLines.push('            if (-not $imgName -and $ps.parent_vm_path) { $imgName = $ps.parent_vm_path }');
+        scriptLines.push('            if (-not $imgName -and $ps.parent_vm_id)   { $imgName = $ps.parent_vm_id }');
+        scriptLines.push('            if (-not $snapName -and $ps.snapshot_path) { $snapName = $ps.snapshot_path }');
+        scriptLines.push('            if (-not $snapName -and $ps.base_snapshot_id) { $snapName = $ps.base_snapshot_id }');
+        scriptLines.push('        }');
+        scriptLines.push('    }');
+        scriptLines.push('');
+        scriptLines.push('    # Per-pool detail lookup');
+        scriptLines.push('    if ($dpid -and $desktopDetails) {');
+        scriptLines.push('        $dMatch = $desktopDetails | Where-Object { $_.id -eq $dpid } | Select-Object -First 1');
+        scriptLines.push('        if ($dMatch -and $dMatch.detail) {');
+        scriptLines.push('            $d = $dMatch.detail');
+        scriptLines.push('            $ads2 = $d.automated_desktop_settings');
+        scriptLines.push('            if ($ads2) {');
+        scriptLines.push('                $vcs2 = $null');
+        scriptLines.push('                if ($ads2.vmware_desktop_settings) { $vcs2 = $ads2.vmware_desktop_settings.vmware_desktop_vcenter_settings }');
+        scriptLines.push('                if ($vcs2) {');
+        scriptLines.push('                    if (-not $imgName -and $vcs2.parent_vm_path) { $imgName = $vcs2.parent_vm_path }');
+        scriptLines.push('                    if (-not $imgName -and $vcs2.parent_vm_id)   { $imgName = $vcs2.parent_vm_id }');
+        scriptLines.push('                    if (-not $snapName -and $vcs2.snapshot_path) { $snapName = $vcs2.snapshot_path }');
+        scriptLines.push('                    if (-not $snapName -and $vcs2.base_snapshot_id) { $snapName = $vcs2.base_snapshot_id }');
+        scriptLines.push('                }');
+        scriptLines.push('            }');
+        scriptLines.push('            # top-level detail fallbacks');
+        scriptLines.push('            if (-not $imgName -and $d.baseImage) { $imgName = $d.baseImage }');
+        scriptLines.push('            if (-not $imgName -and $d.image) { $imgName = $d.image }');
+        scriptLines.push('            if (-not $snapName -and $d.snapshot) { $snapName = $d.snapshot }');
+        scriptLines.push('            if (-not $snapName -and $d.snapshotName) { $snapName = $d.snapshotName }');
+        scriptLines.push('            if (-not $snapTime -and $d.snapshotTimestamp) { $snapTime = $d.snapshotTimestamp }');
+        scriptLines.push('            if (-not $snapTime -and $d.snapshotCreationTime) { $snapTime = $d.snapshotCreationTime }');
+        scriptLines.push('        }');
+        scriptLines.push('    }');
+        scriptLines.push('');
+        scriptLines.push('    # legacy / alternate field names');
+        scriptLines.push('    if (-not $imgName) { $imgName = $dp.baseImageName }');
+        scriptLines.push('    if (-not $imgName -and $dp.baseImage) { $imgName = $dp.baseImage.name }');
+        scriptLines.push('    if (-not $snapName) { $snapName = $dp.baseImageSnapshotName }');
+        scriptLines.push('    if (-not $snapName -and $dp.baseImage) { $snapName = $dp.baseImage.snapshotName }');
+        scriptLines.push('    if (-not $snapTime) { $snapTime = $dp.baseImageSnapshotCreationTime }');
+        scriptLines.push('');
+        scriptLines.push('    # Match to VMware master image list (same logic as farms)');
+        scriptLines.push('    $vmNameMatch = $null');
+        scriptLines.push('    if ($imgName -and $vmMasterIndex.ContainsKey($imgName)) {');
+        scriptLines.push('        $vmNameMatch = $imgName');
+        scriptLines.push('    } elseif ($imgName) {');
+        scriptLines.push('        foreach ($k in $vmMasterIndex.Keys) {');
+        scriptLines.push('            if ($imgName -like "*$k*") { $vmNameMatch = $k; break }');
+        scriptLines.push('            if ($k -like "*$imgName*") { $vmNameMatch = $k; break }');
+        scriptLines.push('        }');
+        scriptLines.push('    }');
+        scriptLines.push('    $vmImageName = $null; $vmSnapName = $null; $vmSnapTime = $null; $cloneState = $null');
+        scriptLines.push('    if ($vmNameMatch -and $vmMasterIndex.ContainsKey($vmNameMatch)) {');
+        scriptLines.push('        $entry = $vmMasterIndex[$vmNameMatch]');
+        scriptLines.push('        $vmImageName = $entry.Name');
+        scriptLines.push('        $vmSnapName = $entry.Snapshot');
+        scriptLines.push('        $vmSnapTime = $entry.SnapshotTimestamp');
+        scriptLines.push('        if ($cloneIndex.ContainsKey($vmImageName)) { $cloneState = $cloneIndex[$vmImageName] }');
+        scriptLines.push('    }');
+        scriptLines.push('');
+        scriptLines.push('    $rows += [PSCustomObject]@{');
+        scriptLines.push('        HzFarm             = $dpName');
+        scriptLines.push('        HzFarmType         = $dpType');
+        scriptLines.push('        HzSourceType       = "Desktop"');
         scriptLines.push('        HzBaseImage        = $imgName');
         scriptLines.push('        HzSnapshot         = $snapName');
         scriptLines.push('        VmMasterImage      = $vmImageName');
@@ -3925,8 +4057,9 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('    Write-Host "First item properties:" -ForegroundColor Yellow');
         scriptLines.push('    $source[0].PSObject.Properties.Name | ForEach-Object { Write-Host " - $_" }');
         scriptLines.push('}');
+        scriptLines.push('Write-Host "[DEBUG] Step 12: Total rows: $($rows.Count) ($($invFarms.Count) farm(s) + $($invDesktops.Count) desktop pool(s))" -ForegroundColor Green');
         scriptLines.push('$response = $rows');
-        scriptLines.push('Write-Host "[DEBUG] Step 12: Saving FarmData.json..." -ForegroundColor Magenta');
+        scriptLines.push('Write-Host "[DEBUG] Step 12b: Saving FarmData.json..." -ForegroundColor Magenta');
         scriptLines.push('');
         scriptLines.push('# Also save farm data as JSON in Reports so GoldenSun UI can load it');
         scriptLines.push('$farmJsonPath = Join-Path $ReportsDir "FarmData.json"');
@@ -5563,7 +5696,8 @@ async function renderGoldenSunFarmReport() {
             <thead>
                 <tr style="background:#f0f0f0;border-bottom:2px solid #ccc;">
                     <th style="width:28px;padding:6px 4px;"></th>
-                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Farm</th>
+                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Farm / Pool</th>
+                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Type</th>
                     <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Image</th>
                     <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Snapshot</th>
                     <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">State</th>
@@ -5578,6 +5712,10 @@ async function renderGoldenSunFarmReport() {
             const safeKey = String(key).replace(/'/g, "\\'");
 
             const farmName = escapeHtml(row.HzFarm || '');
+            const isDesktop = (row.HzSourceType || '').toLowerCase() === 'desktop';
+            const typeBadge = isDesktop
+                ? '<span style="font-size:10px;background:#e3f0ff;color:#1a5fa8;border-radius:3px;padding:1px 5px;font-weight:600;">VDI</span>'
+                : '<span style="font-size:10px;background:#e8f5e9;color:#2e7d32;border-radius:3px;padding:1px 5px;font-weight:600;">RDS</span>';
             // Strip folder path — keep only the segment after the last /
             const rawImage = row.VmMasterImage || row.HzBaseImage || '';
             const imageName = escapeHtml(rawImage.replace(/^.*\//, ''));
@@ -5593,6 +5731,7 @@ async function renderGoldenSunFarmReport() {
                         <input type="checkbox" ${checked} onchange="toggleFarmMasterSelection('${safeKey}')">
                     </td>
                     <td style="padding:8px 10px;font-weight:600;">${farmName}</td>
+                    <td style="padding:8px 10px;">${typeBadge}</td>
                     <td style="padding:8px 10px;">${imageName}</td>
                     <td style="padding:8px 10px;color:#555;">${snapName}</td>
                     <td style="padding:8px 10px;${stateStyle}">${cloneState}</td>
@@ -5606,7 +5745,9 @@ async function renderGoldenSunFarmReport() {
 
     list.innerHTML = html;
     if (status) {
-        status.textContent = `${visibleRows.length} automated farm(s) of ${farmReportRows.length} total. Selected: ${farmSelectedMasters.size}.`;
+        const farmCount = visibleRows.filter(r => (r.HzSourceType || '').toLowerCase() !== 'desktop').length;
+        const desktopCount = visibleRows.filter(r => (r.HzSourceType || '').toLowerCase() === 'desktop').length;
+        status.textContent = `${visibleRows.length} automated pool(s): ${farmCount} RDS farm(s), ${desktopCount} VDI desktop pool(s). Selected: ${farmSelectedMasters.size}.`;
     }
     if (masterPanel) {
         masterPanel.style.display = visibleRows.length ? 'block' : 'none';

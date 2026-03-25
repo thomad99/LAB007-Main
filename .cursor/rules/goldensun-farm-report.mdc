@@ -12,8 +12,9 @@ Rows produced by the PowerShell collection script have these fields:
 
 | Field | Description |
 |---|---|
-| `HzFarm` | Horizon farm display name |
-| `HzFarmType` | Farm type: `AUTOMATED` or `MANUAL` |
+| `HzFarm` | Farm or desktop pool display name |
+| `HzFarmType` | Pool type: `AUTOMATED` or `MANUAL` |
+| `HzSourceType` | Source: `Farm` (RDS) or `Desktop` (VDI) |
 | `HzBaseImage` | Image path from Horizon provisioning settings |
 | `HzSnapshot` | Snapshot path from Horizon |
 | `VmMasterImage` | Matched VMware master VM name |
@@ -37,4 +38,7 @@ N automated farm(s) of Total total. Selected: M.
 
 ## PowerShell Script Output
 
-Always include `HzFarmType = $farm.type` in the `$rows` PSCustomObject so the UI can filter by farm type.
+- Always include `HzFarmType = $farm.type` and `HzSourceType = "Farm"` in farm rows.
+- Always include `HzFarmType = $dpType` and `HzSourceType = "Desktop"` in desktop pool rows.
+- Farms use endpoint `/inventory/v7/farms`; desktop pools use `/inventory/v7/desktop-pools`.
+- Desktop pool image fields live under `automated_desktop_settings.vmware_desktop_settings.vmware_desktop_vcenter_settings.parent_vm_path` and `snapshot_path`.
