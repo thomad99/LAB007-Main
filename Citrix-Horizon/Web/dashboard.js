@@ -4547,21 +4547,6 @@ Write-Host "Done." -ForegroundColor Green
 
 // ── FSLogix Profiles ──────────────────────────────────────────────────────────
 
-// Keep the mode hint text in sync with the radio selection
-document.addEventListener('DOMContentLoaded', () => {
-    const radios = document.querySelectorAll('input[name="fslogixMode"]');
-    radios.forEach(r => r.addEventListener('change', updateFslogixHint));
-});
-
-function updateFslogixHint() {
-    const mode = document.querySelector('input[name="fslogixMode"]:checked')?.value || 'report';
-    const hint = document.getElementById('fslogixModeHint');
-    if (!hint) return;
-    hint.textContent = mode === 'report'
-        ? 'Will scan and report folders — no deletions performed.'
-        : 'Will report first, confirm count, then permanently delete matching folders.';
-}
-
 function fslogixGenerateScript() {
     const path = (document.getElementById('fslogixPath')?.value || '').trim();
     const days = parseInt(document.getElementById('fslogixDays')?.value || '90', 10) || 90;
