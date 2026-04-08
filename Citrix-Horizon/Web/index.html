@@ -804,6 +804,7 @@
                     <button class="task-tab" onclick="showHorizonTask('cloneMasterImage')">Clone Master Image</button>
                     <button class="task-tab" onclick="showHorizonTask('addApplications')">Add Applications to HZ</button>
                     <button class="task-tab" onclick="showHorizonTask('adminTasks')">Admin</button>
+                    <button class="task-tab" onclick="showHorizonTask('vmMgmt')">VM Mgmt</button>
                     <!-- More tasks can be added here -->
                 </div>
                 
@@ -1001,6 +1002,104 @@
                         </div>
                     </div>
                 </div>
+
+                <!-- VM Mgmt Task -->
+                <div id="vmMgmtTask" class="horizon-task-panel">
+                    <h3>VM Management</h3>
+                    <p style="color:#666;">Generate PowerShell scripts for VMware ESX VM management tasks.</p>
+
+                    <!-- Sub-type selector -->
+                    <div style="display:flex;gap:10px;margin-bottom:20px;border-bottom:1px solid #ddd;padding-bottom:12px;">
+                        <button id="vmMgmtBtnDelete" class="btn btn-primary" onclick="showVmMgmtSection('deleteVms')" style="min-width:180px;">Delete VMs</button>
+                        <button id="vmMgmtBtnFslogix" class="btn btn-secondary" onclick="showVmMgmtSection('fslogix')" style="min-width:220px;">Delete Old FSLogix Profiles</button>
+                    </div>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- Section 1: Delete VMs                   -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <div id="vmMgmtDeleteVms" style="display:block;">
+                        <h4 style="margin-bottom:6px;">Delete VMs</h4>
+                        <p style="color:#666;font-size:13px;margin-bottom:14px;">Load a plain-text file containing one VM name per line. Select the VMs to remove, then generate the delete script.</p>
+
+                        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px;">
+                            <button class="btn btn-secondary" onclick="vmMgmtLoadVmFile()">Load VM List (txt / csv)</button>
+                            <input type="file" id="vmMgmtFileInput" accept=".txt,.csv,.json" style="display:none;" onchange="vmMgmtHandleFile(event)">
+                            <span id="vmMgmtFileLabel" style="color:#666;font-size:13px;"></span>
+                        </div>
+
+                        <div id="vmMgmtVmListSection" style="display:none;">
+                            <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap;">
+                                <strong id="vmMgmtVmCount" style="font-size:13px;"></strong>
+                                <button class="btn btn-sm" onclick="vmMgmtSelectAll()">Select All</button>
+                                <button class="btn btn-sm" onclick="vmMgmtDeselectAll()">Deselect All</button>
+                            </div>
+                            <div id="vmMgmtVmList" style="max-height:340px;overflow-y:auto;border:1px solid #ddd;border-radius:4px;padding:8px;background:#f8f9fa;font-size:13px;"></div>
+                            <div style="margin-top:12px;text-align:right;">
+                                <button class="btn btn-primary" onclick="vmMgmtGenerateDeleteScript()">Generate Delete Script</button>
+                            </div>
+                        </div>
+
+                        <div id="vmMgmtDeleteScriptSection" style="display:none;margin-top:16px;">
+                            <h4 style="margin-bottom:6px;">Generated Delete Script</h4>
+                            <textarea id="vmMgmtDeleteScript" readonly style="width:100%;height:360px;font-family:'Courier New',monospace;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:4px;background:#f8f9fa;"></textarea>
+                            <div style="margin-top:8px;text-align:right;display:flex;gap:8px;justify-content:flex-end;">
+                                <button class="btn btn-secondary" onclick="vmMgmtCopyScript('vmMgmtDeleteScript')">Copy Script</button>
+                                <button class="btn btn-secondary" onclick="vmMgmtDownloadScript('vmMgmtDeleteScript','Delete-VMs.ps1')">Download Script</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ═══════════════════════════════════════ -->
+                    <!-- Section 2: Delete Old FSLogix Profiles  -->
+                    <!-- ═══════════════════════════════════════ -->
+                    <div id="vmMgmtFslogix" style="display:none;">
+                        <h4 style="margin-bottom:6px;">Delete Old FSLogix Profiles</h4>
+                        <p style="color:#666;font-size:13px;margin-bottom:14px;">Generate a script to find and optionally delete FSLogix profile folders older than N days.</p>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:16px;">
+                            <div>
+                                <label style="display:block;font-weight:600;margin-bottom:4px;">FSLogix Profile Share Path</label>
+                                <input type="text" id="fslogixPath" placeholder="\\server\FSLogix or D:\FSLogix\Profiles"
+                                    style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;">
+                                <small style="color:#888;">UNC path or local path to the FSLogix profiles root</small>
+                            </div>
+                            <div>
+                                <label style="display:block;font-weight:600;margin-bottom:4px;">Delete folders older than (days)</label>
+                                <input type="number" id="fslogixDays" value="90" min="1"
+                                    style="width:100%;padding:8px;border:1px solid #ddd;border-radius:4px;font-size:13px;">
+                                <small style="color:#888;">Default: 90 days</small>
+                            </div>
+                        </div>
+
+                        <!-- REPORT / DELETE toggle -->
+                        <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px;padding:12px;background:#f8f9fa;border:1px solid #ddd;border-radius:6px;">
+                            <span style="font-weight:600;">Mode:</span>
+                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="fslogixMode" id="fslogixModeReport" value="report" checked>
+                                <span>Report Only</span>
+                            </label>
+                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:14px;">
+                                <input type="radio" name="fslogixMode" id="fslogixModeDelete" value="delete">
+                                <span>Delete</span>
+                            </label>
+                            <span id="fslogixModeHint" style="color:#666;font-size:12px;margin-left:8px;">Will scan and report folders — no deletions performed.</span>
+                        </div>
+
+                        <div style="margin-bottom:16px;text-align:right;">
+                            <button class="btn btn-primary" onclick="fslogixGenerateScript()">Generate Script</button>
+                        </div>
+
+                        <div id="fslogixScriptSection" style="display:none;">
+                            <h4 style="margin-bottom:6px;">Generated Script</h4>
+                            <textarea id="fslogixScript" readonly style="width:100%;height:400px;font-family:'Courier New',monospace;font-size:12px;padding:10px;border:1px solid #ddd;border-radius:4px;background:#f8f9fa;"></textarea>
+                            <div style="margin-top:8px;text-align:right;display:flex;gap:8px;justify-content:flex-end;">
+                                <button class="btn btn-secondary" onclick="vmMgmtCopyScript('fslogixScript')">Copy Script</button>
+                                <button class="btn btn-secondary" id="fslogixDownloadBtn" onclick="vmMgmtDownloadScript('fslogixScript','FSLogix-Report.ps1')">Download Script</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
         </div>
