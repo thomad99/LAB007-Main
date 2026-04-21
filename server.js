@@ -100,6 +100,13 @@ app.get('/webdesign', (req, res) => {
   return res.status(404).send('Not found');
 });
 
+// Serve digital marketing page
+app.get('/digitalmarketing', (req, res) => {
+  const p = path.join(__dirname, 'public', 'DigitalMarketing.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
+});
+
 // ========== Mount Project Apps FIRST ==========
 // Mount each project's Express app BEFORE main static middleware to ensure routes are matched correctly
 
