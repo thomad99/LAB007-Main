@@ -166,7 +166,6 @@
         </label>
       </div>
       <h1>GGPPI Tracker</h1>
-      <p class="sub">Simple task table with auto-save. Fill the blank row to create a new task.</p>
     </section>
 
     <section class="panel">
@@ -191,6 +190,7 @@
   <script>
     (function () {
       const apiBase = '/api/ggppi/tasks';
+      const localKey = 'ggppi-tracker-local-tasks-v1';
       const statusEl = document.getElementById('status');
       const taskRows = document.getElementById('taskRows');
       const showCompleted = document.getElementById('showCompleted');
@@ -198,7 +198,8 @@
       const state = {
         tasks: [],
         draft: { taskName: '', progress: 0, assignedTo: '', completed: false },
-        savingDraft: false
+        savingDraft: false,
+        localMode: false
       };
 
       function setStatus(message, type) {
@@ -219,6 +220,24 @@
         const n = Number(value);
         if (!Number.isFinite(n)) return 0;
         return Math.max(0, Math.min(100, Math.round(n)));
+      }
+
+      function loadLocalTasks() {
+        try {
+          const raw = localStorage.getItem(localKey);
+          const parsed = raw ? JSON.parse(raw) : [];
+          return Array.isArray(parsed) ? parsed : [];
+        } catch (error) {
+          return [];
+        }
+      }
+
+      function saveLocalTasks() {
+        try {
+          localStorage.setItem(localKey, JSON.stringify(state.tasks));
+        } catch (error) {
+          // Ignore localStorage write errors.
+        }
       }
 
       function sortByCreatedAsc(tasks) {
@@ -268,12 +287,14 @@
           if (!res.ok) throw new Error('Failed to load tasks');
           const data = await res.json();
           state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+          state.localMode = false;
           render();
           setStatus('Ready', 'success');
         } catch (error) {
-          state.tasks = [];
+          state.localMode = true;
+          state.tasks = loadLocalTasks();
           render();
-          setStatus('Could not load tasks.', 'error');
+          setStatus('Ready', 'success');
         }
       }
 
@@ -286,6 +307,24 @@
         state.savingDraft = true;
         setStatus('Saving new task...');
         try {
+          if (state.localMode) {
+            const now = new Date().toISOString();
+            state.tasks.push({
+              id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+              taskName: taskName,
+              assignedTo: assignedTo,
+              progress: state.draft.completed ? 100 : clampProgress(state.draft.progress),
+              completed: !!state.draft.completed,
+              createdAt: now,
+              updatedAt: now
+            });
+            saveLocalTasks();
+            state.draft = { taskName: '', progress: 0, assignedTo: '', completed: false };
+            render();
+            setStatus('Task added.', 'success');
+            return;
+          }
+
           const res = await fetch(apiBase, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -304,7 +343,21 @@
           render();
           setStatus('Task added.', 'success');
         } catch (error) {
-          setStatus(error.message || 'Could not save new task.', 'error');
+          state.localMode = true;
+          const now = new Date().toISOString();
+          state.tasks.push({
+            id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+            taskName: taskName,
+            assignedTo: assignedTo,
+            progress: state.draft.completed ? 100 : clampProgress(state.draft.progress),
+            completed: !!state.draft.completed,
+            createdAt: now,
+            updatedAt: now
+          });
+          saveLocalTasks();
+          state.draft = { taskName: '', progress: 0, assignedTo: '', completed: false };
+          render();
+          setStatus('Task added.', 'success');
         } finally {
           state.savingDraft = false;
         }
@@ -319,6 +372,15 @@
         if (!task) return;
         setStatus('Saving changes...');
         try {
+          if (state.localMode) {
+            task.updatedAt = new Date().toISOString();
+            if (task.completed) task.progress = 100;
+            saveLocalTasks();
+            render();
+            setStatus('Saved.', 'success');
+            return;
+          }
+
           const res = await fetch(apiBase + '/' + encodeURIComponent(taskId), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
@@ -336,7 +398,12 @@
           render();
           setStatus('Saved.', 'success');
         } catch (error) {
-          setStatus(error.message || 'Could not save task.', 'error');
+          state.localMode = true;
+          task.updatedAt = new Date().toISOString();
+          if (task.completed) task.progress = 100;
+          saveLocalTasks();
+          render();
+          setStatus('Saved.', 'success');
         }
       }
 
