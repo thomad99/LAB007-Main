@@ -54,18 +54,11 @@
 
     .top {
       display: flex;
-      justify-content: space-between;
+      justify-content: flex-end;
       align-items: center;
       gap: 10px;
       flex-wrap: wrap;
       margin-bottom: 6px;
-    }
-
-    .top a {
-      color: #bdd9ff;
-      text-decoration: none;
-      font-size: 0.9rem;
-      font-weight: 600;
     }
 
     .toggle {
@@ -167,7 +160,6 @@
   <main class="wrap">
     <section class="panel">
       <div class="top">
-        <a href="/">Back to LAB007</a>
         <label class="toggle">
           <input id="showCompleted" type="checkbox">
           Show completed tasks
@@ -279,6 +271,8 @@
           render();
           setStatus('Ready', 'success');
         } catch (error) {
+          state.tasks = [];
+          render();
           setStatus('Could not load tasks.', 'error');
         }
       }
@@ -404,6 +398,7 @@
         render();
       });
 
+      render();
       loadTasks();
     })();
   </script>
