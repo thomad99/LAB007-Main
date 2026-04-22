@@ -53,3 +53,6 @@ shots/
 # TomoPI uploaded images - server-only, never in git
 tomopi-data/images/
 
+# GGPPI Tracker — runtime task JSON (created by server). Use GGPPI_DATA_DIR on a persistent volume in production.
+/data/ggppi-tasks.json
+

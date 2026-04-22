@@ -16,7 +16,7 @@ const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
-// GGPPI Tracker: JSON + uploads (set GGPPI_DATA_DIR / GGPPI_UPLOAD_DIR to a mounted volume in production)
+// GGPPI Tracker: JSON + uploads (production: e.g. GGPPI_DATA_DIR=/var/data/lab007/GGPPI, GGPPI_UPLOAD_DIR=.../uploads)
 const ggppiDataDir = process.env.GGPPI_DATA_DIR
   ? path.resolve(process.env.GGPPI_DATA_DIR)
   : path.join(__dirname, 'data');
@@ -33,6 +33,14 @@ if (!fs.existsSync(ggppiUploadDir)) {
 console.log('GGPPI data dir:', ggppiDataDir);
 console.log('GGPPI tasks file:', ggppiTasksPath);
 console.log('GGPPI uploads dir:', ggppiUploadDir);
+
+const ggppiGithubRepo = (process.env.GGPPI_GITHUB_REPO || 'thomad99/LAB007-Main').trim();
+const ggppiGithubBranch = (process.env.GGPPI_GITHUB_BRANCH || 'main').trim();
+const ggppiGithubPath = (process.env.GGPPI_GITHUB_PATH || 'data/ggppi-tasks.json').trim();
+const ggppiGithubToken = (process.env.GITHUB_TOKEN || process.env.GGPPI_GITHUB_TOKEN || '').trim();
+const ggppiGithubEnabled =
+  ['1', 'true', 'yes'].includes(String(process.env.GGPPI_GITHUB_ENABLED || '').trim().toLowerCase()) &&
+  ggppiGithubToken.length > 0;
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadDir),
@@ -442,7 +450,7 @@ error: 'Failed to send message. Please try again later or contact us directly at
 }
 });
 
-function readGgppiTasks() {
+function readGgppiTasksFromDisk() {
   try {
     if (!fs.existsSync(ggppiTasksPath)) {
       return [];
@@ -451,13 +459,132 @@ function readGgppiTasks() {
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? parsed : [];
   } catch (error) {
-    console.error('Failed to read GGPPI tasks:', error);
+    console.error('Failed to read GGPPI tasks from disk:', error);
     return [];
   }
 }
 
-function writeGgppiTasks(tasks) {
+function writeGgppiTasksToDisk(tasks) {
   fs.writeFileSync(ggppiTasksPath, JSON.stringify(tasks, null, 2), 'utf8');
+  console.log(`[GGPPI] Wrote ${tasks.length} task(s) to ${ggppiTasksPath}`);
+}
+
+function ggppiEncodeGithubPath(filePath) {
+  return String(filePath)
+    .split('/')
+    .filter((segment) => segment.length > 0)
+    .map((segment) => encodeURIComponent(segment))
+    .join('/');
+}
+
+async function githubGgppiGetContentsMeta() {
+  const url =
+    `https://api.github.com/repos/${ggppiGithubRepo}/contents/${ggppiEncodeGithubPath(ggppiGithubPath)}` +
+    `?ref=${encodeURIComponent(ggppiGithubBranch)}`;
+  const response = await fetchFn(url, {
+    headers: {
+      Authorization: `Bearer ${ggppiGithubToken}`,
+      Accept: 'application/vnd.github+json',
+      'X-GitHub-Api-Version': '2022-11-28',
+      'User-Agent': 'LAB007-GGPPI-Tracker'
+    }
+  });
+  if (response.status === 404) {
+    return null;
+  }
+  if (!response.ok) {
+    const body = await response.text();
+    throw new Error(`GitHub GET ${response.status}: ${body.slice(0, 500)}`);
+  }
+  const data = await response.json();
+  if (!data || data.type !== 'file' || typeof data.content !== 'string') {
+    throw new Error('GitHub API returned unexpected payload for tasks file');
+  }
+  const jsonText = Buffer.from(data.content.replace(/\s/g, ''), 'base64').toString('utf8');
+  return { sha: data.sha, jsonText };
+}
+
+async function readGgppiTasksFromGithub() {
+  const meta = await githubGgppiGetContentsMeta();
+  if (!meta) {
+    return [];
+  }
+  try {
+    const parsed = JSON.parse(meta.jsonText);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('[GGPPI] Invalid JSON in GitHub tasks file:', error.message);
+    return readGgppiTasksFromDisk();
+  }
+}
+
+async function writeGgppiTasksToGithub(tasks) {
+  const url = `https://api.github.com/repos/${ggppiGithubRepo}/contents/${ggppiEncodeGithubPath(ggppiGithubPath)}`;
+  const bodyJson = JSON.stringify(tasks, null, 2);
+  const content = Buffer.from(bodyJson, 'utf8').toString('base64');
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const meta = await githubGgppiGetContentsMeta();
+    const putBody = {
+      message: `GGPPI: update tasks (${tasks.length})`,
+      content,
+      branch: ggppiGithubBranch
+    };
+    if (meta && meta.sha) {
+      putBody.sha = meta.sha;
+    }
+    const response = await fetchFn(url, {
+      method: 'PUT',
+      headers: {
+        Authorization: `Bearer ${ggppiGithubToken}`,
+        Accept: 'application/vnd.github+json',
+        'X-GitHub-Api-Version': '2022-11-28',
+        'User-Agent': 'LAB007-GGPPI-Tracker',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(putBody)
+    });
+    if (response.ok) {
+      console.log(`[GGPPI] GitHub: saved ${tasks.length} task(s) to ${ggppiGithubRepo}@${ggppiGithubBranch}:${ggppiGithubPath}`);
+      return;
+    }
+    const text = await response.text();
+    if (response.status === 409 && attempt < 2) {
+      console.warn('[GGPPI] GitHub 409 conflict; retrying with fresh file SHA');
+      continue;
+    }
+    throw new Error(`GitHub PUT ${response.status}: ${text.slice(0, 500)}`);
+  }
+}
+
+async function readGgppiTasks() {
+  if (ggppiGithubEnabled) {
+    try {
+      return await readGgppiTasksFromGithub();
+    } catch (error) {
+      console.error('[GGPPI] GitHub read failed; using disk cache if present:', error.message);
+      return readGgppiTasksFromDisk();
+    }
+  }
+  return readGgppiTasksFromDisk();
+}
+
+async function writeGgppiTasks(tasks) {
+  if (ggppiGithubEnabled) {
+    await writeGgppiTasksToGithub(tasks);
+    return;
+  }
+  writeGgppiTasksToDisk(tasks);
+}
+
+if (ggppiGithubEnabled) {
+  console.log('[GGPPI] GitHub storage enabled:', ggppiGithubRepo, ggppiGithubBranch, ggppiGithubPath);
+} else {
+  try {
+    const bootCount = readGgppiTasksFromDisk().length;
+    console.log(`[GGPPI] Disk storage: ${bootCount} task(s) at ${ggppiTasksPath}`);
+  } catch (e) {
+    console.warn('[GGPPI] Startup: could not read tasks file yet:', e.message);
+  }
 }
 
 const GGPPI_OWNERS = ['David T', 'John G', 'Tom', 'Dave 3D', 'TBC'];
@@ -510,8 +637,8 @@ function withOptionalGgppiUpload(req, res, next) {
   return next();
 }
 
-app.get('/api/ggppi/tasks', (req, res) => {
-  const tasks = readGgppiTasks().map((task) => {
+app.get('/api/ggppi/tasks', async (req, res) => {
+  const tasks = (await readGgppiTasks()).map((task) => {
     const normalized = normalizeGgppiOwner(task.assignedTo);
     return {
       ...task,
@@ -523,7 +650,7 @@ app.get('/api/ggppi/tasks', (req, res) => {
   return res.json({ tasks, owners: GGPPI_OWNERS });
 });
 
-app.post('/api/ggppi/tasks', ggppiUpload.array('attachments', 10), (req, res) => {
+app.post('/api/ggppi/tasks', ggppiUpload.array('attachments', 10), async (req, res) => {
   const taskName = String(req.body.taskName || '').trim();
   const assignedTo = normalizeGgppiOwner(req.body.assignedTo);
   const notes = String(req.body.notes || '').trim();
@@ -551,16 +678,21 @@ app.post('/api/ggppi/tasks', ggppiUpload.array('attachments', 10), (req, res) =>
     updatedAt: now
   };
 
-  const tasks = readGgppiTasks();
+  const tasks = await readGgppiTasks();
   tasks.push(task);
-  writeGgppiTasks(tasks);
+  try {
+    await writeGgppiTasks(tasks);
+  } catch (error) {
+    console.error('[GGPPI] Failed to save new task:', error);
+    return res.status(502).json({ error: 'Could not save tasks. Check server logs or try again.' });
+  }
 
   return res.status(201).json({ task });
 });
 
-app.put('/api/ggppi/tasks/:id', withOptionalGgppiUpload, (req, res) => {
+app.put('/api/ggppi/tasks/:id', withOptionalGgppiUpload, async (req, res) => {
   const { id } = req.params;
-  const tasks = readGgppiTasks();
+  const tasks = await readGgppiTasks();
   const taskIndex = tasks.findIndex((item) => item.id === id);
 
   if (taskIndex === -1) {
@@ -634,14 +766,19 @@ app.put('/api/ggppi/tasks/:id', withOptionalGgppiUpload, (req, res) => {
   };
 
   tasks[taskIndex] = updatedTask;
-  writeGgppiTasks(tasks);
+  try {
+    await writeGgppiTasks(tasks);
+  } catch (error) {
+    console.error('[GGPPI] Failed to save task update:', error);
+    return res.status(502).json({ error: 'Could not save tasks. Check server logs or try again.' });
+  }
 
   return res.json({ task: updatedTask });
 });
 
-app.delete('/api/ggppi/tasks/:id', (req, res) => {
+app.delete('/api/ggppi/tasks/:id', async (req, res) => {
   const { id } = req.params;
-  const tasks = readGgppiTasks();
+  const tasks = await readGgppiTasks();
   const taskIndex = tasks.findIndex((item) => item.id === id);
 
   if (taskIndex === -1) {
@@ -649,7 +786,12 @@ app.delete('/api/ggppi/tasks/:id', (req, res) => {
   }
 
   const [removedTask] = tasks.splice(taskIndex, 1);
-  writeGgppiTasks(tasks);
+  try {
+    await writeGgppiTasks(tasks);
+  } catch (error) {
+    console.error('[GGPPI] Failed to save after delete:', error);
+    return res.status(502).json({ error: 'Could not save tasks. Check server logs or try again.' });
+  }
 
   (removedTask.attachments || []).forEach((file) => {
     const filePath = path.join(ggppiUploadDir, file.filename);

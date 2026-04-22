@@ -1,3 +1,9 @@
+# NOTE: Render “free” web services use an EPHEMERAL filesystem. Anything written under the app
+# directory (including data/ggppi-tasks.json) can disappear on restart or redeploy.
+# Persistence options for GGPPI Tracker:
+#   (A) GitHub: set GITHUB_TOKEN (repo scope) + GGPPI_GITHUB_ENABLED=true, optional GGPPI_GITHUB_REPO,
+#       GGPPI_GITHUB_BRANCH, GGPPI_GITHUB_PATH (default data/ggppi-tasks.json). Tasks commit to the repo.
+#   (B) Disk: mount e.g. /var/data/lab007 then set paths below so tasks + uploads live on the volume.
 services:
   - type: web
     name: lab007-unified-services
@@ -13,3 +19,7 @@ services:
           type: web
           name: lab007-unified-services
           property: port
+      - key: GGPPI_DATA_DIR
+        value: /var/data/lab007/GGPPI
+      - key: GGPPI_UPLOAD_DIR
+        value: /var/data/lab007/GGPPI/uploads
