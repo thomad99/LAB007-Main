@@ -388,7 +388,6 @@
   <script>
     (function () {
       const apiBase = '/api/ggppi/tasks';
-      const localKey = 'ggppi-tracker-local-tasks-v1';
       const defaultAssignedNames = ['John G', 'Tom', 'Dave 3D'];
       const statusEl = document.getElementById('status');
       const taskRows = document.getElementById('taskRows');
@@ -405,8 +404,7 @@
       const state = {
         tasks: [],
         draft: { taskName: '', notes: '', assignedTo: '', completed: false },
-        savingDraft: false,
-        localMode: false
+        savingDraft: false
       };
 
       function setStatus(message, type) {
@@ -430,24 +428,6 @@
         if (lower === 'jon') return 'John G';
         if (lower === 'david thomas') return '';
         return trimmed;
-      }
-
-      function loadLocalTasks() {
-        try {
-          const raw = localStorage.getItem(localKey);
-          const parsed = raw ? JSON.parse(raw) : [];
-          return Array.isArray(parsed) ? parsed : [];
-        } catch (error) {
-          return [];
-        }
-      }
-
-      function saveLocalTasks() {
-        try {
-          localStorage.setItem(localKey, JSON.stringify(state.tasks));
-        } catch (error) {
-          // Ignore localStorage write errors.
-        }
       }
 
       function sortByAssignedAsc(tasks) {
@@ -545,19 +525,18 @@
           if (!res.ok) throw new Error('Failed to load tasks');
           const data = await res.json();
           state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
-          state.localMode = false;
           render();
           setStatus('Ready', 'success');
         } catch (error) {
-          state.localMode = true;
-          state.tasks = loadLocalTasks();
+          state.tasks = [];
           render();
-          setStatus('Ready', 'success');
+          setStatus('Could not reach the server to load tasks. Open this page on the same site where the LAB007 server is running, or ask your host to enable the /api/ggppi/tasks API.', 'error');
         }
       }
 
       async function createTaskFromDraftIfReady() {
         if (state.savingDraft) return;
+        syncDraftFromDom();
         const taskName = state.draft.taskName.trim();
         const assignedTo = state.draft.assignedTo.trim();
         if (!taskName || !assignedTo) return;
@@ -565,24 +544,6 @@
         state.savingDraft = true;
         setStatus('Saving new task...');
         try {
-          if (state.localMode) {
-            const now = new Date().toISOString();
-            state.tasks.push({
-              id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-              taskName: taskName,
-              assignedTo: assignedTo,
-              notes: String(state.draft.notes || '').trim(),
-              completed: !!state.draft.completed,
-              createdAt: now,
-              updatedAt: now
-            });
-            saveLocalTasks();
-            state.draft = { taskName: '', notes: '', assignedTo: '', completed: false };
-            render();
-            setStatus('Task added.', 'success');
-            return;
-          }
-
           const res = await fetch(apiBase, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -601,21 +562,7 @@
           render();
           setStatus('Task added.', 'success');
         } catch (error) {
-          state.localMode = true;
-          const now = new Date().toISOString();
-          state.tasks.push({
-            id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-            taskName: taskName,
-            assignedTo: assignedTo,
-            notes: String(state.draft.notes || '').trim(),
-            completed: !!state.draft.completed,
-            createdAt: now,
-            updatedAt: now
-          });
-          saveLocalTasks();
-          state.draft = { taskName: '', notes: '', assignedTo: '', completed: false };
-          render();
-          setStatus('Task added.', 'success');
+          setStatus(error.message || 'Could not save task on the server. Tasks are not stored in this browser.', 'error');
         } finally {
           state.savingDraft = false;
         }
@@ -625,25 +572,55 @@
         return state.tasks.find(function (task) { return task.id === taskId; });
       }
 
+      function findRowByTaskId(taskId) {
+        const rows = taskRows.querySelectorAll('tr[data-task-id]');
+        for (let i = 0; i < rows.length; i += 1) {
+          if (rows[i].getAttribute('data-task-id') === taskId) {
+            return rows[i];
+          }
+        }
+        return null;
+      }
+
+      function syncDraftFromDom() {
+        const row = findRowByTaskId('draft');
+        if (!row) return;
+        const nameEl = row.querySelector('[data-field="taskName"]');
+        const notesEl = row.querySelector('[data-field="notes"]');
+        const assignEl = row.querySelector('[data-field="assignedTo"]');
+        const doneEl = row.querySelector('[data-field="completed"]');
+        if (nameEl) state.draft.taskName = nameEl.value;
+        if (notesEl) state.draft.notes = notesEl.value;
+        if (assignEl) state.draft.assignedTo = assignEl.value;
+        if (doneEl) state.draft.completed = !!doneEl.checked;
+      }
+
+      function syncTaskFromDom(taskId) {
+        const task = getTaskById(taskId);
+        const row = findRowByTaskId(taskId);
+        if (!task || !row) return;
+        const nameEl = row.querySelector('[data-field="taskName"]');
+        const notesEl = row.querySelector('[data-field="notes"]');
+        const assignEl = row.querySelector('[data-field="assignedTo"]');
+        const doneEl = row.querySelector('[data-field="completed"]');
+        if (nameEl) task.taskName = nameEl.value;
+        if (notesEl) task.notes = notesEl.value;
+        if (assignEl) task.assignedTo = assignEl.value;
+        if (doneEl) task.completed = !!doneEl.checked;
+      }
+
       async function saveExistingTask(taskId) {
         const task = getTaskById(taskId);
         if (!task) return;
+        syncTaskFromDom(taskId);
         setStatus('Saving changes...');
         try {
-          if (state.localMode) {
-            task.updatedAt = new Date().toISOString();
-            saveLocalTasks();
-            render();
-            setStatus('Saved.', 'success');
-            return;
-          }
-
           const res = await fetch(apiBase + '/' + encodeURIComponent(taskId), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              taskName: task.taskName,
-              assignedTo: task.assignedTo,
+              taskName: String(task.taskName || '').trim(),
+              assignedTo: String(task.assignedTo || '').trim(),
               notes: String(task.notes || '').trim(),
               completed: !!task.completed
             })
@@ -655,11 +632,8 @@
           render();
           setStatus('Saved.', 'success');
         } catch (error) {
-          state.localMode = true;
-          task.updatedAt = new Date().toISOString();
-          saveLocalTasks();
-          render();
-          setStatus('Saved.', 'success');
+          setStatus(error.message || 'Could not save changes on the server.', 'error');
+          await loadTasks();
         }
       }
 
@@ -670,14 +644,6 @@
 
         setStatus('Deleting task...');
         try {
-          if (state.localMode) {
-            state.tasks = state.tasks.filter(function (task) { return task.id !== taskId; });
-            saveLocalTasks();
-            render();
-            setStatus('Deleted.', 'success');
-            return;
-          }
-
           const res = await fetch(apiBase + '/' + encodeURIComponent(taskId), { method: 'DELETE' });
           const data = await res.json().catch(function () { return {}; });
           if (!res.ok) throw new Error(data.error || 'Failed to delete task');
@@ -686,11 +652,8 @@
           render();
           setStatus('Deleted.', 'success');
         } catch (error) {
-          state.localMode = true;
-          state.tasks = state.tasks.filter(function (task) { return task.id !== taskId; });
-          saveLocalTasks();
-          render();
-          setStatus('Deleted.', 'success');
+          setStatus(error.message || 'Could not delete task on the server.', 'error');
+          await loadTasks();
         }
       }
 

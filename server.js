@@ -16,15 +16,23 @@ const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
-const ggppiDataDir = path.join(__dirname, 'data');
+// GGPPI Tracker: JSON + uploads (set GGPPI_DATA_DIR / GGPPI_UPLOAD_DIR to a mounted volume in production)
+const ggppiDataDir = process.env.GGPPI_DATA_DIR
+  ? path.resolve(process.env.GGPPI_DATA_DIR)
+  : path.join(__dirname, 'data');
 const ggppiTasksPath = path.join(ggppiDataDir, 'ggppi-tasks.json');
-const ggppiUploadDir = path.join(uploadDir, 'ggppi-tracker');
+const ggppiUploadDir = process.env.GGPPI_UPLOAD_DIR
+  ? path.resolve(process.env.GGPPI_UPLOAD_DIR)
+  : path.join(uploadDir, 'ggppi-tracker');
 if (!fs.existsSync(ggppiDataDir)) {
   fs.mkdirSync(ggppiDataDir, { recursive: true });
 }
 if (!fs.existsSync(ggppiUploadDir)) {
   fs.mkdirSync(ggppiUploadDir, { recursive: true });
 }
+console.log('GGPPI data dir:', ggppiDataDir);
+console.log('GGPPI tasks file:', ggppiTasksPath);
+console.log('GGPPI uploads dir:', ggppiUploadDir);
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadDir),
@@ -431,6 +439,8 @@ console.error('Failed to send contact form email:', error);
 res.status(500).json({ 
 error: 'Failed to send message. Please try again later or contact us directly at info@lab007.ai' 
 });
+}
+});
 
 function readGgppiTasks() {
   try {
@@ -632,8 +642,6 @@ app.delete('/api/ggppi/tasks/:id', (req, res) => {
   });
 
   return res.json({ success: true });
-});
-}
 });
 
 // SRQ Cleaning contact form - sends to info@lab007.ai
