@@ -4,218 +4,55 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GGPPI Tracker | LAB007</title>
-  <meta name="description" content="GGPPI Tracker is a mobile-friendly team task tracker with assignee, progress, completion, and file uploads.">
+  <meta name="description" content="Simple team task table with auto-save.">
   <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
   <style>
     :root {
-      --bg: #0b0e14;
-      --panel: #131926;
-      --panel-soft: #1b2336;
-      --line: #2d3750;
+      --bg: #0f1320;
+      --panel: #171e31;
+      --line: #2f3c5f;
       --text: #edf2ff;
-      --muted: #9fa9c3;
-      --accent: #59a5ff;
-      --accent-strong: #2f8aff;
-      --danger: #ef5350;
-      --ok: #3ecf8e;
+      --muted: #a8b3cf;
+      --accent: #68adff;
+      --cell-bg: #11182a;
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      font-family: "Inter", "Segoe UI", Arial, sans-serif;
-      background: radial-gradient(circle at top right, #1a315f 0%, #0b0e14 42%);
+      padding: 12px;
+      background: radial-gradient(circle at top right, #20335e 0%, #0f1320 45%);
       color: var(--text);
-      line-height: 1.45;
-      padding: 14px;
+      font-family: "Inter", "Segoe UI", Arial, sans-serif;
     }
 
     .wrap {
-      width: min(980px, 100%);
+      width: min(1100px, 100%);
       margin: 0 auto;
       display: grid;
-      gap: 12px;
+      gap: 10px;
     }
 
     .panel {
-      background: rgba(19, 25, 38, 0.96);
+      background: rgba(23, 30, 49, 0.96);
       border: 1px solid var(--line);
-      border-radius: 14px;
-      padding: 14px;
+      border-radius: 12px;
+      padding: 12px;
     }
 
     h1 {
-      margin: 0 0 6px;
-      font-size: clamp(1.45rem, 4vw, 2.1rem);
-      letter-spacing: 0.02em;
+      margin: 0 0 4px;
+      font-size: clamp(1.4rem, 4vw, 1.95rem);
     }
 
     .sub {
       margin: 0;
       color: var(--muted);
-      font-size: 0.95rem;
+      font-size: 0.92rem;
     }
 
-    .grid {
-      display: grid;
-      grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 10px;
-    }
-
-    .full { grid-column: 1 / -1; }
-
-    label {
-      display: block;
-      color: var(--muted);
-      font-size: 0.78rem;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-weight: 700;
-    }
-
-    input[type="text"],
-    input[type="number"],
-    select {
-      width: 100%;
-      border: 1px solid #3a4666;
-      border-radius: 10px;
-      background: #0f1522;
-      color: var(--text);
-      padding: 10px 11px;
-      font-size: 0.95rem;
-    }
-
-    input[type="file"] {
-      width: 100%;
-      color: var(--muted);
-    }
-
-    .actions {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    button {
-      border: 1px solid #3d5d96;
-      background: linear-gradient(180deg, var(--accent), var(--accent-strong));
-      color: white;
-      font-weight: 700;
-      border-radius: 999px;
-      cursor: pointer;
-      padding: 10px 14px;
-      font-size: 0.9rem;
-    }
-
-    button.ghost {
-      background: #131d30;
-      border-color: #3a4666;
-      color: var(--text);
-    }
-
-    button.danger {
-      background: #3a1a20;
-      border-color: #64313c;
-      color: #ffdbe1;
-    }
-
-    .status {
-      color: var(--muted);
-      font-size: 0.9rem;
-      min-height: 1.2rem;
-    }
-
-    .status.error { color: #ff9090; }
-    .status.success { color: #83e6b9; }
-
-    .task-list {
-      display: grid;
-      gap: 10px;
-    }
-
-    .task {
-      border: 1px solid var(--line);
-      border-radius: 12px;
-      padding: 12px;
-      background: var(--panel-soft);
-      display: grid;
-      gap: 10px;
-    }
-
-    .task-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .chip {
-      border: 1px solid #34517c;
-      color: #bfdbff;
-      border-radius: 999px;
-      padding: 2px 10px;
-      font-size: 0.75rem;
-      white-space: nowrap;
-    }
-
-    .progress-row {
-      display: grid;
-      grid-template-columns: 1fr 86px;
-      gap: 8px;
-      align-items: center;
-    }
-
-    input[type="range"] {
-      width: 100%;
-    }
-
-    .attachments {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-
-    .file-chip {
-      border: 1px solid #3a4666;
-      border-radius: 999px;
-      padding: 4px 8px;
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      font-size: 0.8rem;
-      background: #11192b;
-    }
-
-    .file-chip a {
-      color: #b9d7ff;
-      text-decoration: none;
-    }
-
-    .file-chip button {
-      padding: 2px 6px;
-      font-size: 0.72rem;
-      border-radius: 999px;
-      background: #2b1b20;
-      border-color: #5a3039;
-      color: #ffc8d2;
-    }
-
-    .muted {
-      color: var(--muted);
-      font-size: 0.84rem;
-    }
-
-    .empty {
-      text-align: center;
-      color: var(--muted);
-      border: 1px dashed #415079;
-      border-radius: 12px;
-      padding: 18px;
-    }
-
-    .top-links {
+    .top {
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -224,107 +61,157 @@
       margin-bottom: 6px;
     }
 
-    .top-links a {
-      color: #b9d7ff;
+    .top a {
+      color: #bdd9ff;
       text-decoration: none;
-      font-weight: 600;
       font-size: 0.9rem;
+      font-weight: 600;
     }
 
+    .toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 0.86rem;
+    }
+
+    .table-wrap {
+      width: 100%;
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+      background: var(--panel);
+    }
+
+    thead th {
+      text-align: left;
+      font-size: 0.8rem;
+      letter-spacing: 0.05em;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 10px;
+      border-bottom: 1px solid var(--line);
+      background: #1d2640;
+    }
+
+    tbody td {
+      border-bottom: 1px solid #2b3656;
+      padding: 6px;
+      vertical-align: middle;
+    }
+
+    tbody tr:last-child td {
+      border-bottom: none;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      border: 1px solid #38456c;
+      border-radius: 8px;
+      background: var(--cell-bg);
+      color: var(--text);
+      padding: 9px 10px;
+      font-size: 0.92rem;
+    }
+
+    input[type="number"] {
+      width: 90px;
+    }
+
+    .done-cell {
+      text-align: center;
+      width: 130px;
+    }
+
+    .draft-row input {
+      border-style: dashed;
+      border-color: #4d639d;
+      background: #121c31;
+    }
+
+    .hint {
+      color: var(--muted);
+      font-size: 0.82rem;
+      padding-top: 8px;
+    }
+
+    .status {
+      min-height: 1.2rem;
+      font-size: 0.88rem;
+      color: var(--muted);
+      padding-top: 6px;
+    }
+
+    .status.error { color: #ff9fa2; }
+    .status.success { color: #8ce4ba; }
+
     @media (max-width: 760px) {
-      body { padding: 10px; }
-      .grid { grid-template-columns: 1fr; }
-      .task-top { align-items: flex-start; flex-direction: column; }
-      .progress-row { grid-template-columns: 1fr 76px; }
-      button { width: 100%; }
-      .actions button { width: auto; }
+      body { padding: 9px; }
+      .panel { padding: 10px; }
+      input[type="text"], input[type="number"] {
+        padding: 8px;
+        font-size: 0.9rem;
+      }
     }
   </style>
 </head>
 <body>
   <main class="wrap">
     <section class="panel">
-      <div class="top-links">
+      <div class="top">
         <a href="/">Back to LAB007</a>
+        <label class="toggle">
+          <input id="showCompleted" type="checkbox">
+          Show completed tasks
+        </label>
       </div>
       <h1>GGPPI Tracker</h1>
-      <p class="sub">Shared team task tracker. Anyone with this URL can add and update tasks.</p>
+      <p class="sub">Simple task table with auto-save. Fill the blank row to create a new task.</p>
     </section>
 
     <section class="panel">
-      <h2 style="margin:0 0 10px;font-size:1.2rem;">Add Task</h2>
-      <form id="taskForm" class="grid">
-        <div class="full">
-          <label for="taskName">Task Name</label>
-          <input id="taskName" name="taskName" type="text" placeholder="Update landing page hero section" required>
-        </div>
-        <div>
-          <label for="assignedTo">Assigned Name</label>
-          <input id="assignedTo" name="assignedTo" type="text" placeholder="Alex" required>
-        </div>
-        <div>
-          <label for="progress">Task Progress (%)</label>
-          <input id="progress" name="progress" type="number" min="0" max="100" value="0" required>
-        </div>
-        <div class="full">
-          <label for="attachments">Uploads</label>
-          <input id="attachments" name="attachments" type="file" multiple>
-          <div class="muted">You can attach files to each task.</div>
-        </div>
-        <div class="full">
-          <label><input id="completed" name="completed" type="checkbox"> Completed</label>
-        </div>
-        <div class="actions full">
-          <button type="submit">Add Task</button>
-          <button id="refreshBtn" class="ghost" type="button">Refresh</button>
-        </div>
-      </form>
-      <div id="formStatus" class="status" aria-live="polite"></div>
-    </section>
-
-    <section class="panel">
-      <h2 style="margin:0 0 10px;font-size:1.2rem;">Filters</h2>
-      <div class="grid">
-        <div>
-          <label for="assignedFilter">Assigned To</label>
-          <select id="assignedFilter">
-            <option value="">All team members</option>
-          </select>
-        </div>
-        <div>
-          <label for="completedFilter">Completed</label>
-          <select id="completedFilter">
-            <option value="all">All</option>
-            <option value="open">Open only</option>
-            <option value="done">Completed only</option>
-          </select>
-        </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Task Name</th>
+              <th style="width:120px;">Task Progress</th>
+              <th style="width:220px;">Assigned Name</th>
+              <th style="width:130px;">Completed</th>
+            </tr>
+          </thead>
+          <tbody id="taskRows"></tbody>
+        </table>
       </div>
-    </section>
-
-    <section class="panel">
-      <h2 style="margin:0 0 10px;font-size:1.2rem;">Tasks</h2>
-      <div id="listStatus" class="status" aria-live="polite"></div>
-      <div id="taskList" class="task-list"></div>
+      <div class="hint">Auto-save runs when you leave a cell or toggle completed.</div>
+      <div id="status" class="status" aria-live="polite"></div>
     </section>
   </main>
 
   <script>
     (function () {
       const apiBase = '/api/ggppi/tasks';
-      const state = { tasks: [] };
+      const statusEl = document.getElementById('status');
+      const taskRows = document.getElementById('taskRows');
+      const showCompleted = document.getElementById('showCompleted');
 
-      const taskForm = document.getElementById('taskForm');
-      const formStatus = document.getElementById('formStatus');
-      const listStatus = document.getElementById('listStatus');
-      const taskList = document.getElementById('taskList');
-      const refreshBtn = document.getElementById('refreshBtn');
-      const assignedFilter = document.getElementById('assignedFilter');
-      const completedFilter = document.getElementById('completedFilter');
+      const state = {
+        tasks: [],
+        draft: { taskName: '', progress: 0, assignedTo: '', completed: false },
+        savingDraft: false
+      };
 
-      function setStatus(el, message, kind) {
-        el.textContent = message || '';
-        el.className = 'status' + (kind ? ' ' + kind : '');
+      function setStatus(message, type) {
+        statusEl.textContent = message || '';
+        statusEl.className = 'status' + (type ? ' ' + type : '');
       }
 
       function esc(value) {
@@ -336,231 +223,188 @@
           .replace(/'/g, '&#39;');
       }
 
-      function taskMatchesFilters(task) {
-        const assignedValue = assignedFilter.value;
-        const completeValue = completedFilter.value;
-        if (assignedValue && task.assignedTo !== assignedValue) return false;
-        if (completeValue === 'open' && task.completed) return false;
-        if (completeValue === 'done' && !task.completed) return false;
-        return true;
+      function clampProgress(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return 0;
+        return Math.max(0, Math.min(100, Math.round(n)));
       }
 
-      function syncFilterOptions() {
-        const current = assignedFilter.value;
-        const names = Array.from(new Set(state.tasks.map((task) => task.assignedTo).filter(Boolean))).sort((a, b) => a.localeCompare(b));
-        assignedFilter.innerHTML = '<option value="">All team members</option>' +
-          names.map((name) => '<option value="' + esc(name) + '">' + esc(name) + '</option>').join('');
-        if (names.includes(current)) {
-          assignedFilter.value = current;
-        }
+      function sortByCreatedAsc(tasks) {
+        return tasks.slice().sort(function (a, b) {
+          const aTime = new Date(a.createdAt || 0).getTime();
+          const bTime = new Date(b.createdAt || 0).getTime();
+          return aTime - bTime;
+        });
       }
 
-      function renderTasks() {
-        const visibleTasks = state.tasks.filter(taskMatchesFilters);
-        if (!visibleTasks.length) {
-          taskList.innerHTML = '<div class="empty">No tasks match this filter yet.</div>';
-          return;
-        }
+      function visibleTasks() {
+        const sorted = sortByCreatedAsc(state.tasks);
+        if (showCompleted.checked) return sorted;
+        return sorted.filter(function (task) { return !task.completed; });
+      }
 
-        taskList.innerHTML = visibleTasks.map((task) => {
-          const attachmentsHtml = (task.attachments || []).map((file) => {
-            return '<span class="file-chip">' +
-              '<a href="' + esc(file.url) + '" target="_blank" rel="noopener">' + esc(file.originalName || file.filename) + '</a>' +
-              '<button type="button" data-action="remove-file" data-task-id="' + esc(task.id) + '" data-filename="' + esc(file.filename) + '">x</button>' +
-              '</span>';
-          }).join('');
-
-          const progressValue = Number.isFinite(Number(task.progress)) ? Number(task.progress) : 0;
-          const updatedAt = task.updatedAt ? new Date(task.updatedAt).toLocaleString() : '';
-
+      function render() {
+        const rows = visibleTasks().map(function (task) {
+          const progress = clampProgress(task.progress);
           return (
-            '<article class="task" data-task-id="' + esc(task.id) + '">' +
-              '<div class="task-top">' +
-                '<div class="chip">' + (task.completed ? 'Completed' : 'In Progress') + '</div>' +
-                '<div class="muted">Updated: ' + esc(updatedAt) + '</div>' +
-              '</div>' +
-              '<div class="grid">' +
-                '<div class="full">' +
-                  '<label>Task Name</label>' +
-                  '<input type="text" data-field="taskName" value="' + esc(task.taskName) + '">' +
-                '</div>' +
-                '<div>' +
-                  '<label>Assigned Name</label>' +
-                  '<input type="text" data-field="assignedTo" value="' + esc(task.assignedTo) + '">' +
-                '</div>' +
-                '<div>' +
-                  '<label>Completed</label>' +
-                  '<label><input type="checkbox" data-field="completed" ' + (task.completed ? 'checked' : '') + '> Mark completed</label>' +
-                '</div>' +
-                '<div class="full">' +
-                  '<label>Progress</label>' +
-                  '<div class="progress-row">' +
-                    '<input type="range" min="0" max="100" data-field="progress-range" value="' + progressValue + '">' +
-                    '<input type="number" min="0" max="100" data-field="progress" value="' + progressValue + '">' +
-                  '</div>' +
-                '</div>' +
-              '</div>' +
-              '<div>' +
-                '<label>Attachments</label>' +
-                '<div class="attachments">' + (attachmentsHtml || '<span class="muted">No files yet.</span>') + '</div>' +
-              '</div>' +
-              '<div class="grid">' +
-                '<div class="full">' +
-                  '<label>Add More Uploads</label>' +
-                  '<input type="file" data-field="newFiles" multiple>' +
-                '</div>' +
-              '</div>' +
-              '<div class="actions">' +
-                '<button type="button" data-action="save" data-task-id="' + esc(task.id) + '">Save Changes</button>' +
-                '<button type="button" class="ghost" data-action="upload" data-task-id="' + esc(task.id) + '">Upload Files</button>' +
-                '<button type="button" class="danger" data-action="delete" data-task-id="' + esc(task.id) + '">Delete</button>' +
-              '</div>' +
-            '</article>'
+            '<tr data-task-id="' + esc(task.id) + '">' +
+              '<td><input type="text" data-field="taskName" value="' + esc(task.taskName) + '"></td>' +
+              '<td><input type="number" min="0" max="100" data-field="progress" value="' + progress + '"></td>' +
+              '<td><input type="text" data-field="assignedTo" value="' + esc(task.assignedTo) + '"></td>' +
+              '<td class="done-cell"><input type="checkbox" data-field="completed" ' + (task.completed ? 'checked' : '') + '></td>' +
+            '</tr>'
           );
         }).join('');
+
+        const draft = state.draft;
+        const draftRow = (
+          '<tr class="draft-row" data-task-id="draft">' +
+            '<td><input type="text" data-field="taskName" value="' + esc(draft.taskName) + '" placeholder="Type new task..."></td>' +
+            '<td><input type="number" min="0" max="100" data-field="progress" value="' + clampProgress(draft.progress) + '"></td>' +
+            '<td><input type="text" data-field="assignedTo" value="' + esc(draft.assignedTo) + '" placeholder="Assigned name"></td>' +
+            '<td class="done-cell"><input type="checkbox" data-field="completed" ' + (draft.completed ? 'checked' : '') + '></td>' +
+          '</tr>'
+        );
+
+        taskRows.innerHTML = rows + draftRow;
       }
 
-      async function fetchTasks() {
-        setStatus(listStatus, 'Loading tasks...');
+      async function loadTasks() {
+        setStatus('Loading tasks...');
         try {
           const res = await fetch(apiBase);
           if (!res.ok) throw new Error('Failed to load tasks');
           const data = await res.json();
           state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
-          syncFilterOptions();
-          renderTasks();
-          setStatus(listStatus, 'Loaded ' + state.tasks.length + ' task(s).', 'success');
+          render();
+          setStatus('Ready', 'success');
         } catch (error) {
-          setStatus(listStatus, 'Could not load tasks right now.', 'error');
+          setStatus('Could not load tasks.', 'error');
         }
       }
 
-      async function createTask(formEl) {
-        const formData = new FormData(formEl);
-        const completed = formData.get('completed') === 'on';
-        formData.set('completed', completed ? 'true' : 'false');
-        if (completed) {
-          formData.set('progress', '100');
-        }
+      async function createTaskFromDraftIfReady() {
+        if (state.savingDraft) return;
+        const taskName = state.draft.taskName.trim();
+        const assignedTo = state.draft.assignedTo.trim();
+        if (!taskName || !assignedTo) return;
 
-        setStatus(formStatus, 'Saving task...');
+        state.savingDraft = true;
+        setStatus('Saving new task...');
         try {
-          const res = await fetch(apiBase, { method: 'POST', body: formData });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.error || 'Failed to create task');
-          formEl.reset();
-          formEl.progress.value = '0';
-          setStatus(formStatus, 'Task added successfully.', 'success');
-          await fetchTasks();
-        } catch (error) {
-          setStatus(formStatus, error.message || 'Failed to create task.', 'error');
-        }
-      }
-
-      async function updateTask(taskId, payload, useFormData) {
-        const options = { method: 'PUT' };
-        if (useFormData) {
-          options.body = payload;
-        } else {
-          options.headers = { 'Content-Type': 'application/json' };
-          options.body = JSON.stringify(payload);
-        }
-        const res = await fetch(apiBase + '/' + encodeURIComponent(taskId), options);
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'Update failed');
-        return data.task;
-      }
-
-      async function deleteTask(taskId) {
-        const res = await fetch(apiBase + '/' + encodeURIComponent(taskId), { method: 'DELETE' });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'Delete failed');
-      }
-
-      taskForm.addEventListener('submit', function (event) {
-        event.preventDefault();
-        createTask(taskForm);
-      });
-
-      refreshBtn.addEventListener('click', function () {
-        fetchTasks();
-      });
-
-      assignedFilter.addEventListener('change', renderTasks);
-      completedFilter.addEventListener('change', renderTasks);
-
-      taskList.addEventListener('input', function (event) {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) return;
-        if (target.getAttribute('data-field') === 'progress-range') {
-          const card = target.closest('.task');
-          const num = card ? card.querySelector('[data-field="progress"]') : null;
-          if (num) {
-            num.value = target.value;
-          }
-        }
-      });
-
-      taskList.addEventListener('click', async function (event) {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) return;
-
-        const action = target.getAttribute('data-action');
-        if (!action) return;
-
-        const taskId = target.getAttribute('data-task-id');
-        if (!taskId) return;
-
-        const card = target.closest('.task');
-        if (!card) return;
-
-        try {
-          if (action === 'save') {
-            const taskName = card.querySelector('[data-field="taskName"]').value.trim();
-            const assignedTo = card.querySelector('[data-field="assignedTo"]').value.trim();
-            const completed = !!card.querySelector('[data-field="completed"]').checked;
-            const progress = Number(card.querySelector('[data-field="progress"]').value || 0);
-            await updateTask(taskId, {
+          const res = await fetch(apiBase, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
               taskName: taskName,
               assignedTo: assignedTo,
-              completed: completed,
-              progress: completed ? 100 : progress
-            }, false);
-            setStatus(listStatus, 'Task updated.', 'success');
-            await fetchTasks();
-          } else if (action === 'upload') {
-            const filesInput = card.querySelector('[data-field="newFiles"]');
-            const files = filesInput ? filesInput.files : null;
-            if (!files || !files.length) {
-              setStatus(listStatus, 'Choose file(s) before upload.', 'error');
-              return;
-            }
-            const fd = new FormData();
-            for (let i = 0; i < files.length; i += 1) {
-              fd.append('attachments', files[i]);
-            }
-            await updateTask(taskId, fd, true);
-            setStatus(listStatus, 'Files uploaded.', 'success');
-            await fetchTasks();
-          } else if (action === 'delete') {
-            const ok = window.confirm('Delete this task?');
-            if (!ok) return;
-            await deleteTask(taskId);
-            setStatus(listStatus, 'Task deleted.', 'success');
-            await fetchTasks();
-          } else if (action === 'remove-file') {
-            const filename = target.getAttribute('data-filename');
-            if (!filename) return;
-            await updateTask(taskId, { removeAttachmentFilenames: [filename] }, false);
-            setStatus(listStatus, 'Attachment removed.', 'success');
-            await fetchTasks();
-          }
+              progress: state.draft.completed ? 100 : clampProgress(state.draft.progress),
+              completed: !!state.draft.completed
+            })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'Failed to save new task');
+
+          state.tasks.push(data.task);
+          state.draft = { taskName: '', progress: 0, assignedTo: '', completed: false };
+          render();
+          setStatus('Task added.', 'success');
         } catch (error) {
-          setStatus(listStatus, error.message || 'Action failed.', 'error');
+          setStatus(error.message || 'Could not save new task.', 'error');
+        } finally {
+          state.savingDraft = false;
+        }
+      }
+
+      function getTaskById(taskId) {
+        return state.tasks.find(function (task) { return task.id === taskId; });
+      }
+
+      async function saveExistingTask(taskId) {
+        const task = getTaskById(taskId);
+        if (!task) return;
+        setStatus('Saving changes...');
+        try {
+          const res = await fetch(apiBase + '/' + encodeURIComponent(taskId), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              taskName: task.taskName,
+              assignedTo: task.assignedTo,
+              progress: task.completed ? 100 : clampProgress(task.progress),
+              completed: !!task.completed
+            })
+          });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'Failed to save task');
+          const index = state.tasks.findIndex(function (item) { return item.id === taskId; });
+          if (index >= 0) state.tasks[index] = data.task;
+          render();
+          setStatus('Saved.', 'success');
+        } catch (error) {
+          setStatus(error.message || 'Could not save task.', 'error');
+        }
+      }
+
+      taskRows.addEventListener('input', function (event) {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const row = target.closest('tr');
+        if (!row) return;
+        const taskId = row.getAttribute('data-task-id');
+        const field = target.getAttribute('data-field');
+        if (!taskId || !field) return;
+
+        const value = field === 'completed' ? !!target.checked : target.value;
+        if (taskId === 'draft') {
+          if (field === 'progress') state.draft.progress = clampProgress(value);
+          else if (field === 'completed') state.draft.completed = !!value;
+          else state.draft[field] = value;
+          return;
+        }
+
+        const task = getTaskById(taskId);
+        if (!task) return;
+        if (field === 'progress') task.progress = clampProgress(value);
+        else if (field === 'completed') task.completed = !!value;
+        else task[field] = value;
+      });
+
+      taskRows.addEventListener('change', function (event) {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const row = target.closest('tr');
+        if (!row) return;
+        const taskId = row.getAttribute('data-task-id');
+        if (!taskId) return;
+
+        if (taskId === 'draft') {
+          createTaskFromDraftIfReady();
+        } else {
+          saveExistingTask(taskId);
         }
       });
 
-      fetchTasks();
+      taskRows.addEventListener('focusout', function (event) {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const row = target.closest('tr');
+        if (!row) return;
+        const taskId = row.getAttribute('data-task-id');
+        if (!taskId) return;
+
+        if (taskId === 'draft') {
+          createTaskFromDraftIfReady();
+        } else {
+          saveExistingTask(taskId);
+        }
+      });
+
+      showCompleted.addEventListener('change', function () {
+        render();
+      });
+
+      loadTasks();
     })();
   </script>
 </body>
