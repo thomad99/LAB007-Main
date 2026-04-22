@@ -460,6 +460,19 @@ function writeGgppiTasks(tasks) {
   fs.writeFileSync(ggppiTasksPath, JSON.stringify(tasks, null, 2), 'utf8');
 }
 
+const GGPPI_OWNERS = ['David T', 'John G', 'Tom', 'Dave 3D', 'TBC'];
+
+function normalizeGgppiOwner(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  const lower = raw.toLowerCase();
+  if (lower === 'david t' || lower === 'david t.') return 'David T';
+  if (lower === 'david thomas') return 'David T';
+  if (lower === 'jon') return 'John G';
+  const exact = GGPPI_OWNERS.find((owner) => owner.toLowerCase() === lower);
+  return exact || '';
+}
+
 function parseBoolean(value) {
   if (typeof value === 'boolean') return value;
   if (typeof value === 'string') {
@@ -498,15 +511,21 @@ function withOptionalGgppiUpload(req, res, next) {
 }
 
 app.get('/api/ggppi/tasks', (req, res) => {
-  const tasks = readGgppiTasks().sort((a, b) => {
+  const tasks = readGgppiTasks().map((task) => {
+    const normalized = normalizeGgppiOwner(task.assignedTo);
+    return {
+      ...task,
+      assignedTo: normalized || 'TBC'
+    };
+  }).sort((a, b) => {
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
-  return res.json({ tasks });
+  return res.json({ tasks, owners: GGPPI_OWNERS });
 });
 
 app.post('/api/ggppi/tasks', ggppiUpload.array('attachments', 10), (req, res) => {
   const taskName = String(req.body.taskName || '').trim();
-  const assignedTo = String(req.body.assignedTo || '').trim();
+  const assignedTo = normalizeGgppiOwner(req.body.assignedTo);
   const notes = String(req.body.notes || '').trim();
   const progress = parseProgress(req.body.progress, 0);
   const completed = parseBoolean(req.body.completed);
@@ -515,7 +534,7 @@ app.post('/api/ggppi/tasks', ggppiUpload.array('attachments', 10), (req, res) =>
     return res.status(400).json({ error: 'Task name is required' });
   }
   if (!assignedTo) {
-    return res.status(400).json({ error: 'Assigned name is required' });
+    return res.status(400).json({ error: 'Assigned name must be one of: ' + GGPPI_OWNERS.join(', ') });
   }
 
   const now = new Date().toISOString();
@@ -557,7 +576,9 @@ app.put('/api/ggppi/tasks/:id', withOptionalGgppiUpload, (req, res) => {
   const hasRemoved = Object.prototype.hasOwnProperty.call(req.body || {}, 'removeAttachmentFilenames');
 
   const nextTaskName = hasTaskName ? String(req.body.taskName || '').trim() : current.taskName;
-  const nextAssignedTo = hasAssignedTo ? String(req.body.assignedTo || '').trim() : current.assignedTo;
+  const nextAssignedTo = hasAssignedTo
+    ? normalizeGgppiOwner(req.body.assignedTo)
+    : (normalizeGgppiOwner(current.assignedTo) || 'TBC');
   const nextNotes = hasNotes ? String(req.body.notes || '').trim() : String(current.notes || '');
   const nextCompleted = hasCompleted ? parseBoolean(req.body.completed) : !!current.completed;
   const nextProgress = hasProgress ? parseProgress(req.body.progress, current.progress) : current.progress;
@@ -566,7 +587,7 @@ app.put('/api/ggppi/tasks/:id', withOptionalGgppiUpload, (req, res) => {
     return res.status(400).json({ error: 'Task name cannot be empty' });
   }
   if (!nextAssignedTo) {
-    return res.status(400).json({ error: 'Assigned name cannot be empty' });
+    return res.status(400).json({ error: 'Assigned name must be one of: ' + GGPPI_OWNERS.join(', ') });
   }
 
   let removeAttachmentFilenames = [];

@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>GGPPI Tracker | LAB007</title>
-  <meta name="description" content="Simple team task table with auto-save.">
+  <meta name="description" content="GGPPI task tracker for mobile team workflows.">
   <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
   <style>
     :root {
@@ -14,17 +14,20 @@
       --text: #edf2ff;
       --muted: #a8b3cf;
       --accent: #68adff;
-      --cell-bg: #11182a;
+      --danger: #ffb4c4;
+      --danger-bg: #2a1720;
+      --ok: #8ce4ba;
+      --input: #11182a;
     }
 
     * { box-sizing: border-box; }
 
     body {
       margin: 0;
-      padding: 12px;
+      padding: 10px;
       padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
-      padding-left: max(12px, env(safe-area-inset-left, 0px));
-      padding-right: max(12px, env(safe-area-inset-right, 0px));
+      padding-left: max(10px, env(safe-area-inset-left, 0px));
+      padding-right: max(10px, env(safe-area-inset-right, 0px));
       background: radial-gradient(circle at top right, #20335e 0%, #0f1320 45%);
       color: var(--text);
       font-family: "Inter", "Segoe UI", Arial, sans-serif;
@@ -32,7 +35,7 @@
     }
 
     .wrap {
-      width: min(1100px, 100%);
+      width: min(980px, 100%);
       margin: 0 auto;
       display: grid;
       gap: 10px;
@@ -41,125 +44,71 @@
     .panel {
       background: rgba(23, 30, 49, 0.96);
       border: 1px solid var(--line);
-      border-radius: 12px;
+      border-radius: 14px;
       padding: 12px;
     }
 
     h1 {
-      margin: 0 0 4px;
-      font-size: clamp(1.4rem, 4vw, 1.95rem);
-    }
-
-    .sub {
       margin: 0;
-      color: var(--muted);
-      font-size: 0.92rem;
+      font-size: clamp(1.5rem, 5vw, 2rem);
     }
 
-    .top {
+    .header-row {
       display: flex;
-      justify-content: flex-end;
+      gap: 8px;
       align-items: center;
-      gap: 10px;
+      justify-content: space-between;
       flex-wrap: wrap;
-      margin-bottom: 6px;
-    }
-
-    /* Title first on small screens (toggle stays easy to reach below title) */
-    section.panel.hero-panel {
-      display: flex;
-      flex-direction: column;
-    }
-
-    section.panel.hero-panel h1 {
-      order: -1;
       margin-bottom: 8px;
     }
 
-    section.panel.hero-panel .top {
-      margin-bottom: 0;
+    .toolbar {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      align-items: end;
+      width: 100%;
+    }
+
+    .field {
+      display: grid;
+      gap: 4px;
+      min-width: 0;
+    }
+
+    label {
+      color: var(--muted);
+      font-size: 0.76rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+
+    select,
+    input[type="text"],
+    textarea {
+      width: 100%;
+      border: 1px solid #3a4b78;
+      border-radius: 10px;
+      background: var(--input);
+      color: var(--text);
+      padding: 12px;
+      font-size: 16px;
+      min-height: 44px;
+    }
+
+    textarea {
+      min-height: 84px;
+      resize: vertical;
     }
 
     .toggle {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      color: var(--muted);
-      font-size: 0.86rem;
-    }
-
-    .filters {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr);
       gap: 8px;
-      margin-bottom: 10px;
-    }
-
-    .filters label {
-      display: block;
       color: var(--muted);
-      font-size: 0.78rem;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-weight: 700;
-    }
-
-    .filters select {
-      width: 100%;
-      border: 1px solid #38456c;
-      border-radius: 10px;
-      background: #0f1522;
-      color: var(--text);
-      padding: 10px 11px;
-      font-size: 0.95rem;
-      min-height: 44px;
-    }
-
-    .table-wrap {
-      width: 100%;
-      overflow-x: auto;
-      -webkit-overflow-scrolling: touch;
-      border: 1px solid var(--line);
-      border-radius: 10px;
-    }
-
-    table.task-table {
-      width: 100%;
-      border-collapse: collapse;
-      min-width: 0;
-      background: var(--panel);
-    }
-
-    thead th {
-      text-align: left;
-      font-size: 0.8rem;
-      letter-spacing: 0.05em;
-      color: var(--muted);
-      text-transform: uppercase;
-      padding: 10px;
-      border-bottom: 1px solid var(--line);
-      background: #1d2640;
-    }
-
-    tbody td {
-      border-bottom: 1px solid #2b3656;
-      padding: 6px;
-      vertical-align: middle;
-    }
-
-    tbody tr:last-child td {
-      border-bottom: none;
-    }
-
-    input[type="text"] {
-      width: 100%;
-      border: 1px solid #38456c;
-      border-radius: 8px;
-      background: var(--cell-bg);
-      color: var(--text);
-      padding: 9px 10px;
       font-size: 0.92rem;
+      white-space: nowrap;
     }
 
     input[type="checkbox"] {
@@ -168,249 +117,218 @@
       accent-color: var(--accent);
     }
 
-    .done-cell {
-      text-align: center;
-      width: 130px;
-    }
-
-    .action-cell {
-      text-align: center;
-      width: 56px;
-      vertical-align: middle;
-    }
-
-    .icon-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 44px;
-      height: 44px;
+    .icon-btn,
+    .btn {
+      border: 1px solid #3e5285;
+      background: #1b2a46;
+      color: #d7e8ff;
       border-radius: 10px;
-      border: 1px solid #4a3a45;
-      background: #24141a;
-      color: #ffc9d4;
+      height: 44px;
+      min-width: 44px;
+      padding: 0 14px;
+      font-size: 0.94rem;
+      font-weight: 700;
       cursor: pointer;
-      padding: 0;
       touch-action: manipulation;
     }
 
-    .icon-btn:hover {
-      border-color: #7a4a5a;
-      background: #2c1820;
+    .icon-btn {
+      width: 44px;
+      padding: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5rem;
+      line-height: 1;
     }
 
-    .icon-btn svg {
-      width: 18px;
-      height: 18px;
-      display: block;
+    .btn.primary {
+      background: linear-gradient(180deg, #6eb3ff, #4e95e4);
+      color: #081527;
+      border-color: #79b9ff;
     }
 
-    .draft-row input {
-      border-style: dashed;
-      border-color: #4d639d;
-      background: #121c31;
-    }
-
-    .hint {
-      color: var(--muted);
-      font-size: 0.82rem;
-      padding-top: 8px;
+    .btn.danger {
+      background: var(--danger-bg);
+      color: var(--danger);
+      border-color: #5d3342;
     }
 
     .status {
       min-height: 1.2rem;
-      font-size: 0.88rem;
+      font-size: 0.9rem;
       color: var(--muted);
-      padding-top: 6px;
+      margin-top: 6px;
     }
 
     .status.error { color: #ff9fa2; }
-    .status.success { color: #8ce4ba; }
+    .status.success { color: var(--ok); }
 
-    /* Wide screens: horizontal scroll for full table */
-    @media (min-width: 641px) {
-      table.task-table {
-        min-width: 720px;
-      }
+    .add-panel {
+      display: none;
+      margin-top: 8px;
+      border: 1px dashed #4f6299;
+      border-radius: 12px;
+      padding: 10px;
+      background: rgba(17, 24, 42, 0.55);
+      gap: 10px;
     }
 
-    /* Portrait phones: card stack — no sideways scrolling */
-    @media (max-width: 640px) {
-      body {
-        padding: 10px;
-        padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
-      }
-
-      .panel {
-        padding: 12px;
-        border-radius: 14px;
-      }
-
-      .toggle {
-        font-size: 0.9rem;
-        align-items: flex-start;
-        max-width: 100%;
-      }
-
-      .toggle input {
-        width: 22px;
-        height: 22px;
-        flex-shrink: 0;
-        margin-top: 2px;
-      }
-
-      .table-wrap {
-        overflow-x: visible;
-        border: none;
-        border-radius: 0;
-        background: transparent;
-      }
-
-      table.task-table thead {
-        display: none;
-      }
-
-      table.task-table tbody tr {
-        display: block;
-        margin-bottom: 12px;
-        padding: 12px 12px 10px;
-        border: 1px solid var(--line);
-        border-radius: 14px;
-        background: var(--panel);
-      }
-
-      table.task-table tbody tr.draft-row {
-        border-style: dashed;
-        background: rgba(23, 30, 49, 0.65);
-      }
-
-      table.task-table tbody td {
-        display: block;
-        width: 100% !important;
-        border: none;
-        padding: 10px 0;
-        text-align: left !important;
-      }
-
-      table.task-table tbody td::before {
-        content: attr(data-label);
-        display: block;
-        font-size: 0.72rem;
-        color: var(--muted);
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        font-weight: 700;
-        margin-bottom: 6px;
-      }
-
-      table.task-table tbody td.mobile-no-label::before {
-        display: none;
-      }
-
-      table.task-table tbody td.done-cell {
-        display: flex;
-        flex-direction: row;
-        align-items: center;
-        gap: 12px;
-        min-height: 48px;
-      }
-
-      table.task-table tbody td.done-cell::before {
-        margin-bottom: 0;
-        flex: 0 0 auto;
-      }
-
-      table.task-table tbody td.action-cell {
-        display: flex;
-        justify-content: flex-end;
-        padding-top: 4px;
-      }
-
-      input[type="text"] {
-        padding: 12px 12px;
-        font-size: 16px;
-        min-height: 48px;
-      }
-
-      .filters select {
-        font-size: 16px;
-        padding: 12px;
-      }
+    .add-panel.open {
+      display: grid;
     }
 
-    @media (min-width: 641px) and (max-width: 760px) {
-      body { padding: 10px; }
-      .panel { padding: 11px; }
+    .task-list {
+      display: grid;
+      gap: 10px;
+      margin-top: 8px;
+    }
+
+    .task-item {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(17, 24, 42, 0.55);
+    }
+
+    .task-head {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      padding: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      cursor: pointer;
+    }
+
+    .task-title {
+      font-size: 1rem;
+      font-weight: 700;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .task-meta {
+      color: var(--muted);
+      font-size: 0.83rem;
+      white-space: nowrap;
+    }
+
+    .task-body {
+      display: none;
+      border-top: 1px solid #2d3a5e;
+      padding: 10px;
+      gap: 10px;
+    }
+
+    .task-item.expanded .task-body {
+      display: grid;
+    }
+
+    .task-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .empty {
+      color: var(--muted);
+      border: 1px dashed #445786;
+      border-radius: 12px;
+      padding: 14px;
+      text-align: center;
+    }
+
+    @media (min-width: 760px) {
+      .task-body-grid {
+        display: grid;
+        grid-template-columns: 1fr 220px;
+        gap: 10px;
+      }
     }
   </style>
 </head>
 <body>
   <main class="wrap">
-    <section class="panel hero-panel">
-      <div class="top">
-        <label class="toggle">
-          <input id="showCompleted" type="checkbox">
-          Show completed tasks
-        </label>
+    <section class="panel">
+      <div class="header-row">
+        <h1>GGPPI Tracker</h1>
       </div>
-      <h1>GGPPI Tracker</h1>
+
+      <div class="toolbar">
+        <div class="field">
+          <label for="ownerFilter">Team Member View</label>
+          <select id="ownerFilter"></select>
+        </div>
+
+        <button id="addToggleBtn" class="icon-btn" type="button" aria-label="Add task" title="Add task">+</button>
+      </div>
+
+      <div id="addPanel" class="add-panel">
+        <div class="field">
+          <label for="newTaskName">Task Name</label>
+          <input id="newTaskName" type="text" placeholder="Enter task name">
+        </div>
+
+        <div class="field">
+          <label for="newTaskNotes">Notes</label>
+          <textarea id="newTaskNotes" placeholder="Add notes"></textarea>
+        </div>
+
+        <div class="field">
+          <label for="newTaskOwner">Assigned To</label>
+          <select id="newTaskOwner"></select>
+        </div>
+
+        <label class="toggle">
+          <input id="newTaskCompleted" type="checkbox">
+          Completed
+        </label>
+
+        <div class="task-actions">
+          <button id="saveNewTaskBtn" class="btn primary" type="button">Save</button>
+          <button id="cancelNewTaskBtn" class="btn" type="button">Cancel</button>
+        </div>
+      </div>
+
+      <div id="status" class="status" aria-live="polite"></div>
     </section>
 
     <section class="panel">
-      <div class="filters">
-        <div>
-          <label for="assignedFilter">Assigned</label>
-          <select id="assignedFilter">
-            <option value="">All team members</option>
-          </select>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table class="task-table">
-          <thead>
-            <tr>
-              <th>Task Name</th>
-              <th style="width:260px;">Notes</th>
-              <th style="width:220px;">Assigned Name</th>
-              <th style="width:130px;">Completed</th>
-              <th class="action-cell" aria-label="Delete"></th>
-            </tr>
-          </thead>
-          <tbody id="taskRows"></tbody>
-        </table>
-      </div>
-      <datalist id="assignedSuggestions"></datalist>
-      <div class="hint">Auto-save runs when you leave a cell or toggle completed.</div>
-      <div id="status" class="status" aria-live="polite"></div>
+      <div id="taskList" class="task-list"></div>
     </section>
   </main>
 
   <script>
     (function () {
       const apiBase = '/api/ggppi/tasks';
-      const defaultAssignedNames = ['John G', 'Tom', 'Dave 3D'];
-      const statusEl = document.getElementById('status');
-      const taskRows = document.getElementById('taskRows');
-      const showCompleted = document.getElementById('showCompleted');
-      const assignedFilter = document.getElementById('assignedFilter');
-      const assignedSuggestions = document.getElementById('assignedSuggestions');
+      const ownerPrefKey = 'ggppi-selected-owner-v1';
+      const fallbackOwners = ['David T', 'John G', 'Tom', 'Dave 3D', 'TBC'];
 
-      const trashIconSvg = (
-        '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
-          '<path fill="currentColor" d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1zm-1 6h2v9H8zm4 0h2v9h-2zm4 0h2v9h-2z"/>' +
-        '</svg>'
-      );
+      const statusEl = document.getElementById('status');
+      const taskListEl = document.getElementById('taskList');
+      const ownerFilterEl = document.getElementById('ownerFilter');
+
+      const addToggleBtn = document.getElementById('addToggleBtn');
+      const addPanel = document.getElementById('addPanel');
+      const newTaskNameEl = document.getElementById('newTaskName');
+      const newTaskNotesEl = document.getElementById('newTaskNotes');
+      const newTaskOwnerEl = document.getElementById('newTaskOwner');
+      const newTaskCompletedEl = document.getElementById('newTaskCompleted');
+      const saveNewTaskBtn = document.getElementById('saveNewTaskBtn');
+      const cancelNewTaskBtn = document.getElementById('cancelNewTaskBtn');
 
       const state = {
         tasks: [],
-        draft: { taskName: '', notes: '', assignedTo: '', completed: false },
-        savingDraft: false
+        owners: fallbackOwners.slice(),
+        selectedOwner: '',
+        expandedIds: new Set()
       };
-
-      function setStatus(message, type) {
-        statusEl.textContent = message || '';
-        statusEl.className = 'status' + (type ? ' ' + type : '');
-      }
 
       function esc(value) {
         return String(value || '')
@@ -421,224 +339,234 @@
           .replace(/'/g, '&#39;');
       }
 
-      function cleanAssignedForStaffList(name) {
-        const trimmed = String(name || '').trim();
-        if (!trimmed) return '';
-        const lower = trimmed.toLocaleLowerCase();
+      function setStatus(message, type) {
+        statusEl.textContent = message || '';
+        statusEl.className = 'status' + (type ? ' ' + type : '');
+      }
+
+      function normalizeOwner(name) {
+        const raw = String(name || '').trim();
+        if (!raw) return '';
+        const lower = raw.toLowerCase();
+        if (lower === 'david thomas' || lower === 'david t' || lower === 'david t.') return 'David T';
         if (lower === 'jon') return 'John G';
-        if (lower === 'david thomas') return '';
-        return trimmed;
+        const exact = state.owners.find((owner) => owner.toLowerCase() === lower);
+        return exact || '';
       }
 
-      function sortByAssignedAsc(tasks) {
+      function sortTasks(tasks) {
         return tasks.slice().sort(function (a, b) {
-          const aName = String(a.assignedTo || '').trim().toLocaleLowerCase();
-          const bName = String(b.assignedTo || '').trim().toLocaleLowerCase();
-          const nameCmp = aName.localeCompare(bName);
-          if (nameCmp !== 0) return nameCmp;
-          const aTime = new Date(a.createdAt || 0).getTime();
-          const bTime = new Date(b.createdAt || 0).getTime();
-          return aTime - bTime;
+          const byOwner = String(a.assignedTo || '').localeCompare(String(b.assignedTo || ''));
+          if (byOwner !== 0) return byOwner;
+          return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
         });
       }
 
-      function renderAssignedSuggestions() {
-        const taskNames = state.tasks.map(function (task) {
-          return cleanAssignedForStaffList(task.assignedTo);
-        }).filter(Boolean);
-        const draftName = cleanAssignedForStaffList(state.draft.assignedTo);
-        const combined = defaultAssignedNames.concat(taskNames, draftName ? [draftName] : []);
-        const unique = Array.from(new Set(combined));
-        assignedSuggestions.innerHTML = unique.map(function (name) {
-          return '<option value="' + esc(name) + '"></option>';
-        }).join('');
+      function filteredTasks() {
+        const selected = state.selectedOwner;
+        const byOwner = selected === '__all__'
+          ? state.tasks
+          : state.tasks.filter((task) => normalizeOwner(task.assignedTo) === selected);
+        return sortTasks(byOwner);
       }
 
-      function syncAssignedFilterOptions() {
-        const current = assignedFilter.value;
-        const taskNames = state.tasks.map(function (task) {
-          return cleanAssignedForStaffList(task.assignedTo);
-        }).filter(Boolean);
-        const draftName = cleanAssignedForStaffList(state.draft.assignedTo);
-        const combined = defaultAssignedNames.concat(taskNames, draftName ? [draftName] : []);
-        const unique = Array.from(new Set(combined)).sort(function (a, b) {
-          return a.localeCompare(b);
-        });
+      function renderOwnerOptions() {
+        const current = state.selectedOwner;
+        const owners = state.owners.slice();
 
-        assignedFilter.innerHTML = '<option value="">All team members</option>' +
-          unique.map(function (name) {
-            return '<option value="' + esc(name) + '">' + esc(name) + '</option>';
-          }).join('');
+        ownerFilterEl.innerHTML = '<option value="__all__">All team members</option>' + owners
+          .map((owner) => '<option value="' + esc(owner) + '">' + esc(owner) + '</option>')
+          .join('');
 
-        if (unique.includes(current)) {
-          assignedFilter.value = current;
+        newTaskOwnerEl.innerHTML = owners
+          .map((owner) => '<option value="' + esc(owner) + '">' + esc(owner) + '</option>')
+          .join('');
+
+        const normalizedCurrent = current && current !== '__all__' ? normalizeOwner(current) : current;
+        ownerFilterEl.value = normalizedCurrent && owners.includes(normalizedCurrent) ? normalizedCurrent : '__all__';
+        state.selectedOwner = ownerFilterEl.value;
+
+        const defaultOwner = ownerFilterEl.value !== '__all__' ? ownerFilterEl.value : owners[0];
+        if (owners.includes(defaultOwner)) {
+          newTaskOwnerEl.value = defaultOwner;
         }
       }
 
-      function visibleTasks() {
-        const filteredByAssignee = assignedFilter.value
-          ? state.tasks.filter(function (task) {
-              return cleanAssignedForStaffList(task.assignedTo) === assignedFilter.value;
-            })
-          : state.tasks.slice();
-
-        const sorted = sortByAssignedAsc(filteredByAssignee);
-        if (showCompleted.checked) return sorted;
-        return sorted.filter(function (task) { return !task.completed; });
+      function openAddPanel(open) {
+        addPanel.classList.toggle('open', !!open);
+        if (open) {
+          newTaskNameEl.focus();
+        }
       }
 
-      function render() {
-        const rows = visibleTasks().map(function (task) {
+      function renderTasks() {
+        const tasks = filteredTasks();
+        if (!tasks.length) {
+          taskListEl.innerHTML = '<div class="empty">No tasks for this view yet.</div>';
+          return;
+        }
+
+        taskListEl.innerHTML = tasks.map(function (task) {
+          const isExpanded = state.expandedIds.has(task.id);
+          const titleText = String(task.taskName || 'Untitled task');
+          const safeTitleDisplay = esc(titleText);
+          const safeTaskNameValue = esc(titleText);
+          const notesText = String(task.notes || '');
+          const safeNotesValue = esc(notesText);
+          const ownerOptions = state.owners.map(function (owner) {
+            const selected = normalizeOwner(task.assignedTo) === owner ? ' selected' : '';
+            return '<option value="' + esc(owner) + '"' + selected + '>' + esc(owner) + '</option>';
+          }).join('');
+
           return (
-            '<tr data-task-id="' + esc(task.id) + '">' +
-              '<td data-label="Task name"><input type="text" data-field="taskName" value="' + esc(task.taskName) + '"></td>' +
-              '<td data-label="Notes"><input type="text" data-field="notes" value="' + esc(task.notes || '') + '" placeholder="Add note"></td>' +
-              '<td data-label="Assigned"><input type="text" list="assignedSuggestions" data-field="assignedTo" value="' + esc(task.assignedTo) + '"></td>' +
-              '<td class="done-cell" data-label="Completed"><input type="checkbox" data-field="completed" ' + (task.completed ? 'checked' : '') + '></td>' +
-              '<td class="action-cell" data-label="Delete">' +
-                '<button type="button" class="icon-btn" data-action="delete" aria-label="Delete task">' + trashIconSvg + '</button>' +
-              '</td>' +
-            '</tr>'
+            '<article class="task-item' + (isExpanded ? ' expanded' : '') + '" data-task-id="' + esc(task.id) + '">' +
+              '<button class="task-head" type="button" data-action="toggle-expand">' +
+                '<span class="task-title">' + safeTitleDisplay + '</span>' +
+                '<span class="task-meta">' + esc(normalizeOwner(task.assignedTo) || 'TBC') + (task.completed ? ' - Done' : '') + '</span>' +
+              '</button>' +
+              '<div class="task-body">' +
+                '<div class="task-body-grid">' +
+                  '<div class="field">' +
+                    '<label>Task Name</label>' +
+                    '<input type="text" data-field="taskName" value="' + safeTaskNameValue + '">' +
+                  '</div>' +
+                  '<div class="field">' +
+                    '<label>Assigned To</label>' +
+                    '<select data-field="assignedTo">' + ownerOptions + '</select>' +
+                  '</div>' +
+                '</div>' +
+                '<div class="field">' +
+                  '<label>Notes</label>' +
+                  '<textarea data-field="notes" placeholder="Add notes">' + safeNotesValue + '</textarea>' +
+                '</div>' +
+                '<label class="toggle"><input type="checkbox" data-field="completed"' + (task.completed ? ' checked' : '') + '> Completed</label>' +
+                '<div class="task-actions">' +
+                  '<button type="button" class="btn primary" data-action="save">Save</button>' +
+                  '<button type="button" class="btn danger" data-action="delete">Delete</button>' +
+                '</div>' +
+              '</div>' +
+            '</article>'
           );
         }).join('');
+      }
 
-        const draft = state.draft;
-        const draftRow = (
-          '<tr class="draft-row" data-task-id="draft">' +
-            '<td data-label="Task name"><input type="text" data-field="taskName" value="' + esc(draft.taskName) + '" placeholder="Type new task..."></td>' +
-            '<td data-label="Notes"><input type="text" data-field="notes" value="' + esc(draft.notes || '') + '" placeholder="Add note"></td>' +
-            '<td data-label="Assigned"><input type="text" list="assignedSuggestions" data-field="assignedTo" value="' + esc(draft.assignedTo) + '" placeholder="Assigned name"></td>' +
-            '<td class="done-cell" data-label="Completed"><input type="checkbox" data-field="completed" ' + (draft.completed ? 'checked' : '') + '></td>' +
-            '<td class="action-cell mobile-no-label"></td>' +
-          '</tr>'
-        );
-
-        taskRows.innerHTML = rows + draftRow;
-        renderAssignedSuggestions();
-        syncAssignedFilterOptions();
+      function readTaskForm(taskId) {
+        const card = taskListEl.querySelector('[data-task-id="' + taskId + '"]');
+        if (!card) return null;
+        return {
+          taskName: String((card.querySelector('[data-field="taskName"]') || {}).value || '').trim(),
+          assignedTo: String((card.querySelector('[data-field="assignedTo"]') || {}).value || '').trim(),
+          notes: String((card.querySelector('[data-field="notes"]') || {}).value || '').trim(),
+          completed: !!((card.querySelector('[data-field="completed"]') || {}).checked)
+        };
       }
 
       async function loadTasks() {
         setStatus('Loading tasks...');
         try {
           const res = await fetch(apiBase);
-          if (!res.ok) throw new Error('Failed to load tasks');
-          const data = await res.json();
-          state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
-          render();
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'Failed to load tasks');
+
+          const ownersFromApi = Array.isArray(data.owners) && data.owners.length ? data.owners : fallbackOwners;
+          state.owners = ownersFromApi.slice();
+
+          state.tasks = (Array.isArray(data.tasks) ? data.tasks : []).map(function (task) {
+            const owner = normalizeOwner(task.assignedTo) || 'TBC';
+            return Object.assign({}, task, { assignedTo: owner });
+          });
+
+          const remembered = localStorage.getItem(ownerPrefKey) || '';
+          state.selectedOwner = (remembered && (remembered === '__all__' || state.owners.includes(remembered)))
+            ? remembered
+            : (state.owners[0] || '__all__');
+
+          renderOwnerOptions();
+          renderTasks();
           setStatus('Ready', 'success');
         } catch (error) {
           state.tasks = [];
-          render();
-          setStatus('Could not reach the server to load tasks. Open this page on the same site where the LAB007 server is running, or ask your host to enable the /api/ggppi/tasks API.', 'error');
+          renderOwnerOptions();
+          renderTasks();
+          setStatus(error.message || 'Could not load tasks from the server.', 'error');
         }
       }
 
-      async function createTaskFromDraftIfReady() {
-        if (state.savingDraft) return;
-        syncDraftFromDom();
-        const taskName = state.draft.taskName.trim();
-        const assignedTo = state.draft.assignedTo.trim();
-        if (!taskName || !assignedTo) return;
+      async function createTask() {
+        const taskName = String(newTaskNameEl.value || '').trim();
+        const assignedTo = normalizeOwner(newTaskOwnerEl.value);
+        const notes = String(newTaskNotesEl.value || '').trim();
+        const completed = !!newTaskCompletedEl.checked;
 
-        state.savingDraft = true;
-        setStatus('Saving new task...');
+        if (!taskName) {
+          setStatus('Task name is required.', 'error');
+          newTaskNameEl.focus();
+          return;
+        }
+        if (!assignedTo) {
+          setStatus('Please select an owner from the list.', 'error');
+          newTaskOwnerEl.focus();
+          return;
+        }
+
+        setStatus('Saving task...');
         try {
           const res = await fetch(apiBase, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              taskName: taskName,
-              assignedTo: assignedTo,
-              notes: String(state.draft.notes || '').trim(),
-              completed: !!state.draft.completed
-            })
+            body: JSON.stringify({ taskName: taskName, assignedTo: assignedTo, notes: notes, completed: completed })
           });
           const data = await res.json().catch(function () { return {}; });
-          if (!res.ok) throw new Error(data.error || 'Failed to save new task');
+          if (!res.ok) throw new Error(data.error || 'Failed to create task');
 
-          state.tasks.push(data.task);
-          state.draft = { taskName: '', notes: '', assignedTo: '', completed: false };
-          render();
-          setStatus('Task added.', 'success');
+          newTaskNameEl.value = '';
+          newTaskNotesEl.value = '';
+          newTaskCompletedEl.checked = false;
+          openAddPanel(false);
+
+          await loadTasks();
+          setStatus('Task created.', 'success');
         } catch (error) {
-          setStatus(error.message || 'Could not save task on the server. Tasks are not stored in this browser.', 'error');
-        } finally {
-          state.savingDraft = false;
+          setStatus(error.message || 'Could not save task.', 'error');
         }
       }
 
-      function getTaskById(taskId) {
-        return state.tasks.find(function (task) { return task.id === taskId; });
-      }
+      async function saveTask(taskId) {
+        const payload = readTaskForm(taskId);
+        if (!payload) return;
 
-      function findRowByTaskId(taskId) {
-        const rows = taskRows.querySelectorAll('tr[data-task-id]');
-        for (let i = 0; i < rows.length; i += 1) {
-          if (rows[i].getAttribute('data-task-id') === taskId) {
-            return rows[i];
-          }
+        payload.assignedTo = normalizeOwner(payload.assignedTo);
+        if (!payload.taskName) {
+          setStatus('Task name cannot be empty.', 'error');
+          return;
         }
-        return null;
-      }
+        if (!payload.assignedTo) {
+          setStatus('Assigned owner must be from the owner list.', 'error');
+          return;
+        }
 
-      function syncDraftFromDom() {
-        const row = findRowByTaskId('draft');
-        if (!row) return;
-        const nameEl = row.querySelector('[data-field="taskName"]');
-        const notesEl = row.querySelector('[data-field="notes"]');
-        const assignEl = row.querySelector('[data-field="assignedTo"]');
-        const doneEl = row.querySelector('[data-field="completed"]');
-        if (nameEl) state.draft.taskName = nameEl.value;
-        if (notesEl) state.draft.notes = notesEl.value;
-        if (assignEl) state.draft.assignedTo = assignEl.value;
-        if (doneEl) state.draft.completed = !!doneEl.checked;
-      }
-
-      function syncTaskFromDom(taskId) {
-        const task = getTaskById(taskId);
-        const row = findRowByTaskId(taskId);
-        if (!task || !row) return;
-        const nameEl = row.querySelector('[data-field="taskName"]');
-        const notesEl = row.querySelector('[data-field="notes"]');
-        const assignEl = row.querySelector('[data-field="assignedTo"]');
-        const doneEl = row.querySelector('[data-field="completed"]');
-        if (nameEl) task.taskName = nameEl.value;
-        if (notesEl) task.notes = notesEl.value;
-        if (assignEl) task.assignedTo = assignEl.value;
-        if (doneEl) task.completed = !!doneEl.checked;
-      }
-
-      async function saveExistingTask(taskId) {
-        const task = getTaskById(taskId);
-        if (!task) return;
-        syncTaskFromDom(taskId);
         setStatus('Saving changes...');
         try {
           const res = await fetch(apiBase + '/' + encodeURIComponent(taskId), {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              taskName: String(task.taskName || '').trim(),
-              assignedTo: String(task.assignedTo || '').trim(),
-              notes: String(task.notes || '').trim(),
-              completed: !!task.completed
-            })
+            body: JSON.stringify(payload)
           });
           const data = await res.json().catch(function () { return {}; });
           if (!res.ok) throw new Error(data.error || 'Failed to save task');
-          const index = state.tasks.findIndex(function (item) { return item.id === taskId; });
-          if (index >= 0) state.tasks[index] = data.task;
-          render();
+
+          const index = state.tasks.findIndex(function (task) { return task.id === taskId; });
+          if (index >= 0) {
+            state.tasks[index] = Object.assign({}, data.task, { assignedTo: normalizeOwner(data.task.assignedTo) || 'TBC' });
+          }
+          renderTasks();
           setStatus('Saved.', 'success');
         } catch (error) {
-          setStatus(error.message || 'Could not save changes on the server.', 'error');
-          await loadTasks();
+          setStatus(error.message || 'Could not save task.', 'error');
         }
       }
 
       async function deleteTask(taskId) {
-        if (!taskId || taskId === 'draft') return;
         const ok = window.confirm('Delete this task?');
         if (!ok) return;
 
@@ -649,86 +577,70 @@
           if (!res.ok) throw new Error(data.error || 'Failed to delete task');
 
           state.tasks = state.tasks.filter(function (task) { return task.id !== taskId; });
-          render();
+          state.expandedIds.delete(taskId);
+          renderTasks();
           setStatus('Deleted.', 'success');
         } catch (error) {
-          setStatus(error.message || 'Could not delete task on the server.', 'error');
-          await loadTasks();
+          setStatus(error.message || 'Could not delete task.', 'error');
         }
       }
 
-      taskRows.addEventListener('input', function (event) {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) return;
-        const row = target.closest('tr');
-        if (!row) return;
-        const taskId = row.getAttribute('data-task-id');
-        const field = target.getAttribute('data-field');
-        if (!taskId || !field) return;
-
-        const value = field === 'completed' ? !!target.checked : target.value;
-        if (taskId === 'draft') {
-          if (field === 'completed') state.draft.completed = !!value;
-          else state.draft[field] = value;
-          return;
-        }
-
-        const task = getTaskById(taskId);
-        if (!task) return;
-        if (field === 'completed') task.completed = !!value;
-        else task[field] = value;
+      addToggleBtn.addEventListener('click', function () {
+        openAddPanel(!addPanel.classList.contains('open'));
       });
 
-      taskRows.addEventListener('change', function (event) {
+      cancelNewTaskBtn.addEventListener('click', function () {
+        openAddPanel(false);
+      });
+
+      saveNewTaskBtn.addEventListener('click', function () {
+        createTask();
+      });
+
+      ownerFilterEl.addEventListener('change', function () {
+        state.selectedOwner = ownerFilterEl.value;
+        localStorage.setItem(ownerPrefKey, state.selectedOwner);
+        if (state.selectedOwner !== '__all__') {
+          newTaskOwnerEl.value = state.selectedOwner;
+        }
+        renderTasks();
+      });
+
+      taskListEl.addEventListener('change', function (event) {
         const target = event.target;
         if (!(target instanceof HTMLElement)) return;
-        const row = target.closest('tr');
-        if (!row) return;
-        const taskId = row.getAttribute('data-task-id');
+        if (target.getAttribute('data-field') !== 'assignedTo') return;
+        const card = target.closest('.task-item');
+        if (!card) return;
+        const taskId = card.getAttribute('data-task-id');
+        if (!taskId) return;
+        saveTask(taskId);
+      });
+
+      taskListEl.addEventListener('click', function (event) {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+
+        const card = target.closest('.task-item');
+        if (!card) return;
+        const taskId = card.getAttribute('data-task-id');
         if (!taskId) return;
 
-        if (taskId === 'draft') {
-          createTaskFromDraftIfReady();
-        } else {
-          saveExistingTask(taskId);
+        const actionEl = target.closest('[data-action]');
+        if (!actionEl) return;
+        const action = actionEl.getAttribute('data-action');
+
+        if (action === 'toggle-expand') {
+          if (state.expandedIds.has(taskId)) state.expandedIds.delete(taskId);
+          else state.expandedIds.add(taskId);
+          renderTasks();
+        } else if (action === 'save') {
+          saveTask(taskId);
+        } else if (action === 'delete') {
+          deleteTask(taskId);
         }
       });
 
-      taskRows.addEventListener('focusout', function (event) {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) return;
-        const row = target.closest('tr');
-        if (!row) return;
-        const taskId = row.getAttribute('data-task-id');
-        if (!taskId) return;
-
-        if (taskId === 'draft') {
-          createTaskFromDraftIfReady();
-        } else {
-          saveExistingTask(taskId);
-        }
-      });
-
-      taskRows.addEventListener('click', function (event) {
-        const target = event.target;
-        if (!(target instanceof HTMLElement)) return;
-        const btn = target.closest('button[data-action="delete"]');
-        if (!btn) return;
-        const row = btn.closest('tr');
-        if (!row) return;
-        const taskId = row.getAttribute('data-task-id');
-        deleteTask(taskId);
-      });
-
-      showCompleted.addEventListener('change', function () {
-        render();
-      });
-
-      assignedFilter.addEventListener('change', function () {
-        render();
-      });
-
-      render();
       loadTasks();
     })();
   </script>
