@@ -22,9 +22,13 @@
     body {
       margin: 0;
       padding: 12px;
+      padding-bottom: max(12px, env(safe-area-inset-bottom, 0px));
+      padding-left: max(12px, env(safe-area-inset-left, 0px));
+      padding-right: max(12px, env(safe-area-inset-right, 0px));
       background: radial-gradient(circle at top right, #20335e 0%, #0f1320 45%);
       color: var(--text);
       font-family: "Inter", "Segoe UI", Arial, sans-serif;
+      -webkit-text-size-adjust: 100%;
     }
 
     .wrap {
@@ -61,6 +65,21 @@
       margin-bottom: 6px;
     }
 
+    /* Title first on small screens (toggle stays easy to reach below title) */
+    section.panel.hero-panel {
+      display: flex;
+      flex-direction: column;
+    }
+
+    section.panel.hero-panel h1 {
+      order: -1;
+      margin-bottom: 8px;
+    }
+
+    section.panel.hero-panel .top {
+      margin-bottom: 0;
+    }
+
     .toggle {
       display: inline-flex;
       align-items: center;
@@ -94,19 +113,21 @@
       color: var(--text);
       padding: 10px 11px;
       font-size: 0.95rem;
+      min-height: 44px;
     }
 
     .table-wrap {
       width: 100%;
       overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
       border: 1px solid var(--line);
       border-radius: 10px;
     }
 
-    table {
+    table.task-table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 760px;
+      min-width: 0;
       background: var(--panel);
     }
 
@@ -141,6 +162,12 @@
       font-size: 0.92rem;
     }
 
+    input[type="checkbox"] {
+      width: 22px;
+      height: 22px;
+      accent-color: var(--accent);
+    }
+
     .done-cell {
       text-align: center;
       width: 130px;
@@ -156,14 +183,15 @@
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      width: 38px;
-      height: 38px;
+      width: 44px;
+      height: 44px;
       border-radius: 10px;
       border: 1px solid #4a3a45;
       background: #24141a;
       color: #ffc9d4;
       cursor: pointer;
       padding: 0;
+      touch-action: manipulation;
     }
 
     .icon-btn:hover {
@@ -199,19 +227,126 @@
     .status.error { color: #ff9fa2; }
     .status.success { color: #8ce4ba; }
 
-    @media (max-width: 760px) {
-      body { padding: 9px; }
-      .panel { padding: 10px; }
-      input[type="text"] {
-        padding: 8px;
-        font-size: 0.9rem;
+    /* Wide screens: horizontal scroll for full table */
+    @media (min-width: 641px) {
+      table.task-table {
+        min-width: 720px;
       }
+    }
+
+    /* Portrait phones: card stack — no sideways scrolling */
+    @media (max-width: 640px) {
+      body {
+        padding: 10px;
+        padding-bottom: max(10px, env(safe-area-inset-bottom, 0px));
+      }
+
+      .panel {
+        padding: 12px;
+        border-radius: 14px;
+      }
+
+      .toggle {
+        font-size: 0.9rem;
+        align-items: flex-start;
+        max-width: 100%;
+      }
+
+      .toggle input {
+        width: 22px;
+        height: 22px;
+        flex-shrink: 0;
+        margin-top: 2px;
+      }
+
+      .table-wrap {
+        overflow-x: visible;
+        border: none;
+        border-radius: 0;
+        background: transparent;
+      }
+
+      table.task-table thead {
+        display: none;
+      }
+
+      table.task-table tbody tr {
+        display: block;
+        margin-bottom: 12px;
+        padding: 12px 12px 10px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: var(--panel);
+      }
+
+      table.task-table tbody tr.draft-row {
+        border-style: dashed;
+        background: rgba(23, 30, 49, 0.65);
+      }
+
+      table.task-table tbody td {
+        display: block;
+        width: 100% !important;
+        border: none;
+        padding: 10px 0;
+        text-align: left !important;
+      }
+
+      table.task-table tbody td::before {
+        content: attr(data-label);
+        display: block;
+        font-size: 0.72rem;
+        color: var(--muted);
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        font-weight: 700;
+        margin-bottom: 6px;
+      }
+
+      table.task-table tbody td.mobile-no-label::before {
+        display: none;
+      }
+
+      table.task-table tbody td.done-cell {
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        gap: 12px;
+        min-height: 48px;
+      }
+
+      table.task-table tbody td.done-cell::before {
+        margin-bottom: 0;
+        flex: 0 0 auto;
+      }
+
+      table.task-table tbody td.action-cell {
+        display: flex;
+        justify-content: flex-end;
+        padding-top: 4px;
+      }
+
+      input[type="text"] {
+        padding: 12px 12px;
+        font-size: 16px;
+        min-height: 48px;
+      }
+
+      .filters select {
+        font-size: 16px;
+        padding: 12px;
+      }
+    }
+
+    @media (min-width: 641px) and (max-width: 760px) {
+      body { padding: 10px; }
+      .panel { padding: 11px; }
     }
   </style>
 </head>
 <body>
   <main class="wrap">
-    <section class="panel">
+    <section class="panel hero-panel">
       <div class="top">
         <label class="toggle">
           <input id="showCompleted" type="checkbox">
@@ -231,7 +366,7 @@
         </div>
       </div>
       <div class="table-wrap">
-        <table>
+        <table class="task-table">
           <thead>
             <tr>
               <th>Task Name</th>
@@ -254,7 +389,7 @@
     (function () {
       const apiBase = '/api/ggppi/tasks';
       const localKey = 'ggppi-tracker-local-tasks-v1';
-      const defaultAssignedNames = ['David T', 'Jon', 'Tom', 'Dave 3D'];
+      const defaultAssignedNames = ['John G', 'Tom', 'Dave 3D'];
       const statusEl = document.getElementById('status');
       const taskRows = document.getElementById('taskRows');
       const showCompleted = document.getElementById('showCompleted');
@@ -286,6 +421,15 @@
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#39;');
+      }
+
+      function cleanAssignedForStaffList(name) {
+        const trimmed = String(name || '').trim();
+        if (!trimmed) return '';
+        const lower = trimmed.toLocaleLowerCase();
+        if (lower === 'jon') return 'John G';
+        if (lower === 'david thomas') return '';
+        return trimmed;
       }
 
       function loadLocalTasks() {
@@ -320,9 +464,9 @@
 
       function renderAssignedSuggestions() {
         const taskNames = state.tasks.map(function (task) {
-          return String(task.assignedTo || '').trim();
+          return cleanAssignedForStaffList(task.assignedTo);
         }).filter(Boolean);
-        const draftName = String(state.draft.assignedTo || '').trim();
+        const draftName = cleanAssignedForStaffList(state.draft.assignedTo);
         const combined = defaultAssignedNames.concat(taskNames, draftName ? [draftName] : []);
         const unique = Array.from(new Set(combined));
         assignedSuggestions.innerHTML = unique.map(function (name) {
@@ -333,9 +477,9 @@
       function syncAssignedFilterOptions() {
         const current = assignedFilter.value;
         const taskNames = state.tasks.map(function (task) {
-          return String(task.assignedTo || '').trim();
+          return cleanAssignedForStaffList(task.assignedTo);
         }).filter(Boolean);
-        const draftName = String(state.draft.assignedTo || '').trim();
+        const draftName = cleanAssignedForStaffList(state.draft.assignedTo);
         const combined = defaultAssignedNames.concat(taskNames, draftName ? [draftName] : []);
         const unique = Array.from(new Set(combined)).sort(function (a, b) {
           return a.localeCompare(b);
@@ -354,7 +498,7 @@
       function visibleTasks() {
         const filteredByAssignee = assignedFilter.value
           ? state.tasks.filter(function (task) {
-              return String(task.assignedTo || '').trim() === assignedFilter.value;
+              return cleanAssignedForStaffList(task.assignedTo) === assignedFilter.value;
             })
           : state.tasks.slice();
 
@@ -367,11 +511,11 @@
         const rows = visibleTasks().map(function (task) {
           return (
             '<tr data-task-id="' + esc(task.id) + '">' +
-              '<td><input type="text" data-field="taskName" value="' + esc(task.taskName) + '"></td>' +
-              '<td><input type="text" data-field="notes" value="' + esc(task.notes || '') + '" placeholder="Add note"></td>' +
-              '<td><input type="text" list="assignedSuggestions" data-field="assignedTo" value="' + esc(task.assignedTo) + '"></td>' +
-              '<td class="done-cell"><input type="checkbox" data-field="completed" ' + (task.completed ? 'checked' : '') + '></td>' +
-              '<td class="action-cell">' +
+              '<td data-label="Task name"><input type="text" data-field="taskName" value="' + esc(task.taskName) + '"></td>' +
+              '<td data-label="Notes"><input type="text" data-field="notes" value="' + esc(task.notes || '') + '" placeholder="Add note"></td>' +
+              '<td data-label="Assigned"><input type="text" list="assignedSuggestions" data-field="assignedTo" value="' + esc(task.assignedTo) + '"></td>' +
+              '<td class="done-cell" data-label="Completed"><input type="checkbox" data-field="completed" ' + (task.completed ? 'checked' : '') + '></td>' +
+              '<td class="action-cell" data-label="Delete">' +
                 '<button type="button" class="icon-btn" data-action="delete" aria-label="Delete task">' + trashIconSvg + '</button>' +
               '</td>' +
             '</tr>'
@@ -381,11 +525,11 @@
         const draft = state.draft;
         const draftRow = (
           '<tr class="draft-row" data-task-id="draft">' +
-            '<td><input type="text" data-field="taskName" value="' + esc(draft.taskName) + '" placeholder="Type new task..."></td>' +
-            '<td><input type="text" data-field="notes" value="' + esc(draft.notes || '') + '" placeholder="Add note"></td>' +
-            '<td><input type="text" list="assignedSuggestions" data-field="assignedTo" value="' + esc(draft.assignedTo) + '" placeholder="Assigned name"></td>' +
-            '<td class="done-cell"><input type="checkbox" data-field="completed" ' + (draft.completed ? 'checked' : '') + '></td>' +
-            '<td class="action-cell"></td>' +
+            '<td data-label="Task name"><input type="text" data-field="taskName" value="' + esc(draft.taskName) + '" placeholder="Type new task..."></td>' +
+            '<td data-label="Notes"><input type="text" data-field="notes" value="' + esc(draft.notes || '') + '" placeholder="Add note"></td>' +
+            '<td data-label="Assigned"><input type="text" list="assignedSuggestions" data-field="assignedTo" value="' + esc(draft.assignedTo) + '" placeholder="Assigned name"></td>' +
+            '<td class="done-cell" data-label="Completed"><input type="checkbox" data-field="completed" ' + (draft.completed ? 'checked' : '') + '></td>' +
+            '<td class="action-cell mobile-no-label"></td>' +
           '</tr>'
         );
 
