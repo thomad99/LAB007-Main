@@ -16,6 +16,15 @@ const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
+const ggppiDataDir = path.join(__dirname, 'data');
+const ggppiTasksPath = path.join(ggppiDataDir, 'ggppi-tasks.json');
+const ggppiUploadDir = path.join(uploadDir, 'ggppi-tracker');
+if (!fs.existsSync(ggppiDataDir)) {
+  fs.mkdirSync(ggppiDataDir, { recursive: true });
+}
+if (!fs.existsSync(ggppiUploadDir)) {
+  fs.mkdirSync(ggppiUploadDir, { recursive: true });
+}
 const upload = multer({
   storage: multer.diskStorage({
     destination: (req, file, cb) => cb(null, uploadDir),
@@ -25,6 +34,19 @@ const upload = multer({
     }
   }),
   limits: { fileSize: 1024 * 1024 * 300 } // 300MB max
+});
+const ggppiUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, ggppiUploadDir),
+    filename: (req, file, cb) => {
+      const safeName = file.originalname.replace(/[^a-zA-Z0-9._-]/g, '_');
+      cb(null, `${Date.now()}-${safeName}`);
+    }
+  }),
+  limits: {
+    fileSize: 1024 * 1024 * 25, // 25MB max per file
+    files: 10
+  }
 });
 
 // Boot diagnostics
@@ -92,6 +114,7 @@ console.warn('SMTP_USER or SMTP_PASS not configured - contact form emails will n
 
 // Serve LAB007 images (before project apps to avoid conflicts)
 app.use('/images', express.static(path.join(__dirname, 'LAB007', 'Images')));
+app.use('/uploads/ggppi-tracker', express.static(ggppiUploadDir));
 
 // Serve webdesign static page
 app.get('/webdesign', (req, res) => {
@@ -103,6 +126,13 @@ app.get('/webdesign', (req, res) => {
 // Serve digital marketing page
 app.get('/digitalmarketing', (req, res) => {
   const p = path.join(__dirname, 'public', 'DigitalMarketing.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
+});
+
+// Serve GGPPI Tracker page
+app.get('/ggppi-tracker', (req, res) => {
+  const p = path.join(__dirname, 'public', 'ggppi-tracker.html');
   if (fs.existsSync(p)) return res.sendFile(p);
   return res.status(404).send('Not found');
 });
@@ -400,6 +430,203 @@ res.json({ success: true, message: 'Message sent successfully' });
 console.error('Failed to send contact form email:', error);
 res.status(500).json({ 
 error: 'Failed to send message. Please try again later or contact us directly at info@lab007.ai' 
+});
+
+function readGgppiTasks() {
+  try {
+    if (!fs.existsSync(ggppiTasksPath)) {
+      return [];
+    }
+    const raw = fs.readFileSync(ggppiTasksPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('Failed to read GGPPI tasks:', error);
+    return [];
+  }
+}
+
+function writeGgppiTasks(tasks) {
+  fs.writeFileSync(ggppiTasksPath, JSON.stringify(tasks, null, 2), 'utf8');
+}
+
+function parseBoolean(value) {
+  if (typeof value === 'boolean') return value;
+  if (typeof value === 'string') {
+    return ['true', '1', 'yes', 'on'].includes(value.trim().toLowerCase());
+  }
+  return false;
+}
+
+function parseProgress(value, fallback = 0) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(100, Math.round(n)));
+}
+
+function formatTaskFiles(files) {
+  return (files || []).map((file) => ({
+    filename: file.filename,
+    originalName: file.originalname,
+    size: file.size,
+    mimeType: file.mimetype,
+    url: `/uploads/ggppi-tracker/${file.filename}`,
+    uploadedAt: new Date().toISOString()
+  }));
+}
+
+function withOptionalGgppiUpload(req, res, next) {
+  if (req.is('multipart/form-data')) {
+    return ggppiUpload.array('attachments', 10)(req, res, (error) => {
+      if (error) {
+        return res.status(400).json({ error: error.message || 'File upload failed' });
+      }
+      return next();
+    });
+  }
+  return next();
+}
+
+app.get('/api/ggppi/tasks', (req, res) => {
+  const tasks = readGgppiTasks().sort((a, b) => {
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+  return res.json({ tasks });
+});
+
+app.post('/api/ggppi/tasks', ggppiUpload.array('attachments', 10), (req, res) => {
+  const taskName = String(req.body.taskName || '').trim();
+  const assignedTo = String(req.body.assignedTo || '').trim();
+  const progress = parseProgress(req.body.progress, 0);
+  const completed = parseBoolean(req.body.completed);
+
+  if (!taskName) {
+    return res.status(400).json({ error: 'Task name is required' });
+  }
+  if (!assignedTo) {
+    return res.status(400).json({ error: 'Assigned name is required' });
+  }
+
+  const now = new Date().toISOString();
+  const files = formatTaskFiles(req.files);
+  const task = {
+    id: `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    taskName,
+    assignedTo,
+    progress: completed ? 100 : progress,
+    completed,
+    attachments: files,
+    createdAt: now,
+    updatedAt: now
+  };
+
+  const tasks = readGgppiTasks();
+  tasks.push(task);
+  writeGgppiTasks(tasks);
+
+  return res.status(201).json({ task });
+});
+
+app.put('/api/ggppi/tasks/:id', withOptionalGgppiUpload, (req, res) => {
+  const { id } = req.params;
+  const tasks = readGgppiTasks();
+  const taskIndex = tasks.findIndex((item) => item.id === id);
+
+  if (taskIndex === -1) {
+    return res.status(404).json({ error: 'Task not found' });
+  }
+
+  const current = tasks[taskIndex];
+  const hasTaskName = Object.prototype.hasOwnProperty.call(req.body || {}, 'taskName');
+  const hasAssignedTo = Object.prototype.hasOwnProperty.call(req.body || {}, 'assignedTo');
+  const hasProgress = Object.prototype.hasOwnProperty.call(req.body || {}, 'progress');
+  const hasCompleted = Object.prototype.hasOwnProperty.call(req.body || {}, 'completed');
+  const hasRemoved = Object.prototype.hasOwnProperty.call(req.body || {}, 'removeAttachmentFilenames');
+
+  const nextTaskName = hasTaskName ? String(req.body.taskName || '').trim() : current.taskName;
+  const nextAssignedTo = hasAssignedTo ? String(req.body.assignedTo || '').trim() : current.assignedTo;
+  const nextCompleted = hasCompleted ? parseBoolean(req.body.completed) : !!current.completed;
+  const nextProgress = hasProgress ? parseProgress(req.body.progress, current.progress) : current.progress;
+
+  if (!nextTaskName) {
+    return res.status(400).json({ error: 'Task name cannot be empty' });
+  }
+  if (!nextAssignedTo) {
+    return res.status(400).json({ error: 'Assigned name cannot be empty' });
+  }
+
+  let removeAttachmentFilenames = [];
+  if (hasRemoved) {
+    try {
+      if (Array.isArray(req.body.removeAttachmentFilenames)) {
+        removeAttachmentFilenames = req.body.removeAttachmentFilenames.map((name) => String(name));
+      } else {
+        const parsed = JSON.parse(String(req.body.removeAttachmentFilenames || '[]'));
+        if (Array.isArray(parsed)) {
+          removeAttachmentFilenames = parsed.map((name) => String(name));
+        }
+      }
+    } catch (error) {
+      return res.status(400).json({ error: 'Invalid removeAttachmentFilenames payload' });
+    }
+  }
+
+  const removedSet = new Set(removeAttachmentFilenames);
+  const keptAttachments = (current.attachments || []).filter((file) => !removedSet.has(file.filename));
+  const addedAttachments = formatTaskFiles(req.files);
+  const mergedAttachments = keptAttachments.concat(addedAttachments);
+
+  removeAttachmentFilenames.forEach((filename) => {
+    const filePath = path.join(ggppiUploadDir, filename);
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (error) {
+        console.warn('Failed to remove attachment:', filePath);
+      }
+    }
+  });
+
+  const updatedTask = {
+    ...current,
+    taskName: nextTaskName,
+    assignedTo: nextAssignedTo,
+    completed: nextCompleted,
+    progress: nextCompleted ? 100 : nextProgress,
+    attachments: mergedAttachments,
+    updatedAt: new Date().toISOString()
+  };
+
+  tasks[taskIndex] = updatedTask;
+  writeGgppiTasks(tasks);
+
+  return res.json({ task: updatedTask });
+});
+
+app.delete('/api/ggppi/tasks/:id', (req, res) => {
+  const { id } = req.params;
+  const tasks = readGgppiTasks();
+  const taskIndex = tasks.findIndex((item) => item.id === id);
+
+  if (taskIndex === -1) {
+    return res.status(404).json({ error: 'Task not found' });
+  }
+
+  const [removedTask] = tasks.splice(taskIndex, 1);
+  writeGgppiTasks(tasks);
+
+  (removedTask.attachments || []).forEach((file) => {
+    const filePath = path.join(ggppiUploadDir, file.filename);
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (error) {
+        console.warn('Failed to remove attachment:', filePath);
+      }
+    }
+  });
+
+  return res.json({ success: true });
 });
 }
 });

@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GGPPI Tracker | LAB007</title>
+  <meta name="description" content="GGPPI Tracker is a mobile-friendly team task tracker with assignee, progress, completion, and file uploads.">
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
+  <style>
+    :root {
+      --bg: #0b0e14;
+      --panel: #131926;
+      --panel-soft: #1b2336;
+      --line: #2d3750;
+      --text: #edf2ff;
+      --muted: #9fa9c3;
+      --accent: #59a5ff;
+      --accent-strong: #2f8aff;
+      --danger: #ef5350;
+      --ok: #3ecf8e;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Inter", "Segoe UI", Arial, sans-serif;
+      background: radial-gradient(circle at top right, #1a315f 0%, #0b0e14 42%);
+      color: var(--text);
+      line-height: 1.45;
+      padding: 14px;
+    }
+
+    .wrap {
+      width: min(980px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 12px;
+    }
+
+    .panel {
+      background: rgba(19, 25, 38, 0.96);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.45rem, 4vw, 2.1rem);
+      letter-spacing: 0.02em;
+    }
+
+    .sub {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .full { grid-column: 1 / -1; }
+
+    label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      border: 1px solid #3a4666;
+      border-radius: 10px;
+      background: #0f1522;
+      color: var(--text);
+      padding: 10px 11px;
+      font-size: 0.95rem;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      color: var(--muted);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    button {
+      border: 1px solid #3d5d96;
+      background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+      color: white;
+      font-weight: 700;
+      border-radius: 999px;
+      cursor: pointer;
+      padding: 10px 14px;
+      font-size: 0.9rem;
+    }
+
+    button.ghost {
+      background: #131d30;
+      border-color: #3a4666;
+      color: var(--text);
+    }
+
+    button.danger {
+      background: #3a1a20;
+      border-color: #64313c;
+      color: #ffdbe1;
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 0.9rem;
+      min-height: 1.2rem;
+    }
+
+    .status.error { color: #ff9090; }
+    .status.success { color: #83e6b9; }
+
+    .task-list {
+      display: grid;
+      gap: 10px;
+    }
+
+    .task {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 12px;
+      background: var(--panel-soft);
+      display: grid;
+      gap: 10px;
+    }
+
+    .task-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .chip {
+      border: 1px solid #34517c;
+      color: #bfdbff;
+      border-radius: 999px;
+      padding: 2px 10px;
+      font-size: 0.75rem;
+      white-space: nowrap;
+    }
+
+    .progress-row {
+      display: grid;
+      grid-template-columns: 1fr 86px;
+      gap: 8px;
+      align-items: center;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    .attachments {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .file-chip {
+      border: 1px solid #3a4666;
+      border-radius: 999px;
+      padding: 4px 8px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      background: #11192b;
+    }
+
+    .file-chip a {
+      color: #b9d7ff;
+      text-decoration: none;
+    }
+
+    .file-chip button {
+      padding: 2px 6px;
+      font-size: 0.72rem;
+      border-radius: 999px;
+      background: #2b1b20;
+      border-color: #5a3039;
+      color: #ffc8d2;
+    }
+
+    .muted {
+      color: var(--muted);
+      font-size: 0.84rem;
+    }
+
+    .empty {
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed #415079;
+      border-radius: 12px;
+      padding: 18px;
+    }
+
+    .top-links {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 6px;
+    }
+
+    .top-links a {
+      color: #b9d7ff;
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    @media (max-width: 760px) {
+      body { padding: 10px; }
+      .grid { grid-template-columns: 1fr; }
+      .task-top { align-items: flex-start; flex-direction: column; }
+      .progress-row { grid-template-columns: 1fr 76px; }
+      button { width: 100%; }
+      .actions button { width: auto; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel">
+      <div class="top-links">
+        <a href="/">Back to LAB007</a>
+      </div>
+      <h1>GGPPI Tracker</h1>
+      <p class="sub">Shared team task tracker. Anyone with this URL can add and update tasks.</p>
+    </section>
+
+    <section class="panel">
+      <h2 style="margin:0 0 10px;font-size:1.2rem;">Add Task</h2>
+      <form id="taskForm" class="grid">
+        <div class="full">
+          <label for="taskName">Task Name</label>
+          <input id="taskName" name="taskName" type="text" placeholder="Update landing page hero section" required>
+        </div>
+        <div>
+          <label for="assignedTo">Assigned Name</label>
+          <input id="assignedTo" name="assignedTo" type="text" placeholder="Alex" required>
+        </div>
+        <div>
+          <label for="progress">Task Progress (%)</label>
+          <input id="progress" name="progress" type="number" min="0" max="100" value="0" required>
+        </div>
+        <div class="full">
+          <label for="attachments">Uploads</label>
+          <input id="attachments" name="attachments" type="file" multiple>
+          <div class="muted">You can attach files to each task.</div>
+        </div>
+        <div class="full">
+          <label><input id="completed" name="completed" type="checkbox"> Completed</label>
+        </div>
+        <div class="actions full">
+          <button type="submit">Add Task</button>
+          <button id="refreshBtn" class="ghost" type="button">Refresh</button>
+        </div>
+      </form>
+      <div id="formStatus" class="status" aria-live="polite"></div>
+    </section>
+
+    <section class="panel">
+      <h2 style="margin:0 0 10px;font-size:1.2rem;">Filters</h2>
+      <div class="grid">
+        <div>
+          <label for="assignedFilter">Assigned To</label>
+          <select id="assignedFilter">
+            <option value="">All team members</option>
+          </select>
+        </div>
+        <div>
+          <label for="completedFilter">Completed</label>
+          <select id="completedFilter">
+            <option value="all">All</option>
+            <option value="open">Open only</option>
+            <option value="done">Completed only</option>
+          </select>
+        </div>
+      </div>
+    </section>
+
+    <section class="panel">
+      <h2 style="margin:0 0 10px;font-size:1.2rem;">Tasks</h2>
+      <div id="listStatus" class="status" aria-live="polite"></div>
+      <div id="taskList" class="task-list"></div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const apiBase = '/api/ggppi/tasks';
+      const state = { tasks: [] };
+
+      const taskForm = document.getElementById('taskForm');
+      const formStatus = document.getElementById('formStatus');
+      const listStatus = document.getElementById('listStatus');
+      const taskList = document.getElementById('taskList');
+      const refreshBtn = document.getElementById('refreshBtn');
+      const assignedFilter = document.getElementById('assignedFilter');
+      const completedFilter = document.getElementById('completedFilter');
+
+      function setStatus(el, message, kind) {
+        el.textContent = message || '';
+        el.className = 'status' + (kind ? ' ' + kind : '');
+      }
+
+      function esc(value) {
+        return String(value || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#39;');
+      }
+
+      function taskMatchesFilters(task) {
+        const assignedValue = assignedFilter.value;
+        const completeValue = completedFilter.value;
+        if (assignedValue && task.assignedTo !== assignedValue) return false;
+        if (completeValue === 'open' && task.completed) return false;
+        if (completeValue === 'done' && !task.completed) return false;
+        return true;
+      }
+
+      function syncFilterOptions() {
+        const current = assignedFilter.value;
+        const names = Array.from(new Set(state.tasks.map((task) => task.assignedTo).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+        assignedFilter.innerHTML = '<option value="">All team members</option>' +
+          names.map((name) => '<option value="' + esc(name) + '">' + esc(name) + '</option>').join('');
+        if (names.includes(current)) {
+          assignedFilter.value = current;
+        }
+      }
+
+      function renderTasks() {
+        const visibleTasks = state.tasks.filter(taskMatchesFilters);
+        if (!visibleTasks.length) {
+          taskList.innerHTML = '<div class="empty">No tasks match this filter yet.</div>';
+          return;
+        }
+
+        taskList.innerHTML = visibleTasks.map((task) => {
+          const attachmentsHtml = (task.attachments || []).map((file) => {
+            return '<span class="file-chip">' +
+              '<a href="' + esc(file.url) + '" target="_blank" rel="noopener">' + esc(file.originalName || file.filename) + '</a>' +
+              '<button type="button" data-action="remove-file" data-task-id="' + esc(task.id) + '" data-filename="' + esc(file.filename) + '">x</button>' +
+              '</span>';
+          }).join('');
+
+          const progressValue = Number.isFinite(Number(task.progress)) ? Number(task.progress) : 0;
+          const updatedAt = task.updatedAt ? new Date(task.updatedAt).toLocaleString() : '';
+
+          return (
+            '<article class="task" data-task-id="' + esc(task.id) + '">' +
+              '<div class="task-top">' +
+                '<div class="chip">' + (task.completed ? 'Completed' : 'In Progress') + '</div>' +
+                '<div class="muted">Updated: ' + esc(updatedAt) + '</div>' +
+              '</div>' +
+              '<div class="grid">' +
+                '<div class="full">' +
+                  '<label>Task Name</label>' +
+                  '<input type="text" data-field="taskName" value="' + esc(task.taskName) + '">' +
+                '</div>' +
+                '<div>' +
+                  '<label>Assigned Name</label>' +
+                  '<input type="text" data-field="assignedTo" value="' + esc(task.assignedTo) + '">' +
+                '</div>' +
+                '<div>' +
+                  '<label>Completed</label>' +
+                  '<label><input type="checkbox" data-field="completed" ' + (task.completed ? 'checked' : '') + '> Mark completed</label>' +
+                '</div>' +
+                '<div class="full">' +
+                  '<label>Progress</label>' +
+                  '<div class="progress-row">' +
+                    '<input type="range" min="0" max="100" data-field="progress-range" value="' + progressValue + '">' +
+                    '<input type="number" min="0" max="100" data-field="progress" value="' + progressValue + '">' +
+                  '</div>' +
+                '</div>' +
+              '</div>' +
+              '<div>' +
+                '<label>Attachments</label>' +
+                '<div class="attachments">' + (attachmentsHtml || '<span class="muted">No files yet.</span>') + '</div>' +
+              '</div>' +
+              '<div class="grid">' +
+                '<div class="full">' +
+                  '<label>Add More Uploads</label>' +
+                  '<input type="file" data-field="newFiles" multiple>' +
+                '</div>' +
+              '</div>' +
+              '<div class="actions">' +
+                '<button type="button" data-action="save" data-task-id="' + esc(task.id) + '">Save Changes</button>' +
+                '<button type="button" class="ghost" data-action="upload" data-task-id="' + esc(task.id) + '">Upload Files</button>' +
+                '<button type="button" class="danger" data-action="delete" data-task-id="' + esc(task.id) + '">Delete</button>' +
+              '</div>' +
+            '</article>'
+          );
+        }).join('');
+      }
+
+      async function fetchTasks() {
+        setStatus(listStatus, 'Loading tasks...');
+        try {
+          const res = await fetch(apiBase);
+          if (!res.ok) throw new Error('Failed to load tasks');
+          const data = await res.json();
+          state.tasks = Array.isArray(data.tasks) ? data.tasks : [];
+          syncFilterOptions();
+          renderTasks();
+          setStatus(listStatus, 'Loaded ' + state.tasks.length + ' task(s).', 'success');
+        } catch (error) {
+          setStatus(listStatus, 'Could not load tasks right now.', 'error');
+        }
+      }
+
+      async function createTask(formEl) {
+        const formData = new FormData(formEl);
+        const completed = formData.get('completed') === 'on';
+        formData.set('completed', completed ? 'true' : 'false');
+        if (completed) {
+          formData.set('progress', '100');
+        }
+
+        setStatus(formStatus, 'Saving task...');
+        try {
+          const res = await fetch(apiBase, { method: 'POST', body: formData });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Failed to create task');
+          formEl.reset();
+          formEl.progress.value = '0';
+          setStatus(formStatus, 'Task added successfully.', 'success');
+          await fetchTasks();
+        } catch (error) {
+          setStatus(formStatus, error.message || 'Failed to create task.', 'error');
+        }
+      }
+
+      async function updateTask(taskId, payload, useFormData) {
+        const options = { method: 'PUT' };
+        if (useFormData) {
+          options.body = payload;
+        } else {
+          options.headers = { 'Content-Type': 'application/json' };
+          options.body = JSON.stringify(payload);
+        }
+        const res = await fetch(apiBase + '/' + encodeURIComponent(taskId), options);
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Update failed');
+        return data.task;
+      }
+
+      async function deleteTask(taskId) {
+        const res = await fetch(apiBase + '/' + encodeURIComponent(taskId), { method: 'DELETE' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Delete failed');
+      }
+
+      taskForm.addEventListener('submit', function (event) {
+        event.preventDefault();
+        createTask(taskForm);
+      });
+
+      refreshBtn.addEventListener('click', function () {
+        fetchTasks();
+      });
+
+      assignedFilter.addEventListener('change', renderTasks);
+      completedFilter.addEventListener('change', renderTasks);
+
+      taskList.addEventListener('input', function (event) {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        if (target.getAttribute('data-field') === 'progress-range') {
+          const card = target.closest('.task');
+          const num = card ? card.querySelector('[data-field="progress"]') : null;
+          if (num) {
+            num.value = target.value;
+          }
+        }
+      });
+
+      taskList.addEventListener('click', async function (event) {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+
+        const action = target.getAttribute('data-action');
+        if (!action) return;
+
+        const taskId = target.getAttribute('data-task-id');
+        if (!taskId) return;
+
+        const card = target.closest('.task');
+        if (!card) return;
+
+        try {
+          if (action === 'save') {
+            const taskName = card.querySelector('[data-field="taskName"]').value.trim();
+            const assignedTo = card.querySelector('[data-field="assignedTo"]').value.trim();
+            const completed = !!card.querySelector('[data-field="completed"]').checked;
+            const progress = Number(card.querySelector('[data-field="progress"]').value || 0);
+            await updateTask(taskId, {
+              taskName: taskName,
+              assignedTo: assignedTo,
+              completed: completed,
+              progress: completed ? 100 : progress
+            }, false);
+            setStatus(listStatus, 'Task updated.', 'success');
+            await fetchTasks();
+          } else if (action === 'upload') {
+            const filesInput = card.querySelector('[data-field="newFiles"]');
+            const files = filesInput ? filesInput.files : null;
+            if (!files || !files.length) {
+              setStatus(listStatus, 'Choose file(s) before upload.', 'error');
+              return;
+            }
+            const fd = new FormData();
+            for (let i = 0; i < files.length; i += 1) {
+              fd.append('attachments', files[i]);
+            }
+            await updateTask(taskId, fd, true);
+            setStatus(listStatus, 'Files uploaded.', 'success');
+            await fetchTasks();
+          } else if (action === 'delete') {
+            const ok = window.confirm('Delete this task?');
+            if (!ok) return;
+            await deleteTask(taskId);
+            setStatus(listStatus, 'Task deleted.', 'success');
+            await fetchTasks();
+          } else if (action === 'remove-file') {
+            const filename = target.getAttribute('data-filename');
+            if (!filename) return;
+            await updateTask(taskId, { removeAttachmentFilenames: [filename] }, false);
+            setStatus(listStatus, 'Attachment removed.', 'success');
+            await fetchTasks();
+          }
+        } catch (error) {
+          setStatus(listStatus, error.message || 'Action failed.', 'error');
+        }
+      });
+
+      fetchTasks();
+    })();
+  </script>
+</body>
+</html>
