@@ -191,6 +191,21 @@
       background: rgba(17, 24, 42, 0.55);
     }
 
+    .task-item.task-item--done {
+      opacity: 0.62;
+      background: rgba(14, 18, 28, 0.72);
+      border-color: #2a334d;
+    }
+
+    .task-item.task-item--done .task-title,
+    .task-item.task-item--done .task-meta {
+      color: #8b93ab;
+    }
+
+    .task-item.task-item--done .task-head {
+      cursor: pointer;
+    }
+
     .task-head {
       width: 100%;
       border: 0;
@@ -356,6 +371,9 @@
 
       function sortTasks(tasks) {
         return tasks.slice().sort(function (a, b) {
+          const aDone = !!a.completed;
+          const bDone = !!b.completed;
+          if (aDone !== bDone) return aDone ? 1 : -1;
           const byOwner = String(a.assignedTo || '').localeCompare(String(b.assignedTo || ''));
           if (byOwner !== 0) return byOwner;
           return new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime();
@@ -418,8 +436,10 @@
             return '<option value="' + esc(owner) + '"' + selected + '>' + esc(owner) + '</option>';
           }).join('');
 
+          const doneClass = task.completed ? ' task-item--done' : '';
+
           return (
-            '<article class="task-item' + (isExpanded ? ' expanded' : '') + '" data-task-id="' + esc(task.id) + '">' +
+            '<article class="task-item' + doneClass + (isExpanded ? ' expanded' : '') + '" data-task-id="' + esc(task.id) + '">' +
               '<button class="task-head" type="button" data-action="toggle-expand">' +
                 '<span class="task-title">' + safeTitleDisplay + '</span>' +
                 '<span class="task-meta">' + esc(normalizeOwner(task.assignedTo) || 'TBC') + (task.completed ? ' - Done' : '') + '</span>' +
