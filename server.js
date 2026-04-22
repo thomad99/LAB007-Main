@@ -497,6 +497,7 @@ app.get('/api/ggppi/tasks', (req, res) => {
 app.post('/api/ggppi/tasks', ggppiUpload.array('attachments', 10), (req, res) => {
   const taskName = String(req.body.taskName || '').trim();
   const assignedTo = String(req.body.assignedTo || '').trim();
+  const notes = String(req.body.notes || '').trim();
   const progress = parseProgress(req.body.progress, 0);
   const completed = parseBoolean(req.body.completed);
 
@@ -513,6 +514,7 @@ app.post('/api/ggppi/tasks', ggppiUpload.array('attachments', 10), (req, res) =>
     id: `task_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
     taskName,
     assignedTo,
+    notes,
     progress: completed ? 100 : progress,
     completed,
     attachments: files,
@@ -539,12 +541,14 @@ app.put('/api/ggppi/tasks/:id', withOptionalGgppiUpload, (req, res) => {
   const current = tasks[taskIndex];
   const hasTaskName = Object.prototype.hasOwnProperty.call(req.body || {}, 'taskName');
   const hasAssignedTo = Object.prototype.hasOwnProperty.call(req.body || {}, 'assignedTo');
+  const hasNotes = Object.prototype.hasOwnProperty.call(req.body || {}, 'notes');
   const hasProgress = Object.prototype.hasOwnProperty.call(req.body || {}, 'progress');
   const hasCompleted = Object.prototype.hasOwnProperty.call(req.body || {}, 'completed');
   const hasRemoved = Object.prototype.hasOwnProperty.call(req.body || {}, 'removeAttachmentFilenames');
 
   const nextTaskName = hasTaskName ? String(req.body.taskName || '').trim() : current.taskName;
   const nextAssignedTo = hasAssignedTo ? String(req.body.assignedTo || '').trim() : current.assignedTo;
+  const nextNotes = hasNotes ? String(req.body.notes || '').trim() : String(current.notes || '');
   const nextCompleted = hasCompleted ? parseBoolean(req.body.completed) : !!current.completed;
   const nextProgress = hasProgress ? parseProgress(req.body.progress, current.progress) : current.progress;
 
@@ -591,6 +595,7 @@ app.put('/api/ggppi/tasks/:id', withOptionalGgppiUpload, (req, res) => {
     ...current,
     taskName: nextTaskName,
     assignedTo: nextAssignedTo,
+    notes: nextNotes,
     completed: nextCompleted,
     progress: nextCompleted ? 100 : nextProgress,
     attachments: mergedAttachments,

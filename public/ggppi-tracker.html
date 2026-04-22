@@ -69,6 +69,33 @@
       font-size: 0.86rem;
     }
 
+    .filters {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .filters label {
+      display: block;
+      color: var(--muted);
+      font-size: 0.78rem;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      font-weight: 700;
+    }
+
+    .filters select {
+      width: 100%;
+      border: 1px solid #38456c;
+      border-radius: 10px;
+      background: #0f1522;
+      color: var(--text);
+      padding: 10px 11px;
+      font-size: 0.95rem;
+    }
+
     .table-wrap {
       width: 100%;
       overflow-x: auto;
@@ -104,8 +131,7 @@
       border-bottom: none;
     }
 
-    input[type="text"],
-    input[type="number"] {
+    input[type="text"] {
       width: 100%;
       border: 1px solid #38456c;
       border-radius: 8px;
@@ -115,13 +141,40 @@
       font-size: 0.92rem;
     }
 
-    input[type="number"] {
-      width: 90px;
-    }
-
     .done-cell {
       text-align: center;
       width: 130px;
+    }
+
+    .action-cell {
+      text-align: center;
+      width: 56px;
+      vertical-align: middle;
+    }
+
+    .icon-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      border: 1px solid #4a3a45;
+      background: #24141a;
+      color: #ffc9d4;
+      cursor: pointer;
+      padding: 0;
+    }
+
+    .icon-btn:hover {
+      border-color: #7a4a5a;
+      background: #2c1820;
+    }
+
+    .icon-btn svg {
+      width: 18px;
+      height: 18px;
+      display: block;
     }
 
     .draft-row input {
@@ -149,7 +202,7 @@
     @media (max-width: 760px) {
       body { padding: 9px; }
       .panel { padding: 10px; }
-      input[type="text"], input[type="number"] {
+      input[type="text"] {
         padding: 8px;
         font-size: 0.9rem;
       }
@@ -169,19 +222,29 @@
     </section>
 
     <section class="panel">
+      <div class="filters">
+        <div>
+          <label for="assignedFilter">Assigned</label>
+          <select id="assignedFilter">
+            <option value="">All team members</option>
+          </select>
+        </div>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
             <tr>
               <th>Task Name</th>
-              <th style="width:120px;">Task Progress</th>
+              <th style="width:260px;">Notes</th>
               <th style="width:220px;">Assigned Name</th>
               <th style="width:130px;">Completed</th>
+              <th class="action-cell" aria-label="Delete"></th>
             </tr>
           </thead>
           <tbody id="taskRows"></tbody>
         </table>
       </div>
+      <datalist id="assignedSuggestions"></datalist>
       <div class="hint">Auto-save runs when you leave a cell or toggle completed.</div>
       <div id="status" class="status" aria-live="polite"></div>
     </section>
@@ -191,13 +254,22 @@
     (function () {
       const apiBase = '/api/ggppi/tasks';
       const localKey = 'ggppi-tracker-local-tasks-v1';
+      const defaultAssignedNames = ['David T', 'Jon', 'Tom', 'Dave 3D'];
       const statusEl = document.getElementById('status');
       const taskRows = document.getElementById('taskRows');
       const showCompleted = document.getElementById('showCompleted');
+      const assignedFilter = document.getElementById('assignedFilter');
+      const assignedSuggestions = document.getElementById('assignedSuggestions');
+
+      const trashIconSvg = (
+        '<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">' +
+          '<path fill="currentColor" d="M9 3h6a1 1 0 0 1 1 1v1h4v2H4V5h4V4a1 1 0 0 1 1-1zm-1 6h2v9H8zm4 0h2v9h-2zm4 0h2v9h-2z"/>' +
+        '</svg>'
+      );
 
       const state = {
         tasks: [],
-        draft: { taskName: '', progress: 0, assignedTo: '', completed: false },
+        draft: { taskName: '', notes: '', assignedTo: '', completed: false },
         savingDraft: false,
         localMode: false
       };
@@ -214,12 +286,6 @@
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;')
           .replace(/'/g, '&#39;');
-      }
-
-      function clampProgress(value) {
-        const n = Number(value);
-        if (!Number.isFinite(n)) return 0;
-        return Math.max(0, Math.min(100, Math.round(n)));
       }
 
       function loadLocalTasks() {
@@ -240,29 +306,74 @@
         }
       }
 
-      function sortByCreatedAsc(tasks) {
+      function sortByAssignedAsc(tasks) {
         return tasks.slice().sort(function (a, b) {
+          const aName = String(a.assignedTo || '').trim().toLocaleLowerCase();
+          const bName = String(b.assignedTo || '').trim().toLocaleLowerCase();
+          const nameCmp = aName.localeCompare(bName);
+          if (nameCmp !== 0) return nameCmp;
           const aTime = new Date(a.createdAt || 0).getTime();
           const bTime = new Date(b.createdAt || 0).getTime();
           return aTime - bTime;
         });
       }
 
+      function renderAssignedSuggestions() {
+        const taskNames = state.tasks.map(function (task) {
+          return String(task.assignedTo || '').trim();
+        }).filter(Boolean);
+        const draftName = String(state.draft.assignedTo || '').trim();
+        const combined = defaultAssignedNames.concat(taskNames, draftName ? [draftName] : []);
+        const unique = Array.from(new Set(combined));
+        assignedSuggestions.innerHTML = unique.map(function (name) {
+          return '<option value="' + esc(name) + '"></option>';
+        }).join('');
+      }
+
+      function syncAssignedFilterOptions() {
+        const current = assignedFilter.value;
+        const taskNames = state.tasks.map(function (task) {
+          return String(task.assignedTo || '').trim();
+        }).filter(Boolean);
+        const draftName = String(state.draft.assignedTo || '').trim();
+        const combined = defaultAssignedNames.concat(taskNames, draftName ? [draftName] : []);
+        const unique = Array.from(new Set(combined)).sort(function (a, b) {
+          return a.localeCompare(b);
+        });
+
+        assignedFilter.innerHTML = '<option value="">All team members</option>' +
+          unique.map(function (name) {
+            return '<option value="' + esc(name) + '">' + esc(name) + '</option>';
+          }).join('');
+
+        if (unique.includes(current)) {
+          assignedFilter.value = current;
+        }
+      }
+
       function visibleTasks() {
-        const sorted = sortByCreatedAsc(state.tasks);
+        const filteredByAssignee = assignedFilter.value
+          ? state.tasks.filter(function (task) {
+              return String(task.assignedTo || '').trim() === assignedFilter.value;
+            })
+          : state.tasks.slice();
+
+        const sorted = sortByAssignedAsc(filteredByAssignee);
         if (showCompleted.checked) return sorted;
         return sorted.filter(function (task) { return !task.completed; });
       }
 
       function render() {
         const rows = visibleTasks().map(function (task) {
-          const progress = clampProgress(task.progress);
           return (
             '<tr data-task-id="' + esc(task.id) + '">' +
               '<td><input type="text" data-field="taskName" value="' + esc(task.taskName) + '"></td>' +
-              '<td><input type="number" min="0" max="100" data-field="progress" value="' + progress + '"></td>' +
-              '<td><input type="text" data-field="assignedTo" value="' + esc(task.assignedTo) + '"></td>' +
+              '<td><input type="text" data-field="notes" value="' + esc(task.notes || '') + '" placeholder="Add note"></td>' +
+              '<td><input type="text" list="assignedSuggestions" data-field="assignedTo" value="' + esc(task.assignedTo) + '"></td>' +
               '<td class="done-cell"><input type="checkbox" data-field="completed" ' + (task.completed ? 'checked' : '') + '></td>' +
+              '<td class="action-cell">' +
+                '<button type="button" class="icon-btn" data-action="delete" aria-label="Delete task">' + trashIconSvg + '</button>' +
+              '</td>' +
             '</tr>'
           );
         }).join('');
@@ -271,13 +382,16 @@
         const draftRow = (
           '<tr class="draft-row" data-task-id="draft">' +
             '<td><input type="text" data-field="taskName" value="' + esc(draft.taskName) + '" placeholder="Type new task..."></td>' +
-            '<td><input type="number" min="0" max="100" data-field="progress" value="' + clampProgress(draft.progress) + '"></td>' +
-            '<td><input type="text" data-field="assignedTo" value="' + esc(draft.assignedTo) + '" placeholder="Assigned name"></td>' +
+            '<td><input type="text" data-field="notes" value="' + esc(draft.notes || '') + '" placeholder="Add note"></td>' +
+            '<td><input type="text" list="assignedSuggestions" data-field="assignedTo" value="' + esc(draft.assignedTo) + '" placeholder="Assigned name"></td>' +
             '<td class="done-cell"><input type="checkbox" data-field="completed" ' + (draft.completed ? 'checked' : '') + '></td>' +
+            '<td class="action-cell"></td>' +
           '</tr>'
         );
 
         taskRows.innerHTML = rows + draftRow;
+        renderAssignedSuggestions();
+        syncAssignedFilterOptions();
       }
 
       async function loadTasks() {
@@ -313,13 +427,13 @@
               id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
               taskName: taskName,
               assignedTo: assignedTo,
-              progress: state.draft.completed ? 100 : clampProgress(state.draft.progress),
+              notes: String(state.draft.notes || '').trim(),
               completed: !!state.draft.completed,
               createdAt: now,
               updatedAt: now
             });
             saveLocalTasks();
-            state.draft = { taskName: '', progress: 0, assignedTo: '', completed: false };
+            state.draft = { taskName: '', notes: '', assignedTo: '', completed: false };
             render();
             setStatus('Task added.', 'success');
             return;
@@ -331,7 +445,7 @@
             body: JSON.stringify({
               taskName: taskName,
               assignedTo: assignedTo,
-              progress: state.draft.completed ? 100 : clampProgress(state.draft.progress),
+              notes: String(state.draft.notes || '').trim(),
               completed: !!state.draft.completed
             })
           });
@@ -339,7 +453,7 @@
           if (!res.ok) throw new Error(data.error || 'Failed to save new task');
 
           state.tasks.push(data.task);
-          state.draft = { taskName: '', progress: 0, assignedTo: '', completed: false };
+          state.draft = { taskName: '', notes: '', assignedTo: '', completed: false };
           render();
           setStatus('Task added.', 'success');
         } catch (error) {
@@ -349,13 +463,13 @@
             id: 'local_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
             taskName: taskName,
             assignedTo: assignedTo,
-            progress: state.draft.completed ? 100 : clampProgress(state.draft.progress),
+            notes: String(state.draft.notes || '').trim(),
             completed: !!state.draft.completed,
             createdAt: now,
             updatedAt: now
           });
           saveLocalTasks();
-          state.draft = { taskName: '', progress: 0, assignedTo: '', completed: false };
+          state.draft = { taskName: '', notes: '', assignedTo: '', completed: false };
           render();
           setStatus('Task added.', 'success');
         } finally {
@@ -374,7 +488,6 @@
         try {
           if (state.localMode) {
             task.updatedAt = new Date().toISOString();
-            if (task.completed) task.progress = 100;
             saveLocalTasks();
             render();
             setStatus('Saved.', 'success');
@@ -387,7 +500,7 @@
             body: JSON.stringify({
               taskName: task.taskName,
               assignedTo: task.assignedTo,
-              progress: task.completed ? 100 : clampProgress(task.progress),
+              notes: String(task.notes || '').trim(),
               completed: !!task.completed
             })
           });
@@ -400,10 +513,40 @@
         } catch (error) {
           state.localMode = true;
           task.updatedAt = new Date().toISOString();
-          if (task.completed) task.progress = 100;
           saveLocalTasks();
           render();
           setStatus('Saved.', 'success');
+        }
+      }
+
+      async function deleteTask(taskId) {
+        if (!taskId || taskId === 'draft') return;
+        const ok = window.confirm('Delete this task?');
+        if (!ok) return;
+
+        setStatus('Deleting task...');
+        try {
+          if (state.localMode) {
+            state.tasks = state.tasks.filter(function (task) { return task.id !== taskId; });
+            saveLocalTasks();
+            render();
+            setStatus('Deleted.', 'success');
+            return;
+          }
+
+          const res = await fetch(apiBase + '/' + encodeURIComponent(taskId), { method: 'DELETE' });
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok) throw new Error(data.error || 'Failed to delete task');
+
+          state.tasks = state.tasks.filter(function (task) { return task.id !== taskId; });
+          render();
+          setStatus('Deleted.', 'success');
+        } catch (error) {
+          state.localMode = true;
+          state.tasks = state.tasks.filter(function (task) { return task.id !== taskId; });
+          saveLocalTasks();
+          render();
+          setStatus('Deleted.', 'success');
         }
       }
 
@@ -418,16 +561,14 @@
 
         const value = field === 'completed' ? !!target.checked : target.value;
         if (taskId === 'draft') {
-          if (field === 'progress') state.draft.progress = clampProgress(value);
-          else if (field === 'completed') state.draft.completed = !!value;
+          if (field === 'completed') state.draft.completed = !!value;
           else state.draft[field] = value;
           return;
         }
 
         const task = getTaskById(taskId);
         if (!task) return;
-        if (field === 'progress') task.progress = clampProgress(value);
-        else if (field === 'completed') task.completed = !!value;
+        if (field === 'completed') task.completed = !!value;
         else task[field] = value;
       });
 
@@ -461,7 +602,22 @@
         }
       });
 
+      taskRows.addEventListener('click', function (event) {
+        const target = event.target;
+        if (!(target instanceof HTMLElement)) return;
+        const btn = target.closest('button[data-action="delete"]');
+        if (!btn) return;
+        const row = btn.closest('tr');
+        if (!row) return;
+        const taskId = row.getAttribute('data-task-id');
+        deleteTask(taskId);
+      });
+
       showCompleted.addEventListener('change', function () {
+        render();
+      });
+
+      assignedFilter.addEventListener('change', function () {
         render();
       });
 
