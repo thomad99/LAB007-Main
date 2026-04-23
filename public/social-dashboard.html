@@ -1,0 +1,603 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Social Dashboard | LAB007</title>
+  <meta name="description" content="Analyze Instagram or Facebook posting cadence and engagement timeline from a profile URL.">
+  <style>
+    :root {
+      --bg: #0a0b0f;
+      --panel: #11131a;
+      --panel-2: #171b25;
+      --line: rgba(255,255,255,0.12);
+      --text: #f5f7fb;
+      --muted: #b4bdd3;
+      --gold: #d5b56b;
+      --blue: #7ec8e3;
+      --green: #66f5c8;
+      --danger: #ff7f91;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, Segoe UI, Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 10% -10%, #1a2134 0%, transparent 45%),
+                  radial-gradient(900px 650px at 110% 10%, #2a1e2f 0%, transparent 48%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap {
+      width: min(1120px, 94vw);
+      margin: 26px auto 40px;
+      display: grid;
+      gap: 14px;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(170deg, rgba(17,19,26,0.96), rgba(12,14,20,0.98));
+      box-shadow: 0 14px 34px rgba(0,0,0,0.35);
+      padding: 16px;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .kicker {
+      margin: 0;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 800;
+    }
+    h1 {
+      margin: 6px 0 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .go-back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      border: 1px solid rgba(213,181,107,.36);
+      color: #f3dfb2;
+      text-decoration: none;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      background: rgba(213,181,107,.06);
+    }
+    .form-row {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+    .input {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #0d1018;
+      color: var(--text);
+      border-radius: 12px;
+      min-height: 48px;
+      padding: 0 14px;
+      font-size: 15px;
+      outline: none;
+    }
+    .input:focus {
+      border-color: rgba(126,200,227,.7);
+      box-shadow: 0 0 0 2px rgba(126,200,227,.18);
+    }
+    .btn {
+      border: 1px solid #7aa8bf;
+      background: linear-gradient(180deg, #8dd4ee, #5ea8c5);
+      color: #061119;
+      border-radius: 12px;
+      min-height: 48px;
+      padding: 0 18px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .status {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 18px;
+    }
+    .status.error { color: var(--danger); }
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(12, 1fr);
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(170deg, var(--panel), var(--panel-2));
+      padding: 14px;
+      min-height: 0;
+    }
+    .metric {
+      grid-column: span 3;
+    }
+    .metric-title {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+    .metric-value {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 36px);
+      line-height: 1;
+      font-weight: 800;
+      color: #fff;
+    }
+    .metric-sub {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #9eb8cf;
+    }
+    .freq-card { grid-column: span 6; }
+    .timeline-card { grid-column: span 6; }
+    .dates-card { grid-column: span 4; }
+    .graph-card { grid-column: span 8; }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #dce8ff;
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .table th,
+    .table td {
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 8px 6px;
+      text-align: left;
+      color: #d8deec;
+    }
+    .table th {
+      color: #96a8c8;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .notes {
+      margin: 0;
+      padding-left: 16px;
+      display: grid;
+      gap: 6px;
+      color: #c4d0e8;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .dates-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 360px;
+      overflow: auto;
+      display: grid;
+      gap: 6px;
+    }
+    .dates-list li {
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.03);
+      padding: 8px 10px;
+      font-family: ui-monospace, Menlo, Consolas, monospace;
+      font-size: 12px;
+      color: #cdd8ef;
+    }
+    .graph-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    .year-select {
+      min-height: 36px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #0d1018;
+      color: #deebff;
+      padding: 0 10px;
+      font-size: 13px;
+    }
+    #annualChart {
+      width: 100%;
+      height: 260px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(8,11,18,0.9);
+      display: block;
+    }
+    .helper {
+      margin-top: 8px;
+      color: #9fb0cf;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    @media (max-width: 920px) {
+      .metric { grid-column: span 6; }
+      .freq-card, .timeline-card, .dates-card, .graph-card { grid-column: span 12; }
+    }
+    @media (max-width: 640px) {
+      .form-row { grid-template-columns: 1fr; }
+      .btn { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel">
+      <div class="topbar">
+        <div>
+          <p class="kicker">LAB007 Analytics</p>
+          <h1>Social Dashboard</h1>
+        </div>
+        <a class="go-back" href="/digitalmarketing">Back to Digital Marketing</a>
+      </div>
+      <div class="form-row">
+        <input id="profileUrl" class="input" type="text" placeholder="Enter Instagram or Facebook profile/page URL">
+        <button id="runAnalysis" class="btn" type="button">Analyze Feed</button>
+      </div>
+      <p id="status" class="status">Enter a public profile URL and run analysis.</p>
+      <p class="helper">Dashboard includes all posting dates, average posting frequency (3 months, 6 months, 12 months, and lifetime), annual posting graph, plus engagement totals and timeline summaries when public data is available.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card metric">
+        <p class="metric-title">Total posts found</p>
+        <p id="mPosts" class="metric-value">0</p>
+        <div id="mPostsSub" class="metric-sub">No data yet</div>
+      </article>
+      <article class="card metric">
+        <p class="metric-title">Likes total</p>
+        <p id="mLikes" class="metric-value">0</p>
+        <div class="metric-sub">Public estimate</div>
+      </article>
+      <article class="card metric">
+        <p class="metric-title">Comments total</p>
+        <p id="mComments" class="metric-value">0</p>
+        <div class="metric-sub">Public estimate</div>
+      </article>
+      <article class="card metric">
+        <p class="metric-title">Shares total</p>
+        <p id="mShares" class="metric-value">0</p>
+        <div class="metric-sub">Public estimate</div>
+      </article>
+
+      <article class="card freq-card">
+        <h2>Posting Frequency</h2>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Window</th>
+              <th>Posts</th>
+              <th>Avg / month</th>
+              <th>Avg gap (days)</th>
+            </tr>
+          </thead>
+          <tbody id="freqBody"></tbody>
+        </table>
+      </article>
+
+      <article class="card timeline-card">
+        <h2>Timeline Summary</h2>
+        <ul id="timelineNotes" class="notes">
+          <li>No summary yet.</li>
+        </ul>
+      </article>
+
+      <article class="card graph-card">
+        <div class="graph-head">
+          <h2 style="margin:0;">Annual Posting Graph</h2>
+          <select id="yearSelect" class="year-select"></select>
+        </div>
+        <canvas id="annualChart" width="760" height="260"></canvas>
+        <p class="helper">Bars show total posts by month for the selected year.</p>
+      </article>
+
+      <article class="card dates-card">
+        <h2>All Posting Dates</h2>
+        <ul id="datesList" class="dates-list"></ul>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const profileUrl = document.getElementById('profileUrl');
+      const runBtn = document.getElementById('runAnalysis');
+      const statusEl = document.getElementById('status');
+      const freqBody = document.getElementById('freqBody');
+      const notesEl = document.getElementById('timelineNotes');
+      const datesList = document.getElementById('datesList');
+      const yearSelect = document.getElementById('yearSelect');
+      const chart = document.getElementById('annualChart');
+      const mPosts = document.getElementById('mPosts');
+      const mPostsSub = document.getElementById('mPostsSub');
+      const mLikes = document.getElementById('mLikes');
+      const mComments = document.getElementById('mComments');
+      const mShares = document.getElementById('mShares');
+
+      let activeDates = [];
+
+      function fmtNum(n) {
+        const val = Number(n) || 0;
+        return val.toLocaleString();
+      }
+
+      function setStatus(text, isError) {
+        statusEl.textContent = text;
+        statusEl.classList.toggle('error', !!isError);
+      }
+
+      function diffDays(a, b) {
+        return Math.abs((b.getTime() - a.getTime()) / 86400000);
+      }
+
+      function monthKey(d) {
+        return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      }
+
+      function formatDate(d) {
+        return d.toISOString().slice(0, 10);
+      }
+
+      function statsForWindow(datesAsc, months) {
+        if (!datesAsc.length) return { posts: 0, avgPerMonth: 0, avgGapDays: 0 };
+        const now = new Date();
+        const cutoff = new Date(now.getFullYear(), now.getMonth() - months, now.getDate());
+        const subset = datesAsc.filter((d) => d >= cutoff);
+        if (subset.length < 1) return { posts: 0, avgPerMonth: 0, avgGapDays: 0 };
+        let avgGapDays = 0;
+        if (subset.length > 1) {
+          let total = 0;
+          for (let i = 1; i < subset.length; i++) total += diffDays(subset[i - 1], subset[i]);
+          avgGapDays = total / (subset.length - 1);
+        }
+        return {
+          posts: subset.length,
+          avgPerMonth: subset.length / months,
+          avgGapDays
+        };
+      }
+
+      function statsLifetime(datesAsc) {
+        if (!datesAsc.length) return { posts: 0, avgPerMonth: 0, avgGapDays: 0 };
+        const start = datesAsc[0];
+        const end = datesAsc[datesAsc.length - 1];
+        const months = Math.max(1, (end.getFullYear() - start.getFullYear()) * 12 + (end.getMonth() - start.getMonth()) + 1);
+        let avgGapDays = 0;
+        if (datesAsc.length > 1) {
+          let total = 0;
+          for (let i = 1; i < datesAsc.length; i++) total += diffDays(datesAsc[i - 1], datesAsc[i]);
+          avgGapDays = total / (datesAsc.length - 1);
+        }
+        return {
+          posts: datesAsc.length,
+          avgPerMonth: datesAsc.length / months,
+          avgGapDays
+        };
+      }
+
+      function renderFrequency(datesAsc) {
+        const rows = [
+          { name: '3 months', stats: statsForWindow(datesAsc, 3) },
+          { name: '6 months', stats: statsForWindow(datesAsc, 6) },
+          { name: '12 months', stats: statsForWindow(datesAsc, 12) },
+          { name: 'Lifetime', stats: statsLifetime(datesAsc) }
+        ];
+        freqBody.innerHTML = rows.map((r) => (
+          '<tr>' +
+            '<td>' + r.name + '</td>' +
+            '<td>' + fmtNum(r.stats.posts) + '</td>' +
+            '<td>' + r.stats.avgPerMonth.toFixed(2) + '</td>' +
+            '<td>' + (r.stats.avgGapDays ? r.stats.avgGapDays.toFixed(1) : '—') + '</td>' +
+          '</tr>'
+        )).join('');
+      }
+
+      function renderDates(datesDesc) {
+        datesList.innerHTML = '';
+        if (!datesDesc.length) {
+          datesList.innerHTML = '<li>No posting dates found.</li>';
+          return;
+        }
+        const frag = document.createDocumentFragment();
+        datesDesc.forEach((d) => {
+          const li = document.createElement('li');
+          li.textContent = formatDate(d);
+          frag.appendChild(li);
+        });
+        datesList.appendChild(frag);
+      }
+
+      function renderTimelineSummary(datesAsc) {
+        if (!datesAsc.length) {
+          notesEl.innerHTML = '<li>No timeline data available yet.</li>';
+          return;
+        }
+        const monthCounts = new Map();
+        datesAsc.forEach((d) => {
+          const key = monthKey(d);
+          monthCounts.set(key, (monthCounts.get(key) || 0) + 1);
+        });
+        let busiestKey = '';
+        let busiestVal = 0;
+        monthCounts.forEach((count, key) => {
+          if (count > busiestVal) {
+            busiestVal = count;
+            busiestKey = key;
+          }
+        });
+        const last = datesAsc[datesAsc.length - 1];
+        const first = datesAsc[0];
+        const daysSinceLast = Math.floor(diffDays(last, new Date()));
+        const activeMonths = monthCounts.size;
+        notesEl.innerHTML =
+          '<li>First detected post: <strong>' + formatDate(first) + '</strong>.</li>' +
+          '<li>Most active month: <strong>' + busiestKey + '</strong> with <strong>' + busiestVal + '</strong> posts.</li>' +
+          '<li>Active months detected: <strong>' + activeMonths + '</strong>.</li>' +
+          '<li>Days since most recent post: <strong>' + daysSinceLast + '</strong>.</li>';
+      }
+
+      function drawAnnualChart(datesAsc, year) {
+        const ctx = chart.getContext('2d');
+        const w = chart.width;
+        const h = chart.height;
+        ctx.clearRect(0, 0, w, h);
+
+        const monthCounts = new Array(12).fill(0);
+        datesAsc.forEach((d) => {
+          if (d.getFullYear() === year) monthCounts[d.getMonth()]++;
+        });
+        const max = Math.max(1, ...monthCounts);
+        const pad = { top: 14, right: 16, bottom: 30, left: 26 };
+        const plotW = w - pad.left - pad.right;
+        const plotH = h - pad.top - pad.bottom;
+        const barGap = 8;
+        const barW = (plotW - barGap * 11) / 12;
+        const months = ['J','F','M','A','M','J','J','A','S','O','N','D'];
+
+        ctx.strokeStyle = 'rgba(255,255,255,0.13)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i <= 4; i++) {
+          const y = pad.top + (plotH * i / 4);
+          ctx.beginPath();
+          ctx.moveTo(pad.left, y);
+          ctx.lineTo(w - pad.right, y);
+          ctx.stroke();
+        }
+
+        monthCounts.forEach((v, i) => {
+          const x = pad.left + i * (barW + barGap);
+          const bh = (v / max) * (plotH - 4);
+          const y = pad.top + plotH - bh;
+          const grad = ctx.createLinearGradient(0, y, 0, y + bh);
+          grad.addColorStop(0, '#8ad7f3');
+          grad.addColorStop(1, '#517dbd');
+          ctx.fillStyle = grad;
+          ctx.fillRect(x, y, barW, bh);
+
+          ctx.fillStyle = '#a8bbdd';
+          ctx.font = '11px Inter, Segoe UI, Arial';
+          ctx.textAlign = 'center';
+          ctx.fillText(months[i], x + barW / 2, h - 10);
+
+          if (v > 0) {
+            ctx.fillStyle = '#e6efff';
+            ctx.font = '11px Inter, Segoe UI, Arial';
+            ctx.fillText(String(v), x + barW / 2, y - 4);
+          }
+        });
+      }
+
+      function renderYearSelector(datesAsc) {
+        const years = Array.from(new Set(datesAsc.map((d) => d.getFullYear()))).sort((a, b) => b - a);
+        yearSelect.innerHTML = years.map((y) => '<option value="' + y + '">' + y + '</option>').join('');
+        if (!years.length) {
+          yearSelect.innerHTML = '<option value="">No data</option>';
+          drawAnnualChart([], new Date().getFullYear());
+          return;
+        }
+        drawAnnualChart(datesAsc, years[0]);
+      }
+
+      yearSelect.addEventListener('change', function () {
+        const year = Number(yearSelect.value);
+        if (!Number.isFinite(year)) return;
+        drawAnnualChart(activeDates, year);
+      });
+
+      async function run() {
+        const url = profileUrl.value.trim();
+        if (!url) {
+          setStatus('Please enter an Instagram or Facebook URL first.', true);
+          return;
+        }
+        setStatus('Checking public feed data...', false);
+        runBtn.disabled = true;
+        try {
+          const resp = await fetch('/api/social-dashboard/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url })
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Analysis failed');
+
+          const parsedDates = (data.posts || [])
+            .map((p) => new Date(p.date + 'T00:00:00Z'))
+            .filter((d) => Number.isFinite(d.getTime()))
+            .sort((a, b) => a - b);
+          activeDates = parsedDates;
+
+          const likesFromPosts = (data.posts || []).reduce((sum, p) => sum + (Number(p.likes) || 0), 0);
+          const commentsFromPosts = (data.posts || []).reduce((sum, p) => sum + (Number(p.comments) || 0), 0);
+          const sharesFromPosts = (data.posts || []).reduce((sum, p) => sum + (Number(p.shares) || 0), 0);
+          const likes = Math.max(likesFromPosts, Number(data.engagementHints?.likes) || 0);
+          const comments = Math.max(commentsFromPosts, Number(data.engagementHints?.comments) || 0);
+          const shares = Math.max(sharesFromPosts, Number(data.engagementHints?.shares) || 0);
+
+          mPosts.textContent = fmtNum(parsedDates.length);
+          mPostsSub.textContent = data.sourceUrl || 'Source analyzed';
+          mLikes.textContent = fmtNum(likes);
+          mComments.textContent = fmtNum(comments);
+          mShares.textContent = fmtNum(shares);
+
+          renderFrequency(parsedDates);
+          renderTimelineSummary(parsedDates);
+          renderDates(parsedDates.slice().reverse());
+          renderYearSelector(parsedDates);
+
+          const diag = Array.isArray(data.diagnostics) && data.diagnostics.length
+            ? ' Notes: ' + data.diagnostics.join(' ')
+            : '';
+          setStatus('Analysis complete.' + diag, false);
+        } catch (error) {
+          setStatus(error.message || 'Failed to analyze feed.', true);
+        } finally {
+          runBtn.disabled = false;
+        }
+      }
+
+      runBtn.addEventListener('click', run);
+      profileUrl.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          run();
+        }
+      });
+
+      renderFrequency([]);
+      renderDates([]);
+      renderYearSelector([]);
+    })();
+  </script>
+</body>
+</html>

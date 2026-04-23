@@ -3,7 +3,8 @@
 # Persistence options for GGPPI Tracker:
 #   (A) GitHub: set GITHUB_TOKEN (repo scope) + GGPPI_GITHUB_ENABLED=true, optional GGPPI_GITHUB_REPO,
 #       GGPPI_GITHUB_BRANCH, GGPPI_GITHUB_PATH (default data/ggppi-tasks.json). Tasks commit to the repo.
-#   (B) Disk: mount e.g. /var/data/lab007 then set paths below so tasks + uploads live on the volume.
+#   (B) Disk: mount e.g. /var/data/lab007 then set GGPPI_* paths under that mount.
+#       If the service was not created from this blueprint, add the same env vars in the Render dashboard.
 services:
   - type: web
     name: lab007-unified-services

@@ -34,11 +34,15 @@ console.log('GGPPI data dir:', ggppiDataDir);
 console.log('GGPPI tasks file:', ggppiTasksPath);
 console.log('GGPPI uploads dir:', ggppiUploadDir);
 
+/** When set, task JSON always uses this volume path (GitHub task sync stays off — avoids empty GitHub wiping the UI). */
+const ggppiDataDirExplicit = String(process.env.GGPPI_DATA_DIR || '').trim().length > 0;
+
 const ggppiGithubRepo = (process.env.GGPPI_GITHUB_REPO || 'thomad99/LAB007-Main').trim();
 const ggppiGithubBranch = (process.env.GGPPI_GITHUB_BRANCH || 'main').trim();
 const ggppiGithubPath = (process.env.GGPPI_GITHUB_PATH || 'data/ggppi-tasks.json').trim();
 const ggppiGithubToken = (process.env.GITHUB_TOKEN || process.env.GGPPI_GITHUB_TOKEN || '').trim();
 const ggppiGithubEnabled =
+  !ggppiDataDirExplicit &&
   ['1', 'true', 'yes'].includes(String(process.env.GGPPI_GITHUB_ENABLED || '').trim().toLowerCase()) &&
   ggppiGithubToken.length > 0;
 const upload = multer({
@@ -142,6 +146,13 @@ app.get('/webdesign', (req, res) => {
 // Serve digital marketing page
 app.get('/digitalmarketing', (req, res) => {
   const p = path.join(__dirname, 'public', 'DigitalMarketing.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
+});
+
+// Serve social dashboard page
+app.get('/social-dashboard', (req, res) => {
+  const p = path.join(__dirname, 'public', 'social-dashboard.html');
   if (fs.existsSync(p)) return res.sendFile(p);
   return res.status(404).send('Not found');
 });
@@ -581,10 +592,22 @@ if (ggppiGithubEnabled) {
 } else {
   try {
     const bootCount = readGgppiTasksFromDisk().length;
-    console.log(`[GGPPI] Disk storage: ${bootCount} task(s) at ${ggppiTasksPath}`);
+    console.log(
+      `[GGPPI] Task JSON on disk: ${bootCount} task(s) → ${ggppiTasksPath}` +
+        (ggppiDataDirExplicit ? ' (GGPPI_DATA_DIR set)' : ' (default ./data — not persistent on Render)')
+    );
   } catch (e) {
     console.warn('[GGPPI] Startup: could not read tasks file yet:', e.message);
   }
+}
+
+if (ggppiDataDirExplicit && ['1', 'true', 'yes'].includes(String(process.env.GGPPI_GITHUB_ENABLED || '').trim().toLowerCase()) && ggppiGithubToken.length > 0) {
+  console.log('[GGPPI] GGPPI_DATA_DIR is set; using volume for task JSON (GGPPI_GITHUB_ENABLED ignored for tasks).');
+}
+if (String(process.env.RENDER || '').toLowerCase() === 'true' && !ggppiDataDirExplicit && !ggppiGithubEnabled) {
+  console.warn(
+    '[GGPPI] Render: GGPPI_DATA_DIR is unset — ggppi-tasks.json lives under the app and is lost on restart. Set GGPPI_DATA_DIR (and GGPPI_UPLOAD_DIR) to paths under your disk mount.'
+  );
 }
 
 const GGPPI_OWNERS = ['David T', 'John G', 'Tom', 'Dave 3D', 'TBC'];
@@ -836,6 +859,206 @@ app.post('/api/srq-contact', async (req, res) => {
   } catch (error) {
     console.error('SRQ contact form error:', error);
     res.status(500).json({ error: 'Failed to send message. Please try again or email info@lab007.ai directly.' });
+  }
+});
+
+function normalizeSocialUrl(input) {
+  const raw = String(input || '').trim();
+  if (!raw) return null;
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const u = new URL(withProtocol);
+    if (!['http:', 'https:'].includes(u.protocol)) return null;
+    return u;
+  } catch (error) {
+    return null;
+  }
+}
+
+function isPrivateHostname(hostname) {
+  const h = String(hostname || '').toLowerCase();
+  if (!h) return true;
+  if (h === 'localhost' || h === '127.0.0.1' || h === '::1') return true;
+  if (/^10\./.test(h)) return true;
+  if (/^192\.168\./.test(h)) return true;
+  if (/^172\.(1[6-9]|2\d|3[0-1])\./.test(h)) return true;
+  if (/^169\.254\./.test(h)) return true;
+  return false;
+}
+
+function toDateOnly(isoLike) {
+  const d = new Date(isoLike);
+  if (!Number.isFinite(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function dedupePostsByDate(posts) {
+  const seen = new Set();
+  const out = [];
+  for (const post of posts) {
+    if (!post || !post.date) continue;
+    if (seen.has(post.date)) continue;
+    seen.add(post.date);
+    out.push(post);
+  }
+  out.sort((a, b) => (a.date < b.date ? 1 : -1));
+  return out;
+}
+
+function extractPostsFromJsonLdObject(node, posts) {
+  if (!node || typeof node !== 'object') return;
+  if (Array.isArray(node)) {
+    node.forEach((n) => extractPostsFromJsonLdObject(n, posts));
+    return;
+  }
+
+  const dateRaw = node.datePublished || node.uploadDate || node.dateCreated || null;
+  const date = toDateOnly(dateRaw);
+  if (date) {
+    const stats = { likes: null, comments: null, shares: null };
+    const directLikes = Number(node.likeCount);
+    const directComments = Number(node.commentCount);
+    const directShares = Number(node.shareCount);
+    if (Number.isFinite(directLikes)) stats.likes = directLikes;
+    if (Number.isFinite(directComments)) stats.comments = directComments;
+    if (Number.isFinite(directShares)) stats.shares = directShares;
+
+    const interaction = node.interactionStatistic;
+    const statsList = Array.isArray(interaction) ? interaction : interaction ? [interaction] : [];
+    statsList.forEach((it) => {
+      const type = String(
+        (it?.interactionType && (it.interactionType['@type'] || it.interactionType.name || it.interactionType)) || ''
+      ).toLowerCase();
+      const count = Number(it?.userInteractionCount);
+      if (!Number.isFinite(count)) return;
+      if (type.includes('like')) stats.likes = count;
+      if (type.includes('comment')) stats.comments = count;
+      if (type.includes('share')) stats.shares = count;
+    });
+
+    posts.push({ date, ...stats });
+  }
+
+  Object.keys(node).forEach((key) => {
+    const val = node[key];
+    if (val && typeof val === 'object') {
+      extractPostsFromJsonLdObject(val, posts);
+    }
+  });
+}
+
+function extractPostsFromHtml(htmlText) {
+  const posts = [];
+  const diagnostics = [];
+
+  // JSON-LD blocks (most structured source when available).
+  const jsonLdMatches = htmlText.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>[\s\S]*?<\/script>/gi) || [];
+  for (const block of jsonLdMatches) {
+    const content = block
+      .replace(/^<script[^>]*>/i, '')
+      .replace(/<\/script>$/i, '')
+      .trim();
+    if (!content) continue;
+    try {
+      const parsed = JSON.parse(content);
+      extractPostsFromJsonLdObject(parsed, posts);
+    } catch (error) {
+      diagnostics.push('Some JSON-LD blocks were not parseable.');
+    }
+  }
+
+  // Instagram-like timestamps.
+  const unixMatches = htmlText.match(/"taken_at_timestamp"\s*:\s*(\d{10})/g) || [];
+  unixMatches.forEach((chunk) => {
+    const raw = chunk.match(/(\d{10})/);
+    if (!raw) return;
+    const seconds = Number(raw[1]);
+    if (!Number.isFinite(seconds)) return;
+    const date = toDateOnly(new Date(seconds * 1000).toISOString());
+    if (date) posts.push({ date, likes: null, comments: null, shares: null });
+  });
+
+  // Fallback ISO dates.
+  const isoMatches = htmlText.match(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?Z/g) || [];
+  isoMatches.slice(0, 500).forEach((iso) => {
+    const date = toDateOnly(iso);
+    if (date) posts.push({ date, likes: null, comments: null, shares: null });
+  });
+
+  // Aggregate engagement hints across page text.
+  const likesHints = [];
+  const commentsHints = [];
+  const sharesHints = [];
+  const likeRx = /(\d[\d,]*)\s+(?:likes?|reactions?)/gi;
+  const commentRx = /(\d[\d,]*)\s+comments?/gi;
+  const shareRx = /(\d[\d,]*)\s+shares?/gi;
+  let m;
+  while ((m = likeRx.exec(htmlText)) !== null) likesHints.push(Number(String(m[1]).replace(/,/g, '')));
+  while ((m = commentRx.exec(htmlText)) !== null) commentsHints.push(Number(String(m[1]).replace(/,/g, '')));
+  while ((m = shareRx.exec(htmlText)) !== null) sharesHints.push(Number(String(m[1]).replace(/,/g, '')));
+
+  const cleanLikes = likesHints.filter(Number.isFinite);
+  const cleanComments = commentsHints.filter(Number.isFinite);
+  const cleanShares = sharesHints.filter(Number.isFinite);
+  if (cleanLikes.length || cleanComments.length || cleanShares.length) {
+    diagnostics.push('Engagement totals estimated from publicly visible text snippets.');
+  }
+
+  const deduped = dedupePostsByDate(posts).slice(0, 2000);
+  return {
+    posts: deduped,
+    engagementHints: {
+      likes: cleanLikes.reduce((a, b) => a + b, 0),
+      comments: cleanComments.reduce((a, b) => a + b, 0),
+      shares: cleanShares.reduce((a, b) => a + b, 0)
+    },
+    diagnostics
+  };
+}
+
+app.post('/api/social-dashboard/analyze', async (req, res) => {
+  try {
+    const url = normalizeSocialUrl(req.body?.url);
+    if (!url) {
+      return res.status(400).json({ error: 'Please provide a valid Instagram or Facebook URL.' });
+    }
+    if (isPrivateHostname(url.hostname)) {
+      return res.status(400).json({ error: 'Private or local hosts are not allowed.' });
+    }
+
+    const response = await fetchFn(url.toString(), {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    });
+    if (!response.ok) {
+      return res.status(502).json({ error: `Could not fetch profile feed (${response.status}).` });
+    }
+
+    const html = await response.text();
+    const result = extractPostsFromHtml(html);
+    if (!result.posts.length) {
+      return res.status(200).json({
+        sourceUrl: url.toString(),
+        posts: [],
+        engagementHints: result.engagementHints,
+        diagnostics: [
+          'No post timestamps found from public page HTML.',
+          'Some social pages hide feed data unless authenticated.'
+        ]
+      });
+    }
+
+    return res.json({
+      sourceUrl: url.toString(),
+      posts: result.posts,
+      engagementHints: result.engagementHints,
+      diagnostics: result.diagnostics
+    });
+  } catch (error) {
+    console.error('Social dashboard analyze error:', error);
+    return res.status(500).json({ error: 'Failed to analyze social feed' });
   }
 });
 
