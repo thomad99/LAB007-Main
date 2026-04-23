@@ -1294,8 +1294,8 @@
         .insp-mini-row {
             min-height: 22px;
             border-radius: 8px;
-            background: rgba(255,255,255,.06);
-            border: 1px solid rgba(255,255,255,.12);
+            background: linear-gradient(180deg, rgba(211, 220, 233, 0.2), rgba(126, 136, 152, 0.12));
+            border: 1px solid rgba(201, 210, 224, 0.34);
             position: relative;
             overflow: hidden;
             display: flex;
@@ -1315,7 +1315,7 @@
             min-width: 0;
             font-size: 9px;
             font-weight: 600;
-            color: rgba(244,237,226,.9);
+            color: #e9edf6;
             font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
             white-space: nowrap;
             overflow: hidden;
@@ -1332,7 +1332,7 @@
             height: 10px;
             margin-top: 1px;
             border-radius: 1px;
-            background: var(--gold);
+            background: #cfd7e4;
             opacity: 0;
             flex-shrink: 0;
             align-self: center;
@@ -1352,8 +1352,8 @@
             margin-top: 4px;
             height: 26px;
             border-radius: 999px;
-            background: linear-gradient(180deg, #e3c984, #b8923e);
-            color: #1a1206;
+            background: linear-gradient(180deg, #e5e9f2, #b6c0d0);
+            color: #1b2432;
             font-size: 10px;
             font-weight: 800;
             display: grid;
@@ -1362,14 +1362,14 @@
             animation: insp-send-glow 1.8s ease-in-out infinite;
         }
         .insp-mini-send.is-ready {
-            box-shadow: 0 0 14px rgba(213,181,107,.5);
+            box-shadow: 0 0 14px rgba(177, 189, 209, 0.5);
             transform: scale(1.03);
         }
         .insp-mini-send.is-sent {
             animation: insp-mini-send-tap 0.55s ease;
         }
         @keyframes insp-send-glow {
-            50% { filter: brightness(1.15); box-shadow: 0 0 14px rgba(213,181,107,.45); }
+            50% { filter: brightness(1.08); box-shadow: 0 0 14px rgba(177, 189, 209, 0.45); }
         }
         @keyframes insp-mini-send-tap {
             0% { transform: scale(1.03); }
@@ -1749,31 +1749,6 @@
             cursor: pointer;
         }
         .chat-replay button:hover { background: rgba(213,181,107,.08); }
-        #contactForm .demo-input,
-        #contactForm .demo-textarea {
-            border: 1px solid rgba(98, 214, 142, 0.45);
-            background: linear-gradient(180deg, rgba(8, 26, 16, 0.92), rgba(8, 20, 14, 0.96));
-            color: #e9fff2;
-        }
-        #contactForm .demo-input:focus,
-        #contactForm .demo-textarea:focus {
-            outline: none;
-            border-color: #63d88f;
-            box-shadow: 0 0 0 3px rgba(99, 216, 143, 0.2);
-        }
-        #contactForm label {
-            color: #93d9af;
-        }
-        #contactForm .demo-button {
-            border: 1px solid #4fbd7e;
-            background: linear-gradient(180deg, #7be2a8, #3bbd74);
-            color: #062112;
-            box-shadow: 0 10px 20px rgba(41, 153, 90, 0.28);
-        }
-        #contactStatus {
-            color: #8fd6ab;
-        }
-
         @media (prefers-reduced-motion: reduce) {
             .chat-row.is-visible .chat-bubble,
             .chat-typing.is-on {
