@@ -11,8 +11,8 @@
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Digital Marketing Services | LAB007 AI Tech</title>
-    <meta name="description" content="LAB007 Digital Marketing: strategy, SEO, content, paid ads, and campaigns for Sarasota and beyond.">
+    <title>Digital Marketing Services | AI Tech</title>
+    <meta name="description" content="Digital Marketing: strategy, SEO, content, paid ads, and campaigns for Sarasota and beyond.">
     <meta name="keywords" content="digital marketing, SEO, PPC, content marketing, Sarasota marketing">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://www.lab007.ai/digitalmarketing">
@@ -24,27 +24,27 @@
     <link href="https://fonts.googleapis.com/css2?family=Anton&family=Bebas+Neue&family=Dancing+Script:wght@700&family=Fjalla+One&family=Lobster&family=Montserrat:wght@800&family=Pacifico&family=Playfair+Display:wght@700&family=Roboto+Mono:wght@700&family=Russo+One&family=Permanent+Marker&family=Righteous&family=Sora:wght@800&display=swap" rel="stylesheet">
 
     <meta property="og:type" content="website">
-    <meta property="og:title" content="Digital Marketing Services | LAB007 AI Tech">
-    <meta property="og:description" content="Premium digital marketing campaigns with LAB007 — strategy, creative, and clarity.">
+    <meta property="og:title" content="Digital Marketing Services | AI Tech">
+    <meta property="og:description" content="Premium digital marketing campaigns — strategy, creative, and clarity.">
     <meta property="og:url" content="https://www.lab007.ai/digitalmarketing">
     <meta property="og:image" content="https://www.lab007.ai/images/lab007-trans.PNG">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Digital Marketing Services | LAB007 AI Tech">
-    <meta name="twitter:description" content="SEO, paid ads, content strategy, and campaign execution from LAB007.">
+    <meta name="twitter:title" content="Digital Marketing Services | AI Tech">
+    <meta name="twitter:description" content="SEO, paid ads, content strategy, and campaign execution.">
     <meta name="twitter:image" content="https://www.lab007.ai/images/lab007-trans.PNG">
 
     <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "ProfessionalService",
-      "name": "LAB007 Digital Marketing",
+      "name": "Digital Marketing",
       "url": "https://www.lab007.ai/digitalmarketing",
       "description": "Digital marketing services including SEO, content strategy, and campaign setup.",
       "areaServed": "US",
       "email": "info@lab007.ai",
       "brand": {
         "@type": "Brand",
-        "name": "LAB007"
+        "name": "Brand"
       }
     }
     </script>
@@ -95,6 +95,14 @@
             width: 72px;
             opacity: .9;
             filter: brightness(1.1);
+        }
+        @media (min-width: 721px) {
+            .hero {
+                grid-template-columns: 168px 1fr;
+            }
+            .logo-mark {
+                width: 144px;
+            }
         }
         h1 {
             font-family: Georgia, "Times New Roman", serif;
@@ -161,9 +169,12 @@
             grid-auto-rows: 1fr;
         }
         .feature {
-            border: 1px solid var(--line);
+            border: 1px solid rgba(149, 170, 210, 0.28);
             border-radius: 12px;
-            background: var(--panel);
+            background:
+                radial-gradient(120% 100% at 0% 0%, rgba(126, 200, 227, 0.16), transparent 52%),
+                radial-gradient(120% 100% at 100% 100%, rgba(213, 181, 107, 0.14), transparent 56%),
+                linear-gradient(165deg, #171b26 0%, #11151f 58%, #18131b 100%);
             padding: 12px;
             min-height: 0;
             height: 100%;
@@ -171,6 +182,9 @@
             flex-direction: column;
             position: relative;
             z-index: 0;
+            box-shadow:
+                inset 0 1px 0 rgba(255,255,255,.06),
+                0 8px 20px rgba(0,0,0,.26);
             transform-origin: center center;
             transition:
                 transform 0.55s cubic-bezier(0.4, 0, 0.2, 1),
@@ -1118,6 +1132,34 @@
             flex: 1;
             overflow: hidden;
         }
+        .insp-wa-thread {
+            margin-top: 6px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+        .insp-wa-msg {
+            max-width: 94%;
+            font-size: 8px;
+            line-height: 1.35;
+            padding: 6px 8px;
+            border-radius: 10px;
+            border: 1px solid rgba(0,0,0,.08);
+            box-shadow: 0 2px 8px rgba(0,0,0,.08);
+        }
+        .insp-wa-msg--visitor {
+            align-self: flex-start;
+            background: #ffffff;
+            color: #2e3440;
+            border-radius: 10px 10px 10px 3px;
+        }
+        .insp-wa-msg--human {
+            align-self: flex-end;
+            background: linear-gradient(180deg, #dff5e8, #c9edd9);
+            color: #11311f;
+            border-color: rgba(37, 120, 72, 0.25);
+            border-radius: 10px 10px 3px 10px;
+        }
         .insp-wa-btn {
             position: absolute;
             bottom: 8px;
@@ -1648,15 +1690,15 @@
 <body>
     <main class="wrap">
         <section class="panel hero" aria-labelledby="hero-title">
-            <img class="logo-mark" src="/images/lab007-trans.PNG" alt="LAB007 logo">
+            <img class="logo-mark" src="/images/lab007-trans.PNG" alt="Brand logo">
             <div>
-                <div class="tiny">LAB007 AI TECH</div>
+                <div class="tiny">AI TECH</div>
                 <h1 id="hero-title">Digital marketing campaigns that look premium and perform.</h1>
             </div>
         </section>
 
         <section class="panel">
-            <div class="tiny">LAB007</div>
+            <div class="tiny">Brand</div>
             <h2 style="font-family:Georgia,serif;font-size:38px;line-height:.95;margin:8px 0 6px;">Your brand, advertised with clarity.</h2>
             <p style="color:var(--muted);max-width:700px;font-size:13px;">A modern campaign system for real businesses and teams that need premium-looking campaigns without agency clutter.</p>
 
@@ -1714,16 +1756,6 @@
             <h2 id="inspiration-title" class="insp-head">Design inspiration</h2>
             <p class="insp-intro">A rapid-fire taste of building blocks we use — typography, branding, imagery, video, color palette, bookings, CRM, commerce, messaging, site chatbot, and lead capture — shown as quick, colorful demos.</p>
             <div class="insp-grid">
-                <div class="insp-tile insp-tile--fonts">
-                    <div class="insp-tile-label">Fonts</div>
-                    <div class="insp-tile-body">
-                        <div class="insp-fonts-demo">
-                            <div class="insp-font-stage" aria-hidden="true">
-                                <span id="inspFontWord" class="insp-fw insp-fw--choosing"></span><span id="inspFontCaret" class="insp-font-caret" aria-hidden="true"></span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
                 <div class="insp-tile insp-tile--branding">
                     <div class="insp-tile-label">Branding</div>
                     <div class="insp-tile-body">
@@ -1739,6 +1771,16 @@
                     <div class="insp-tile-label">Images</div>
                     <div class="insp-tile-body">
                         <div id="inspImgMosaic" class="insp-img-mosaic"></div>
+                    </div>
+                </div>
+                <div class="insp-tile insp-tile--fonts">
+                    <div class="insp-tile-label">Fonts</div>
+                    <div class="insp-tile-body">
+                        <div class="insp-fonts-demo">
+                            <div class="insp-font-stage" aria-hidden="true">
+                                <span id="inspFontWord" class="insp-fw insp-fw--choosing"></span><span id="inspFontCaret" class="insp-font-caret" aria-hidden="true"></span>
+                            </div>
+                        </div>
                     </div>
                 </div>
                 <div class="insp-tile insp-tile--video">
@@ -1887,9 +1929,11 @@
                             <div class="insp-wa-browser">
                                 <div class="insp-wa-chrome"><span style="opacity:.7">● ● ●</span> yourbrand.com</div>
                                 <div class="insp-wa-page">
-                                    <div style="font-size:10px;color:#334;font-weight:700;">Welcome</div>
-                                    <div id="inspWaPopup" class="insp-wa-popup">Hi! Questions? Tap chat to reach us on your favorite channel.</div>
-                                    <div class="insp-wa-btn" aria-hidden="true">💬</div>
+                                    <div style="font-size:10px;color:#334;font-weight:700;">Direct message demo</div>
+                                    <div class="insp-wa-thread" aria-hidden="true">
+                                        <div class="insp-wa-msg insp-wa-msg--visitor">hi, are you human</div>
+                                        <div class="insp-wa-msg insp-wa-msg--human">yes this is direct chat with human not a chatbot, how can i help you</div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1907,7 +1951,7 @@
                                         <div class="chat-avatar" aria-hidden="true">💬</div>
                                         <div class="chat-head-text">
                                             <div class="chat-label">Assistant</div>
-                                            <div class="chat-name">LAB007 Site Bot (demo)</div>
+                                            <div class="chat-name">Site Team (demo)</div>
                                         </div>
                                     </div>
                                     <div id="chatMsgs" class="chat-msgs" aria-live="polite" aria-relevant="additions text">
@@ -1963,9 +2007,9 @@
         </section>
 
         <section class="panel">
-            <div class="tiny">Contact LAB007</div>
+            <div class="tiny">Contact</div>
             <h2 style="font-family:Georgia,serif;font-size:30px;line-height:.95;margin:8px 0 10px;">Contact US</h2>
-            <form id="contactForm" class="demo-form" style="max-width:700px;">
+            <form id="contactForm" class="demo-form" style="max-width:700px;margin:0 auto;">
                 <div>
                     <label for="contactName">Name</label>
                     <input id="contactName" class="demo-input" type="text" placeholder="Your name" required>
@@ -1978,13 +2022,12 @@
                     <label for="contactMessage">Message</label>
                     <textarea id="contactMessage" class="demo-textarea" placeholder="Tell us what you want to build..." required></textarea>
                 </div>
-                <button type="submit" class="demo-button">Send to info@lab007.ai</button>
+                <button type="submit" class="demo-button">SEND</button>
             </form>
             <div id="contactStatus" class="contact-status"></div>
 
             <nav class="social-strip" aria-label="Advertising and social platforms we work with">
-                <p class="social-strip-title">We work with</p>
-                <p class="social-strip-note">LAB007 plans, launches, and optimizes campaigns on major social and video platforms — including those below — so your ads reach the right audience.</p>
+                <p class="social-strip-note">We plan, launch, and optimize campaigns on major social and video platforms.</p>
                 <ul class="social-links">
                     <li>
                         <a href="https://www.instagram.com/lab007ai/" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
@@ -2013,7 +2056,7 @@
                     </li>
                 </ul>
                 <div class="subpage-links">
-                    <a class="subpage-link" href="/social-dashboard">Social Dashboard</a>
+                    <a class="subpage-link" href="/social-dashboard.html">Social Dashboard</a>
                 </div>
             </nav>
         </section>
@@ -2157,8 +2200,8 @@
                         { src: '/Images/branding/winghouse.png', alt: 'Winghouse logo' },
                         { src: '/Images/branding/sarasota-3d-print.png', alt: 'Sarasota 3D Print logo' },
                         { src: '/Images/branding/glam-bus.png', alt: 'Glam-Bus logo' },
-                        { src: '/Images/branding/lab007-trans-a.png', alt: 'LAB007 dark logo' },
-                        { src: '/Images/branding/lab007-trans-b.png', alt: 'LAB007 dark logo variant' }
+                        { src: '/Images/branding/lab007-trans-a.png', alt: 'Dark logo' },
+                        { src: '/Images/branding/lab007-trans-b.png', alt: 'Dark logo variant' }
                     ];
                     slides.forEach(function(_, di) {
                         var d = document.createElement('span');
@@ -2199,14 +2242,56 @@
 
                 var mosaic = document.getElementById('inspImgMosaic');
                 var imgPool = [
-                    'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?auto=format&fit=crop&w=240&q=70',
-                    'https://images.unsplash.com/photo-1469474968028-56623f02e42e?auto=format&fit=crop&w=240&q=70',
-                    'https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=240&q=70',
-                    'https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=240&q=70',
-                    'https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=240&q=70',
-                    'https://images.unsplash.com/photo-1519681393784-d120267933ba?auto=format&fit=crop&w=240&q=70',
-                    'https://images.unsplash.com/photo-1490750967868-88aa4486c946?auto=format&fit=crop&w=240&q=70',
-                    'https://images.unsplash.com/photo-1465146344425-f00d5f5c8f07?auto=format&fit=crop&w=240&q=70'
+                    'https://picsum.photos/seed/market-001/240/240',
+                    'https://picsum.photos/seed/market-002/240/240',
+                    'https://picsum.photos/seed/market-003/240/240',
+                    'https://picsum.photos/seed/market-004/240/240',
+                    'https://picsum.photos/seed/market-005/240/240',
+                    'https://picsum.photos/seed/market-006/240/240',
+                    'https://picsum.photos/seed/market-007/240/240',
+                    'https://picsum.photos/seed/market-008/240/240',
+                    'https://picsum.photos/seed/market-009/240/240',
+                    'https://picsum.photos/seed/market-010/240/240',
+                    'https://picsum.photos/seed/market-011/240/240',
+                    'https://picsum.photos/seed/market-012/240/240',
+                    'https://picsum.photos/seed/market-013/240/240',
+                    'https://picsum.photos/seed/market-014/240/240',
+                    'https://picsum.photos/seed/market-015/240/240',
+                    'https://picsum.photos/seed/market-016/240/240',
+                    'https://picsum.photos/seed/market-017/240/240',
+                    'https://picsum.photos/seed/market-018/240/240',
+                    'https://picsum.photos/seed/market-019/240/240',
+                    'https://picsum.photos/seed/market-020/240/240',
+                    'https://picsum.photos/seed/market-021/240/240',
+                    'https://picsum.photos/seed/market-022/240/240',
+                    'https://picsum.photos/seed/market-023/240/240',
+                    'https://picsum.photos/seed/market-024/240/240',
+                    'https://picsum.photos/seed/market-025/240/240',
+                    'https://picsum.photos/seed/market-026/240/240',
+                    'https://picsum.photos/seed/market-027/240/240',
+                    'https://picsum.photos/seed/market-028/240/240',
+                    'https://picsum.photos/seed/market-029/240/240',
+                    'https://picsum.photos/seed/market-030/240/240',
+                    'https://picsum.photos/seed/market-031/240/240',
+                    'https://picsum.photos/seed/market-032/240/240',
+                    'https://picsum.photos/seed/market-033/240/240',
+                    'https://picsum.photos/seed/market-034/240/240',
+                    'https://picsum.photos/seed/market-035/240/240',
+                    'https://picsum.photos/seed/market-036/240/240',
+                    'https://picsum.photos/seed/market-037/240/240',
+                    'https://picsum.photos/seed/market-038/240/240',
+                    'https://picsum.photos/seed/market-039/240/240',
+                    'https://picsum.photos/seed/market-040/240/240',
+                    'https://picsum.photos/seed/market-041/240/240',
+                    'https://picsum.photos/seed/market-042/240/240',
+                    'https://picsum.photos/seed/market-043/240/240',
+                    'https://picsum.photos/seed/market-044/240/240',
+                    'https://picsum.photos/seed/market-045/240/240',
+                    'https://picsum.photos/seed/market-046/240/240',
+                    'https://picsum.photos/seed/market-047/240/240',
+                    'https://picsum.photos/seed/market-048/240/240',
+                    'https://picsum.photos/seed/market-049/240/240',
+                    'https://picsum.photos/seed/market-050/240/240'
                 ];
                 if (mosaic) {
                     var nCells = 15;
@@ -2216,12 +2301,45 @@
                         mosaic.appendChild(cell);
                     }
                     var cells = mosaic.querySelectorAll('.insp-img-cell');
+                    var poolOrder = imgPool.map(function(_, i) { return i; });
+                    var poolCursor = 0;
+                    var previousByCell = [];
+                    var lastFlashCell = -1;
+                    function shuffleOrder() {
+                        for (var i = poolOrder.length - 1; i > 0; i--) {
+                            var j = Math.floor(Math.random() * (i + 1));
+                            var tmp = poolOrder[i];
+                            poolOrder[i] = poolOrder[j];
+                            poolOrder[j] = tmp;
+                        }
+                    }
+                    function nextPoolIndex(avoid) {
+                        if (poolCursor >= poolOrder.length) {
+                            shuffleOrder();
+                            poolCursor = 0;
+                        }
+                        var idx = poolOrder[poolCursor++];
+                        if (typeof avoid === 'number' && poolOrder.length > 1 && idx === avoid) {
+                            if (poolCursor >= poolOrder.length) {
+                                shuffleOrder();
+                                poolCursor = 0;
+                            }
+                            idx = poolOrder[poolCursor++];
+                        }
+                        return idx;
+                    }
+                    shuffleOrder();
                     function flashMosaic() {
-                        var pool = imgPool;
-                        cells.forEach(function(cell) {
-                            cell.style.backgroundImage = 'url(' + pool[Math.floor(Math.random() * pool.length)] + ')';
+                        cells.forEach(function(cell, cellIndex) {
+                            var imgIndex = nextPoolIndex(previousByCell[cellIndex]);
+                            previousByCell[cellIndex] = imgIndex;
+                            cell.style.backgroundImage = 'url(' + imgPool[imgIndex] + ')';
                         });
                         var pick = Math.floor(Math.random() * cells.length);
+                        if (cells.length > 1 && pick === lastFlashCell) {
+                            pick = (pick + 1 + Math.floor(Math.random() * (cells.length - 1))) % cells.length;
+                        }
+                        lastFlashCell = pick;
                         cells[pick].classList.add('is-flash');
                         window.setTimeout(function() {
                             cells[pick].classList.remove('is-flash');
