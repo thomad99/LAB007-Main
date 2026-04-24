@@ -1515,15 +1515,20 @@
         }
         .inspiration-panel .chat-demo-wrap {
             margin-top: 0;
+            flex: 1;
+            min-height: 0;
+            display: flex;
+            flex-direction: column;
         }
         .inspiration-panel .insp-tile--chat .chat-shell {
             max-width: 100%;
             height: 100%;
+            min-height: 0;
             display: flex;
             flex-direction: column;
         }
         .inspiration-panel .insp-tile--chat .chat-msgs {
-            min-height: 0;
+            min-height: 0 !important;
             max-height: none;
             flex: 1;
             overflow-y: auto;
@@ -1779,9 +1784,14 @@
                 gap: 10px;
             }
             .inspiration-panel .insp-tile {
+                display: grid;
+                grid-template-rows: auto minmax(0, 1fr);
                 aspect-ratio: 1 / 1;
                 min-height: 0;
-                height: auto;
+                align-self: stretch;
+            }
+            .inspiration-panel .insp-tile-label {
+                align-self: start;
             }
             .inspiration-panel .insp-tile-body {
                 min-height: 0;
@@ -1791,6 +1801,63 @@
             }
             .inspiration-panel .insp-tile-body > * {
                 margin: auto;
+            }
+            .inspiration-panel .insp-tile--book .insp-tile-body > *,
+            .inspiration-panel .insp-tile--crm .insp-tile-body > *,
+            .inspiration-panel .insp-tile--shop .insp-tile-body > *,
+            .inspiration-panel .insp-tile--msg .insp-tile-body > *,
+            .inspiration-panel .insp-tile--chat .insp-tile-body > *,
+            .inspiration-panel .insp-tile--form .insp-tile-body > *,
+            .inspiration-panel .insp-tile--branding .insp-tile-body > *,
+            .inspiration-panel .insp-tile--images .insp-tile-body > * {
+                margin: 0;
+                width: 100%;
+                max-width: 100%;
+            }
+            .inspiration-panel .insp-tile--chat .insp-tile-body {
+                align-items: stretch !important;
+                justify-content: flex-start !important;
+            }
+            .inspiration-panel .insp-tile--chat .insp-chat-inner {
+                flex: 1;
+                min-height: 0;
+                height: 100%;
+            }
+            .inspiration-panel .insp-tile--chat .chat-demo-wrap {
+                flex: 1;
+                min-height: 0;
+            }
+            .inspiration-panel .insp-tile--chat .chat-head {
+                padding: 8px 10px;
+                gap: 8px;
+            }
+            .inspiration-panel .insp-tile--chat .chat-avatar {
+                width: 30px;
+                height: 30px;
+                font-size: 15px;
+            }
+            .inspiration-panel .insp-tile--chat .chat-head-text .chat-name {
+                font-size: 12px;
+            }
+            .inspiration-panel .insp-tile--chat .chat-msgs {
+                padding: 8px;
+                gap: 6px;
+            }
+            .inspiration-panel .insp-tile--chat .chat-bubble {
+                font-size: 10px;
+                line-height: 1.35;
+                padding: 7px 9px;
+            }
+            .inspiration-panel .insp-tile--chat .chat-typing {
+                font-size: 9px;
+                padding: 7px 10px;
+            }
+            .inspiration-panel .insp-tile--chat .chat-replay {
+                margin-top: 6px;
+            }
+            .inspiration-panel .insp-tile--chat .chat-replay button {
+                padding: 5px 10px;
+                font-size: 10px;
             }
             .inspiration-panel .insp-font-stage {
                 transform: scale(1.42);
