@@ -1,0 +1,513 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Marketing Analyzer | LAB007</title>
+  <meta name="description" content="Website health analyzer for SEO, local visibility, listing checks, and action-focused recommendations.">
+  <style>
+    :root {
+      --bg: #0a0b0f;
+      --panel: #11131a;
+      --panel-2: #171b25;
+      --line: rgba(255,255,255,0.12);
+      --text: #f5f7fb;
+      --muted: #b4bdd3;
+      --gold: #d5b56b;
+      --blue: #7ec8e3;
+      --green: #66f5c8;
+      --danger: #ff7f91;
+      --warn: #ffd58a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
+      background: radial-gradient(1200px 700px at 10% -10%, #1a2134 0%, transparent 45%),
+                  radial-gradient(900px 650px at 110% 10%, #2a1e2f 0%, transparent 48%),
+                  var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap {
+      width: min(1200px, 94vw);
+      margin: 24px auto 40px;
+      display: grid;
+      gap: 14px;
+    }
+    .panel {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: linear-gradient(170deg, rgba(17,19,26,0.96), rgba(12,14,20,0.98));
+      box-shadow: 0 14px 34px rgba(0,0,0,0.35);
+      padding: 16px;
+    }
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .kicker {
+      margin: 0;
+      font-size: 11px;
+      letter-spacing: 0.16em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 800;
+    }
+    h1 {
+      margin: 6px 0 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(28px, 4vw, 40px);
+      line-height: 1;
+      letter-spacing: -0.02em;
+    }
+    .go-back {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      border: 1px solid rgba(213,181,107,.36);
+      color: #f3dfb2;
+      text-decoration: none;
+      padding: 8px 14px;
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+      background: rgba(213,181,107,.06);
+    }
+    .form-row {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+    .input {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: #0d1018;
+      color: var(--text);
+      border-radius: 12px;
+      min-height: 48px;
+      padding: 0 14px;
+      font-size: 15px;
+      outline: none;
+    }
+    .input:focus {
+      border-color: rgba(126,200,227,.7);
+      box-shadow: 0 0 0 2px rgba(126,200,227,.18);
+    }
+    .btn {
+      border: 1px solid #7aa8bf;
+      background: linear-gradient(180deg, #8dd4ee, #5ea8c5);
+      color: #061119;
+      border-radius: 12px;
+      min-height: 48px;
+      padding: 0 18px;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+    }
+    .status {
+      margin-top: 10px;
+      font-size: 13px;
+      color: var(--muted);
+      min-height: 18px;
+    }
+    .status.error { color: var(--danger); }
+    .helper {
+      margin-top: 8px;
+      color: #9fb0cf;
+      font-size: 12px;
+      line-height: 1.45;
+    }
+    .grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(12, 1fr);
+    }
+    .card {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: linear-gradient(170deg, var(--panel), var(--panel-2));
+      padding: 14px;
+      min-height: 0;
+    }
+    .metric { grid-column: span 3; }
+    .metric-title {
+      font-size: 11px;
+      color: var(--muted);
+      letter-spacing: 0.14em;
+      text-transform: uppercase;
+      font-weight: 800;
+      margin: 0 0 8px;
+    }
+    .metric-value {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 36px);
+      line-height: 1;
+      font-weight: 800;
+      color: #fff;
+    }
+    .metric-sub {
+      margin-top: 6px;
+      font-size: 12px;
+      color: #9eb8cf;
+      word-break: break-word;
+    }
+    .wide-6 { grid-column: span 6; }
+    .wide-4 { grid-column: span 4; }
+    .wide-8 { grid-column: span 8; }
+    .wide-12 { grid-column: span 12; }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 15px;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #dce8ff;
+    }
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+    .table th,
+    .table td {
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding: 8px 6px;
+      text-align: left;
+      color: #d8deec;
+      vertical-align: top;
+    }
+    .table th {
+      color: #96a8c8;
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .pill {
+      display: inline-flex;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.18);
+      padding: 2px 8px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+    .pill.good {
+      color: #b2f7d8;
+      border-color: rgba(102,245,200,0.35);
+      background: rgba(102,245,200,0.08);
+    }
+    .pill.warn {
+      color: #ffe7bd;
+      border-color: rgba(255,213,138,0.35);
+      background: rgba(255,213,138,0.08);
+    }
+    .list {
+      margin: 0;
+      padding-left: 18px;
+      display: grid;
+      gap: 7px;
+      color: #c4d0e8;
+      font-size: 13px;
+      line-height: 1.45;
+    }
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .links a {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      border: 1px solid rgba(126,200,227,.35);
+      background: rgba(126,200,227,.08);
+      color: #d5ecff;
+      text-decoration: none;
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .rec-item {
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      padding: 10px;
+      display: grid;
+      gap: 6px;
+    }
+    .rec-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 13px;
+      font-weight: 700;
+      color: #f0f6ff;
+    }
+    .rec-detail {
+      margin: 0;
+      font-size: 12px;
+      color: #c6d4ed;
+    }
+    .rec-action {
+      margin: 0;
+      font-size: 12px;
+      color: #f4deb0;
+    }
+    @media (max-width: 980px) {
+      .metric { grid-column: span 6; }
+      .wide-6, .wide-4, .wide-8, .wide-12 { grid-column: span 12; }
+    }
+    @media (max-width: 640px) {
+      .form-row { grid-template-columns: 1fr; }
+      .btn { width: 100%; }
+      .metric { grid-column: span 12; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <section class="panel">
+      <div class="topbar">
+        <div>
+          <p class="kicker">LAB007 Analytics</p>
+          <h1>Marketing Analyzer</h1>
+        </div>
+        <a class="go-back" href="/digitalmarketing">Back to Digital Marketing</a>
+      </div>
+      <div class="form-row">
+        <input id="siteUrl" class="input" type="text" placeholder="Enter website URL (example.com)">
+        <button id="runAnalysis" class="btn" type="button">Analyze Website</button>
+      </div>
+      <p id="status" class="status">Enter a website URL to run SEO + local visibility health checks.</p>
+      <p class="helper">This report checks on-page SEO signals, local presence indicators (Google Maps, Apple Maps, Yelp references), social preview tags, and recommendations against best-practice benchmarks.</p>
+    </section>
+
+    <section class="grid">
+      <article class="card metric">
+        <p class="metric-title">Health score</p>
+        <p id="mHealth" class="metric-value">0%</p>
+        <div id="mHealthSub" class="metric-sub">No analysis yet</div>
+      </article>
+      <article class="card metric">
+        <p class="metric-title">Page speed (fetch)</p>
+        <p id="mFetch" class="metric-value">0ms</p>
+        <div class="metric-sub">Server-side fetch timing</div>
+      </article>
+      <article class="card metric">
+        <p class="metric-title">Content words</p>
+        <p id="mWords" class="metric-value">0</p>
+        <div class="metric-sub">Visible text estimate</div>
+      </article>
+      <article class="card metric">
+        <p class="metric-title">Images missing alt</p>
+        <p id="mAlt" class="metric-value">0</p>
+        <div id="mAltSub" class="metric-sub">Out of 0 images</div>
+      </article>
+
+      <article class="card wide-6">
+        <h2>SEO Snapshot</h2>
+        <table class="table">
+          <tbody id="seoTable"></tbody>
+        </table>
+      </article>
+
+      <article class="card wide-6">
+        <h2>Local Presence & Listings</h2>
+        <table class="table">
+          <tbody id="localTable"></tbody>
+        </table>
+        <div id="quickLinks" class="links"></div>
+      </article>
+
+      <article class="card wide-8">
+        <h2>Recommendations (Action Plan)</h2>
+        <div id="recommendations" style="display:grid;gap:8px;">
+          <p class="helper">No recommendations yet.</p>
+        </div>
+      </article>
+
+      <article class="card wide-4">
+        <h2>Backlinks & Off-page</h2>
+        <ul id="offPageList" class="list">
+          <li>No off-page guidance yet.</li>
+        </ul>
+      </article>
+
+      <article class="card wide-12">
+        <h2>Best-practice Gap Summary</h2>
+        <ul id="gapList" class="list">
+          <li>Run an analysis to compare this site against core marketing SEO best practices.</li>
+        </ul>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const siteUrl = document.getElementById('siteUrl');
+      const runBtn = document.getElementById('runAnalysis');
+      const statusEl = document.getElementById('status');
+      const mHealth = document.getElementById('mHealth');
+      const mHealthSub = document.getElementById('mHealthSub');
+      const mFetch = document.getElementById('mFetch');
+      const mWords = document.getElementById('mWords');
+      const mAlt = document.getElementById('mAlt');
+      const mAltSub = document.getElementById('mAltSub');
+      const seoTable = document.getElementById('seoTable');
+      const localTable = document.getElementById('localTable');
+      const quickLinks = document.getElementById('quickLinks');
+      const recommendations = document.getElementById('recommendations');
+      const offPageList = document.getElementById('offPageList');
+      const gapList = document.getElementById('gapList');
+
+      function setStatus(text, isError) {
+        statusEl.textContent = text;
+        statusEl.classList.toggle('error', !!isError);
+      }
+
+      function fmtNum(n) {
+        const val = Number(n) || 0;
+        return val.toLocaleString();
+      }
+
+      function yesNo(v) {
+        return v ? 'Yes' : 'No';
+      }
+
+      function row(label, value) {
+        return '<tr><th>' + label + '</th><td>' + value + '</td></tr>';
+      }
+
+      function esc(s) {
+        return String(s || '').replace(/[&<>"']/g, function (ch) {
+          return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+        });
+      }
+
+      function renderRecommendations(items) {
+        if (!Array.isArray(items) || !items.length) {
+          recommendations.innerHTML = '<p class="helper">No recommendations available.</p>';
+          return;
+        }
+        recommendations.innerHTML = items.map(function (r) {
+          const cls = r.status === 'good' ? 'good' : 'warn';
+          const label = r.status === 'good' ? 'Good' : 'Needs Work';
+          return (
+            '<article class="rec-item">' +
+              '<div class="rec-title">' + esc(r.title) + ' <span class="pill ' + cls + '">' + label + '</span></div>' +
+              '<p class="rec-detail">' + esc(r.detail || '') + '</p>' +
+              '<p class="rec-action"><strong>Action:</strong> ' + esc(r.action || '') + '</p>' +
+            '</article>'
+          );
+        }).join('');
+      }
+
+      function renderQuickLinks(links) {
+        const entries = Object.entries(links || {}).filter(function (pair) { return !!pair[1]; });
+        if (!entries.length) {
+          quickLinks.innerHTML = '';
+          return;
+        }
+        quickLinks.innerHTML = entries.map(function (pair) {
+          const label = pair[0].replace(/([A-Z])/g, ' $1').replace(/^./, function (c) { return c.toUpperCase(); });
+          return '<a href="' + esc(pair[1]) + '" target="_blank" rel="noopener noreferrer">' + esc(label) + '</a>';
+        }).join('');
+      }
+
+      function renderGapSummary(data) {
+        const recs = Array.isArray(data.recommendations) ? data.recommendations : [];
+        const weak = recs.filter(function (r) { return r.status !== 'good'; });
+        if (!weak.length) {
+          gapList.innerHTML = '<li>Core checklist is in strong shape. Focus next on backlinks and local listing optimization.</li>';
+          return;
+        }
+        gapList.innerHTML = weak.slice(0, 8).map(function (r) {
+          return '<li><strong>' + esc(r.title) + ':</strong> ' + esc(r.action || '') + '</li>';
+        }).join('');
+      }
+
+      async function run() {
+        const url = siteUrl.value.trim();
+        if (!url) {
+          setStatus('Please enter a URL first.', true);
+          return;
+        }
+
+        setStatus('Analyzing website health...', false);
+        runBtn.disabled = true;
+
+        try {
+          const resp = await fetch('/api/marketing-analyzer/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: url })
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Analysis failed');
+
+          mHealth.textContent = (Number(data.healthScore?.percent) || 0) + '%';
+          mHealthSub.textContent = (data.healthScore?.value || 0) + ' / ' + (data.healthScore?.max || 0) + ' checks passed';
+          mFetch.textContent = fmtNum(data.technical?.fetchMs) + 'ms';
+          mWords.textContent = fmtNum(data.seo?.wordCount);
+          mAlt.textContent = fmtNum(data.seo?.imagesMissingAlt);
+          mAltSub.textContent = 'Out of ' + fmtNum(data.seo?.imageCount) + ' images';
+
+          seoTable.innerHTML =
+            row('Source URL', esc(data.sourceUrl || '')) +
+            row('Title', esc(data.seo?.title || 'Missing')) +
+            row('Meta description', esc(data.seo?.metaDescription || 'Missing')) +
+            row('H1 count', fmtNum(data.seo?.h1Count)) +
+            row('H2 count', fmtNum(data.seo?.h2Count)) +
+            row('Canonical', esc(data.technical?.canonical || 'Missing')) +
+            row('Robots meta', esc(data.technical?.robotsMeta || 'Missing')) +
+            row('Viewport', esc(data.technical?.viewport || 'Missing')) +
+            row('HTTPS', yesNo(data.technical?.https)) +
+            row('Robots.txt found', yesNo(data.technical?.robotsTxtFound)) +
+            row('Sitemap.xml found', yesNo(data.technical?.sitemapFound));
+
+          localTable.innerHTML =
+            row('Google Maps links', fmtNum(data.localPresence?.googleMapsLinks)) +
+            row('Apple Maps links', fmtNum(data.localPresence?.appleMapsLinks)) +
+            row('Yelp links', fmtNum(data.localPresence?.yelpLinks)) +
+            row('LocalBusiness schema', yesNo(data.localPresence?.hasLocalBusinessSchema)) +
+            row('Aggregate rating schema', yesNo(data.localPresence?.hasAggregateRatingSchema)) +
+            row('Organization schema', yesNo(data.localPresence?.hasOrganizationSchema)) +
+            row('Social profiles found', fmtNum((data.localPresence?.socialProfiles || []).length));
+
+          renderQuickLinks(data.localPresence?.quickCheckLinks || {});
+          renderRecommendations(data.recommendations || []);
+
+          const offPage = data.offPage || {};
+          const actions = Array.isArray(offPage.recommendedBacklinkActions) ? offPage.recommendedBacklinkActions : [];
+          offPageList.innerHTML = actions.length
+            ? actions.map(function (item) { return '<li>' + esc(item) + '</li>'; }).join('')
+            : '<li>No off-page guidance found.</li>';
+
+          renderGapSummary(data);
+          setStatus('Analysis complete. Review recommendations and start with the highest-impact gaps.', false);
+        } catch (error) {
+          setStatus(error.message || 'Failed to analyze website.', true);
+        } finally {
+          runBtn.disabled = false;
+        }
+      }
+
+      runBtn.addEventListener('click', run);
+      siteUrl.addEventListener('keydown', function (ev) {
+        if (ev.key === 'Enter') {
+          ev.preventDefault();
+          run();
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

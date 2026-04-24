@@ -157,6 +157,13 @@ app.get('/social-dashboard', (req, res) => {
   return res.status(404).send('Not found');
 });
 
+// Serve marketing analyzer page
+app.get('/marketing-analyzer', (req, res) => {
+  const p = path.join(__dirname, 'public', 'marketing-analyzer.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
+});
+
 // Serve GGPPI Tracker page
 app.get('/ggppi-tracker', (req, res) => {
   const p = path.join(__dirname, 'public', 'ggppi-tracker.html');
@@ -1061,6 +1068,311 @@ app.post('/api/social-dashboard/analyze', async (req, res) => {
     return res.status(500).json({ error: 'Failed to analyze social feed' });
   }
 });
+
+function normalizeMarketingUrl(input) {
+  const raw = String(input || '').trim();
+  if (!raw) return null;
+  const withProtocol = /^https?:\/\//i.test(raw) ? raw : `https://${raw}`;
+  try {
+    const u = new URL(withProtocol);
+    if (!['http:', 'https:'].includes(u.protocol)) return null;
+    return u;
+  } catch (error) {
+    return null;
+  }
+}
+
+function safeGetMatch(text, rx, groupIndex = 1) {
+  const m = String(text || '').match(rx);
+  if (!m || !m[groupIndex]) return '';
+  return String(m[groupIndex]).trim();
+}
+
+function getAllMatches(text, rx, groupIndex = 1) {
+  const out = [];
+  const source = String(text || '');
+  let m;
+  while ((m = rx.exec(source)) !== null) {
+    if (m[groupIndex]) out.push(String(m[groupIndex]).trim());
+  }
+  return out;
+}
+
+function uniq(arr) {
+  return Array.from(new Set((arr || []).filter(Boolean)));
+}
+
+function makeAbsoluteUrl(baseUrl, maybeRelative) {
+  try {
+    return new URL(maybeRelative, baseUrl).toString();
+  } catch (error) {
+    return '';
+  }
+}
+
+function buildRecommendation(id, status, title, detail, action) {
+  return { id, status, title, detail, action };
+}
+
+function scoreRecommendations(recs) {
+  return recs.reduce((sum, r) => sum + (r.status === 'good' ? 1 : 0), 0);
+}
+
+function computeMarketingHealthFromHtml(html, pageUrl, fetchMs) {
+  const source = String(html || '');
+  const lower = source.toLowerCase();
+  const title = safeGetMatch(source, /<title[^>]*>([\s\S]*?)<\/title>/i);
+  const metaDescription = safeGetMatch(
+    source,
+    /<meta[^>]+name=["']description["'][^>]+content=["']([^"']*)["'][^>]*>/i
+  ) || safeGetMatch(
+    source,
+    /<meta[^>]+content=["']([^"']*)["'][^>]+name=["']description["'][^>]*>/i
+  );
+  const canonical = safeGetMatch(
+    source,
+    /<link[^>]+rel=["']canonical["'][^>]+href=["']([^"']*)["'][^>]*>/i
+  ) || safeGetMatch(
+    source,
+    /<link[^>]+href=["']([^"']*)["'][^>]+rel=["']canonical["'][^>]*>/i
+  );
+  const robotsMeta = safeGetMatch(source, /<meta[^>]+name=["']robots["'][^>]+content=["']([^"']*)["'][^>]*>/i);
+  const viewport = safeGetMatch(source, /<meta[^>]+name=["']viewport["'][^>]+content=["']([^"']*)["'][^>]*>/i);
+
+  const h1Count = (source.match(/<h1\b/gi) || []).length;
+  const h2Count = (source.match(/<h2\b/gi) || []).length;
+  const imgTags = source.match(/<img\b[^>]*>/gi) || [];
+  const imageCount = imgTags.length;
+  const imagesMissingAlt = imgTags.filter((tag) => !/\balt\s*=\s*["'][^"']*["']/i.test(tag)).length;
+
+  const linkMatches = source.match(/<a\b[^>]*href=["'][^"']+["'][^>]*>/gi) || [];
+  let internalLinks = 0;
+  let externalLinks = 0;
+  let mapLinks = 0;
+  let yelpLinks = 0;
+  let appleMapsLinks = 0;
+  const linkTargets = [];
+
+  linkMatches.forEach((tag) => {
+    const href = safeGetMatch(tag, /href=["']([^"']+)["']/i);
+    if (!href) return;
+    const full = makeAbsoluteUrl(pageUrl, href);
+    if (!full) return;
+    linkTargets.push(full);
+    try {
+      const u = new URL(full);
+      if (u.hostname === pageUrl.hostname) internalLinks += 1;
+      else externalLinks += 1;
+      const h = u.hostname.toLowerCase();
+      if (h.includes('maps.google.') || h.includes('google.com') && u.pathname.toLowerCase().includes('/maps')) mapLinks += 1;
+      if (h.includes('maps.apple.com')) appleMapsLinks += 1;
+      if (h.includes('yelp.')) yelpLinks += 1;
+    } catch (error) {
+      // ignore malformed links
+    }
+  });
+
+  const scriptLdJsonCount = (source.match(/<script[^>]*type=["']application\/ld\+json["'][^>]*>/gi) || []).length;
+  const hasSchemaLocalBusiness = /"@type"\s*:\s*"LocalBusiness"/i.test(source);
+  const hasAggregateRating = /"aggregateRating"\s*:/i.test(source);
+  const hasOrganizationSchema = /"@type"\s*:\s*"Organization"/i.test(source);
+
+  const ogTitle = safeGetMatch(source, /<meta[^>]+property=["']og:title["'][^>]+content=["']([^"']*)["'][^>]*>/i);
+  const ogDescription = safeGetMatch(source, /<meta[^>]+property=["']og:description["'][^>]+content=["']([^"']*)["'][^>]*>/i);
+  const ogImage = safeGetMatch(source, /<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']*)["'][^>]*>/i);
+  const twitterCard = safeGetMatch(source, /<meta[^>]+name=["']twitter:card["'][^>]+content=["']([^"']*)["'][^>]*>/i);
+
+  const bodyText = source.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<style[\s\S]*?<\/style>/gi, ' ').replace(/<[^>]+>/g, ' ');
+  const wordCount = bodyText.split(/\s+/).filter(Boolean).length;
+
+  const socialLinks = uniq(linkTargets.filter((url) =>
+    /facebook\.com|instagram\.com|linkedin\.com|x\.com|twitter\.com|youtube\.com|tiktok\.com/i.test(url)
+  ));
+
+  const recommendations = [];
+  recommendations.push(
+    buildRecommendation(
+      'title',
+      title.length >= 20 && title.length <= 60 ? 'good' : 'needs-work',
+      'Page title length',
+      title ? `"${title}" (${title.length} chars)` : 'No title found.',
+      'Aim for 20-60 characters with primary keyword near the start.'
+    )
+  );
+  recommendations.push(
+    buildRecommendation(
+      'meta-description',
+      metaDescription.length >= 80 && metaDescription.length <= 165 ? 'good' : 'needs-work',
+      'Meta description',
+      metaDescription ? `${metaDescription.length} chars` : 'No meta description found.',
+      'Add a compelling 80-165 character summary with a clear value proposition.'
+    )
+  );
+  recommendations.push(
+    buildRecommendation(
+      'viewport',
+      viewport ? 'good' : 'needs-work',
+      'Mobile viewport tag',
+      viewport || 'Viewport meta tag missing.',
+      'Add `<meta name="viewport" content="width=device-width, initial-scale=1">` for mobile friendliness.'
+    )
+  );
+  recommendations.push(
+    buildRecommendation(
+      'h1',
+      h1Count === 1 ? 'good' : 'needs-work',
+      'Primary heading structure',
+      `H1 tags found: ${h1Count}`,
+      'Use exactly one clear H1 to reinforce the page topic.'
+    )
+  );
+  recommendations.push(
+    buildRecommendation(
+      'image-alt',
+      imageCount === 0 || imagesMissingAlt === 0 ? 'good' : 'needs-work',
+      'Image alt text',
+      `${imagesMissingAlt} of ${imageCount} images appear to be missing alt text.`,
+      'Add descriptive alt text to improve accessibility and image SEO.'
+    )
+  );
+  recommendations.push(
+    buildRecommendation(
+      'schema',
+      scriptLdJsonCount > 0 ? 'good' : 'needs-work',
+      'Structured data',
+      scriptLdJsonCount > 0 ? `${scriptLdJsonCount} JSON-LD blocks detected.` : 'No JSON-LD structured data detected.',
+      'Add schema (Organization, LocalBusiness, Service, FAQ, Review) to improve SERP visibility.'
+    )
+  );
+  recommendations.push(
+    buildRecommendation(
+      'social-cards',
+      ogTitle && ogDescription && ogImage && twitterCard ? 'good' : 'needs-work',
+      'Social sharing metadata',
+      `OG title: ${ogTitle ? 'yes' : 'no'}, OG description: ${ogDescription ? 'yes' : 'no'}, OG image: ${ogImage ? 'yes' : 'no'}, Twitter card: ${twitterCard ? 'yes' : 'no'}.`,
+      'Ensure Open Graph and Twitter card tags are complete for better link previews.'
+    )
+  );
+
+  const backlinkIdeas = [
+    'Run Ahrefs/SEMrush/Majestic to get referring domains and toxicity score.',
+    'Build local citations (Google Business Profile, Apple Maps, Yelp, Bing Places, industry directories).',
+    'Pursue 5-10 local partner backlinks (associations, chambers, suppliers, sponsorship pages).',
+    'Create linkable assets (guides, tools, before/after case studies) and outreach monthly.'
+  ];
+
+  const googleMapsSearchUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pageUrl.hostname)}`;
+  const appleMapsSearchUrl = `https://maps.apple.com/?q=${encodeURIComponent(pageUrl.hostname)}`;
+  const yelpSearchUrl = `https://www.yelp.com/search?find_desc=${encodeURIComponent(pageUrl.hostname)}`;
+  const googleReviewSearchUrl = `https://www.google.com/search?q=${encodeURIComponent(pageUrl.hostname + ' reviews')}`;
+
+  const scoreMax = recommendations.length;
+  const score = scoreRecommendations(recommendations);
+
+  return {
+    analyzedAt: new Date().toISOString(),
+    sourceUrl: pageUrl.toString(),
+    healthScore: {
+      value: score,
+      max: scoreMax,
+      percent: Math.round((score / scoreMax) * 100)
+    },
+    technical: {
+      fetchMs,
+      htmlBytes: Buffer.byteLength(source, 'utf8'),
+      https: pageUrl.protocol === 'https:',
+      canonical: canonical || null,
+      robotsMeta: robotsMeta || null,
+      viewport: viewport || null
+    },
+    seo: {
+      title: title || null,
+      titleLength: title.length,
+      metaDescription: metaDescription || null,
+      metaDescriptionLength: metaDescription.length,
+      h1Count,
+      h2Count,
+      wordCount,
+      internalLinks,
+      externalLinks,
+      imageCount,
+      imagesMissingAlt
+    },
+    localPresence: {
+      googleMapsLinks: mapLinks,
+      appleMapsLinks,
+      yelpLinks,
+      hasLocalBusinessSchema: hasSchemaLocalBusiness,
+      hasAggregateRatingSchema: hasAggregateRating,
+      hasOrganizationSchema,
+      socialProfiles: socialLinks,
+      quickCheckLinks: {
+        googleMaps: googleMapsSearchUrl,
+        appleMaps: appleMapsSearchUrl,
+        yelp: yelpSearchUrl,
+        googleReviews: googleReviewSearchUrl
+      }
+    },
+    socialPreview: {
+      ogTitle: ogTitle || null,
+      ogDescription: ogDescription || null,
+      ogImage: ogImage || null,
+      twitterCard: twitterCard || null
+    },
+    offPage: {
+      backlinkDataAvailable: false,
+      note: 'Backlink/referring-domain data requires dedicated SEO APIs or tools.',
+      recommendedBacklinkActions: backlinkIdeas
+    },
+    recommendations
+  };
+}
+
+app.post('/api/marketing-analyzer/analyze', async (req, res) => {
+  try {
+    const pageUrl = normalizeMarketingUrl(req.body?.url);
+    if (!pageUrl) {
+      return res.status(400).json({ error: 'Please provide a valid website URL.' });
+    }
+    if (isPrivateHostname(pageUrl.hostname)) {
+      return res.status(400).json({ error: 'Private or local hosts are not allowed.' });
+    }
+
+    const started = Date.now();
+    const response = await fetchFn(pageUrl.toString(), {
+      redirect: 'follow',
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    });
+    const fetchMs = Date.now() - started;
+
+    if (!response.ok) {
+      return res.status(502).json({ error: `Could not fetch website (${response.status}).` });
+    }
+
+    const html = await response.text();
+    const result = computeMarketingHealthFromHtml(html, pageUrl, fetchMs);
+
+    const robotsUrl = makeAbsoluteUrl(pageUrl, '/robots.txt');
+    const sitemapUrl = makeAbsoluteUrl(pageUrl, '/sitemap.xml');
+    const robotsFound = lowerBooleanCheck(await fetchFn(robotsUrl).then((r) => r.ok).catch(() => false));
+    const sitemapFound = lowerBooleanCheck(await fetchFn(sitemapUrl).then((r) => r.ok).catch(() => false));
+
+    result.technical.robotsTxtFound = robotsFound;
+    result.technical.sitemapFound = sitemapFound;
+
+    return res.json(result);
+  } catch (error) {
+    console.error('Marketing analyzer error:', error);
+    return res.status(500).json({ error: 'Failed to analyze website health' });
+  }
+});
+
+function lowerBooleanCheck(v) {
+  return !!v;
+}
 
 // Health check
 app.get('/api/health', (req, res) => {
