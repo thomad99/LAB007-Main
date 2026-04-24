@@ -112,6 +112,43 @@
       text-transform: uppercase;
       cursor: pointer;
     }
+    .btn.secondary {
+      border-color: rgba(213,181,107,.45);
+      background: rgba(213,181,107,.1);
+      color: #f4e3bd;
+      min-height: 40px;
+      padding: 0 14px;
+      font-size: 12px;
+    }
+    .btn.ghost {
+      border-color: rgba(126,200,227,.4);
+      background: rgba(126,200,227,.1);
+      color: #d9efff;
+      min-height: 40px;
+      padding: 0 14px;
+      font-size: 12px;
+    }
+    .form-actions {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 10px;
+      align-items: center;
+    }
+    .input.small {
+      min-height: 40px;
+      font-size: 13px;
+    }
+    .select {
+      min-height: 40px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #0d1018;
+      color: #deebff;
+      padding: 0 10px;
+      font-size: 13px;
+      width: 100%;
+    }
     .status {
       margin-top: 10px;
       font-size: 13px;
@@ -129,6 +166,115 @@
       display: grid;
       gap: 12px;
       grid-template-columns: repeat(12, 1fr);
+    }
+    .scoreboard {
+      grid-column: span 12;
+      display: grid;
+      gap: 18px;
+    }
+    .gauge-row {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 16px;
+    }
+    .gauge-card {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 16px;
+      background: linear-gradient(170deg, rgba(15,19,31,.9), rgba(10,14,23,.95));
+      padding: 12px 10px 10px;
+    }
+    .gauge-svg {
+      width: 130px;
+      height: 130px;
+      transform: rotate(-90deg);
+    }
+    .gauge-track {
+      fill: none;
+      stroke: rgba(45,59,88,.6);
+      stroke-width: 11;
+    }
+    .gauge-progress {
+      fill: none;
+      stroke: #2fd5f5;
+      stroke-width: 11;
+      stroke-linecap: round;
+      transition: stroke-dashoffset .35s ease, stroke .35s ease;
+    }
+    .gauge-center {
+      margin-top: -95px;
+      text-align: center;
+      min-height: 70px;
+      display: grid;
+      place-items: center;
+      pointer-events: none;
+    }
+    .gauge-grade {
+      font-size: 40px;
+      font-weight: 800;
+      line-height: 1;
+      letter-spacing: .02em;
+      color: #f5d988;
+      text-transform: uppercase;
+    }
+    .gauge-score {
+      font-size: 20px;
+      color: #8ea4c8;
+      font-weight: 700;
+    }
+    .gauge-name {
+      margin-top: 2px;
+      font-size: 24px;
+      letter-spacing: .12em;
+      color: #8097b9;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .stats-high-level {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+    .hl-card {
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 16px;
+      background: linear-gradient(170deg, rgba(15,19,31,.9), rgba(10,14,23,.95));
+      padding: 12px;
+      display: grid;
+      gap: 8px;
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.02);
+    }
+    .hl-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .hl-head .ok {
+      color: #2fe8be;
+    }
+    .hl-head .warn {
+      color: #f8d37c;
+    }
+    .hl-value {
+      margin: 0;
+      font-size: 42px;
+      line-height: 1;
+      color: #fff;
+      font-weight: 800;
+    }
+    .hl-label {
+      margin: 0;
+      font-size: 24px;
+      color: #91a7c8;
+      font-weight: 600;
+      line-height: 1.25;
     }
     .card {
       border: 1px solid var(--line);
@@ -261,14 +407,141 @@
       font-size: 12px;
       color: #f4deb0;
     }
+    .compare-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+    .compare-results {
+      margin-top: 10px;
+      display: grid;
+      gap: 8px;
+    }
+    .compare-item {
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.03);
+      padding: 8px 10px;
+      font-size: 13px;
+      color: #d7e2f8;
+    }
+    .delta-pos { color: #b2f7d8; }
+    .delta-neg { color: #ffbdc7; }
+    .analysis-progress {
+      display: none;
+      border: 1px solid rgba(126,200,227,.22);
+      border-radius: 16px;
+      background: radial-gradient(800px 500px at 30% -40%, rgba(58,90,165,.2), transparent 60%),
+                  linear-gradient(170deg, rgba(12,17,30,.96), rgba(8,12,20,.98));
+      padding: 22px;
+    }
+    .analysis-progress.is-on {
+      display: block;
+    }
+    .progress-wrap {
+      width: min(640px, 100%);
+      margin: 0 auto;
+      display: grid;
+      gap: 14px;
+    }
+    .progress-spinner {
+      width: 96px;
+      height: 96px;
+      border-radius: 24px;
+      background: linear-gradient(180deg, rgba(25,38,68,.9), rgba(16,27,49,.92));
+      border: 1px solid rgba(126,200,227,.18);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.03), 0 20px 40px rgba(0,0,0,.35);
+      margin: 4px auto 2px;
+      display: grid;
+      place-items: center;
+    }
+    .progress-spinner::before {
+      content: "";
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      border: 4px solid rgba(52,138,255,.25);
+      border-top-color: #2f8bff;
+      animation: spin 1s linear infinite;
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      border-radius: 99px;
+      background: rgba(255,255,255,.08);
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,.12);
+    }
+    .progress-bar-fill {
+      width: 0%;
+      height: 100%;
+      background: linear-gradient(90deg, #2fd5f5, #3d8fff);
+      transition: width 0.35s ease;
+    }
+    .progress-label {
+      margin: 0;
+      font-size: 12px;
+      color: #a8c3e8;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      text-align: center;
+      font-weight: 700;
+    }
+    .progress-steps {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 10px;
+    }
+    .progress-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      color: #8da4c7;
+      font-size: 22px;
+      line-height: 1.2;
+      font-weight: 600;
+      opacity: .45;
+      transition: opacity 0.25s ease, color 0.25s ease;
+    }
+    .progress-step::before {
+      content: "";
+      width: 11px;
+      height: 11px;
+      border-radius: 50%;
+      border: 1px solid rgba(255,255,255,.18);
+      background: rgba(255,255,255,.06);
+      flex-shrink: 0;
+    }
+    .progress-step.is-active,
+    .progress-step.is-done {
+      opacity: 1;
+      color: #f1f7ff;
+    }
+    .progress-step.is-active::before,
+    .progress-step.is-done::before {
+      border-color: rgba(47,213,245,.7);
+      background: #2fd5f5;
+      box-shadow: 0 0 0 4px rgba(47,213,245,.16);
+    }
     @media (max-width: 980px) {
       .metric { grid-column: span 6; }
       .wide-6, .wide-4, .wide-8, .wide-12 { grid-column: span 12; }
+      .form-actions { grid-template-columns: 1fr; }
+      .compare-grid { grid-template-columns: 1fr; }
+      .gauge-row { grid-template-columns: 1fr; }
+      .stats-high-level { grid-template-columns: 1fr; }
     }
     @media (max-width: 640px) {
       .form-row { grid-template-columns: 1fr; }
       .btn { width: 100%; }
       .metric { grid-column: span 12; }
+      .progress-step { font-size: 16px; }
     }
   </style>
 </head>
@@ -286,30 +559,105 @@
         <input id="siteUrl" class="input" type="text" placeholder="Enter website URL (example.com)">
         <button id="runAnalysis" class="btn" type="button">Analyze Website</button>
       </div>
+      <div class="form-actions">
+        <input id="reportLabel" class="input small" type="text" placeholder="Optional scan name (example: Home page before fixes)">
+        <button id="saveReport" class="btn secondary" type="button">Save Scan</button>
+        <button id="exportPdf" class="btn ghost" type="button">Save as PDF</button>
+      </div>
       <p id="status" class="status">Enter a website URL to run SEO + local visibility health checks.</p>
       <p class="helper">This report checks on-page SEO signals, local presence indicators (Google Maps, Apple Maps, Yelp references), social preview tags, and recommendations against best-practice benchmarks.</p>
     </section>
 
-    <section class="grid">
-      <article class="card metric">
-        <p class="metric-title">Health score</p>
-        <p id="mHealth" class="metric-value">0%</p>
-        <div id="mHealthSub" class="metric-sub">No analysis yet</div>
-      </article>
-      <article class="card metric">
-        <p class="metric-title">Page speed (fetch)</p>
-        <p id="mFetch" class="metric-value">0ms</p>
-        <div class="metric-sub">Server-side fetch timing</div>
-      </article>
-      <article class="card metric">
-        <p class="metric-title">Content words</p>
-        <p id="mWords" class="metric-value">0</p>
-        <div class="metric-sub">Visible text estimate</div>
-      </article>
-      <article class="card metric">
-        <p class="metric-title">Images missing alt</p>
-        <p id="mAlt" class="metric-value">0</p>
-        <div id="mAltSub" class="metric-sub">Out of 0 images</div>
+    <section id="analysisProgress" class="analysis-progress" aria-live="polite">
+      <div class="progress-wrap">
+        <div class="progress-spinner" aria-hidden="true"></div>
+        <div class="progress-bar"><div id="progressFill" class="progress-bar-fill"></div></div>
+        <p id="progressLabel" class="progress-label">Starting analysis...</p>
+        <ul id="progressSteps" class="progress-steps">
+          <li class="progress-step" data-step="0">Fetching website content...</li>
+          <li class="progress-step" data-step="1">Analyzing SEO elements...</li>
+          <li class="progress-step" data-step="2">Checking directory listings...</li>
+          <li class="progress-step" data-step="3">Evaluating best practices...</li>
+          <li class="progress-step" data-step="4">Generating recommendations...</li>
+        </ul>
+      </div>
+    </section>
+
+    <section id="reportGrid" class="grid">
+      <article class="scoreboard">
+        <div class="gauge-row">
+          <div class="gauge-card">
+            <svg class="gauge-svg" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="gauge-track" cx="60" cy="60" r="44"></circle>
+              <circle id="gaugeSeo" class="gauge-progress" cx="60" cy="60" r="44"></circle>
+            </svg>
+            <div class="gauge-center">
+              <div>
+                <div id="gSeoGrade" class="gauge-grade">—</div>
+                <div id="gSeoScore" class="gauge-score">0 / 100</div>
+              </div>
+            </div>
+            <div class="gauge-name">SEO</div>
+          </div>
+          <div class="gauge-card">
+            <svg class="gauge-svg" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="gauge-track" cx="60" cy="60" r="44"></circle>
+              <circle id="gaugePerf" class="gauge-progress" cx="60" cy="60" r="44"></circle>
+            </svg>
+            <div class="gauge-center">
+              <div>
+                <div id="gPerfGrade" class="gauge-grade">—</div>
+                <div id="gPerfScore" class="gauge-score">0 / 100</div>
+              </div>
+            </div>
+            <div class="gauge-name">Performance</div>
+          </div>
+          <div class="gauge-card">
+            <svg class="gauge-svg" viewBox="0 0 120 120" aria-hidden="true">
+              <circle class="gauge-track" cx="60" cy="60" r="44"></circle>
+              <circle id="gaugeAccess" class="gauge-progress" cx="60" cy="60" r="44"></circle>
+            </svg>
+            <div class="gauge-center">
+              <div>
+                <div id="gAccessGrade" class="gauge-grade">—</div>
+                <div id="gAccessScore" class="gauge-score">0 / 100</div>
+              </div>
+            </div>
+            <div class="gauge-name">Accessibility</div>
+          </div>
+        </div>
+        <div class="stats-high-level">
+          <div class="hl-card">
+            <div class="hl-head"><span>Secure</span><span id="cSecureState" class="ok">GOOD</span></div>
+            <p id="cSecureValue" class="hl-value">Yes</p>
+            <p class="hl-label">SSL Certificate</p>
+          </div>
+          <div class="hl-card">
+            <div class="hl-head"><span>Speed</span><span id="cSpeedState" class="ok">GOOD</span></div>
+            <p id="cSpeedValue" class="hl-value">0.0s</p>
+            <p class="hl-label">Page Load</p>
+          </div>
+          <div class="hl-card">
+            <div class="hl-head"><span>Meta Tags</span><span id="cMetaState" class="ok">GOOD</span></div>
+            <p id="cMetaValue" class="hl-value">0</p>
+            <p class="hl-label">Core tags found</p>
+          </div>
+          <div class="hl-card">
+            <div class="hl-head"><span>Backlinks Est.</span><span id="cBacklinksState" class="warn">Warning</span></div>
+            <p id="cBacklinksValue" class="hl-value">—</p>
+            <p class="hl-label">External links proxy</p>
+          </div>
+          <div class="hl-card">
+            <div class="hl-head"><span>Mobile</span><span id="cMobileState" class="ok">GOOD</span></div>
+            <p id="cMobileValue" class="hl-value">Yes</p>
+            <p class="hl-label">Viewport check</p>
+          </div>
+          <div class="hl-card">
+            <div class="hl-head"><span>Alt Tags</span><span id="cAltState" class="ok">GOOD</span></div>
+            <p id="cAltValue" class="hl-value">0%</p>
+            <p class="hl-label">Missing images alt text</p>
+          </div>
+        </div>
       </article>
 
       <article class="card wide-6">
@@ -342,6 +690,24 @@
       </article>
 
       <article class="card wide-12">
+        <h2>Saved Scans & Compare</h2>
+        <div class="compare-grid">
+          <div>
+            <div class="helper" style="margin:0 0 6px;">Baseline scan</div>
+            <select id="compareBase" class="select"></select>
+          </div>
+          <div>
+            <div class="helper" style="margin:0 0 6px;">Improved scan</div>
+            <select id="compareTarget" class="select"></select>
+          </div>
+          <button id="runCompare" class="btn secondary" type="button">Compare</button>
+        </div>
+        <div id="compareResults" class="compare-results">
+          <div class="helper">Save at least two scans to compare progress over time.</div>
+        </div>
+      </article>
+
+      <article class="card wide-12">
         <h2>Best-practice Gap Summary</h2>
         <ul id="gapList" class="list">
           <li>Run an analysis to compare this site against core marketing SEO best practices.</li>
@@ -353,20 +719,48 @@
   <script>
     (function () {
       const siteUrl = document.getElementById('siteUrl');
+      const reportLabel = document.getElementById('reportLabel');
       const runBtn = document.getElementById('runAnalysis');
+      const saveBtn = document.getElementById('saveReport');
+      const exportPdfBtn = document.getElementById('exportPdf');
+      const runCompareBtn = document.getElementById('runCompare');
+      const compareBase = document.getElementById('compareBase');
+      const compareTarget = document.getElementById('compareTarget');
+      const compareResults = document.getElementById('compareResults');
+      const analysisProgress = document.getElementById('analysisProgress');
+      const reportGrid = document.getElementById('reportGrid');
+      const progressFill = document.getElementById('progressFill');
+      const progressLabel = document.getElementById('progressLabel');
+      const progressSteps = Array.from(document.querySelectorAll('#progressSteps .progress-step'));
       const statusEl = document.getElementById('status');
-      const mHealth = document.getElementById('mHealth');
-      const mHealthSub = document.getElementById('mHealthSub');
-      const mFetch = document.getElementById('mFetch');
-      const mWords = document.getElementById('mWords');
-      const mAlt = document.getElementById('mAlt');
-      const mAltSub = document.getElementById('mAltSub');
+      const gaugeSeo = document.getElementById('gaugeSeo');
+      const gaugePerf = document.getElementById('gaugePerf');
+      const gaugeAccess = document.getElementById('gaugeAccess');
+      const gSeoGrade = document.getElementById('gSeoGrade');
+      const gSeoScore = document.getElementById('gSeoScore');
+      const gPerfGrade = document.getElementById('gPerfGrade');
+      const gPerfScore = document.getElementById('gPerfScore');
+      const gAccessGrade = document.getElementById('gAccessGrade');
+      const gAccessScore = document.getElementById('gAccessScore');
+      const cSecureState = document.getElementById('cSecureState');
+      const cSecureValue = document.getElementById('cSecureValue');
+      const cSpeedState = document.getElementById('cSpeedState');
+      const cSpeedValue = document.getElementById('cSpeedValue');
+      const cMetaState = document.getElementById('cMetaState');
+      const cMetaValue = document.getElementById('cMetaValue');
+      const cBacklinksState = document.getElementById('cBacklinksState');
+      const cBacklinksValue = document.getElementById('cBacklinksValue');
+      const cMobileState = document.getElementById('cMobileState');
+      const cMobileValue = document.getElementById('cMobileValue');
+      const cAltState = document.getElementById('cAltState');
+      const cAltValue = document.getElementById('cAltValue');
       const seoTable = document.getElementById('seoTable');
       const localTable = document.getElementById('localTable');
       const quickLinks = document.getElementById('quickLinks');
       const recommendations = document.getElementById('recommendations');
       const offPageList = document.getElementById('offPageList');
       const gapList = document.getElementById('gapList');
+      let lastAnalysis = null;
 
       function setStatus(text, isError) {
         statusEl.textContent = text;
@@ -390,6 +784,84 @@
         return String(s || '').replace(/[&<>"']/g, function (ch) {
           return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
         });
+      }
+
+      function fmtSigned(n) {
+        const val = Number(n) || 0;
+        const sign = val > 0 ? '+' : '';
+        return sign + val.toLocaleString();
+      }
+
+      function deltaClass(value, invert) {
+        const val = Number(value) || 0;
+        if (val === 0) return '';
+        if (invert) return val < 0 ? 'delta-pos' : 'delta-neg';
+        return val > 0 ? 'delta-pos' : 'delta-neg';
+      }
+
+      function gradeFromScore(score) {
+        const n = Math.max(0, Math.min(100, Number(score) || 0));
+        if (n >= 90) return 'A';
+        if (n >= 80) return 'B';
+        if (n >= 70) return 'C';
+        if (n >= 60) return 'D';
+        return 'F';
+      }
+
+      function gaugeColor(score) {
+        const n = Number(score) || 0;
+        if (n >= 80) return '#2fe8be';
+        if (n >= 65) return '#f5d988';
+        return '#ff9aab';
+      }
+
+      function setGauge(el, gradeEl, scoreEl, score) {
+        const n = Math.max(0, Math.min(100, Number(score) || 0));
+        const radius = 44;
+        const circumference = 2 * Math.PI * radius;
+        const offset = circumference * (1 - (n / 100));
+        el.style.strokeDasharray = String(circumference);
+        el.style.strokeDashoffset = String(offset);
+        el.style.stroke = gaugeColor(n);
+        gradeEl.textContent = gradeFromScore(n);
+        gradeEl.style.color = gaugeColor(n);
+        scoreEl.textContent = Math.round(n) + ' / 100';
+      }
+
+      function renderProgress(activeStep, doneStep, percent, label) {
+        progressFill.style.width = Math.max(0, Math.min(100, percent)) + '%';
+        progressLabel.textContent = label;
+        progressSteps.forEach(function (step, idx) {
+          step.classList.remove('is-active', 'is-done');
+          if (idx <= doneStep) step.classList.add('is-done');
+          else if (idx === activeStep) step.classList.add('is-active');
+        });
+      }
+
+      function startProgressSequence() {
+        const phases = [
+          { label: 'Fetching website content...', pct: 14 },
+          { label: 'Analyzing SEO elements...', pct: 34 },
+          { label: 'Checking directory listings...', pct: 54 },
+          { label: 'Evaluating best practices...', pct: 74 },
+          { label: 'Generating recommendations...', pct: 92 }
+        ];
+        let idx = 0;
+        renderProgress(0, -1, 8, 'Preparing scan...');
+        const timer = window.setInterval(function () {
+          if (idx >= phases.length) return;
+          renderProgress(idx, idx - 1, phases[idx].pct, phases[idx].label);
+          idx += 1;
+        }, 900);
+        return {
+          complete: function () {
+            window.clearInterval(timer);
+            renderProgress(4, 4, 100, 'Analysis complete');
+          },
+          fail: function () {
+            window.clearInterval(timer);
+          }
+        };
       }
 
       function renderRecommendations(items) {
@@ -434,6 +906,95 @@
         }).join('');
       }
 
+      async function loadSavedReports() {
+        try {
+          const resp = await fetch('/api/marketing-analyzer/reports');
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Failed to load reports');
+          const reports = Array.isArray(data.reports) ? data.reports : [];
+          if (!reports.length) {
+            compareBase.innerHTML = '<option value="">No saved scans yet</option>';
+            compareTarget.innerHTML = '<option value="">No saved scans yet</option>';
+            return;
+          }
+          const opts = reports.map(function (r) {
+            const score = Number(r.summary?.healthPercent) || 0;
+            const stamp = String(r.savedAt || '').replace('T', ' ').slice(0, 16);
+            return '<option value="' + esc(r.id) + '">' + esc(r.label || r.sourceUrl) + ' · ' + score + '% · ' + esc(stamp) + '</option>';
+          }).join('');
+          compareBase.innerHTML = opts;
+          compareTarget.innerHTML = opts;
+          if (reports.length > 1) {
+            compareBase.value = reports[1].id;
+            compareTarget.value = reports[0].id;
+          }
+        } catch (error) {
+          compareBase.innerHTML = '<option value="">Could not load scans</option>';
+          compareTarget.innerHTML = '<option value="">Could not load scans</option>';
+        }
+      }
+
+      async function saveCurrentReport() {
+        if (!lastAnalysis) {
+          setStatus('Run an analysis first, then save the scan.', true);
+          return;
+        }
+        try {
+          saveBtn.disabled = true;
+          const resp = await fetch('/api/marketing-analyzer/reports', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              label: reportLabel.value.trim(),
+              analysis: lastAnalysis
+            })
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Failed to save scan');
+          setStatus('Scan saved to persistent storage.', false);
+          await loadSavedReports();
+        } catch (error) {
+          setStatus(error.message || 'Failed to save scan.', true);
+        } finally {
+          saveBtn.disabled = false;
+        }
+      }
+
+      async function runCompare() {
+        const baseId = compareBase.value;
+        const targetId = compareTarget.value;
+        if (!baseId || !targetId) {
+          setStatus('Select two saved scans to compare.', true);
+          return;
+        }
+        if (baseId === targetId) {
+          setStatus('Choose two different scans.', true);
+          return;
+        }
+        try {
+          runCompareBtn.disabled = true;
+          const resp = await fetch('/api/marketing-analyzer/compare', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ baseId: baseId, targetId: targetId })
+          });
+          const data = await resp.json();
+          if (!resp.ok) throw new Error(data.error || 'Compare failed');
+          compareResults.innerHTML =
+            '<div class="compare-item"><strong>From:</strong> ' + esc(data.base.label) + ' <br><strong>To:</strong> ' + esc(data.target.label) + '</div>' +
+            '<div class="compare-item">Health score change: <strong class="' + deltaClass(data.delta.healthPercent, false) + '">' + esc(fmtSigned(data.delta.healthPercent)) + '%</strong></div>' +
+            '<div class="compare-item">Fetch speed change: <strong class="' + deltaClass(data.delta.fetchMs, true) + '">' + esc(fmtSigned(data.delta.fetchMs)) + ' ms</strong> (negative is faster)</div>' +
+            '<div class="compare-item">Word count change: <strong class="' + deltaClass(data.delta.wordCount, false) + '">' + esc(fmtSigned(data.delta.wordCount)) + '</strong></div>' +
+            '<div class="compare-item">Missing alt change: <strong class="' + deltaClass(data.delta.missingAlt, true) + '">' + esc(fmtSigned(data.delta.missingAlt)) + '</strong> (negative is better)</div>' +
+            '<div class="compare-item">Recommendation changes: improved <strong class="delta-pos">' + esc(String(data.recommendationDelta.improved)) + '</strong>, regressed <strong class="delta-neg">' + esc(String(data.recommendationDelta.regressed)) + '</strong>, unchanged ' + esc(String(data.recommendationDelta.unchanged)) + '</div>';
+          setStatus('Comparison complete.', false);
+        } catch (error) {
+          setStatus(error.message || 'Failed to compare scans.', true);
+        } finally {
+          runCompareBtn.disabled = false;
+        }
+      }
+
       async function run() {
         const url = siteUrl.value.trim();
         if (!url) {
@@ -443,6 +1004,11 @@
 
         setStatus('Analyzing website health...', false);
         runBtn.disabled = true;
+        saveBtn.disabled = true;
+        exportPdfBtn.disabled = true;
+        reportGrid.style.display = 'none';
+        analysisProgress.classList.add('is-on');
+        const progress = startProgressSequence();
 
         try {
           const resp = await fetch('/api/marketing-analyzer/analyze', {
@@ -452,13 +1018,52 @@
           });
           const data = await resp.json();
           if (!resp.ok) throw new Error(data.error || 'Analysis failed');
+          lastAnalysis = data;
 
-          mHealth.textContent = (Number(data.healthScore?.percent) || 0) + '%';
-          mHealthSub.textContent = (data.healthScore?.value || 0) + ' / ' + (data.healthScore?.max || 0) + ' checks passed';
-          mFetch.textContent = fmtNum(data.technical?.fetchMs) + 'ms';
-          mWords.textContent = fmtNum(data.seo?.wordCount);
-          mAlt.textContent = fmtNum(data.seo?.imagesMissingAlt);
-          mAltSub.textContent = 'Out of ' + fmtNum(data.seo?.imageCount) + ' images';
+          const healthScore = Number(data.healthScore?.percent) || 0;
+          const fetchMs = Number(data.technical?.fetchMs) || 0;
+          const perfScore = Math.max(10, Math.min(100, Math.round(100 - (fetchMs / 120))));
+          const missingAlt = Number(data.seo?.imagesMissingAlt) || 0;
+          const imageCount = Number(data.seo?.imageCount) || 0;
+          const altCoverage = imageCount ? Math.max(0, Math.round(((imageCount - missingAlt) / imageCount) * 100)) : 100;
+          const accessScore = Math.round((altCoverage * 0.65) + ((data.technical?.viewport ? 100 : 50) * 0.35));
+
+          setGauge(gaugeSeo, gSeoGrade, gSeoScore, healthScore);
+          setGauge(gaugePerf, gPerfGrade, gPerfScore, perfScore);
+          setGauge(gaugeAccess, gAccessGrade, gAccessScore, accessScore);
+
+          cSecureValue.textContent = data.technical?.https ? 'Yes' : 'No';
+          cSecureState.textContent = data.technical?.https ? 'GOOD' : 'WARNING';
+          cSecureState.className = data.technical?.https ? 'ok' : 'warn';
+
+          cSpeedValue.textContent = (fetchMs / 1000).toFixed(1) + 's';
+          const speedGood = fetchMs <= 3000;
+          cSpeedState.textContent = speedGood ? 'GOOD' : 'WARNING';
+          cSpeedState.className = speedGood ? 'ok' : 'warn';
+
+          const metaCount = [
+            !!data.seo?.title,
+            !!data.seo?.metaDescription,
+            !!data.technical?.canonical,
+            !!data.technical?.robotsMeta,
+            !!data.technical?.viewport
+          ].filter(Boolean).length;
+          cMetaValue.textContent = String(metaCount);
+          cMetaState.textContent = metaCount >= 4 ? 'GOOD' : 'WARNING';
+          cMetaState.className = metaCount >= 4 ? 'ok' : 'warn';
+
+          const backlinksProxy = Number(data.seo?.externalLinks) || 0;
+          cBacklinksValue.textContent = '~' + fmtNum(backlinksProxy);
+          cBacklinksState.textContent = backlinksProxy >= 25 ? 'GOOD' : 'WARNING';
+          cBacklinksState.className = backlinksProxy >= 25 ? 'ok' : 'warn';
+
+          cMobileValue.textContent = data.technical?.viewport ? 'Yes' : 'No';
+          cMobileState.textContent = data.technical?.viewport ? 'GOOD' : 'WARNING';
+          cMobileState.className = data.technical?.viewport ? 'ok' : 'warn';
+
+          cAltValue.textContent = altCoverage + '%';
+          cAltState.textContent = altCoverage >= 85 ? 'GOOD' : 'WARNING';
+          cAltState.className = altCoverage >= 85 ? 'ok' : 'warn';
 
           seoTable.innerHTML =
             row('Source URL', esc(data.sourceUrl || '')) +
@@ -492,21 +1097,40 @@
             : '<li>No off-page guidance found.</li>';
 
           renderGapSummary(data);
+          progress.complete();
+          window.setTimeout(function () {
+            analysisProgress.classList.remove('is-on');
+            reportGrid.style.display = '';
+          }, 420);
           setStatus('Analysis complete. Review recommendations and start with the highest-impact gaps.', false);
         } catch (error) {
+          progress.fail();
+          analysisProgress.classList.remove('is-on');
+          reportGrid.style.display = '';
           setStatus(error.message || 'Failed to analyze website.', true);
         } finally {
           runBtn.disabled = false;
+          saveBtn.disabled = false;
+          exportPdfBtn.disabled = false;
         }
       }
 
       runBtn.addEventListener('click', run);
+      saveBtn.addEventListener('click', saveCurrentReport);
+      exportPdfBtn.addEventListener('click', function () {
+        window.print();
+      });
+      runCompareBtn.addEventListener('click', runCompare);
       siteUrl.addEventListener('keydown', function (ev) {
         if (ev.key === 'Enter') {
           ev.preventDefault();
           run();
         }
       });
+      setGauge(gaugeSeo, gSeoGrade, gSeoScore, 0);
+      setGauge(gaugePerf, gPerfGrade, gPerfScore, 0);
+      setGauge(gaugeAccess, gAccessGrade, gAccessScore, 0);
+      loadSavedReports();
     })();
   </script>
 </body>

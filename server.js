@@ -34,6 +34,16 @@ console.log('GGPPI data dir:', ggppiDataDir);
 console.log('GGPPI tasks file:', ggppiTasksPath);
 console.log('GGPPI uploads dir:', ggppiUploadDir);
 
+const marketingReportsDir = process.env.MARKETING_REPORTS_DIR
+  ? path.resolve(process.env.MARKETING_REPORTS_DIR)
+  : path.join(__dirname, 'data', 'marketing-analyzer');
+const marketingReportsIndexPath = path.join(marketingReportsDir, 'reports-index.json');
+if (!fs.existsSync(marketingReportsDir)) {
+  fs.mkdirSync(marketingReportsDir, { recursive: true });
+}
+console.log('Marketing reports dir:', marketingReportsDir);
+console.log('Marketing reports index:', marketingReportsIndexPath);
+
 /** When set, task JSON always uses this volume path (GitHub task sync stays off — avoids empty GitHub wiping the UI). */
 const ggppiDataDirExplicit = String(process.env.GGPPI_DATA_DIR || '').trim().length > 0;
 
@@ -1373,6 +1383,187 @@ app.post('/api/marketing-analyzer/analyze', async (req, res) => {
 function lowerBooleanCheck(v) {
   return !!v;
 }
+
+function readMarketingReportsIndex() {
+  try {
+    if (!fs.existsSync(marketingReportsIndexPath)) return [];
+    const raw = fs.readFileSync(marketingReportsIndexPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (error) {
+    console.error('Failed to read marketing reports index:', error);
+    return [];
+  }
+}
+
+function writeMarketingReportsIndex(indexItems) {
+  fs.writeFileSync(marketingReportsIndexPath, JSON.stringify(indexItems, null, 2), 'utf8');
+}
+
+function sanitizeReportLabel(label, fallbackUrl) {
+  const raw = String(label || '').trim();
+  if (raw) return raw.slice(0, 140);
+  const domain = String(fallbackUrl || '').replace(/^https?:\/\//i, '').replace(/\/.*$/, '');
+  if (domain) return `Scan for ${domain}`;
+  return 'Website scan';
+}
+
+function buildReportSummary(analysis) {
+  return {
+    sourceUrl: String(analysis?.sourceUrl || ''),
+    healthPercent: Number(analysis?.healthScore?.percent) || 0,
+    healthValue: Number(analysis?.healthScore?.value) || 0,
+    healthMax: Number(analysis?.healthScore?.max) || 0,
+    fetchMs: Number(analysis?.technical?.fetchMs) || 0,
+    wordCount: Number(analysis?.seo?.wordCount) || 0,
+    missingAlt: Number(analysis?.seo?.imagesMissingAlt) || 0
+  };
+}
+
+function summarizeRecommendationDiff(prevRecs, nextRecs) {
+  const prev = new Map((prevRecs || []).map((r) => [r.id, r.status]));
+  const next = new Map((nextRecs || []).map((r) => [r.id, r.status]));
+  let improved = 0;
+  let regressed = 0;
+  let unchanged = 0;
+  next.forEach((status, id) => {
+    const before = prev.get(id);
+    if (!before) return;
+    if (before === status) {
+      unchanged += 1;
+    } else if (before !== 'good' && status === 'good') {
+      improved += 1;
+    } else if (before === 'good' && status !== 'good') {
+      regressed += 1;
+    } else {
+      unchanged += 1;
+    }
+  });
+  return { improved, regressed, unchanged };
+}
+
+app.get('/api/marketing-analyzer/reports', (req, res) => {
+  const index = readMarketingReportsIndex().sort((a, b) => {
+    return new Date(b.savedAt).getTime() - new Date(a.savedAt).getTime();
+  });
+  return res.json({ reports: index });
+});
+
+app.get('/api/marketing-analyzer/reports/:id', (req, res) => {
+  const id = String(req.params.id || '').trim();
+  if (!id) return res.status(400).json({ error: 'Report id is required.' });
+  const filePath = path.join(marketingReportsDir, `${id}.json`);
+  if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Report not found.' });
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    return res.json(parsed);
+  } catch (error) {
+    console.error('Failed to read marketing report:', error);
+    return res.status(500).json({ error: 'Failed to read report.' });
+  }
+});
+
+app.post('/api/marketing-analyzer/reports', (req, res) => {
+  try {
+    const analysis = req.body?.analysis;
+    const sourceUrl = String(analysis?.sourceUrl || '').trim();
+    if (!analysis || !sourceUrl) {
+      return res.status(400).json({ error: 'Analysis payload with sourceUrl is required.' });
+    }
+    const now = new Date().toISOString();
+    const id = `scan_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    const label = sanitizeReportLabel(req.body?.label, sourceUrl);
+    const summary = buildReportSummary(analysis);
+    const record = {
+      id,
+      label,
+      savedAt: now,
+      sourceUrl,
+      summary,
+      analysis
+    };
+
+    const reportPath = path.join(marketingReportsDir, `${id}.json`);
+    fs.writeFileSync(reportPath, JSON.stringify(record, null, 2), 'utf8');
+
+    const index = readMarketingReportsIndex();
+    index.push({
+      id,
+      label,
+      savedAt: now,
+      sourceUrl,
+      summary
+    });
+    writeMarketingReportsIndex(index);
+
+    return res.status(201).json({
+      success: true,
+      report: {
+        id,
+        label,
+        savedAt: now,
+        sourceUrl,
+        summary
+      }
+    });
+  } catch (error) {
+    console.error('Failed to save marketing report:', error);
+    return res.status(500).json({ error: 'Failed to save report.' });
+  }
+});
+
+app.post('/api/marketing-analyzer/compare', (req, res) => {
+  try {
+    const baseId = String(req.body?.baseId || '').trim();
+    const targetId = String(req.body?.targetId || '').trim();
+    if (!baseId || !targetId) {
+      return res.status(400).json({ error: 'Both baseId and targetId are required.' });
+    }
+    const basePath = path.join(marketingReportsDir, `${baseId}.json`);
+    const targetPath = path.join(marketingReportsDir, `${targetId}.json`);
+    if (!fs.existsSync(basePath) || !fs.existsSync(targetPath)) {
+      return res.status(404).json({ error: 'One or both reports were not found.' });
+    }
+    const base = JSON.parse(fs.readFileSync(basePath, 'utf8'));
+    const target = JSON.parse(fs.readFileSync(targetPath, 'utf8'));
+
+    const baseSummary = buildReportSummary(base.analysis);
+    const targetSummary = buildReportSummary(target.analysis);
+    const delta = {
+      healthPercent: targetSummary.healthPercent - baseSummary.healthPercent,
+      fetchMs: targetSummary.fetchMs - baseSummary.fetchMs,
+      wordCount: targetSummary.wordCount - baseSummary.wordCount,
+      missingAlt: targetSummary.missingAlt - baseSummary.missingAlt
+    };
+    const recommendationDelta = summarizeRecommendationDiff(
+      base.analysis?.recommendations || [],
+      target.analysis?.recommendations || []
+    );
+
+    return res.json({
+      base: {
+        id: base.id,
+        label: base.label,
+        savedAt: base.savedAt,
+        sourceUrl: base.sourceUrl,
+        summary: baseSummary
+      },
+      target: {
+        id: target.id,
+        label: target.label,
+        savedAt: target.savedAt,
+        sourceUrl: target.sourceUrl,
+        summary: targetSummary
+      },
+      delta,
+      recommendationDelta
+    });
+  } catch (error) {
+    console.error('Failed to compare marketing reports:', error);
+    return res.status(500).json({ error: 'Failed to compare reports.' });
+  }
+});
 
 // Health check
 app.get('/api/health', (req, res) => {
