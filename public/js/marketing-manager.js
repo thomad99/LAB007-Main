@@ -625,6 +625,7 @@
                       ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.documentPath)}" target="_blank" rel="noopener" style="text-decoration:none;">Doc</a>`
                       : ''
                   }
+                  <button type="button" class="btn-mm-tiny-danger" data-delete-contract="${escapeHtml(ct.id)}">Delete</button>
                 </div>
               </div>
             `;
@@ -645,6 +646,18 @@
             const ok = await copyText(full);
             if (ok) alert('Signing link copied.');
             else prompt('Copy signing link', full);
+          });
+        });
+        listEl.querySelectorAll('[data-delete-contract]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const contractId = btn.getAttribute('data-delete-contract');
+            if (!contractId) return;
+            if (!confirm('Delete this contract/document and all signed copies?')) return;
+            await api(`/api/marketing-manager/customers/${cust.id}/contracts/${contractId}`, {
+              method: 'DELETE'
+            });
+            await refresh();
+            await loadContracts();
           });
         });
       } catch (err) {

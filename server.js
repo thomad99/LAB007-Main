@@ -2464,6 +2464,33 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
   });
 });
 
+app.delete('/api/marketing-manager/customers/:customerId/contracts/:contractId', (req, res) => {
+  try {
+    const state = readMarketingManagerState();
+    const c = mmFindCustomer(state, req.params.customerId);
+    if (!c) return res.status(404).json({ error: 'Customer not found' });
+    const data = readMarketingContracts();
+    const idx = data.contracts.findIndex(
+      (x) => x.id === req.params.contractId && x.customerId === c.id
+    );
+    if (idx === -1) return res.status(404).json({ error: 'Contract not found' });
+    const contract = data.contracts[idx];
+    [contract.filePath, contract.signedTextPath, contract.signedPdfPath].forEach((p) => {
+      if (!p) return;
+      try {
+        if (fs.existsSync(p)) fs.unlinkSync(p);
+      } catch (err) {
+        console.warn('[Marketing Manager] Failed deleting contract file:', p, err.message);
+      }
+    });
+    data.contracts.splice(idx, 1);
+    writeMarketingContracts(data);
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/marketing-manager/contracts/stats', (req, res) => {
   try {
     const data = readMarketingContracts();
