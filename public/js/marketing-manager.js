@@ -207,6 +207,14 @@
           <button type="button" class="btn-mm" id="mm-kw-suggest">Suggest keywords</button>
         </div>
         <p class="mm-small" id="mm-kw-source"></p>
+        <div class="mm-kw-row" id="mm-kw-actions" style="display:none;">
+          <button type="button" class="btn-mm-ghost" id="mm-kw-select-visible">Select visible</button>
+          <button type="button" class="btn-mm-ghost" id="mm-kw-clear-selected">Clear</button>
+          <button type="button" class="btn-mm" id="mm-kw-add-selected">Add selected to LIKE</button>
+          <button type="button" class="btn-mm-danger-outline" id="mm-kw-dismiss-selected">Dismiss selected</button>
+          <button type="button" class="btn-mm-ghost" id="mm-kw-load-more">Load more</button>
+        </div>
+        <p class="mm-small" id="mm-kw-meta"></p>
         <div class="mm-kw-suggestions" id="mm-kw-suggestions"></div>
         <h4 class="mm-like-title">LIKE list</h4>
         <ul class="mm-like-list" id="mm-like-list"></ul>
@@ -215,6 +223,68 @@
         <button type="button" class="btn-mm" id="mm-kw-save-notes">Save notes</button>
       `;
       renderLikeList(cust.id, task, liked);
+      const kwUi = {
+        suggestions: [],
+        hidden: new Set(),
+        selected: new Set(),
+        visibleCount: 20
+      };
+
+      const renderSuggestionList = () => {
+        const sugEl = $('#mm-kw-suggestions');
+        const actionsEl = $('#mm-kw-actions');
+        const metaEl = $('#mm-kw-meta');
+        if (!sugEl || !actionsEl || !metaEl) return;
+
+        const visibleAll = kwUi.suggestions.filter((kw) => !kwUi.hidden.has(kw));
+        const visibleNow = visibleAll.slice(0, kwUi.visibleCount);
+        actionsEl.style.display = visibleAll.length ? '' : 'none';
+        sugEl.innerHTML = '';
+
+        if (!visibleNow.length) {
+          sugEl.textContent = 'No suggestions visible. Try new seeds or clear dismissed choices.';
+        } else {
+          visibleNow.forEach((kw) => {
+            const row = document.createElement('label');
+            row.className = 'mm-sug-row';
+            const left = document.createElement('div');
+            left.style.display = 'flex';
+            left.style.alignItems = 'center';
+            left.style.gap = '10px';
+
+            const cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.checked = kwUi.selected.has(kw);
+            cb.addEventListener('change', () => {
+              if (cb.checked) kwUi.selected.add(kw);
+              else kwUi.selected.delete(kw);
+              renderSuggestionList();
+            });
+            const sp = document.createElement('span');
+            sp.textContent = kw;
+            left.appendChild(cb);
+            left.appendChild(sp);
+            row.appendChild(left);
+            sugEl.appendChild(row);
+          });
+        }
+
+        const selectedVisibleCount = visibleNow.filter((kw) => kwUi.selected.has(kw)).length;
+        metaEl.textContent = `${visibleAll.length} suggestions available • ${kwUi.selected.size} selected`;
+        const loadMoreBtn = $('#mm-kw-load-more');
+        if (loadMoreBtn) {
+          const hasMore = visibleAll.length > visibleNow.length;
+          loadMoreBtn.style.display = hasMore ? '' : 'none';
+          loadMoreBtn.textContent = hasMore ? `Load more (${visibleAll.length - visibleNow.length})` : 'Load more';
+        }
+        const addBtn = $('#mm-kw-add-selected');
+        if (addBtn) addBtn.disabled = kwUi.selected.size === 0;
+        const dismissBtn = $('#mm-kw-dismiss-selected');
+        if (dismissBtn) dismissBtn.disabled = kwUi.selected.size === 0;
+        const selVisibleBtn = $('#mm-kw-select-visible');
+        if (selVisibleBtn) selVisibleBtn.disabled = !visibleNow.length || selectedVisibleCount === visibleNow.length;
+      };
+
       $('#mm-kw-suggest')?.addEventListener('click', async () => {
         const raw = ($('#mm-kw-seeds').value || '').split(/[,;\n]/).map((s) => s.trim()).filter(Boolean);
         if (!raw.length) {
@@ -233,32 +303,42 @@
             res.source === 'anthropic'
               ? 'Suggestions from AI (refine seeds anytime).'
               : 'Suggestions from quick expansion (set ANTHROPIC_API_KEY for richer ideas).';
-          sugEl.innerHTML = '';
           const likes = new Set(task.likedKeywords || []);
-          (res.suggestions || []).forEach((kw) => {
-            if (!kw || likes.has(kw)) return;
-            const row = document.createElement('div');
-            row.className = 'mm-sug-row';
-            const sp = document.createElement('span');
-            sp.textContent = kw;
-            const b = document.createElement('button');
-            b.type = 'button';
-            b.className = 'btn-mm-tiny';
-            b.textContent = '＋ LIKE';
-            b.addEventListener('click', async () => {
-              const cur = state.data.customers.find((x) => x.id === cust.id);
-              const t = cur?.tasks?.find((x) => x.id === task.id);
-              const existing = (t && t.kind === 'keywords' && t.likedKeywords) || [];
-              const next = [...new Set([...existing, kw])];
-              await patchTask(cust.id, task.id, { likedKeywords: next });
-            });
-            row.appendChild(sp);
-            row.appendChild(b);
-            sugEl.appendChild(row);
-          });
+          kwUi.suggestions = [...new Set((res.suggestions || []).map((x) => String(x || '').trim()).filter(Boolean))]
+            .filter((kw) => !likes.has(kw));
+          kwUi.hidden.clear();
+          kwUi.selected.clear();
+          kwUi.visibleCount = 20;
+          renderSuggestionList();
         } catch (e) {
           sugEl.textContent = e.message;
         }
+      });
+      $('#mm-kw-select-visible')?.addEventListener('click', () => {
+        const visibleAll = kwUi.suggestions.filter((kw) => !kwUi.hidden.has(kw));
+        visibleAll.slice(0, kwUi.visibleCount).forEach((kw) => kwUi.selected.add(kw));
+        renderSuggestionList();
+      });
+      $('#mm-kw-clear-selected')?.addEventListener('click', () => {
+        kwUi.selected.clear();
+        renderSuggestionList();
+      });
+      $('#mm-kw-load-more')?.addEventListener('click', () => {
+        kwUi.visibleCount += 20;
+        renderSuggestionList();
+      });
+      $('#mm-kw-dismiss-selected')?.addEventListener('click', () => {
+        kwUi.selected.forEach((kw) => kwUi.hidden.add(kw));
+        kwUi.selected.clear();
+        renderSuggestionList();
+      });
+      $('#mm-kw-add-selected')?.addEventListener('click', async () => {
+        if (!kwUi.selected.size) return;
+        const cur = state.data.customers.find((x) => x.id === cust.id);
+        const t = cur?.tasks?.find((x) => x.id === task.id);
+        const existing = (t && t.kind === 'keywords' && t.likedKeywords) || [];
+        const next = [...new Set([...existing, ...Array.from(kwUi.selected)])];
+        await patchTask(cust.id, task.id, { likedKeywords: next });
       });
       $('#mm-kw-save-notes')?.addEventListener('click', async () => {
         await patchTask(cust.id, task.id, { notes: $('#mm-kw-notes').value });

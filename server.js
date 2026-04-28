@@ -1603,7 +1603,7 @@ app.post('/api/marketing-analyzer/compare', (req, res) => {
 });
 
 // ── Digital Marketing: Anthropic SEO analyzer proxy (used by /digitalmarketing) ──
-const ANTHROPIC_ANALYZE_MODEL = process.env.ANTHROPIC_ANALYZE_MODEL || 'claude-sonnet-4-20250514';
+const ANTHROPIC_ANALYZE_MODEL = process.env.ANTHROPIC_ANALYZE_MODEL || 'claude-sonnet-4-5';
 
 app.post('/api/analyze', async (req, res) => {
   try {

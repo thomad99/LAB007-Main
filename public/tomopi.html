@@ -769,6 +769,11 @@
           <div class="pi-edit-body" id="piEditBody"></div>
         </div>
       </div>
+      <div class="actions">
+        <button class="btn btn-primary" id="saveBtn">Save</button>
+        <button class="btn btn-secondary" id="reloadBtn">Reload</button>
+        <span class="status" id="status"></span>
+      </div>
 
       <div class="ctrl-section">
         <details>
@@ -777,14 +782,14 @@
             <div class="quick-edit">
           <label for="modeSelect">Mode:</label>
           <select id="modeSelect">
-            <option value="clock_basic">clock_basic</option>
-            <option value="slideshow">slideshow</option>
-            <option value="nixie_clock">nixie_clock</option>
-            <option value="flip_clock">flip_clock</option>
-            <option value="analog_clock">analog_clock</option>
-            <option value="video_player">video_player</option>
-            <option value="web_images">web_images</option>
-            <option value="news_feed">news_feed</option>
+            <option value="clock_basic">Clock Basic</option>
+            <option value="slideshow">Slideshow</option>
+            <option value="nixie_clock">Nixie Clock</option>
+            <option value="flip_clock">Flip Clock</option>
+            <option value="analog_clock">Analog Clock</option>
+            <option value="video_player">Video Player</option>
+            <option value="web_images">Web Images</option>
+            <option value="news_feed">News Feed</option>
           </select>
           <label for="rotateSelect">Screen rotation:</label>
           <select id="rotateSelect">
@@ -952,6 +957,18 @@
               <option value="zoom_out">zoom_out — Old item zooms out</option>
               <option value="wipe_horizontal">wipe_horizontal — Horizontal wipe</option>
               <option value="wipe_vertical">wipe_vertical — Vertical wipe</option>
+              <option value="crossfade_long">crossfade_long — Slower cinematic crossfade</option>
+              <option value="slide_left_slow">slide_left_slow — Gentle left slide</option>
+              <option value="slide_right_slow">slide_right_slow — Gentle right slide</option>
+              <option value="slide_up_slow">slide_up_slow — Gentle upward slide</option>
+              <option value="slide_down_slow">slide_down_slow — Gentle downward slide</option>
+              <option value="zoom_pulse">zoom_pulse — Slight zoom pulse on change</option>
+              <option value="blur_fade">blur_fade — Brief blur then fade in</option>
+              <option value="flip_horizontal">flip_horizontal — Horizontal card flip</option>
+              <option value="flip_vertical">flip_vertical — Vertical card flip</option>
+              <option value="glitch">glitch — Quick digital glitch style</option>
+              <option value="typewriter">typewriter — Character-by-character reveal</option>
+              <option value="matrix">matrix — Matrix-like reveal sweep</option>
             </select>
           </div>
           <div class="ctrl-item">
@@ -1023,11 +1040,6 @@
           Edit the config below. Your Raspberry Pi fetches from <code>/tomopi/config.json</code> every <code>refresh_seconds</code>.
         </p>
         <textarea id="configEditor" spellcheck="false" placeholder="Loading..."></textarea>
-        <div class="actions">
-          <button class="btn btn-primary" id="saveBtn">Save</button>
-          <button class="btn btn-secondary" id="reloadBtn">Reload</button>
-          <span class="status" id="status"></span>
-        </div>
       </details>
     </div>
 
@@ -1118,7 +1130,8 @@
       headlines: [],
       stocks: [],
       nextHeadlineIdx: 0,
-      fetchedAtMs: 0
+      fetchedAtMs: 0,
+      lastHeadlineFlipMs: 0
     };
 
     const CONFIG_URL = '/tomopi/config.json';
@@ -1269,6 +1282,14 @@
 
     function formatPiValue(el) {
       if (!el) return '-';
+      const pretty = (v) => {
+        const s = String(v || '').trim();
+        if (!s) return '-';
+        return s
+          .replace(/_/g, ' ')
+          .replace(/\s+/g, ' ')
+          .replace(/\b([a-z])/g, (m) => m.toUpperCase());
+      };
       if (el.id === 'brightnessSelect') return `${el.value || '--'}%`;
       if (el.id === 'scheduleEnabled') return el.value === 'true' ? 'enabled' : 'always on';
       if (['refreshSeconds','secondsPerSlide','refreshListSeconds','itemSeconds','refreshNewsSeconds','refreshStocksSeconds'].includes(el.id)) {
@@ -1285,12 +1306,13 @@
       }
       if (el.tagName === 'TEXTAREA') {
         const txt = String(el.value || '').trim();
-        return txt ? `${txt.slice(0, 18)}${txt.length > 18 ? '…' : ''}` : 'none';
+        return txt ? pretty(`${txt.slice(0, 18)}${txt.length > 18 ? '…' : ''}`) : 'none';
       }
       if (el.tagName === 'SELECT') {
-        return (el.options[el.selectedIndex] && el.options[el.selectedIndex].textContent) || el.value || '-';
+        const txt = (el.options[el.selectedIndex] && el.options[el.selectedIndex].textContent) || el.value || '-';
+        return pretty(txt);
       }
-      return el.value || '-';
+      return pretty(el.value || '-');
     }
 
     function refreshPiCards() {
@@ -1515,9 +1537,16 @@
         clockSize = json.news_feed.clock_font_size ? `${Math.round(json.news_feed.clock_font_size * 0.3)}px` : '';
         const headlines = simLiveData.headlines || [];
         if (headlines.length) {
+          const intervalSec = Math.max(1, parseInt(json.news_feed.item_seconds || 10, 10));
+          const now = Date.now();
+          if (!simLiveData.lastHeadlineFlipMs) simLiveData.lastHeadlineFlipMs = now;
+          const elapsed = now - simLiveData.lastHeadlineFlipMs;
+          if (elapsed >= intervalSec * 1000) {
+            simLiveData.nextHeadlineIdx = (simLiveData.nextHeadlineIdx + 1) % headlines.length;
+            simLiveData.lastHeadlineFlipMs = now;
+          }
           const idx = simLiveData.nextHeadlineIdx % headlines.length;
           feedText = headlines[idx];
-          simLiveData.nextHeadlineIdx = (idx + 1) % headlines.length;
         } else {
           feedText = 'Sample headline: Markets mixed as tech and energy sectors diverge in early trade.';
         }
