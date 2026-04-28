@@ -1833,7 +1833,7 @@ function writeMarketingContracts(data) {
 
 function mmValidSignatureDataUrl(value) {
   const s = String(value || '');
-  return /^data:image\/png;base64,[a-z0-9+/=\s]+$/i.test(s) && s.length <= 2_000_000;
+  return /^data:image\/(?:png|jpe?g);base64,[a-z0-9+/=\s]+$/i.test(s) && s.length <= 4_000_000;
 }
 
 function mmContractView(c, customerName) {
@@ -1938,13 +1938,15 @@ function mmInjectSignatureIntoText(templateText, contract) {
   const signDate = String(contract.signDate || '').trim();
   let out = String(templateText || '');
   out = out.replace(/\{\{\s*SIGNATURE_NAME\s*\}\}/gi, signer);
+  out = out.replace(/\{\{\s*PRINTED_NAME\s*\}\}/gi, signer);
   out = out.replace(/\{\{\s*SIGNATURE\s*\}\}/gi, signer);
   out = out.replace(/\{\{\s*DATE\s*\}\}/gi, signDate);
   out = out.replace(
     /^(\s*(?:client\s+)?signature\s*[:\-]\s*)(?:_+|\.{2,}|\s*)$/gim,
-    `$1${signer}`
+    `$1${signer} (signed)`
   );
   out = out.replace(/^(\s*date\s*[:\-]\s*)(?:_+|\.{2,}|\s*)$/gim, `$1${signDate}`);
+  out = out.replace(/^(\s*(?:printed\s+)?name\s*[:\-]\s*)(?:_+|\.{2,}|\s*)$/gim, `$1${signer}`);
   return out;
 }
 
@@ -2004,7 +2006,46 @@ function mmBuildSignedContractPdf(contract, customerName) {
   return Buffer.from(out, 'utf8');
 }
 
-function mmBuildSignedContractPdfFromText(textBody) {
+function mmParseSignatureDataUrl(dataUrl) {
+  const s = String(dataUrl || '');
+  const m = s.match(/^data:image\/(png|jpe?g);base64,([a-z0-9+/=\s]+)$/i);
+  if (!m) return null;
+  const fmt = m[1].toLowerCase();
+  const mime = fmt === 'jpg' ? 'image/jpeg' : `image/${fmt}`;
+  const b64 = m[2].replace(/\s+/g, '');
+  return { mime, buffer: Buffer.from(b64, 'base64') };
+}
+
+function mmGetJpegDimensions(buf) {
+  if (!Buffer.isBuffer(buf) || buf.length < 4) return null;
+  if (buf[0] !== 0xff || buf[1] !== 0xd8) return null;
+  let i = 2;
+  while (i + 9 < buf.length) {
+    if (buf[i] !== 0xff) {
+      i += 1;
+      continue;
+    }
+    const marker = buf[i + 1];
+    if (marker === 0xda || marker === 0xd9) break; // SOS/EOI
+    const len = (buf[i + 2] << 8) | buf[i + 3];
+    if (len < 2 || i + 2 + len > buf.length) break;
+    const isSOF =
+      (marker >= 0xc0 && marker <= 0xc3) ||
+      (marker >= 0xc5 && marker <= 0xc7) ||
+      (marker >= 0xc9 && marker <= 0xcb) ||
+      (marker >= 0xcd && marker <= 0xcf);
+    if (isSOF) {
+      const h = (buf[i + 5] << 8) | buf[i + 6];
+      const w = (buf[i + 7] << 8) | buf[i + 8];
+      if (w > 0 && h > 0) return { width: w, height: h };
+      return null;
+    }
+    i += 2 + len;
+  }
+  return null;
+}
+
+function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
   const rawLines = String(textBody || '').split('\n');
   const lines = [];
   rawLines.forEach((line) => {
@@ -2017,6 +2058,18 @@ function mmBuildSignedContractPdfFromText(textBody) {
   const maxLines = 60;
   const finalLines = lines.slice(0, maxLines);
   if (lines.length > maxLines) finalLines.push('... truncated ...');
+  const sigLineIndexRaw = finalLines.findIndex((ln) => /\bsignature\b/i.test(ln));
+  const dateLineIndexRaw = finalLines.findIndex((ln) => /^\s*date\b/i.test(ln));
+  const nameLineIndexRaw = finalLines.findIndex((ln) => /printed\s+name|^\s*name\s*[:\-]/i.test(ln));
+  const sigLineIndex = sigLineIndexRaw === -1 ? Math.max(finalLines.length - 2, 0) : sigLineIndexRaw;
+  const dateLineIndex = dateLineIndexRaw === -1 ? Math.max(finalLines.length - 1, 0) : dateLineIndexRaw;
+  const nameLineIndex = nameLineIndexRaw === -1 ? Math.max(sigLineIndex + 1, 0) : nameLineIndexRaw;
+
+  const parsedSig = mmParseSignatureDataUrl(signatureDataUrl);
+  const jpegSig = parsedSig && parsedSig.mime === 'image/jpeg' ? parsedSig : null;
+  const jpegDims = jpegSig ? mmGetJpegDimensions(jpegSig.buffer) : null;
+  const drawSignature = Boolean(jpegSig && jpegDims);
+
   const contentRows = ['BT', '/F1 11 Tf', '50 790 Td', '14 TL'];
   finalLines.forEach((line, idx) => {
     const t = `(${mmPdfEscape(line)}) Tj`;
@@ -2024,16 +2077,54 @@ function mmBuildSignedContractPdfFromText(textBody) {
     else contentRows.push(`T* ${t}`);
   });
   contentRows.push('ET');
+  if (drawSignature) {
+    const sigW = 180;
+    const aspect = jpegDims.height / jpegDims.width;
+    const sigH = Math.max(40, Math.min(90, Math.round(sigW * aspect)));
+    const lineToY = (lineIndex) => 790 - lineIndex * 14;
+    const candidateY = lineToY(sigLineIndex) - sigH + 8;
+    const sigY = Math.max(72, Math.min(720, candidateY));
+    const sigX = 320;
+    contentRows.push('q');
+    contentRows.push(`${sigW} 0 0 ${sigH} ${sigX} ${sigY} cm`);
+    contentRows.push('/Im1 Do');
+    contentRows.push('Q');
+    // reinforce textual placement near signature areas
+    if (nameLineIndex >= 0) {
+      const ny = Math.max(72, Math.min(760, lineToY(nameLineIndex)));
+      contentRows.push('BT');
+      contentRows.push('/F1 11 Tf');
+      contentRows.push(`320 ${ny} Td`);
+      contentRows.push('(Printed name inserted above signature) Tj');
+      contentRows.push('ET');
+    }
+    if (dateLineIndex >= 0) {
+      const dy = Math.max(72, Math.min(760, lineToY(dateLineIndex)));
+      contentRows.push('BT');
+      contentRows.push('/F1 11 Tf');
+      contentRows.push(`320 ${dy} Td`);
+      contentRows.push('(Date inserted) Tj');
+      contentRows.push('ET');
+    }
+  }
   const stream = contentRows.join('\n');
   const objects = [];
   const addObj = (txt) => objects.push(txt);
   addObj('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
   addObj('2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n');
   addObj(
-    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n'
+    drawSignature
+      ? '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> /XObject << /Im1 6 0 R >> >> /Contents 5 0 R >>\nendobj\n'
+      : '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n'
   );
   addObj('4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n');
   addObj(`5 0 obj\n<< /Length ${Buffer.byteLength(stream, 'utf8')} >>\nstream\n${stream}\nendstream\nendobj\n`);
+  if (drawSignature) {
+    const jpegHex = `${jpegSig.buffer.toString('hex').toUpperCase()}>`;
+    addObj(
+      `6 0 obj\n<< /Type /XObject /Subtype /Image /Width ${jpegDims.width} /Height ${jpegDims.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter [/ASCIIHexDecode /DCTDecode] /Length ${jpegHex.length} >>\nstream\n${jpegHex}\nendstream\nendobj\n`
+    );
+  }
   let out = '%PDF-1.4\n';
   const offsets = [0];
   objects.forEach((o) => {
@@ -2075,7 +2166,7 @@ function mmCreateSignedArtifacts(contract, customerName) {
   const signedTextPath = path.join(marketingManagerSignedDocsDir, `${contract.id}-signed.txt`);
   fs.writeFileSync(signedTextPath, signedTxt, 'utf8');
   const signedPdfPath = path.join(marketingManagerSignedDocsDir, `${contract.id}-signed.pdf`);
-  fs.writeFileSync(signedPdfPath, mmBuildSignedContractPdfFromText(signedTxt));
+  fs.writeFileSync(signedPdfPath, mmBuildSignedContractPdfFromText(signedTxt, contract.signatureDataUrl));
   contract.signedTextPath = signedTextPath;
   contract.signedPdfPath = signedPdfPath;
 }
