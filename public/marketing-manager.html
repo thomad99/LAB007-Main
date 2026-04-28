@@ -1,0 +1,156 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LAB007 — Marketing Manager</title>
+<meta name="description" content="LAB007 Marketing Manager for client accounts, campaign templates, directory listings, and keyword tracking.">
+<link rel="canonical" href="https://www.lab007.ai/marketing-manager">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --gold: #C9A84C;
+  --gold-dim: rgba(201,168,76,0.12);
+  --black: #0A0A0B;
+  --dark: #111114;
+  --panel: #16161A;
+  --border: rgba(255,255,255,0.07);
+  --muted: #888;
+  --text: #E8E8E6;
+  --green: #2ECC87;
+  --red: #E84545;
+  --amber: #F5A623;
+  --blue: #4A90E2;
+  --radius: 12px;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'DM Sans',sans-serif;background:var(--black);color:var(--text);line-height:1.6;overflow-x:hidden}
+nav{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:16px 36px;background:rgba(10,10,11,.85);backdrop-filter:blur(20px);border-bottom:1px solid var(--border)}
+.nav-logo img{height:44px;width:auto}
+.nav-back{color:var(--muted);text-decoration:none;font-size:13px;display:flex;align-items:center;gap:6px;transition:color .2s}
+.nav-back:hover{color:var(--gold)}
+.nav-actions{display:flex;align-items:center;gap:16px}
+.hamburger-btn{width:40px;height:40px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5px;background:transparent;border:1px solid var(--border);border-radius:8px}
+.hamburger-btn span{display:block;width:18px;height:1.5px;background:var(--gold);border-radius:2px;transition:transform .3s,opacity .3s}
+.hamburger-btn.open span:nth-child(1){transform:translateY(6.5px) rotate(45deg)}
+.hamburger-btn.open span:nth-child(2){opacity:0}
+.hamburger-btn.open span:nth-child(3){transform:translateY(-6.5px) rotate(-45deg)}
+.nav-menu{position:fixed;top:0;right:0;bottom:0;width:280px;z-index:999;background:rgba(10,10,11,.97);backdrop-filter:blur(40px);border-left:1px solid var(--border);transform:translateX(100%);transition:transform .4s cubic-bezier(.23,1,.32,1);display:flex;flex-direction:column;padding:90px 40px 40px}
+.nav-menu.open{transform:translateX(0)}
+.nav-menu a{display:block;text-decoration:none;font-family:'Syne',sans-serif;font-weight:700;font-size:24px;color:rgba(255,255,255,.25);padding:10px 0;transition:color .3s}
+.nav-menu a:hover{color:var(--gold)}
+.nav-menu a.active{color:#fff}
+.nav-menu-footer{margin-top:auto;font-size:11px;color:var(--muted)}
+.nav-overlay{position:fixed;inset:0;z-index:998;background:rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .3s}
+.nav-overlay.open{opacity:1;pointer-events:all}
+.wrap{padding:92px 0 60px}
+.section{max-width:1200px;margin:0 auto;padding:24px 48px}
+.section-tag{font-size:11px;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:16px}
+h1{font-family:'Syne',sans-serif;font-weight:800;font-size:clamp(34px,5vw,58px);line-height:1.05;color:#fff;margin-bottom:14px}
+.lead{font-size:16px;color:var(--muted);max-width:760px;margin-bottom:24px}
+.mm-layout{display:grid;grid-template-columns:minmax(220px,280px) 1fr;gap:28px;align-items:start;margin-top:16px}
+.mm-sidebar{background:var(--dark);border:1px solid var(--border);border-radius:var(--radius);padding:16px;position:sticky;top:88px}
+.mm-sidebar-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.mm-sidebar-head h3{font-family:'Syne',sans-serif;font-size:14px;color:#fff}
+.mm-cust-list{display:flex;flex-direction:column;gap:8px;max-height:min(65vh,560px);overflow-y:auto}
+.mm-cust-btn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;text-align:left;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);cursor:pointer;font-family:inherit;font-size:13px;transition:border-color .2s,background .2s}
+.mm-cust-btn:hover{border-color:rgba(201,168,76,.35)}
+.mm-cust-btn.is-active{border-color:rgba(201,168,76,.55);background:rgba(201,168,76,.06)}
+.mm-cust-name{font-weight:600;color:#fff}.mm-cust-meta{font-size:11px;color:var(--muted)}
+.mm-main{background:var(--dark);border:1px solid var(--border);border-radius:var(--radius);padding:24px 26px 32px;min-height:420px}
+.mm-dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:8px;margin-bottom:8px}
+.mm-dash-inline{margin:18px 0 24px}
+.mm-dash-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center}
+.mm-dash-val{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:#fff}
+.mm-dash-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:4px}
+.mm-accent-todo{border-top:3px solid #6b6b75}.mm-accent-started{border-top:3px solid var(--amber)}.mm-accent-done{border-top:3px solid var(--green)}
+.btn-mm,.btn-mm-ghost,.btn-mm-danger,.btn-mm-danger-outline,.btn-mm-outline{font-family:'Syne',sans-serif;font-weight:700;font-size:12px;border-radius:8px;padding:8px 14px;cursor:pointer;letter-spacing:.03em}
+.btn-mm{background:var(--gold);color:var(--black);border:none}
+.btn-mm-ghost{background:transparent;border:1px solid var(--border);color:var(--text)}
+.btn-mm-danger{background:rgba(232,69,69,.2);border:1px solid rgba(232,69,69,.45);color:var(--red)}
+.btn-mm-danger-outline{background:transparent;border:1px solid rgba(232,69,69,.35);color:var(--red);font-size:11px;padding:6px 10px}
+.btn-mm-outline{background:transparent;border:1px solid rgba(201,168,76,.35);color:var(--gold);margin:4px 6px 4px 0;font-size:11px;text-align:left;line-height:1.3}
+.btn-mm-tiny{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid rgba(201,168,76,.45);background:rgba(201,168,76,.08);color:var(--gold);cursor:pointer;font-weight:600}
+.btn-mm-tiny-danger{font-size:11px;padding:4px 10px;border-radius:6px;border:1px solid rgba(232,69,69,.4);background:transparent;color:var(--red);cursor:pointer}
+.mm-muted{color:var(--muted);font-size:13px}.mm-small{font-size:11px;color:var(--muted);margin-top:8px}.mm-error{color:var(--red);font-size:14px}
+.mm-main-head{display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.mm-main-head h2{font-family:'Syne',sans-serif;font-size:22px;color:#fff}.mm-main-actions{display:flex;gap:8px;flex-wrap:wrap}
+.mm-add-task{margin:24px 0;padding-top:20px;border-top:1px solid var(--border)}
+.mm-add-task h3{font-family:'Syne',sans-serif;font-size:15px;color:#fff;margin-bottom:12px}
+.mm-add-buttons{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px}
+.mm-campaign-details summary{cursor:pointer;color:var(--gold);font-size:13px;font-weight:600;margin-bottom:10px}
+.mm-campaign-grid{display:flex;flex-wrap:wrap;gap:8px}.mm-task-panel{margin-top:20px;padding-top:20px;border-top:1px solid var(--border)}
+.mm-select{width:100%;max-width:520px;margin-top:8px;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;font-size:14px}
+.mm-task-meta{margin-top:14px}.mm-task-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:16px}
+.mm-status-badge{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;padding:5px 12px;border-radius:100px}
+.mm-st-todo{background:rgba(107,107,117,.25);color:#b8b8c4;border:1px solid rgba(255,255,255,.08)}
+.mm-st-started{background:rgba(245,166,35,.12);color:var(--amber);border:1px solid rgba(245,166,35,.25)}
+.mm-st-done{background:rgba(46,204,135,.12);color:var(--green);border:1px solid rgba(46,204,135,.22)}
+.mm-task-tool{margin-top:8px}.mm-dir-section h4{font-family:'Syne',sans-serif;font-size:13px;color:var(--gold);margin:16px 0 10px}
+.mm-dir-rows{display:flex;flex-direction:column;gap:6px}.mm-dir-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--border);font-size:12px}
+.mm-dir-row input{width:18px;height:18px;accent-color:var(--gold);cursor:pointer}.mm-dir-name{color:var(--text)}
+.mm-dir-link{color:var(--blue);font-size:11px;text-decoration:none;white-space:nowrap}.mm-dir-link:hover{text-decoration:underline}
+.mm-tool-head{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.mm-pill{font-size:11px;padding:4px 12px;border-radius:100px;border:1px solid var(--border);color:var(--muted)}
+.mm-input,.mm-textarea{width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);font-family:inherit;font-size:14px}
+.mm-kw-row{display:flex;flex-wrap:wrap;gap:10px;margin:14px 0;align-items:center}.mm-kw-row .mm-input{flex:1;min-width:200px}
+.mm-sug-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;border-radius:8px;border:1px solid var(--border);margin-bottom:6px;font-size:13px}
+.mm-like-title{font-family:'Syne',sans-serif;font-size:14px;margin:18px 0 10px;color:#fff}.mm-like-list{list-style:none;display:flex;flex-direction:column;gap:8px}
+.mm-like-list li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;background:var(--panel);border-radius:8px;border:1px solid var(--border);font-size:13px}
+.mm-notes-label{display:block;font-size:11px;color:var(--muted);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.08em}
+@media (max-width:768px){nav{padding:14px 20px}.wrap{padding-top:84px}.section{padding:16px 20px 50px}.mm-layout{grid-template-columns:1fr}.mm-sidebar{position:relative;top:0}}
+</style>
+</head>
+<body>
+<nav>
+  <a href="/" class="nav-logo">
+    <img src="/images/LAB007-GOLD.png" onerror="this.onerror=null;this.src='/images/logo.png';" alt="LAB007">
+  </a>
+  <div class="nav-actions">
+    <a href="/digitalmarketing" class="nav-back">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
+      Digital Marketing
+    </a>
+    <button class="hamburger-btn" id="hamburgerBtn" type="button" aria-label="Menu"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+<div class="nav-overlay" id="navOverlay"></div>
+<div class="nav-menu" id="navMenu">
+  <a href="/">Home</a>
+  <a href="/digitalmarketing">Digital Marketing</a>
+  <a href="/marketing-manager" class="active">Marketing Manager</a>
+  <a href="/contact">Contact</a>
+  <div class="nav-menu-footer">LAB007 AI TECH &copy; 2026</div>
+</div>
+<div class="wrap">
+  <section class="section">
+    <div class="section-tag">Marketing Manager</div>
+    <h1>Client dashboards and campaign tracking</h1>
+    <p class="lead">Manage customer accounts, task status, directory listing checklists, keyword LIKE lists, and campaign starter templates in one place.</p>
+    <div id="mm-overview"></div>
+    <div class="mm-layout">
+      <aside id="mm-sidebar" class="mm-sidebar" aria-label="Clients"></aside>
+      <div id="mm-main" class="mm-main"></div>
+    </div>
+  </section>
+</div>
+<script src="/js/marketing-manager.js"></script>
+<script>
+const hamburgerBtn = document.getElementById('hamburgerBtn');
+const navMenu = document.getElementById('navMenu');
+const navOverlay = document.getElementById('navOverlay');
+hamburgerBtn.addEventListener('click', () => {
+  hamburgerBtn.classList.toggle('open');
+  navMenu.classList.toggle('open');
+  navOverlay.classList.toggle('open');
+});
+navOverlay.addEventListener('click', () => {
+  hamburgerBtn.classList.remove('open');
+  navMenu.classList.remove('open');
+  navOverlay.classList.remove('open');
+});
+</script>
+</body>
+</html>

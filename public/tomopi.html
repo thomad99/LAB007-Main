@@ -171,24 +171,61 @@
     .upload-status.error { color: var(--error); }
     .ctrl-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
       gap: 16px;
       margin-bottom: 16px;
     }
-    .ctrl-item { display: flex; flex-direction: column; gap: 4px; }
-    .ctrl-item label { font-size: 12px; color: var(--muted); }
+    .ctrl-item {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 14px;
+      min-height: 92px;
+    }
+    .ctrl-item label {
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
     .ctrl-item input[type="number"] {
-      padding: 8px 12px;
-      font-size: 14px;
+      padding: 11px 12px;
+      font-size: 15px;
       font-family: inherit;
       background: #0d1117;
       color: var(--text);
       border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 6px;
+      border-radius: 8px;
     }
     .ctrl-item input:focus { outline: none; border-color: var(--accent); }
     .ctrl-section { margin-bottom: 20px; }
     .ctrl-section h3 { font-size: 0.9rem; margin: 0 0 12px 0; color: var(--accent); }
+    .ctrl-section details {
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.02);
+      padding: 0;
+    }
+    .ctrl-section summary {
+      cursor: pointer;
+      font-weight: 700;
+      font-size: 14px;
+      color: var(--accent);
+      padding: 12px 14px;
+      border-radius: 12px;
+      user-select: none;
+    }
+    .ctrl-section details[open] summary {
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+    .ctrl-section .section-inner {
+      padding: 14px;
+    }
     .rss-list { margin-top: 8px; }
     .rss-list textarea {
       min-height: 80px;
@@ -216,15 +253,111 @@
     .rss-presets input[type="checkbox"] { cursor: pointer; }
     .ctrl-hint { font-size: 12px; color: var(--muted); margin: 8px 0 0 0; }
     .ctrl-item input[type="time"] {
-      padding: 8px 12px;
-      font-size: 14px;
+      padding: 11px 12px;
+      font-size: 15px;
       font-family: inherit;
       background: #0d1117;
       color: var(--text);
       border: 1px solid rgba(255,255,255,0.2);
-      border-radius: 6px;
+      border-radius: 8px;
     }
     .ctrl-item input[type="time"]:focus { outline: none; border-color: var(--accent); }
+    .quick-edit {
+      margin-bottom: 0;
+      background: rgba(255,255,255,0.03);
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      padding: 14px;
+    }
+    .quick-edit select, .ctrl-item select {
+      padding: 11px 12px;
+      font-size: 15px;
+      font-family: inherit;
+      background: #0d1117;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 8px;
+      cursor: pointer;
+      width: 100%;
+    }
+    .sim-wrap {
+      background: #0d1117;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .sim-display {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: #000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .sim-content {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 16px;
+      gap: 10px;
+      transition: background 0.25s, color 0.25s;
+    }
+    .sim-clock {
+      font-size: clamp(22px, 9vw, 74px);
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      line-height: 1;
+      white-space: nowrap;
+    }
+    .sim-sub {
+      font-size: clamp(12px, 2.2vw, 18px);
+      opacity: 0.9;
+      max-width: 90%;
+    }
+    .sim-feed {
+      margin-top: 6px;
+      max-width: 92%;
+      font-size: clamp(11px, 2vw, 16px);
+      opacity: 0.92;
+      line-height: 1.35;
+    }
+    .sim-ticker {
+      margin-top: 8px;
+      font-size: clamp(10px, 1.9vw, 15px);
+      opacity: 0.85;
+      border-top: 1px solid rgba(255,255,255,0.2);
+      padding-top: 8px;
+      width: 92%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .sim-mode-badge {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 11px;
+      background: rgba(0,0,0,0.45);
+      color: #fff;
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 999px;
+      padding: 4px 10px;
+      letter-spacing: 0.03em;
+      text-transform: uppercase;
+    }
+    .sim-note {
+      margin-top: 10px;
+      font-size: 12px;
+      color: var(--muted);
+    }
   </style>
 </head>
 <body>
@@ -240,8 +373,10 @@
       <h2>Display config (JSON)</h2>
 
       <div class="ctrl-section">
-        <h3>Mode &amp; rotation</h3>
-        <div class="quick-edit">
+        <details>
+          <summary>Mode &amp; rotation</summary>
+          <div class="section-inner">
+            <div class="quick-edit">
           <label for="modeSelect">Mode:</label>
           <select id="modeSelect">
             <option value="clock_basic">clock_basic</option>
@@ -260,12 +395,16 @@
             <option value="none">none</option>
             <option value="180">180</option>
           </select>
-        </div>
+            </div>
+          </div>
+        </details>
       </div>
 
       <div class="ctrl-section">
-        <h3>Screen</h3>
-        <div class="ctrl-grid">
+        <details>
+          <summary>Screen</summary>
+          <div class="section-inner">
+            <div class="ctrl-grid">
           <div class="ctrl-item">
             <label for="brightnessSelect">Brightness</label>
             <select id="brightnessSelect">
@@ -294,11 +433,15 @@
           </div>
         </div>
         <p class="ctrl-hint">When schedule is enabled, the display turns on at the ON time and off at the OFF time (e.g. 7:00 AM–10:00 PM).</p>
+          </div>
+        </details>
       </div>
 
       <div class="ctrl-section" id="colorFontSection">
-        <h3>Font &amp; colors</h3>
-        <div class="ctrl-grid">
+        <details>
+          <summary>Font &amp; colors</summary>
+          <div class="section-inner">
+            <div class="ctrl-grid">
           <div class="ctrl-item">
             <label for="fontColorSelect">Font color</label>
             <select id="fontColorSelect">
@@ -356,11 +499,14 @@
             <input type="number" id="fontSizeInput" min="12" max="400" placeholder="e.g. 220">
           </div>
         </div>
+          </div>
+        </details>
       </div>
 
       <details class="ctrl-section" id="refreshSection">
         <summary style="cursor:pointer;font-weight:600;">Refresh intervals (seconds)</summary>
-        <div class="ctrl-grid">
+        <div class="section-inner">
+          <div class="ctrl-grid">
           <div class="ctrl-item">
             <label for="refreshSeconds">Global refresh</label>
             <input type="number" id="refreshSeconds" min="1" placeholder="15">
@@ -386,11 +532,13 @@
             <input type="number" id="refreshStocksSeconds" min="60" placeholder="240">
           </div>
         </div>
+        </div>
       </details>
 
-      <details class="ctrl-section" id="newsFeedSection" open>
+      <details class="ctrl-section" id="newsFeedSection">
         <summary style="cursor:pointer;font-weight:600;">News feed &amp; stocks</summary>
-        <div class="ctrl-grid">
+        <div class="section-inner">
+          <div class="ctrl-grid">
           <div class="ctrl-item">
             <label for="transitionSelect">Transition</label>
             <select id="transitionSelect">
@@ -466,6 +614,7 @@
             </select>
           </div>
         </div>
+        </div>
       </details>
 
       <details id="jsonEditorSection">
@@ -482,6 +631,22 @@
           <span class="status" id="status"></span>
         </div>
       </details>
+    </div>
+
+    <div class="panel">
+      <h2>Display simulator</h2>
+      <div class="sim-wrap">
+        <div class="sim-display" id="simDisplay">
+          <div class="sim-mode-badge" id="simModeBadge">mode</div>
+          <div class="sim-content" id="simContent">
+            <div class="sim-clock" id="simClock">--:--</div>
+            <div class="sim-sub" id="simSub">Preview loading...</div>
+            <div class="sim-feed" id="simFeed"></div>
+            <div class="sim-ticker" id="simTicker"></div>
+          </div>
+        </div>
+        <p class="sim-note">Live preview of configured mode, colors, font family, and example content.</p>
+      </div>
     </div>
 
     <div class="panel">
@@ -532,6 +697,12 @@
     const stockLineSpacing = document.getElementById('stockLineSpacing');
     const stockMaxLines = document.getElementById('stockMaxLines');
     const stockFontSelect = document.getElementById('stockFontSelect');
+    const simModeBadge = document.getElementById('simModeBadge');
+    const simContent = document.getElementById('simContent');
+    const simClock = document.getElementById('simClock');
+    const simSub = document.getElementById('simSub');
+    const simFeed = document.getElementById('simFeed');
+    const simTicker = document.getElementById('simTicker');
 
     const CONFIG_URL = '/tomopi/config.json';
     const RSS_PRESETS_DEFAULT = {
@@ -574,6 +745,7 @@
       if (!json) { setStatus('Invalid JSON', 'error'); return; }
       updater(json);
       editor.value = JSON.stringify(json, null, 2);
+      updateSimulator();
     }
 
     function ensureColorOption(sel, val, label) {
@@ -673,6 +845,77 @@
         fontSelect.value = json.slideshow.clock.font_name || 'dejavusans';
         fontSizeInput.value = json.slideshow.clock.font_size || '';
       }
+      updateSimulator();
+    }
+
+    function rgbArrayToCss(arr, fallback) {
+      if (!Array.isArray(arr) || arr.length < 3) return fallback;
+      const vals = arr.slice(0, 3).map(v => {
+        const n = Number(v);
+        if (Number.isNaN(n)) return 0;
+        return Math.max(0, Math.min(255, Math.round(n)));
+      });
+      return `rgb(${vals[0]}, ${vals[1]}, ${vals[2]})`;
+    }
+
+    function nowClockString() {
+      const d = new Date();
+      return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function nowDateString() {
+      const d = new Date();
+      return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
+    }
+
+    function updateSimulator() {
+      const json = getJson();
+      if (!json) return;
+      const mode = json.mode || 'clock_basic';
+      simModeBadge.textContent = mode.replace(/_/g, ' ');
+
+      let fg = [255,255,255];
+      let bg = [0,0,0];
+      let font = 'dejavusans';
+      let feedText = '';
+      let tickerText = '';
+      let subText = nowDateString();
+      let clockSize = '';
+
+      if (mode === 'news_feed' && json.news_feed) {
+        fg = json.news_feed.clock_color_rgb || json.news_feed.text_color_rgb || fg;
+        bg = json.news_feed.bg_rgb || bg;
+        font = json.news_feed.clock_font_name || json.news_feed.text_font_name || font;
+        clockSize = json.news_feed.clock_font_size ? `${Math.round(json.news_feed.clock_font_size * 0.3)}px` : '';
+        feedText = 'Sample headline: Markets mixed as tech and energy sectors diverge in early trade.';
+        tickerText = (json.news_feed.tickers || ['TSLA', 'IBRX', 'AAPL']).slice(0, 8).join(' · ');
+      } else if (mode === 'clock_basic' && json.clock_basic) {
+        fg = json.clock_basic.color_rgb || fg;
+        bg = json.clock_basic.bg_rgb || bg;
+        font = json.clock_basic.font_name || font;
+        clockSize = json.clock_basic.font_size ? `${Math.round(json.clock_basic.font_size * 0.3)}px` : '';
+        feedText = 'Basic clock mode';
+      } else if (mode === 'slideshow' && json.slideshow?.clock) {
+        fg = json.slideshow.clock.color_rgb || fg;
+        font = json.slideshow.clock.font_name || font;
+        clockSize = json.slideshow.clock.font_size ? `${Math.round(json.slideshow.clock.font_size * 0.3)}px` : '';
+        bg = [18, 18, 22];
+        subText = 'Slideshow image + clock overlay';
+      } else {
+        feedText = `${mode} mode preview`;
+      }
+
+      simContent.style.background = rgbArrayToCss(bg, '#000');
+      simContent.style.color = rgbArrayToCss(fg, '#fff');
+      simContent.style.fontFamily = `${font}, "JetBrains Mono", "Fira Code", monospace`;
+      simClock.style.fontSize = clockSize || '';
+
+      simClock.textContent = nowClockString();
+      simSub.textContent = subText;
+      simFeed.textContent = feedText || '';
+      simTicker.textContent = tickerText || '';
+      simFeed.style.display = feedText ? '' : 'none';
+      simTicker.style.display = tickerText ? '' : 'none';
     }
 
     function applyModeFromDropdown() {
@@ -867,6 +1110,7 @@
     stockFontSelect.addEventListener('change', applyRefreshIntervals);
     editor.addEventListener('input', syncControlsFromJson);
     load();
+    setInterval(updateSimulator, 1000);
 
     // Photo upload
     const uploadZone = document.getElementById('uploadZone');

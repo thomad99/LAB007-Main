@@ -65,9 +65,9 @@
 
   /* HERO */
   .hero {
-    min-height: 100vh; display: flex; flex-direction: column;
+    min-height: 88vh; display: flex; flex-direction: column;
     align-items: center; justify-content: center;
-    padding: 120px 48px 80px; position: relative; overflow: hidden; text-align: center;
+    padding: 82px 48px 56px; position: relative; overflow: hidden; text-align: center;
   }
   .hero-bg { position: absolute; inset: 0; background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(201,168,76,0.07) 0%, transparent 70%); pointer-events: none; }
   .hero-grid {
@@ -445,7 +445,7 @@
   @media (max-width: 768px) {
     nav { padding: 14px 20px; }
     section { padding: 60px 20px; }
-    .hero { padding: 100px 24px 60px; }
+    .hero { min-height: 78vh; padding: 82px 24px 42px; }
     .analyzer-inner { padding: 0 20px 60px; }
     .results-top { grid-template-columns: 1fr; }
     .url-row { flex-direction: column; }
@@ -460,7 +460,7 @@
 <!-- NAV -->
 <nav>
   <a href="/" class="nav-logo">
-    <img src="/images/logo.png" alt="LAB007" height="44">
+    <img src="/images/LAB007-GOLD.png" onerror="this.onerror=null;this.src=\"/images/logo.png\";" style="filter: sepia(1) saturate(3.4) hue-rotate(350deg) brightness(1.08);" alt="LAB007" height="44">
   </a>
   <div class="nav-actions">
     <a href="/" class="nav-back">
@@ -475,7 +475,7 @@
 <div class="nav-menu" id="navMenu">
   <a href="/">Home</a>
   <a href="/digitalmarketing" class="active">Digital Marketing</a>
-  <a href="#marketing-manager">Marketing Manager</a>
+  <a href="/marketing-manager">Marketing Manager</a>
   <div class="nav-menu-footer">LAB007 AI TECH &copy; 2026</div>
 </div>
 
@@ -492,7 +492,7 @@
       Analyze My Site — Free
     </button>
     <a href="#services" class="btn-ghost">Our Services</a>
-    <button type="button" class="btn-ghost" onclick="scrollToMarketingManager()">Marketing Manager</button>
+    <a href="/marketing-manager" class="btn-ghost">Marketing Manager</a>
   </div>
 </div>
 
@@ -654,22 +654,6 @@
   </div>
 </div>
 
-<!-- MARKETING MANAGER -->
-<section id="marketing-manager" class="analyzer-section mm-section">
-  <div class="analyzer-inner">
-    <div class="analyzer-header">
-      <div class="section-tag">Marketing Manager</div>
-      <h2>Client accounts & task tracking</h2>
-      <p>Directory listing checklists per customer, keyword LIKE lists with AI-assisted suggestions, and campaign starter templates — with status colors and dashboards.</p>
-    </div>
-    <div id="mm-overview"></div>
-    <div class="mm-layout">
-      <aside id="mm-sidebar" class="mm-sidebar" aria-label="Clients"></aside>
-      <div id="mm-main" class="mm-main"></div>
-    </div>
-  </div>
-</section>
-
 <!-- FOOTER -->
 <div class="footer">
   <div class="footer-logo">LAB007</div>
@@ -677,6 +661,5 @@
 </div>
 
 <script src="/js/digitalmarketing-analyzer.js"></script>
-<script src="/js/marketing-manager.js"></script>
 </body>
 </html>
