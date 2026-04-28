@@ -49,6 +49,10 @@
         <button class="ghost" id="clearBtn" type="button">Clear signature</button>
         <button class="gold" id="signBtn" type="button">Sign contract</button>
       </div>
+      <div class="row" id="postSignActions" style="display:none;">
+        <button class="ghost" id="downloadBtn" type="button">Download signed copy</button>
+        <button class="ghost" id="emailCopyBtn" type="button">Email signed copy</button>
+      </div>
       <p id="statusMsg" class="muted"></p>
     </div>
   </div>
@@ -66,6 +70,9 @@
       const dateEl = document.getElementById('signDate');
       const signBtn = document.getElementById('signBtn');
       const clearBtn = document.getElementById('clearBtn');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const emailCopyBtn = document.getElementById('emailCopyBtn');
+      const postSignActions = document.getElementById('postSignActions');
       const canvas = document.getElementById('sigCanvas');
       const ctx = canvas.getContext('2d');
       let drawing = false;
@@ -114,6 +121,14 @@
         return j;
       }
 
+      function setSignedUi() {
+        signed = true;
+        signBtn.disabled = true;
+        nameEl.disabled = true;
+        dateEl.disabled = true;
+        if (postSignActions) postSignActions.style.display = '';
+      }
+
       async function load() {
         try {
           const data = await api('/api/marketing-manager/contracts/sign/' + token);
@@ -145,12 +160,9 @@
             docViewerEl.innerHTML = '';
           }
           if (c.status === 'signed') {
-            signed = true;
+            setSignedUi();
             nameEl.value = c.signerName || '';
             dateEl.value = c.signDate || '';
-            nameEl.disabled = true;
-            dateEl.disabled = true;
-            signBtn.disabled = true;
             signBtn.textContent = 'Already signed';
             if (c.signatureDataUrl) {
               const img = new Image();
@@ -193,10 +205,7 @@
             method: 'POST',
             body: JSON.stringify({ fullName, date, signatureDataUrl: canvas.toDataURL('image/png') })
           });
-          signed = true;
-          signBtn.disabled = true;
-          nameEl.disabled = true;
-          dateEl.disabled = true;
+          setSignedUi();
           msgEl.className = 'ok';
           msgEl.textContent = 'Contract signed and stored successfully.';
         } catch (err) {
@@ -206,6 +215,28 @@
       });
 
       clearBtn.addEventListener('click', clearSignature);
+      downloadBtn.addEventListener('click', function () {
+        if (!signed) return;
+        window.open('/api/marketing-manager/contracts/sign/' + token + '/download', '_blank', 'noopener');
+      });
+      emailCopyBtn.addEventListener('click', async function () {
+        if (!signed) return;
+        const email = (prompt('Send signed copy to which email address?') || '').trim();
+        if (!email) return;
+        try {
+          msgEl.className = 'muted';
+          msgEl.textContent = 'Sending signed copy...';
+          await api('/api/marketing-manager/contracts/sign/' + token + '/email-copy', {
+            method: 'POST',
+            body: JSON.stringify({ email: email })
+          });
+          msgEl.className = 'ok';
+          msgEl.textContent = 'Signed copy emailed successfully.';
+        } catch (err) {
+          msgEl.className = 'error';
+          msgEl.textContent = err.message;
+        }
+      });
       canvas.addEventListener('mousedown', startDraw);
       canvas.addEventListener('mousemove', moveDraw);
       window.addEventListener('mouseup', endDraw);

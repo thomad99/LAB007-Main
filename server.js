@@ -1785,6 +1785,10 @@ const marketingManagerContractDocsDir = path.join(marketingManagerDataDir, 'cont
 if (!fs.existsSync(marketingManagerContractDocsDir)) {
   fs.mkdirSync(marketingManagerContractDocsDir, { recursive: true });
 }
+const marketingManagerSignedDocsDir = path.join(marketingManagerContractDocsDir, 'signed');
+if (!fs.existsSync(marketingManagerSignedDocsDir)) {
+  fs.mkdirSync(marketingManagerSignedDocsDir, { recursive: true });
+}
 
 const mmAllowedContractExt = new Set(['.pdf', '.doc', '.docx', '.txt', '.png', '.jpg', '.jpeg']);
 const marketingContractsUpload = multer({
@@ -1833,6 +1837,7 @@ function mmValidSignatureDataUrl(value) {
 }
 
 function mmContractView(c, customerName) {
+  const signedDocPath = c.status === 'signed' && c.signedTextPath ? `/api/marketing-manager/contracts/${c.id}/signed-document` : '';
   return {
     id: c.id,
     customerId: c.customerId,
@@ -1847,7 +1852,8 @@ function mmContractView(c, customerName) {
     signPath: `/marketing-manager/sign/${c.token}`,
     hasDocument: Boolean(c.filePath),
     documentName: c.originalName || '',
-    documentPath: c.filePath ? `/api/marketing-manager/contracts/${c.id}/document` : ''
+    documentPath: c.filePath ? `/api/marketing-manager/contracts/${c.id}/document` : '',
+    signedDocumentPath: signedDocPath
   };
 }
 
@@ -1870,6 +1876,11 @@ async function mmNotifyContractSigned(contract, customerName) {
   const signPath = `/marketing-manager/sign/${contract.token}`;
   const signUrl = signUrlBase ? `${signUrlBase.replace(/\/+$/, '')}${signPath}` : signPath;
   const docUrl = contract.filePath ? `${signUrl}/document` : '';
+  const safeTitle = String(contract.title || 'contract').replace(/[^a-zA-Z0-9_-]+/g, '_');
+  const signedPdf =
+    contract.signedPdfPath && fs.existsSync(contract.signedPdfPath)
+      ? fs.readFileSync(contract.signedPdfPath)
+      : mmBuildSignedContractPdf(contract, customerName);
 
   const fromAddr = process.env.SMTP_USER || 'noreply@lab007.ai';
   await emailTransporter.sendMail({
@@ -1888,7 +1899,218 @@ async function mmNotifyContractSigned(contract, customerName) {
       docUrl ? `Document link: ${docUrl}` : ''
     ]
       .filter(Boolean)
-      .join('\n')
+      .join('\n'),
+    attachments: [
+      {
+        filename: `${safeTitle || 'contract'}-signed.pdf`,
+        content: signedPdf,
+        contentType: 'application/pdf'
+      }
+    ]
+  });
+}
+
+function mmValidEmail(value) {
+  const s = String(value || '').trim();
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+}
+
+function mmBuildSignedContractText(contract, customerName) {
+  const lines = [
+    'LAB007 - Signed Contract Copy',
+    '========================================',
+    `Customer: ${customerName || 'Customer'}`,
+    `Contract: ${contract.title || 'Untitled contract'}`,
+    `Status: ${contract.status || 'pending'}`,
+    `Signer full name: ${contract.signerName || ''}`,
+    `Date entered: ${contract.signDate || ''}`,
+    `Signed at: ${contract.signedAt || ''}`,
+    '',
+    'Contract terms:',
+    '----------------------------------------',
+    String(contract.body || '').trim() || '(No body text)'
+  ];
+  return lines.join('\n');
+}
+
+function mmInjectSignatureIntoText(templateText, contract) {
+  const signer = String(contract.signerName || '').trim();
+  const signDate = String(contract.signDate || '').trim();
+  let out = String(templateText || '');
+  out = out.replace(/\{\{\s*SIGNATURE_NAME\s*\}\}/gi, signer);
+  out = out.replace(/\{\{\s*SIGNATURE\s*\}\}/gi, signer);
+  out = out.replace(/\{\{\s*DATE\s*\}\}/gi, signDate);
+  out = out.replace(
+    /^(\s*(?:client\s+)?signature\s*[:\-]\s*)(?:_+|\.{2,}|\s*)$/gim,
+    `$1${signer}`
+  );
+  out = out.replace(/^(\s*date\s*[:\-]\s*)(?:_+|\.{2,}|\s*)$/gim, `$1${signDate}`);
+  return out;
+}
+
+function mmPdfEscape(text) {
+  return String(text || '')
+    .replace(/\\/g, '\\\\')
+    .replace(/\(/g, '\\(')
+    .replace(/\)/g, '\\)');
+}
+
+function mmBuildSignedContractPdf(contract, customerName) {
+  const rawLines = mmBuildSignedContractText(contract, customerName).split('\n');
+  const lines = [];
+  rawLines.forEach((line) => {
+    const s = String(line || '');
+    if (s.length <= 100) lines.push(s);
+    else {
+      for (let i = 0; i < s.length; i += 100) lines.push(s.slice(i, i + 100));
+    }
+  });
+  const maxLines = 60;
+  const finalLines = lines.slice(0, maxLines);
+  if (lines.length > maxLines) finalLines.push('... truncated ...');
+
+  const contentRows = ['BT', '/F1 11 Tf', '50 790 Td', '14 TL'];
+  finalLines.forEach((line, idx) => {
+    const t = `(${mmPdfEscape(line)}) Tj`;
+    if (idx === 0) contentRows.push(t);
+    else contentRows.push(`T* ${t}`);
+  });
+  contentRows.push('ET');
+  const stream = contentRows.join('\n');
+
+  const objects = [];
+  const addObj = (txt) => objects.push(txt);
+  addObj('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  addObj('2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n');
+  addObj(
+    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n'
+  );
+  addObj('4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n');
+  addObj(`5 0 obj\n<< /Length ${Buffer.byteLength(stream, 'utf8')} >>\nstream\n${stream}\nendstream\nendobj\n`);
+
+  let out = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((o) => {
+    offsets.push(Buffer.byteLength(out, 'utf8'));
+    out += o;
+  });
+  const xrefPos = Buffer.byteLength(out, 'utf8');
+  out += `xref\n0 ${objects.length + 1}\n`;
+  out += '0000000000 65535 f \n';
+  for (let i = 1; i <= objects.length; i += 1) {
+    out += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+  }
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefPos}\n%%EOF`;
+  return Buffer.from(out, 'utf8');
+}
+
+function mmBuildSignedContractPdfFromText(textBody) {
+  const rawLines = String(textBody || '').split('\n');
+  const lines = [];
+  rawLines.forEach((line) => {
+    const s = String(line || '');
+    if (s.length <= 100) lines.push(s);
+    else {
+      for (let i = 0; i < s.length; i += 100) lines.push(s.slice(i, i + 100));
+    }
+  });
+  const maxLines = 60;
+  const finalLines = lines.slice(0, maxLines);
+  if (lines.length > maxLines) finalLines.push('... truncated ...');
+  const contentRows = ['BT', '/F1 11 Tf', '50 790 Td', '14 TL'];
+  finalLines.forEach((line, idx) => {
+    const t = `(${mmPdfEscape(line)}) Tj`;
+    if (idx === 0) contentRows.push(t);
+    else contentRows.push(`T* ${t}`);
+  });
+  contentRows.push('ET');
+  const stream = contentRows.join('\n');
+  const objects = [];
+  const addObj = (txt) => objects.push(txt);
+  addObj('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  addObj('2 0 obj\n<< /Type /Pages /Count 1 /Kids [3 0 R] >>\nendobj\n');
+  addObj(
+    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>\nendobj\n'
+  );
+  addObj('4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n');
+  addObj(`5 0 obj\n<< /Length ${Buffer.byteLength(stream, 'utf8')} >>\nstream\n${stream}\nendstream\nendobj\n`);
+  let out = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((o) => {
+    offsets.push(Buffer.byteLength(out, 'utf8'));
+    out += o;
+  });
+  const xrefPos = Buffer.byteLength(out, 'utf8');
+  out += `xref\n0 ${objects.length + 1}\n`;
+  out += '0000000000 65535 f \n';
+  for (let i = 1; i <= objects.length; i += 1) {
+    out += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+  }
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefPos}\n%%EOF`;
+  return Buffer.from(out, 'utf8');
+}
+
+function mmCreateSignedArtifacts(contract, customerName) {
+  const baseText = (() => {
+    const ext = path.extname(String(contract.originalName || '').toLowerCase());
+    if (ext === '.txt' && contract.filePath && fs.existsSync(contract.filePath)) {
+      try {
+        return fs.readFileSync(contract.filePath, 'utf8');
+      } catch {
+        return String(contract.body || '');
+      }
+    }
+    return String(contract.body || '');
+  })();
+  const injected = mmInjectSignatureIntoText(baseText, contract);
+  const signedTxt = [
+    injected.trim(),
+    '',
+    '---',
+    `Signed by: ${contract.signerName || ''}`,
+    `Date: ${contract.signDate || ''}`,
+    `Signed at: ${contract.signedAt || ''}`,
+    `Customer: ${customerName || 'Customer'}`
+  ].join('\n');
+  const signedTextPath = path.join(marketingManagerSignedDocsDir, `${contract.id}-signed.txt`);
+  fs.writeFileSync(signedTextPath, signedTxt, 'utf8');
+  const signedPdfPath = path.join(marketingManagerSignedDocsDir, `${contract.id}-signed.pdf`);
+  fs.writeFileSync(signedPdfPath, mmBuildSignedContractPdfFromText(signedTxt));
+  contract.signedTextPath = signedTextPath;
+  contract.signedPdfPath = signedPdfPath;
+}
+
+async function mmSendSignedCopyByEmail(contract, customerName, toEmail) {
+  if (!emailTransporter) throw new Error('Email service is not configured');
+  if (!mmValidEmail(toEmail)) throw new Error('Valid email address is required');
+  if ((contract.status || 'pending') !== 'signed') throw new Error('Contract is not signed yet');
+  const fromAddr = process.env.SMTP_USER || 'noreply@lab007.ai';
+  const txt =
+    contract.signedTextPath && fs.existsSync(contract.signedTextPath)
+      ? fs.readFileSync(contract.signedTextPath, 'utf8')
+      : mmBuildSignedContractText(contract, customerName);
+  const pdf =
+    contract.signedPdfPath && fs.existsSync(contract.signedPdfPath)
+      ? fs.readFileSync(contract.signedPdfPath)
+      : mmBuildSignedContractPdf(contract, customerName);
+  const safeTitle = String(contract.title || 'contract').replace(/[^a-zA-Z0-9_-]+/g, '_');
+  await emailTransporter.sendMail({
+    from: fromAddr,
+    to: toEmail,
+    subject: `Signed contract copy: ${contract.title || 'Contract'}`,
+    text: `Attached is the signed contract copy for ${customerName || 'Customer'}.`,
+    attachments: [
+      {
+        filename: `${safeTitle || 'contract'}-signed.txt`,
+        content: txt,
+        contentType: 'text/plain; charset=utf-8'
+      },
+      {
+        filename: `${safeTitle || 'contract'}-signed.pdf`,
+        content: pdf,
+        contentType: 'application/pdf'
+      }
+    ]
   });
 }
 
@@ -2274,6 +2496,21 @@ app.get('/api/marketing-manager/contracts/:contractId/document', (req, res) => {
   }
 });
 
+app.get('/api/marketing-manager/contracts/:contractId/signed-document', (req, res) => {
+  try {
+    const data = readMarketingContracts();
+    const contract = data.contracts.find((x) => x.id === req.params.contractId);
+    if (!contract) return res.status(404).json({ error: 'Contract not found' });
+    if ((contract.status || 'pending') !== 'signed' || !contract.signedTextPath || !fs.existsSync(contract.signedTextPath)) {
+      return res.status(404).json({ error: 'Signed document not found' });
+    }
+    res.type('text/plain; charset=utf-8');
+    return res.sendFile(path.resolve(contract.signedTextPath));
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/marketing-manager/contracts/sign/:token', (req, res) => {
   try {
     const token = String(req.params.token || '').trim();
@@ -2295,7 +2532,11 @@ app.get('/api/marketing-manager/contracts/sign/:token', (req, res) => {
         signatureDataUrl: contract.signatureDataUrl || '',
         hasDocument: Boolean(contract.filePath),
         documentName: contract.originalName || '',
-        documentPath: contract.filePath ? `/api/marketing-manager/contracts/sign/${token}/document` : ''
+        documentPath: contract.filePath ? `/api/marketing-manager/contracts/sign/${token}/document` : '',
+        signedDocumentPath:
+          contract.status === 'signed' && contract.signedTextPath
+            ? `/api/marketing-manager/contracts/sign/${token}/document`
+            : ''
       }
     });
   } catch (error) {
@@ -2310,11 +2551,58 @@ app.get('/api/marketing-manager/contracts/sign/:token/document', (req, res) => {
     const data = readMarketingContracts();
     const contract = data.contracts.find((x) => x.token === token);
     if (!contract) return res.status(404).json({ error: 'Contract not found' });
+    if ((contract.status || 'pending') === 'signed' && contract.signedTextPath && fs.existsSync(contract.signedTextPath)) {
+      res.type('text/plain; charset=utf-8');
+      return res.sendFile(path.resolve(contract.signedTextPath));
+    }
     if (!contract.filePath || !fs.existsSync(contract.filePath)) {
       return res.status(404).json({ error: 'Document file not found' });
     }
     if (contract.mimeType) res.type(contract.mimeType);
     return res.sendFile(path.resolve(contract.filePath));
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/marketing-manager/contracts/sign/:token/download', (req, res) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'Invalid token' });
+    const data = readMarketingContracts();
+    const contract = data.contracts.find((x) => x.token === token);
+    if (!contract) return res.status(404).json({ error: 'Contract not found' });
+    if ((contract.status || 'pending') !== 'signed') {
+      return res.status(409).json({ error: 'Contract must be signed before download' });
+    }
+    const state = readMarketingManagerState();
+    const customer = mmFindCustomer(state, contract.customerId);
+    const pdf =
+      contract.signedPdfPath && fs.existsSync(contract.signedPdfPath)
+        ? fs.readFileSync(contract.signedPdfPath)
+        : mmBuildSignedContractPdf(contract, customer?.name || 'Customer');
+    const safeTitle = String(contract.title || 'contract').replace(/[^a-zA-Z0-9_-]+/g, '_');
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${safeTitle || 'contract'}-signed.pdf"`);
+    return res.send(pdf);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/marketing-manager/contracts/sign/:token/email-copy', async (req, res) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'Invalid token' });
+    const toEmail = String(req.body?.email || '').trim();
+    if (!mmValidEmail(toEmail)) return res.status(400).json({ error: 'Valid email address is required' });
+    const data = readMarketingContracts();
+    const contract = data.contracts.find((x) => x.token === token);
+    if (!contract) return res.status(404).json({ error: 'Contract not found' });
+    const state = readMarketingManagerState();
+    const customer = mmFindCustomer(state, contract.customerId);
+    await mmSendSignedCopyByEmail(contract, customer?.name || 'Customer', toEmail);
+    return res.json({ success: true });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -2343,10 +2631,10 @@ app.post('/api/marketing-manager/contracts/sign/:token', (req, res) => {
     contract.signatureDataUrl = signatureDataUrl;
     contract.status = 'signed';
     contract.signedAt = new Date().toISOString();
-    writeMarketingContracts(data);
-
     const state = readMarketingManagerState();
     const customer = mmFindCustomer(state, contract.customerId);
+    mmCreateSignedArtifacts(contract, customer?.name || 'Customer');
+    writeMarketingContracts(data);
     mmNotifyContractSigned(contract, customer?.name || 'Customer').catch((notifyErr) => {
       console.warn('[Marketing Manager] Signed contract notification failed:', notifyErr.message);
     });
