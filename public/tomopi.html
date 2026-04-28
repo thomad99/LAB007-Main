@@ -358,6 +358,167 @@
       font-size: 12px;
       color: var(--muted);
     }
+    .pi-box-panel {
+      margin: 0 0 16px 0;
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 12px;
+      background:
+        radial-gradient(circle at 86% 20%, rgba(59,130,246,0.28), transparent 45%),
+        #05080f;
+      padding: 18px;
+    }
+    .pi-box-title {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 26px;
+      letter-spacing: 0.03em;
+      margin-bottom: 14px;
+      color: #f8fafc;
+    }
+    .pi-box-accent {
+      width: 56px;
+      height: 10px;
+      border-radius: 1px;
+      background: #f07c2f;
+      display: inline-block;
+    }
+    .pi-cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+    }
+    .pi-card {
+      background: rgba(20,105,145,0.92);
+      border: 1px solid rgba(53,158,211,0.5);
+      border-radius: 16px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.08);
+      color: #f8fafc;
+      padding: 18px 14px;
+      min-height: 104px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      gap: 6px;
+      text-align: center;
+      cursor: pointer;
+      transition: transform 0.15s ease, filter 0.15s ease, border-color 0.15s ease;
+    }
+    .pi-card:hover {
+      transform: translateY(-1px);
+      filter: brightness(1.06);
+      border-color: rgba(117,205,255,0.65);
+    }
+    .pi-card-label {
+      font-size: 17px;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+    }
+    .pi-card-value {
+      font-size: 36px;
+      line-height: 1;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      word-break: break-word;
+    }
+    .pi-card-value.pi-value-sm { font-size: 22px; }
+    .pi-card-value.pi-value-md { font-size: 28px; }
+    .pi-edit-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(2,8,20,0.65);
+      z-index: 1200;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+    }
+    .pi-edit-overlay.open { display: flex; }
+    .pi-edit-modal {
+      width: 100%;
+      max-width: 430px;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 14px;
+      background: #111826;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+      overflow: hidden;
+    }
+    .pi-edit-head {
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .pi-edit-head h4 {
+      margin: 0;
+      font-size: 16px;
+      color: #f8fafc;
+    }
+    .pi-close-btn {
+      border: 1px solid rgba(255,255,255,0.2);
+      background: transparent;
+      color: #cbd5e1;
+      border-radius: 8px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+    }
+    .pi-edit-body { padding: 16px; }
+    .pi-edit-body select,
+    .pi-edit-body input[type="time"],
+    .pi-edit-body input[type="number"] {
+      width: 100%;
+      background: #0d1117;
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      padding: 12px;
+      font-family: inherit;
+      font-size: 16px;
+    }
+    .pi-stepper {
+      display: grid;
+      grid-template-columns: 54px 1fr 54px;
+      gap: 10px;
+      align-items: center;
+    }
+    .pi-step-btn {
+      height: 48px;
+      font-size: 24px;
+      line-height: 1;
+      border: 1px solid rgba(255,255,255,0.18);
+      border-radius: 10px;
+      background: #0d1117;
+      color: #e2e8f0;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .pi-edit-actions {
+      display: flex;
+      gap: 10px;
+      justify-content: flex-end;
+      margin-top: 14px;
+    }
+    .pi-edit-actions button {
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 10px;
+      padding: 9px 14px;
+      font-size: 14px;
+      font-family: inherit;
+      cursor: pointer;
+    }
+    .pi-btn-cancel {
+      background: transparent;
+      color: #cbd5e1;
+    }
+    .pi-btn-save {
+      background: var(--accent);
+      color: #fff;
+      border-color: rgba(59,130,246,0.7);
+    }
   </style>
 </head>
 <body>
@@ -371,6 +532,52 @@
 
     <div class="panel">
       <h2>Display config (JSON)</h2>
+      <div class="pi-box-panel">
+        <div class="pi-box-title"><span class="pi-box-accent"></span><span>PI DISPLAY</span></div>
+        <div class="pi-cards" id="piCards">
+          <button class="pi-card" type="button" data-control="modeSelect" data-title="Mode">
+            <span class="pi-card-label">Mode</span>
+            <span class="pi-card-value pi-value-md" id="piVal-modeSelect">-</span>
+          </button>
+          <button class="pi-card" type="button" data-control="rotateSelect" data-title="Screen Rotation">
+            <span class="pi-card-label">Screen Rotation</span>
+            <span class="pi-card-value pi-value-md" id="piVal-rotateSelect">-</span>
+          </button>
+          <button class="pi-card" type="button" data-control="brightnessSelect" data-title="Brightness">
+            <span class="pi-card-label">Brightness</span>
+            <span class="pi-card-value" id="piVal-brightnessSelect">-</span>
+          </button>
+          <button class="pi-card" type="button" data-control="scheduleEnabled" data-title="Schedule">
+            <span class="pi-card-label">Schedule</span>
+            <span class="pi-card-value pi-value-sm" id="piVal-scheduleEnabled">-</span>
+          </button>
+          <button class="pi-card" type="button" data-control="onTimeInput" data-title="Screen ON at">
+            <span class="pi-card-label">ON Time</span>
+            <span class="pi-card-value pi-value-sm" id="piVal-onTimeInput">-</span>
+          </button>
+          <button class="pi-card" type="button" data-control="offTimeInput" data-title="Screen OFF at">
+            <span class="pi-card-label">OFF Time</span>
+            <span class="pi-card-value pi-value-sm" id="piVal-offTimeInput">-</span>
+          </button>
+          <button class="pi-card" type="button" data-control="fontColorSelect" data-title="Font Color">
+            <span class="pi-card-label">Font Color</span>
+            <span class="pi-card-value pi-value-sm" id="piVal-fontColorSelect">-</span>
+          </button>
+          <button class="pi-card" type="button" data-control="bgColorSelect" data-title="Background">
+            <span class="pi-card-label">Background</span>
+            <span class="pi-card-value pi-value-sm" id="piVal-bgColorSelect">-</span>
+          </button>
+        </div>
+      </div>
+      <div class="pi-edit-overlay" id="piEditOverlay">
+        <div class="pi-edit-modal">
+          <div class="pi-edit-head">
+            <h4 id="piEditTitle">Edit setting</h4>
+            <button type="button" class="pi-close-btn" id="piEditClose">Close</button>
+          </div>
+          <div class="pi-edit-body" id="piEditBody"></div>
+        </div>
+      </div>
 
       <div class="ctrl-section">
         <details>
@@ -703,6 +910,11 @@
     const simSub = document.getElementById('simSub');
     const simFeed = document.getElementById('simFeed');
     const simTicker = document.getElementById('simTicker');
+    const piCards = document.getElementById('piCards');
+    const piEditOverlay = document.getElementById('piEditOverlay');
+    const piEditTitle = document.getElementById('piEditTitle');
+    const piEditBody = document.getElementById('piEditBody');
+    const piEditClose = document.getElementById('piEditClose');
 
     const CONFIG_URL = '/tomopi/config.json';
     const RSS_PRESETS_DEFAULT = {
@@ -746,6 +958,7 @@
       updater(json);
       editor.value = JSON.stringify(json, null, 2);
       updateSimulator();
+      refreshPiCards();
     }
 
     function ensureColorOption(sel, val, label) {
@@ -846,6 +1059,125 @@
         fontSizeInput.value = json.slideshow.clock.font_size || '';
       }
       updateSimulator();
+      refreshPiCards();
+    }
+
+    function formatPiValue(el) {
+      if (!el) return '-';
+      if (el.id === 'brightnessSelect') return `${el.value || '--'}%`;
+      if (el.id === 'scheduleEnabled') return el.value === 'true' ? 'enabled' : 'always on';
+      if (el.tagName === 'SELECT') {
+        return (el.options[el.selectedIndex] && el.options[el.selectedIndex].textContent) || el.value || '-';
+      }
+      return el.value || '-';
+    }
+
+    function refreshPiCards() {
+      const map = [
+        'modeSelect',
+        'rotateSelect',
+        'brightnessSelect',
+        'scheduleEnabled',
+        'onTimeInput',
+        'offTimeInput',
+        'fontColorSelect',
+        'bgColorSelect'
+      ];
+      map.forEach((id) => {
+        const el = document.getElementById(id);
+        const out = document.getElementById(`piVal-${id}`);
+        if (out) out.textContent = formatPiValue(el);
+      });
+    }
+
+    function closePiEditor() {
+      piEditOverlay.classList.remove('open');
+      piEditBody.innerHTML = '';
+    }
+
+    function commitPiControl(targetEl, newValue) {
+      if (!targetEl) return;
+      targetEl.value = String(newValue);
+      targetEl.dispatchEvent(new Event('change', { bubbles: true }));
+      targetEl.dispatchEvent(new Event('blur', { bubbles: true }));
+      refreshPiCards();
+      closePiEditor();
+    }
+
+    function openPiControl(controlId, title) {
+      const targetEl = document.getElementById(controlId);
+      if (!targetEl) return;
+      piEditTitle.textContent = title || 'Edit setting';
+      piEditBody.innerHTML = '';
+
+      const actions = document.createElement('div');
+      actions.className = 'pi-edit-actions';
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'pi-btn-cancel';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', closePiEditor);
+      const saveBtn = document.createElement('button');
+      saveBtn.className = 'pi-btn-save';
+      saveBtn.textContent = 'Save';
+
+      if (targetEl.tagName === 'SELECT') {
+        const select = targetEl.cloneNode(true);
+        select.id = '';
+        select.value = targetEl.value;
+        piEditBody.appendChild(select);
+        saveBtn.addEventListener('click', () => commitPiControl(targetEl, select.value));
+      } else if (targetEl.type === 'number') {
+        const stepWrap = document.createElement('div');
+        stepWrap.className = 'pi-stepper';
+        const minus = document.createElement('button');
+        minus.type = 'button';
+        minus.className = 'pi-step-btn';
+        minus.textContent = '−';
+        const num = document.createElement('input');
+        num.type = 'number';
+        num.value = targetEl.value || '';
+        if (targetEl.min) num.min = targetEl.min;
+        if (targetEl.max) num.max = targetEl.max;
+        if (targetEl.step) num.step = targetEl.step;
+        const plus = document.createElement('button');
+        plus.type = 'button';
+        plus.className = 'pi-step-btn';
+        plus.textContent = '+';
+        minus.addEventListener('click', () => {
+          const step = Number(num.step || 1);
+          const cur = Number(num.value || 0);
+          const min = num.min !== '' ? Number(num.min) : -Infinity;
+          num.value = String(Math.max(min, cur - step));
+        });
+        plus.addEventListener('click', () => {
+          const step = Number(num.step || 1);
+          const cur = Number(num.value || 0);
+          const max = num.max !== '' ? Number(num.max) : Infinity;
+          num.value = String(Math.min(max, cur + step));
+        });
+        stepWrap.appendChild(minus);
+        stepWrap.appendChild(num);
+        stepWrap.appendChild(plus);
+        piEditBody.appendChild(stepWrap);
+        saveBtn.addEventListener('click', () => commitPiControl(targetEl, num.value));
+      } else if (targetEl.type === 'time') {
+        const time = targetEl.cloneNode(true);
+        time.id = '';
+        time.value = targetEl.value || '';
+        piEditBody.appendChild(time);
+        saveBtn.addEventListener('click', () => commitPiControl(targetEl, time.value));
+      } else {
+        const input = targetEl.cloneNode(true);
+        input.id = '';
+        input.value = targetEl.value || '';
+        piEditBody.appendChild(input);
+        saveBtn.addEventListener('click', () => commitPiControl(targetEl, input.value));
+      }
+
+      actions.appendChild(cancelBtn);
+      actions.appendChild(saveBtn);
+      piEditBody.appendChild(actions);
+      piEditOverlay.classList.add('open');
     }
 
     function rgbArrayToCss(arr, fallback) {
@@ -1052,6 +1384,7 @@
         populateFontsFromConfig(json);
         populateRssPresets(json);
         syncControlsFromJson();
+        refreshPiCards();
         setStatus('Loaded', 'success');
       } catch (e) {
         setStatus('Load failed: ' + e.message, 'error');
@@ -1111,6 +1444,17 @@
     editor.addEventListener('input', syncControlsFromJson);
     load();
     setInterval(updateSimulator, 1000);
+    if (piCards) {
+      piCards.addEventListener('click', (e) => {
+        const card = e.target.closest('.pi-card');
+        if (!card) return;
+        openPiControl(card.dataset.control, card.dataset.title || 'Edit setting');
+      });
+    }
+    piEditClose.addEventListener('click', closePiEditor);
+    piEditOverlay.addEventListener('click', (e) => {
+      if (e.target === piEditOverlay) closePiEditor();
+    });
 
     // Photo upload
     const uploadZone = document.getElementById('uploadZone');
