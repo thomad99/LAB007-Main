@@ -5,6 +5,7 @@ const express = require('express');
 const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
+const crypto = require('crypto');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 const { parseStringPromise } = require('xml2js');
@@ -193,6 +194,12 @@ app.get('/digitalmarketing', (req, res) => {
 // Serve marketing manager page
 app.get('/marketing-manager', (req, res) => {
   const p = path.join(__dirname, 'public', 'marketing-manager.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
+});
+
+app.get('/marketing-manager/sign/:token', (req, res) => {
+  const p = path.join(__dirname, 'public', 'marketing-sign.html');
   if (fs.existsSync(p)) return res.sendFile(p);
   return res.status(404).send('Not found');
 });
@@ -1773,6 +1780,118 @@ function writeMarketingManagerState(state) {
   fs.writeFileSync(marketingManagerPath, JSON.stringify(state, null, 2), 'utf8');
 }
 
+const marketingManagerContractsPath = path.join(marketingManagerDataDir, 'marketing-contracts.json');
+const marketingManagerContractDocsDir = path.join(marketingManagerDataDir, 'contracts');
+if (!fs.existsSync(marketingManagerContractDocsDir)) {
+  fs.mkdirSync(marketingManagerContractDocsDir, { recursive: true });
+}
+
+const mmAllowedContractExt = new Set(['.pdf', '.doc', '.docx', '.txt', '.png', '.jpg', '.jpeg']);
+const marketingContractsUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, marketingManagerContractDocsDir),
+    filename: (req, file, cb) => {
+      const safeName = String(file.originalname || 'document')
+        .replace(/[^a-zA-Z0-9._-]/g, '_')
+        .slice(0, 180);
+      cb(null, `${Date.now()}-${Math.random().toString(36).slice(2, 8)}-${safeName}`);
+    }
+  }),
+  limits: { fileSize: 1024 * 1024 * 25 }, // 25MB
+  fileFilter: (req, file, cb) => {
+    const ext = path.extname(String(file.originalname || '').toLowerCase());
+    if (!mmAllowedContractExt.has(ext)) {
+      cb(new Error('Unsupported file type. Use PDF, DOC, DOCX, TXT, PNG, JPG, or JPEG.'));
+      return;
+    }
+    cb(null, true);
+  }
+});
+
+function readMarketingContracts() {
+  try {
+    if (!fs.existsSync(marketingManagerContractsPath)) return { contracts: [] };
+    const raw = fs.readFileSync(marketingManagerContractsPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.contracts)) return { contracts: [] };
+    return parsed;
+  } catch (error) {
+    console.error('readMarketingContracts:', error.message);
+    return { contracts: [] };
+  }
+}
+
+function writeMarketingContracts(data) {
+  const dir = path.dirname(marketingManagerContractsPath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(marketingManagerContractsPath, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function mmValidSignatureDataUrl(value) {
+  const s = String(value || '');
+  return /^data:image\/png;base64,[a-z0-9+/=\s]+$/i.test(s) && s.length <= 2_000_000;
+}
+
+function mmContractView(c, customerName) {
+  return {
+    id: c.id,
+    customerId: c.customerId,
+    customerName: customerName || 'Customer',
+    title: c.title,
+    body: c.body || '',
+    status: c.status || 'pending',
+    createdAt: c.createdAt,
+    signedAt: c.signedAt || null,
+    signerName: c.signerName || '',
+    signDate: c.signDate || '',
+    signPath: `/marketing-manager/sign/${c.token}`,
+    hasDocument: Boolean(c.filePath),
+    documentName: c.originalName || '',
+    documentPath: c.filePath ? `/api/marketing-manager/contracts/${c.id}/document` : ''
+  };
+}
+
+async function mmNotifyContractSigned(contract, customerName) {
+  if (!emailTransporter) {
+    console.warn('[Marketing Manager] Signed contract email skipped: email transporter not configured');
+    return;
+  }
+  const notifyTo = String(
+    process.env.MARKETING_MANAGER_SIGN_NOTIFY_EMAIL ||
+      process.env.MY_EMAIL_ADDRESS ||
+      process.env.SMTP_USER ||
+      ''
+  ).trim();
+  if (!notifyTo) {
+    console.warn('[Marketing Manager] Signed contract email skipped: no recipient configured');
+    return;
+  }
+  const signUrlBase = String(process.env.PUBLIC_BASE_URL || process.env.APP_BASE_URL || '').trim();
+  const signPath = `/marketing-manager/sign/${contract.token}`;
+  const signUrl = signUrlBase ? `${signUrlBase.replace(/\/+$/, '')}${signPath}` : signPath;
+  const docUrl = contract.filePath ? `${signUrl}/document` : '';
+
+  const fromAddr = process.env.SMTP_USER || 'noreply@lab007.ai';
+  await emailTransporter.sendMail({
+    from: fromAddr,
+    to: notifyTo,
+    subject: `Contract signed: ${contract.title || 'Untitled contract'}`,
+    text: [
+      'A customer has signed a Marketing Manager contract.',
+      '',
+      `Customer: ${customerName || 'Customer'}`,
+      `Contract: ${contract.title || 'Untitled contract'}`,
+      `Signed by: ${contract.signerName || 'Unknown signer'}`,
+      `Date entered: ${contract.signDate || 'N/A'}`,
+      `Signed at: ${contract.signedAt || 'N/A'}`,
+      `Signing link: ${signUrl}`,
+      docUrl ? `Document link: ${docUrl}` : ''
+    ]
+      .filter(Boolean)
+      .join('\n')
+  });
+}
+
 function mmNewId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
@@ -1804,6 +1923,51 @@ function mmFindCustomer(state, customerId) {
   return state.customers.find((c) => c.id === customerId) || null;
 }
 
+function mmNormalizeWebsite(raw) {
+  const t = String(raw || '').trim();
+  if (!t) return '';
+  const withProto = /^https?:\/\//i.test(t) ? t : `https://${t}`;
+  try {
+    const u = new URL(withProto);
+    if (!['http:', 'https:'].includes(u.protocol)) return '';
+    return u.toString();
+  } catch {
+    return '';
+  }
+}
+
+async function mmTryFetchLogo(websiteUrl) {
+  const base = mmNormalizeWebsite(websiteUrl);
+  if (!base) return null;
+  try {
+    const res = await fetchFn(base, {
+      headers: {
+        'User-Agent': 'LAB007-MarketingManager/1.0',
+        Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      },
+      redirect: 'follow',
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!res.ok) return null;
+    const html = await res.text();
+    const pick = (rx) => {
+      const m = html.match(rx);
+      return m && m[1] ? m[1].trim() : '';
+    };
+    const candidates = [
+      pick(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i),
+      pick(/<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]+href=["']([^"']+)["']/i),
+      pick(/<link[^>]+rel=["'][^"']*icon[^"']*["'][^>]+href=["']([^"']+)["']/i),
+      pick(/<img[^>]+src=["']([^"']*logo[^"']*)["']/i)
+    ].filter(Boolean);
+    if (!candidates.length) return null;
+    const abs = new URL(candidates[0], base).toString();
+    return abs;
+  } catch {
+    return null;
+  }
+}
+
 app.get('/api/marketing-manager/catalog', (req, res) => {
   return res.json({
     directory: {
@@ -1818,16 +1982,20 @@ app.get('/api/marketing-manager/state', (req, res) => {
   return res.json(readMarketingManagerState());
 });
 
-app.post('/api/marketing-manager/customers', (req, res) => {
+app.post('/api/marketing-manager/customers', async (req, res) => {
   try {
     const name = String(req.body?.name || '').trim();
     if (!name) return res.status(400).json({ error: 'Customer name is required' });
     const notes = String(req.body?.notes || '').trim();
+    const website = mmNormalizeWebsite(req.body?.website);
+    const logoUrl = website ? await mmTryFetchLogo(website) : null;
     const state = readMarketingManagerState();
     const customer = {
       id: mmNewId('cust'),
       name,
       notes,
+      website,
+      logoUrl,
       createdAt: new Date().toISOString(),
       tasks: []
     };
@@ -1980,6 +2148,210 @@ app.delete('/api/marketing-manager/customers/:customerId/tasks/:taskId', (req, r
     c.tasks.splice(idx, 1);
     writeMarketingManagerState(state);
     return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/marketing-manager/customers/:customerId/contracts', (req, res) => {
+  try {
+    const state = readMarketingManagerState();
+    const c = mmFindCustomer(state, req.params.customerId);
+    if (!c) return res.status(404).json({ error: 'Customer not found' });
+    const data = readMarketingContracts();
+    const contracts = data.contracts
+      .filter((x) => x.customerId === c.id)
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+      .map((x) => mmContractView(x, c.name));
+    return res.json({ contracts });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) => {
+  try {
+    const state = readMarketingManagerState();
+    const c = mmFindCustomer(state, req.params.customerId);
+    if (!c) return res.status(404).json({ error: 'Customer not found' });
+    const title = String(req.body?.title || '').trim();
+    const body = String(req.body?.body || '').trim();
+    if (!title) return res.status(400).json({ error: 'Contract title is required' });
+    if (!body) return res.status(400).json({ error: 'Contract body is required' });
+
+    const token = crypto.randomBytes(24).toString('hex');
+    const contract = {
+      id: mmNewId('contract'),
+      customerId: c.id,
+      title,
+      body,
+      token,
+      status: 'pending',
+      createdAt: new Date().toISOString(),
+      signedAt: null,
+      signerName: '',
+      signDate: '',
+      signatureDataUrl: ''
+    };
+    const data = readMarketingContracts();
+    data.contracts.push(contract);
+    writeMarketingContracts(data);
+    return res.status(201).json({
+      contract: mmContractView(contract, c.name)
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, res) => {
+  marketingContractsUpload.single('document')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload failed' });
+    try {
+      const state = readMarketingManagerState();
+      const c = mmFindCustomer(state, req.params.customerId);
+      if (!c) return res.status(404).json({ error: 'Customer not found' });
+      if (!req.file) return res.status(400).json({ error: 'Document file is required' });
+
+      const titleRaw = String(req.body?.title || '').trim();
+      const title = titleRaw || req.file.originalname || 'Contract document';
+      const contract = {
+        id: mmNewId('contract'),
+        customerId: c.id,
+        title,
+        body: String(req.body?.body || '').trim(),
+        token: crypto.randomBytes(24).toString('hex'),
+        status: 'pending',
+        createdAt: new Date().toISOString(),
+        signedAt: null,
+        signerName: '',
+        signDate: '',
+        signatureDataUrl: '',
+        filePath: req.file.path,
+        originalName: req.file.originalname || title,
+        mimeType: req.file.mimetype || 'application/octet-stream',
+        fileSize: req.file.size || 0
+      };
+      const data = readMarketingContracts();
+      data.contracts.push(contract);
+      writeMarketingContracts(data);
+      return res.status(201).json({ contract: mmContractView(contract, c.name) });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+app.get('/api/marketing-manager/contracts/stats', (req, res) => {
+  try {
+    const data = readMarketingContracts();
+    let total = 0;
+    let pending = 0;
+    let signed = 0;
+    data.contracts.forEach((c) => {
+      total += 1;
+      if ((c.status || 'pending') === 'signed') signed += 1;
+      else pending += 1;
+    });
+    return res.json({ total, pending, signed });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/marketing-manager/contracts/:contractId/document', (req, res) => {
+  try {
+    const data = readMarketingContracts();
+    const contract = data.contracts.find((x) => x.id === req.params.contractId);
+    if (!contract) return res.status(404).json({ error: 'Contract not found' });
+    if (!contract.filePath || !fs.existsSync(contract.filePath)) {
+      return res.status(404).json({ error: 'Document file not found' });
+    }
+    if (contract.mimeType) res.type(contract.mimeType);
+    return res.sendFile(path.resolve(contract.filePath));
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/marketing-manager/contracts/sign/:token', (req, res) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'Invalid token' });
+    const data = readMarketingContracts();
+    const contract = data.contracts.find((x) => x.token === token);
+    if (!contract) return res.status(404).json({ error: 'Contract not found' });
+    const state = readMarketingManagerState();
+    const customer = mmFindCustomer(state, contract.customerId);
+    return res.json({
+      contract: {
+        title: contract.title,
+        body: contract.body,
+        status: contract.status || 'pending',
+        customerName: customer?.name || 'Customer',
+        signerName: contract.signerName || '',
+        signDate: contract.signDate || '',
+        signedAt: contract.signedAt || null,
+        signatureDataUrl: contract.signatureDataUrl || '',
+        hasDocument: Boolean(contract.filePath),
+        documentName: contract.originalName || '',
+        documentPath: contract.filePath ? `/api/marketing-manager/contracts/sign/${token}/document` : ''
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/marketing-manager/contracts/sign/:token/document', (req, res) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'Invalid token' });
+    const data = readMarketingContracts();
+    const contract = data.contracts.find((x) => x.token === token);
+    if (!contract) return res.status(404).json({ error: 'Contract not found' });
+    if (!contract.filePath || !fs.existsSync(contract.filePath)) {
+      return res.status(404).json({ error: 'Document file not found' });
+    }
+    if (contract.mimeType) res.type(contract.mimeType);
+    return res.sendFile(path.resolve(contract.filePath));
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/marketing-manager/contracts/sign/:token', (req, res) => {
+  try {
+    const token = String(req.params.token || '').trim();
+    if (!token) return res.status(400).json({ error: 'Invalid token' });
+    const fullName = String(req.body?.fullName || '').trim();
+    const signDate = String(req.body?.date || '').trim();
+    const signatureDataUrl = String(req.body?.signatureDataUrl || '').trim();
+    if (!fullName) return res.status(400).json({ error: 'Full name is required' });
+    if (!signDate) return res.status(400).json({ error: 'Date is required' });
+    if (!mmValidSignatureDataUrl(signatureDataUrl)) {
+      return res.status(400).json({ error: 'Signature is required' });
+    }
+
+    const data = readMarketingContracts();
+    const contract = data.contracts.find((x) => x.token === token);
+    if (!contract) return res.status(404).json({ error: 'Contract not found' });
+    if (contract.status === 'signed') return res.status(409).json({ error: 'Contract already signed' });
+
+    contract.signerName = fullName;
+    contract.signDate = signDate;
+    contract.signatureDataUrl = signatureDataUrl;
+    contract.status = 'signed';
+    contract.signedAt = new Date().toISOString();
+    writeMarketingContracts(data);
+
+    const state = readMarketingManagerState();
+    const customer = mmFindCustomer(state, contract.customerId);
+    mmNotifyContractSigned(contract, customer?.name || 'Customer').catch((notifyErr) => {
+      console.warn('[Marketing Manager] Signed contract notification failed:', notifyErr.message);
+    });
+
+    return res.json({ success: true, signedAt: contract.signedAt });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }

@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LAB007 Contract Signing</title>
+  <style>
+    :root { --bg:#0a0a0b; --panel:#16161a; --line:rgba(255,255,255,.1); --text:#e8e8e6; --gold:#c9a84c; --muted:#9a9aa3; --ok:#2ecc87; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Arial, sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 860px; margin: 28px auto; padding: 0 16px 24px; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:14px; }
+    h1 { margin:0 0 8px; font-size:28px; }
+    h2 { margin:0 0 8px; font-size:19px; }
+    .muted { color:var(--muted); }
+    .body { white-space:pre-wrap; line-height:1.6; }
+    label { display:block; font-size:13px; color:var(--muted); margin:8px 0 6px; }
+    input { width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--line); background:#111114; color:var(--text); }
+    canvas { width:100%; max-width: 620px; height: 190px; border:1px dashed var(--line); border-radius:8px; background:#0d0d10; touch-action:none; }
+    .row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    button { border:0; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:700; }
+    .gold { background:var(--gold); color:#0a0a0b; }
+    .ghost { background:transparent; border:1px solid var(--line); color:var(--text); }
+    .ok { color:var(--ok); font-weight:700; }
+    .error { color:#ff6b6b; font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Electronic Contract</h1>
+      <p class="muted" id="custName">Loading…</p>
+    </div>
+    <div class="card">
+      <h2 id="title">Contract</h2>
+      <p class="muted" id="docMeta"></p>
+      <div id="docViewer" class="body"></div>
+      <div class="body" id="bodyText"></div>
+      <p class="muted" id="signedMeta"></p>
+    </div>
+    <div class="card">
+      <label for="fullName">Full name</label>
+      <input id="fullName" type="text" placeholder="Your full name" />
+      <label for="signDate">Date</label>
+      <input id="signDate" type="date" />
+      <label>Signature</label>
+      <canvas id="sigCanvas" width="620" height="190"></canvas>
+      <div class="row">
+        <button class="ghost" id="clearBtn" type="button">Clear signature</button>
+        <button class="gold" id="signBtn" type="button">Sign contract</button>
+      </div>
+      <p id="statusMsg" class="muted"></p>
+    </div>
+  </div>
+  <script>
+    (function () {
+      const token = location.pathname.split('/').pop();
+      const titleEl = document.getElementById('title');
+      const bodyEl = document.getElementById('bodyText');
+      const custEl = document.getElementById('custName');
+      const msgEl = document.getElementById('statusMsg');
+      const docMetaEl = document.getElementById('docMeta');
+      const docViewerEl = document.getElementById('docViewer');
+      const signedMetaEl = document.getElementById('signedMeta');
+      const nameEl = document.getElementById('fullName');
+      const dateEl = document.getElementById('signDate');
+      const signBtn = document.getElementById('signBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const canvas = document.getElementById('sigCanvas');
+      const ctx = canvas.getContext('2d');
+      let drawing = false;
+      let hasInk = false;
+      let signed = false;
+
+      function pointerXY(ev) {
+        const r = canvas.getBoundingClientRect();
+        const src = ev.touches ? ev.touches[0] : ev;
+        const x = (src.clientX - r.left) * (canvas.width / r.width);
+        const y = (src.clientY - r.top) * (canvas.height / r.height);
+        return { x, y };
+      }
+      function startDraw(ev) {
+        if (signed) return;
+        ev.preventDefault();
+        drawing = true;
+        const p = pointerXY(ev);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+      }
+      function moveDraw(ev) {
+        if (!drawing || signed) return;
+        ev.preventDefault();
+        const p = pointerXY(ev);
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#e8e8e6';
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        hasInk = true;
+      }
+      function endDraw() {
+        drawing = false;
+      }
+      function clearSignature() {
+        if (signed) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        hasInk = false;
+      }
+
+      async function api(path, opt) {
+        const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opt });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || r.statusText);
+        return j;
+      }
+
+      async function load() {
+        try {
+          const data = await api('/api/marketing-manager/contracts/sign/' + token);
+          const c = data.contract || {};
+          titleEl.textContent = c.title || 'Contract';
+          bodyEl.textContent = c.body || '';
+          custEl.textContent = 'Customer: ' + (c.customerName || 'Customer');
+          if (c.hasDocument && c.documentPath) {
+            const docUrl = c.documentPath;
+            const docName = c.documentName || 'Contract document';
+            docMetaEl.textContent = 'Document: ';
+            const link = document.createElement('a');
+            link.href = docUrl;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.style.color = '#c9a84c';
+            link.textContent = docName;
+            docMetaEl.appendChild(link);
+            const lower = String(docName).toLowerCase();
+            if (lower.endsWith('.pdf')) {
+              docViewerEl.innerHTML = '<iframe src="' + docUrl + '" style="width:100%;height:480px;border:1px solid rgba(255,255,255,.1);border-radius:8px;" title="Contract document"></iframe>';
+            } else if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+              docViewerEl.innerHTML = '<img src="' + docUrl + '" alt="Contract document" style="max-width:100%;border:1px solid rgba(255,255,255,.1);border-radius:8px;" />';
+            } else {
+              docViewerEl.innerHTML = '';
+            }
+          } else {
+            docMetaEl.textContent = '';
+            docViewerEl.innerHTML = '';
+          }
+          if (c.status === 'signed') {
+            signed = true;
+            nameEl.value = c.signerName || '';
+            dateEl.value = c.signDate || '';
+            nameEl.disabled = true;
+            dateEl.disabled = true;
+            signBtn.disabled = true;
+            signBtn.textContent = 'Already signed';
+            if (c.signatureDataUrl) {
+              const img = new Image();
+              img.onload = function () { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
+              img.src = c.signatureDataUrl;
+            }
+            signedMetaEl.className = 'ok';
+            signedMetaEl.textContent = 'Signed on ' + (c.signedAt || c.signDate || 'saved date');
+          } else {
+            dateEl.value = new Date().toISOString().slice(0, 10);
+          }
+        } catch (err) {
+          msgEl.className = 'error';
+          msgEl.textContent = err.message;
+        }
+      }
+
+      signBtn.addEventListener('click', async function () {
+        msgEl.className = 'muted';
+        msgEl.textContent = 'Saving signature...';
+        const fullName = nameEl.value.trim();
+        const date = dateEl.value;
+        if (!fullName) {
+          msgEl.className = 'error';
+          msgEl.textContent = 'Full name is required.';
+          return;
+        }
+        if (!date) {
+          msgEl.className = 'error';
+          msgEl.textContent = 'Date is required.';
+          return;
+        }
+        if (!hasInk) {
+          msgEl.className = 'error';
+          msgEl.textContent = 'Please draw your signature.';
+          return;
+        }
+        try {
+          await api('/api/marketing-manager/contracts/sign/' + token, {
+            method: 'POST',
+            body: JSON.stringify({ fullName, date, signatureDataUrl: canvas.toDataURL('image/png') })
+          });
+          signed = true;
+          signBtn.disabled = true;
+          nameEl.disabled = true;
+          dateEl.disabled = true;
+          msgEl.className = 'ok';
+          msgEl.textContent = 'Contract signed and stored successfully.';
+        } catch (err) {
+          msgEl.className = 'error';
+          msgEl.textContent = err.message;
+        }
+      });
+
+      clearBtn.addEventListener('click', clearSignature);
+      canvas.addEventListener('mousedown', startDraw);
+      canvas.addEventListener('mousemove', moveDraw);
+      window.addEventListener('mouseup', endDraw);
+      canvas.addEventListener('touchstart', startDraw, { passive: false });
+      canvas.addEventListener('touchmove', moveDraw, { passive: false });
+      canvas.addEventListener('touchend', endDraw, { passive: false });
+      load();
+    })();
+  </script>
+</body>
+</html>

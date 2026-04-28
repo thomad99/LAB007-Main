@@ -2,7 +2,11 @@
  * Marketing Manager — customers, tasks, dashboards (uses /api/marketing-manager/*)
  */
 (function () {
-  const state = { data: { customers: [] }, catalog: { directory: { usa: [], paid: [] }, campaigns: [] } };
+  const state = {
+    data: { customers: [] },
+    catalog: { directory: { usa: [], paid: [] }, campaigns: [] },
+    contractStats: { total: 0, pending: 0, signed: 0 }
+  };
   let selectedId = null;
 
   const $ = (sel) => document.querySelector(sel);
@@ -75,13 +79,22 @@
     return j;
   }
 
+  async function apiForm(path, method, formData) {
+    const r = await fetch(path, { method, body: formData });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || r.statusText);
+    return j;
+  }
+
   async function refresh() {
-    const [st, cat] = await Promise.all([
+    const [st, cat, cstats] = await Promise.all([
       api('/api/marketing-manager/state'),
-      api('/api/marketing-manager/catalog')
+      api('/api/marketing-manager/catalog'),
+      api('/api/marketing-manager/contracts/stats').catch(() => ({ total: 0, pending: 0, signed: 0 }))
     ]);
     state.data = st;
     state.catalog = cat;
+    state.contractStats = cstats || { total: 0, pending: 0, signed: 0 };
     if (selectedId && !state.data.customers.find((c) => c.id === selectedId)) selectedId = null;
     if (!selectedId && state.data.customers.length) selectedId = state.data.customers[0].id;
     render();
@@ -113,6 +126,18 @@
           <div class="mm-dash-val">${g.completed}</div>
           <div class="mm-dash-label">Completed</div>
         </div>
+        <div class="mm-dash-card">
+          <div class="mm-dash-val">${state.contractStats.total || 0}</div>
+          <div class="mm-dash-label">Contracts total</div>
+        </div>
+        <div class="mm-dash-card mm-accent-started">
+          <div class="mm-dash-val">${state.contractStats.pending || 0}</div>
+          <div class="mm-dash-label">Contracts pending</div>
+        </div>
+        <div class="mm-dash-card mm-accent-done">
+          <div class="mm-dash-val">${state.contractStats.signed || 0}</div>
+          <div class="mm-dash-label">Contracts signed</div>
+        </div>
       </div>
     `;
   }
@@ -124,10 +149,11 @@
       .map((c) => {
         const active = c.id === selectedId ? ' is-active' : '';
         const counts = countTasks(c);
+        const site = c.website ? c.website.replace(/^https?:\/\//i, '').replace(/\/$/, '') : '';
         return `
       <button type="button" class="mm-cust-btn${active}" data-id="${c.id}">
         <span class="mm-cust-name">${escapeHtml(c.name)}</span>
-        <span class="mm-cust-meta">${counts.completed}/${counts.total} done</span>
+        <span class="mm-cust-meta">${counts.completed}/${counts.total} done${site ? ` • ${escapeHtml(site)}` : ''}</span>
       </button>`;
       })
       .join('');
@@ -150,9 +176,10 @@
       addBtn.addEventListener('click', async () => {
         const name = prompt('Customer / account name');
         if (!name || !name.trim()) return;
+        const website = (prompt('Website (optional, e.g. example.com)') || '').trim();
         await api('/api/marketing-manager/customers', {
           method: 'POST',
-          body: JSON.stringify({ name: name.trim() })
+          body: JSON.stringify({ name: name.trim(), website })
         });
         await refresh();
       });
@@ -417,6 +444,23 @@
     });
   }
 
+  function fmtDate(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return String(iso);
+    return d.toLocaleString();
+  }
+
+  async function copyText(value) {
+    try {
+      if (navigator.clipboard?.writeText) {
+        await navigator.clipboard.writeText(value);
+        return true;
+      }
+    } catch (_) {}
+    return false;
+  }
+
   function renderMain() {
     const main = $('#mm-main');
     if (!main) return;
@@ -438,6 +482,8 @@
       <div class="mm-main-head">
         <div>
           <h2>${escapeHtml(cust.name)}</h2>
+          ${cust.logoUrl ? `<img src="${escapeHtml(cust.logoUrl)}" alt="${escapeHtml(cust.name)} logo" style="height:34px; max-width:180px; object-fit:contain; margin:8px 0 4px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); padding:4px;" />` : ''}
+          ${cust.website ? `<p class="mm-muted"><a href="${escapeHtml(cust.website)}" target="_blank" rel="noopener" style="color:var(--blue); text-decoration:none;">${escapeHtml(cust.website.replace(/^https?:\/\//i, ''))}</a></p>` : ''}
           <p class="mm-muted">${escapeHtml(cust.notes || 'No notes — click Edit.')}</p>
         </div>
         <div class="mm-main-actions">
@@ -469,6 +515,21 @@
         <select id="mm-task-select" class="mm-select">${taskOpts || '<option value="">No tasks yet</option>'}</select>
         <div id="mm-task-meta" class="mm-task-meta"></div>
         <div id="mm-task-tool" class="mm-task-tool"></div>
+      </div>
+
+      <div class="mm-task-panel">
+        <label class="mm-muted">Electronic contracts</label>
+        <div class="mm-task-meta" id="mm-contracts-meta">
+          <button type="button" class="btn-mm" id="mm-new-contract">New contract</button>
+          <button type="button" class="btn-mm-ghost" id="mm-refresh-contracts">Refresh</button>
+        </div>
+        <div class="mm-task-meta" style="margin-top:12px;">
+          <input type="text" id="mm-contract-upload-title" class="mm-input" placeholder="Uploaded document title (optional)" />
+          <input type="file" id="mm-contract-upload-file" class="mm-input" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" style="margin-top:8px;" />
+          <button type="button" class="btn-mm" id="mm-upload-contract" style="margin-top:8px;">Upload document for e-sign</button>
+          <p class="mm-small">Supported: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG (max 25MB).</p>
+        </div>
+        <div id="mm-contracts-list" class="mm-task-tool"><p class="mm-muted">Loading contracts…</p></div>
       </div>
     `;
 
@@ -525,6 +586,104 @@
       selectedId = null;
       await refresh();
     });
+
+    async function loadContracts() {
+      const listEl = $('#mm-contracts-list');
+      if (!listEl) return;
+      try {
+        const data = await api(`/api/marketing-manager/customers/${cust.id}/contracts`);
+        const contracts = data.contracts || [];
+        const signedCount = contracts.filter((x) => x.status === 'signed').length;
+        const pendingCount = contracts.length - signedCount;
+        if (!contracts.length) {
+          listEl.innerHTML = '<p class="mm-muted">No contracts yet for this customer.</p>';
+          return;
+        }
+        listEl.innerHTML =
+          `<div class="mm-tool-head" style="margin-bottom:10px;">
+            <span class="mm-pill">Customer contracts: ${contracts.length}</span>
+            <span class="mm-pill">Pending: ${pendingCount}</span>
+            <span class="mm-pill">Signed: ${signedCount}</span>
+          </div>` +
+          contracts
+          .map((ct) => {
+            const statusClass = ct.status === 'signed' ? 'mm-st-done' : 'mm-st-started';
+            const statusText = ct.status === 'signed' ? 'Signed' : 'Pending signature';
+            return `
+              <div class="mm-sug-row">
+                <div style="min-width:0;">
+                  <div style="font-weight:600;">${escapeHtml(ct.title || 'Contract')}</div>
+                  <div class="mm-small">Created: ${escapeHtml(fmtDate(ct.createdAt))}</div>
+                  ${ct.signedAt ? `<div class="mm-small">Signed: ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerName || 'Signer')}</div>` : ''}
+                </div>
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
+                  <span class="mm-status-badge ${statusClass}">${statusText}</span>
+                  <button type="button" class="btn-mm-tiny" data-open-contract="${escapeHtml(ct.signPath)}">Open</button>
+                  <button type="button" class="btn-mm-tiny" data-copy-contract="${escapeHtml(ct.signPath)}">Copy link</button>
+                  ${
+                    ct.documentPath
+                      ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.documentPath)}" target="_blank" rel="noopener" style="text-decoration:none;">Doc</a>`
+                      : ''
+                  }
+                </div>
+              </div>
+            `;
+          })
+          .join('');
+        listEl.querySelectorAll('[data-open-contract]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const p = btn.getAttribute('data-open-contract');
+            if (!p) return;
+            window.open(p, '_blank', 'noopener');
+          });
+        });
+        listEl.querySelectorAll('[data-copy-contract]').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            const p = btn.getAttribute('data-copy-contract');
+            if (!p) return;
+            const full = `${window.location.origin}${p}`;
+            const ok = await copyText(full);
+            if (ok) alert('Signing link copied.');
+            else prompt('Copy signing link', full);
+          });
+        });
+      } catch (err) {
+        listEl.innerHTML = `<p class="mm-error">${escapeHtml(err.message)}</p>`;
+      }
+    }
+
+    $('#mm-new-contract')?.addEventListener('click', async () => {
+      const title = prompt('Contract title', `${cust.name} Service Agreement`);
+      if (!title || !title.trim()) return;
+      const body =
+        prompt(
+          'Contract body text',
+          `This agreement is made between LAB007 and ${cust.name}.\n\nScope of work:\n- Digital marketing services\n- Campaign setup and ongoing optimization\n\nBy signing, you agree to the terms and authorize LAB007 to proceed.`
+        ) || '';
+      if (!body.trim()) return alert('Contract body is required.');
+      await api(`/api/marketing-manager/customers/${cust.id}/contracts`, {
+        method: 'POST',
+        body: JSON.stringify({ title: title.trim(), body: body.trim() })
+      });
+      await loadContracts();
+    });
+
+    $('#mm-refresh-contracts')?.addEventListener('click', loadContracts);
+    $('#mm-upload-contract')?.addEventListener('click', async () => {
+      const fileInput = $('#mm-contract-upload-file');
+      const titleInput = $('#mm-contract-upload-title');
+      const file = fileInput?.files && fileInput.files[0];
+      if (!file) return alert('Select a document file to upload.');
+      const fd = new FormData();
+      fd.append('document', file);
+      if (titleInput?.value?.trim()) fd.append('title', titleInput.value.trim());
+      await apiForm(`/api/marketing-manager/customers/${cust.id}/contracts/upload`, 'POST', fd);
+      if (titleInput) titleInput.value = '';
+      if (fileInput) fileInput.value = '';
+      await refresh();
+      await loadContracts();
+    });
+    loadContracts();
 
     const sel = $('#mm-task-select');
     const tasks = cust.tasks || [];
