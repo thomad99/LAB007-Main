@@ -8,6 +8,7 @@ const fs = require('fs');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 const { router: aimailRouter } = require('./aimail');
+const { registerSpamblokRoutes } = require('./lib/spamblok');
 const fetchFn = global.fetch || ((...args) => import('node-fetch').then(({ default: f }) => f(...args)));
 
 const app = express();
@@ -43,6 +44,32 @@ if (!fs.existsSync(marketingReportsDir)) {
 }
 console.log('Marketing reports dir:', marketingReportsDir);
 console.log('Marketing reports index:', marketingReportsIndexPath);
+
+// Marketing Manager state file lives in MarketMG/Clients (matches persistent disk layout on Render).
+// Set LAB007_DATA_DIR=/var/data/lab007 so data is stored at /var/data/lab007/MarketMG/Clients/marketing-manager.json
+// Or set MARKETING_MANAGER_DATA_DIR to the full Clients folder path.
+const legacyMarketingManagerPath = path.join(__dirname, 'data', 'marketing-manager.json');
+const marketingManagerDataDir = (() => {
+  const explicit = String(process.env.MARKETING_MANAGER_DATA_DIR || '').trim();
+  if (explicit) return path.resolve(explicit);
+  const diskRoot = String(process.env.LAB007_DATA_DIR || process.env.LAB007_DISK_ROOT || '').trim();
+  if (diskRoot) return path.join(path.resolve(diskRoot), 'MarketMG', 'Clients');
+  return path.join(__dirname, 'data', 'MarketMG', 'Clients');
+})();
+const marketingManagerPath = path.join(marketingManagerDataDir, 'marketing-manager.json');
+if (!fs.existsSync(marketingManagerDataDir)) {
+  fs.mkdirSync(marketingManagerDataDir, { recursive: true });
+}
+if (!fs.existsSync(marketingManagerPath) && fs.existsSync(legacyMarketingManagerPath)) {
+  try {
+    fs.copyFileSync(legacyMarketingManagerPath, marketingManagerPath);
+    console.log('[Marketing Manager] Migrated:', legacyMarketingManagerPath, '→', marketingManagerPath);
+  } catch (err) {
+    console.warn('[Marketing Manager] Legacy migrate failed:', err.message);
+  }
+}
+console.log('Marketing manager dir:', marketingManagerDataDir);
+console.log('Marketing manager file:', marketingManagerPath);
 
 /** When set, task JSON always uses this volume path (GitHub task sync stays off — avoids empty GitHub wiping the UI). */
 const ggppiDataDirExplicit = String(process.env.GGPPI_DATA_DIR || '').trim().length > 0;
@@ -88,6 +115,8 @@ console.log('CWD :', process.cwd());
 app.use(cors());
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+registerSpamblokRoutes(app);
 
 // Add request logging middleware at the very top to catch ALL requests
 app.use((req, res, next) => {
@@ -1562,6 +1591,470 @@ app.post('/api/marketing-analyzer/compare', (req, res) => {
   } catch (error) {
     console.error('Failed to compare marketing reports:', error);
     return res.status(500).json({ error: 'Failed to compare reports.' });
+  }
+});
+
+// ── Digital Marketing: Anthropic SEO analyzer proxy (used by /digitalmarketing) ──
+const ANTHROPIC_ANALYZE_MODEL = process.env.ANTHROPIC_ANALYZE_MODEL || 'claude-sonnet-4-20250514';
+
+app.post('/api/analyze', async (req, res) => {
+  try {
+    const prompt = req.body?.prompt;
+    if (!prompt || typeof prompt !== 'string') {
+      return res.status(400).json({ success: false, error: 'No prompt provided' });
+    }
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return res.status(500).json({
+        success: false,
+        error: 'ANTHROPIC_API_KEY not set in environment variables'
+      });
+    }
+    const payload = {
+      model: ANTHROPIC_ANALYZE_MODEL,
+      max_tokens: 6000,
+      messages: [{ role: 'user', content: prompt }]
+    };
+    const response = await fetchFn('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.type === 'error' || data.error) {
+      const msg =
+        (data.error && (data.error.message || data.error.type)) ||
+        data.message ||
+        `Anthropic request failed (${response.status})`;
+      return res.status(500).json({ success: false, error: String(msg) });
+    }
+    const text = (data.content || []).map((c) => c.text || '').join('');
+    if (!text) {
+      return res.status(500).json({ success: false, error: 'Empty response from Anthropic' });
+    }
+    return res.json({ success: true, text });
+  } catch (error) {
+    console.error('/api/analyze error:', error);
+    return res.status(500).json({ success: false, error: error.message || 'Analyze failed' });
+  }
+});
+
+// ── Marketing Manager API (customers + tasks); file path: marketingManagerPath (see boot logs) ──
+
+const MM_DIRECTORY_USA = [
+  ['Apple Business Connect', 'https://businessconnect.apple.com/'],
+  ['Yelp', 'https://www.yelp.com/'],
+  ['Yellow Pages', 'https://www.yellowpages.com/'],
+  ['Manta', 'https://www.manta.com/'],
+  ['Hotfrog', 'https://www.hotfrog.com/'],
+  ['Superpages', 'https://www.superpages.com/'],
+  ['Citysearch', 'https://www.citysearch.com/'],
+  ['Foursquare', 'https://foursquare.com/'],
+  ['Bing Places for Business', 'https://www.bingplaces.com/'],
+  ['Chamber of Commerce', 'https://www.chamberofcommerce.com/'],
+  ['Better Business Bureau (BBB)', 'https://www.bbb.org/'],
+  ['MerchantCircle', 'https://www.merchantcircle.com/'],
+  ['Alignable', 'https://www.alignable.com/'],
+  ['Local.com', 'https://www.local.com/'],
+  ['EZLocal', 'https://www.ezlocal.com/'],
+  ['MapQuest', 'https://www.mapquest.com/'],
+  ['USCity.net', 'https://www.uscity.net/'],
+  ['Factual', 'https://www.factual.com/'],
+  ['Brownbook', 'https://www.brownbook.net/'],
+  ['AOL Local', 'https://local.aol.com/'],
+  ['Nextdoor', 'https://nextdoor.com/'],
+  ['LocalStack', 'https://www.localstack.com/'],
+  ['CitySquares', 'https://www.citysquares.com/'],
+  ['ShowMeLocal', 'https://www.showmelocal.com/'],
+  ['Business Directory USA', 'https://www.businessdirectoryusa.com/'],
+  ['IndieBiz', 'https://www.indiebiz.com/'],
+  ['LocalDatabase', 'https://www.localdatabase.com/'],
+  ['Facebook Marketplace', 'https://www.facebook.com/help/1889067784738765/']
+];
+const MM_DIRECTORY_PAID = [
+  ['Bark', 'https://www.bark.com/en/us/'],
+  ['Thumbtack', 'https://www.thumbtack.com/'],
+  ['Kompass', 'https://us.kompass.com/'],
+  ['JustLuxe', 'https://www.justluxe.com/'],
+  ['Spoke', 'https://www.spoke.com/']
+];
+
+const MM_CAMPAIGN_PRESETS = [
+  {
+    key: 'brand_positioning',
+    title: 'Brand Positioning & Messaging',
+    description:
+      'Define who you are, what makes you different, and why customers should care. (Because “we’re passionate about quality” is basically the beige wallpaper of marketing.)'
+  },
+  {
+    key: 'target_audience',
+    title: 'Target Audience Identification',
+    description:
+      'Clearly define your ideal customer—age, location, income, interests, buying habits, and pain points.'
+  },
+  {
+    key: 'website_landing',
+    title: 'Website & Landing Page Optimization',
+    description:
+      'Make sure your website loads fast, looks professional, works on mobile, and converts visitors into leads or sales.'
+  },
+  {
+    key: 'local_seo_gbp',
+    title: 'Local SEO & Google Business Profile',
+    description:
+      'Optimize for local searches so people can find you on Google, Maps, and nearby searches like “best patio store near me.”'
+  },
+  {
+    key: 'content_strategy',
+    title: 'Content Creation Strategy',
+    description:
+      'Plan blogs, videos, reels, before/after photos, FAQs, and educational content that builds trust and authority.'
+  },
+  {
+    key: 'social_media',
+    title: 'Social Media Presence',
+    description:
+      'Choose the right platforms (like Facebook, Instagram, TikTok, LinkedIn) and stay consistent instead of trying to be famous everywhere.'
+  },
+  {
+    key: 'paid_ads',
+    title: 'Paid Advertising Strategy',
+    description:
+      'Plan ad campaigns using Google Ads, Meta Ads, YouTube, etc., with clear budgets and measurable goals.'
+  },
+  {
+    key: 'lead_capture',
+    title: 'Lead Capture & Follow-Up System',
+    description:
+      'Build forms, calls-to-action, email capture, SMS follow-up, and CRM processes so leads don’t vanish into the marketing Bermuda Triangle.'
+  },
+  {
+    key: 'reputation',
+    title: 'Reputation Management & Reviews',
+    description:
+      'Generate and manage reviews on Google, Yelp, and other directories to build trust and improve rankings.'
+  },
+  {
+    key: 'reporting',
+    title: 'Reporting, Analytics & Optimization',
+    description:
+      'Track what works using Google Analytics, ad reporting, call tracking, and conversion data—because guessing is not a growth strategy.'
+  }
+];
+
+function readMarketingManagerState() {
+  try {
+    if (!fs.existsSync(marketingManagerPath)) return { customers: [] };
+    const raw = fs.readFileSync(marketingManagerPath, 'utf8');
+    const p = JSON.parse(raw);
+    if (!p || typeof p !== 'object' || !Array.isArray(p.customers)) return { customers: [] };
+    return p;
+  } catch (error) {
+    console.error('readMarketingManagerState:', error.message);
+    return { customers: [] };
+  }
+}
+
+function writeMarketingManagerState(state) {
+  const dir = path.dirname(marketingManagerPath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(marketingManagerPath, JSON.stringify(state, null, 2), 'utf8');
+}
+
+function mmNewId(prefix) {
+  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
+}
+
+function mmBuildDirectoryChecklist() {
+  const items = [];
+  MM_DIRECTORY_USA.forEach(([name, url], i) => {
+    items.push({
+      id: `usa_${i}`,
+      section: 'usa',
+      name,
+      url,
+      done: false
+    });
+  });
+  MM_DIRECTORY_PAID.forEach(([name, url], i) => {
+    items.push({
+      id: `paid_${i}`,
+      section: 'paid',
+      name,
+      url,
+      done: false
+    });
+  });
+  return items;
+}
+
+function mmFindCustomer(state, customerId) {
+  return state.customers.find((c) => c.id === customerId) || null;
+}
+
+app.get('/api/marketing-manager/catalog', (req, res) => {
+  return res.json({
+    directory: {
+      usa: MM_DIRECTORY_USA.map(([name, url]) => ({ name, url })),
+      paid: MM_DIRECTORY_PAID.map(([name, url]) => ({ name, url }))
+    },
+    campaigns: MM_CAMPAIGN_PRESETS
+  });
+});
+
+app.get('/api/marketing-manager/state', (req, res) => {
+  return res.json(readMarketingManagerState());
+});
+
+app.post('/api/marketing-manager/customers', (req, res) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    if (!name) return res.status(400).json({ error: 'Customer name is required' });
+    const notes = String(req.body?.notes || '').trim();
+    const state = readMarketingManagerState();
+    const customer = {
+      id: mmNewId('cust'),
+      name,
+      notes,
+      createdAt: new Date().toISOString(),
+      tasks: []
+    };
+    state.customers.push(customer);
+    writeMarketingManagerState(state);
+    return res.status(201).json({ customer });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch('/api/marketing-manager/customers/:customerId', (req, res) => {
+  try {
+    const state = readMarketingManagerState();
+    const c = mmFindCustomer(state, req.params.customerId);
+    if (!c) return res.status(404).json({ error: 'Customer not found' });
+    if (req.body.name !== undefined) c.name = String(req.body.name || '').trim() || c.name;
+    if (req.body.notes !== undefined) c.notes = String(req.body.notes || '').trim();
+    c.updatedAt = new Date().toISOString();
+    writeMarketingManagerState(state);
+    return res.json({ customer: c });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/marketing-manager/customers/:customerId', (req, res) => {
+  try {
+    const state = readMarketingManagerState();
+    const idx = state.customers.findIndex((c) => c.id === req.params.customerId);
+    if (idx === -1) return res.status(404).json({ error: 'Customer not found' });
+    state.customers.splice(idx, 1);
+    writeMarketingManagerState(state);
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/marketing-manager/customers/:customerId/tasks', (req, res) => {
+  try {
+    const kind = String(req.body?.kind || '').trim();
+    const state = readMarketingManagerState();
+    const c = mmFindCustomer(state, req.params.customerId);
+    if (!c) return res.status(404).json({ error: 'Customer not found' });
+
+    const now = new Date().toISOString();
+    let task;
+
+    if (kind === 'directory') {
+      task = {
+        id: mmNewId('task'),
+        kind: 'directory',
+        title: 'Directory listings — USA & paid platforms',
+        status: 'not_started',
+        checklist: mmBuildDirectoryChecklist(),
+        createdAt: now,
+        updatedAt: now
+      };
+    } else if (kind === 'keywords') {
+      task = {
+        id: mmNewId('task'),
+        kind: 'keywords',
+        title: 'Keywords — research & LIKE list',
+        status: 'not_started',
+        likedKeywords: [],
+        notes: '',
+        createdAt: now,
+        updatedAt: now
+      };
+    } else if (kind === 'campaign') {
+      const key = String(req.body?.campaignKey || '').trim();
+      const preset = MM_CAMPAIGN_PRESETS.find((p) => p.key === key);
+      if (!preset) return res.status(400).json({ error: 'Invalid campaignKey' });
+      task = {
+        id: mmNewId('task'),
+        kind: 'campaign',
+        campaignKey: preset.key,
+        title: preset.title,
+        description: preset.description,
+        status: 'not_started',
+        notes: '',
+        createdAt: now,
+        updatedAt: now
+      };
+    } else {
+      return res.status(400).json({ error: 'kind must be directory, keywords, or campaign' });
+    }
+
+    c.tasks.push(task);
+    writeMarketingManagerState(state);
+    return res.status(201).json({ task });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.patch('/api/marketing-manager/customers/:customerId/tasks/:taskId', (req, res) => {
+  try {
+    const state = readMarketingManagerState();
+    const c = mmFindCustomer(state, req.params.customerId);
+    if (!c) return res.status(404).json({ error: 'Customer not found' });
+    const task = c.tasks.find((t) => t.id === req.params.taskId);
+    if (!task) return res.status(404).json({ error: 'Task not found' });
+
+    if (req.body.status !== undefined) {
+      const s = String(req.body.status || '').trim();
+      if (!['not_started', 'started', 'completed'].includes(s)) {
+        return res.status(400).json({ error: 'Invalid status' });
+      }
+      task.status = s;
+    }
+    if (task.kind === 'directory' && req.body.checklist !== undefined) {
+      if (!Array.isArray(req.body.checklist)) return res.status(400).json({ error: 'checklist must be an array' });
+      const byId = new Map(task.checklist.map((row) => [row.id, row]));
+      req.body.checklist.forEach((patch) => {
+        if (!patch || !patch.id) return;
+        const row = byId.get(patch.id);
+        if (row && typeof patch.done === 'boolean') row.done = patch.done;
+      });
+    }
+    if (task.kind === 'keywords') {
+      if (req.body.likedKeywords !== undefined) {
+        if (!Array.isArray(req.body.likedKeywords)) {
+          return res.status(400).json({ error: 'likedKeywords must be an array of strings' });
+        }
+        task.likedKeywords = req.body.likedKeywords.map((k) => String(k || '').trim()).filter(Boolean);
+      }
+      if (req.body.notes !== undefined) task.notes = String(req.body.notes || '');
+    }
+    if (task.kind === 'campaign' && req.body.notes !== undefined) {
+      task.notes = String(req.body.notes || '');
+    }
+
+    task.updatedAt = new Date().toISOString();
+    writeMarketingManagerState(state);
+    return res.json({ task });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/marketing-manager/customers/:customerId/tasks/:taskId', (req, res) => {
+  try {
+    const state = readMarketingManagerState();
+    const c = mmFindCustomer(state, req.params.customerId);
+    if (!c) return res.status(404).json({ error: 'Customer not found' });
+    const idx = c.tasks.findIndex((t) => t.id === req.params.taskId);
+    if (idx === -1) return res.status(404).json({ error: 'Task not found' });
+    c.tasks.splice(idx, 1);
+    writeMarketingManagerState(state);
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+function mmHeuristicKeywordSuggestions(seeds) {
+  const modifiers = [
+    'near me',
+    'best',
+    'services',
+    'company',
+    'cost',
+    'reviews',
+    'local',
+    'hire',
+    'quote'
+  ];
+  const out = new Set();
+  for (const raw of seeds) {
+    const s = String(raw || '')
+      .trim()
+      .toLowerCase();
+    if (!s || s.length > 80) continue;
+    modifiers.forEach((m) => out.add(`${s} ${m}`));
+    out.add(`${s} sarasota`);
+    out.add(`${s} florida`);
+  }
+  return [...out].slice(0, 40);
+}
+
+app.post('/api/marketing-manager/keyword-suggest', async (req, res) => {
+  try {
+    const seeds = Array.isArray(req.body?.seeds) ? req.body.seeds : [];
+    const clean = seeds.map((s) => String(s || '').trim()).filter(Boolean).slice(0, 12);
+    if (!clean.length) return res.status(400).json({ error: 'Provide seeds as a non-empty array' });
+
+    const apiKey = process.env.ANTHROPIC_API_KEY;
+    if (!apiKey) {
+      return res.json({ suggestions: mmHeuristicKeywordSuggestions(clean), source: 'heuristic' });
+    }
+
+    const prompt = `The user is building a local SEO keyword list for a business. Seed keywords:
+${clean.map((k, i) => `${i + 1}. ${k}`).join('\n')}
+
+Return ONLY a JSON array of 20-35 short keyword phrases (strings), no markdown, no explanation. Include local and commercial intent variations, long-tail phrases, and related services. JSON only.`;
+
+    const payload = {
+      model: ANTHROPIC_ANALYZE_MODEL,
+      max_tokens: 1200,
+      messages: [{ role: 'user', content: prompt }]
+    };
+    const response = await fetchFn('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01'
+      },
+      body: JSON.stringify(payload)
+    });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok || data.type === 'error' || data.error) {
+      return res.json({ suggestions: mmHeuristicKeywordSuggestions(clean), source: 'heuristic' });
+    }
+    const text = (data.content || []).map((c) => c.text || '').join('').trim();
+    const jsonText = text.replace(/```json|```/g, '').trim();
+    let arr;
+    try {
+      arr = JSON.parse(jsonText);
+    } catch {
+      return res.json({ suggestions: mmHeuristicKeywordSuggestions(clean), source: 'heuristic' });
+    }
+    const suggestions = (Array.isArray(arr) ? arr : [])
+      .map((x) => (typeof x === 'string' ? x.trim() : ''))
+      .filter(Boolean)
+      .slice(0, 40);
+    if (!suggestions.length) {
+      return res.json({ suggestions: mmHeuristicKeywordSuggestions(clean), source: 'heuristic' });
+    }
+    return res.json({ suggestions, source: 'anthropic' });
+  } catch (error) {
+    console.error('keyword-suggest:', error);
+    return res.status(500).json({ error: error.message });
   }
 });
 

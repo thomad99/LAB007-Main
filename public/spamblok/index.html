@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>SPAMBLOK · LAB007</title>
+<style>
+  :root {
+    --bg: #0f1115;
+    --panel: #171a21;
+    --panel-2: #1f242d;
+    --border: #2a313c;
+    --text: #e6e8eb;
+    --muted: #8b94a3;
+    --accent: #5b8cff;
+    --accent-hover: #6f9bff;
+    --success: #3ddc84;
+    --danger: #ff5c5c;
+    --warn: #ffb547;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+  }
+  header {
+    padding: 24px 32px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+  }
+  h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
+  .subtitle { color: var(--muted); font-size: 13px; margin-top: 4px; }
+
+  .actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  .stats { color: var(--muted); font-size: 13px; margin-right: 8px; }
+
+  button {
+    background: var(--panel-2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 9px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: all 0.15s ease;
+  }
+  button:hover:not(:disabled) { background: #262d38; border-color: #3a4252; }
+  button:disabled { opacity: 0.5; cursor: not-allowed; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.primary:hover:not(:disabled) { background: var(--accent-hover); border-color: var(--accent-hover); }
+  button.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
+  button.danger:hover:not(:disabled) { background: rgba(255,92,92,0.1); }
+
+  main { padding: 24px 32px; max-width: 1200px; margin: 0 auto; }
+
+  .filter-bar {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 16px;
+    align-items: center;
+  }
+  input[type="text"], input[type="number"] {
+    background: var(--panel);
+    color: var(--text);
+    border: 1px solid var(--border);
+    padding: 9px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  input[type="text"]:focus, input[type="number"]:focus { border-color: var(--accent); }
+  input[type="text"] { flex: 1; max-width: 360px; }
+  input[type="number"] { width: 100px; }
+
+  .table-wrap {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead { background: var(--panel-2); }
+  th {
+    text-align: left;
+    padding: 12px 14px;
+    font-weight: 600;
+    color: var(--muted);
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    border-bottom: 1px solid var(--border);
+  }
+  td { padding: 12px 14px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+  tbody tr.selected { background: rgba(91,140,255,0.08); }
+
+  input[type="checkbox"] {
+    width: 16px; height: 16px; cursor: pointer; accent-color: var(--accent);
+  }
+  .sender { font-weight: 500; }
+  .sender-addr { color: var(--muted); font-size: 12px; margin-top: 2px; }
+  .domain {
+    font-family: "SF Mono", Menlo, monospace;
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--panel-2);
+    padding: 3px 8px;
+    border-radius: 4px;
+    display: inline-block;
+  }
+  .method-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 600;
+  }
+  .badge-http { background: rgba(91,140,255,0.15); color: var(--accent); }
+  .badge-mailto { background: rgba(255,181,71,0.15); color: var(--warn); }
+  .badge-oneclick { background: rgba(61,220,132,0.15); color: var(--success); }
+
+  .link-cell { max-width: 280px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .link-cell a { color: var(--accent); text-decoration: none; font-size: 12px; }
+  .link-cell a:hover { text-decoration: underline; }
+
+  .empty {
+    padding: 60px 20px;
+    text-align: center;
+    color: var(--muted);
+  }
+
+  .toast-stack {
+    position: fixed; bottom: 24px; right: 24px;
+    display: flex; flex-direction: column; gap: 8px; z-index: 100;
+  }
+  .toast {
+    background: var(--panel-2);
+    border: 1px solid var(--border);
+    padding: 12px 16px;
+    border-radius: 8px;
+    font-size: 13px;
+    min-width: 240px;
+    animation: slideIn 0.2s ease;
+  }
+  .toast.success { border-color: var(--success); }
+  .toast.error { border-color: var(--danger); }
+  @keyframes slideIn { from { transform: translateX(20px); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  .results-modal {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.6);
+    display: none;
+    align-items: center; justify-content: center;
+    z-index: 200;
+    padding: 24px;
+  }
+  .results-modal.open { display: flex; }
+  .results-content {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    width: 100%; max-width: 700px;
+    max-height: 80vh;
+    display: flex; flex-direction: column;
+  }
+  .results-header {
+    padding: 18px 22px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center;
+  }
+  .results-body { padding: 16px 22px; overflow-y: auto; flex: 1; }
+  .result-item {
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; gap: 12px;
+    font-size: 13px;
+  }
+  .result-item:last-child { border-bottom: none; }
+  .result-status { font-size: 12px; font-weight: 600; }
+  .result-status.ok { color: var(--success); }
+  .result-status.fail { color: var(--danger); }
+
+  .spinner {
+    display: inline-block;
+    width: 14px; height: 14px;
+    border: 2px solid var(--muted);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    vertical-align: middle;
+    margin-right: 6px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <a href="/" style="color:var(--muted); font-size:12px; text-decoration:none; display:inline-block; margin-bottom:10px;">← LAB007 Home</a>
+    <h1>SPAMBLOK</h1>
+    <div class="subtitle" id="subtitle">Scan your inbox for List-Unsubscribe headers and bulk-unsubscribe from mailing lists</div>
+  </div>
+  <div class="actions">
+    <input type="number" id="limitInput" value="500" min="50" max="5000" title="How many recent messages to scan" />
+    <button id="scanBtn" class="primary">Scan inbox</button>
+  </div>
+</header>
+
+<main>
+  <div class="filter-bar" id="filterBar" style="display:none;">
+    <input type="text" id="searchInput" placeholder="Filter by sender or domain..." />
+    <span class="stats" id="selCount">0 selected</span>
+    <button id="selectAllBtn">Select all</button>
+    <button id="selectNoneBtn">Clear</button>
+    <button id="goBtn" class="primary" disabled>Unsubscribe selected →</button>
+  </div>
+
+  <div class="table-wrap" id="tableWrap" style="display:none;">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:40px;"><input type="checkbox" id="masterCheck" /></th>
+          <th>Sender</th>
+          <th>Domain</th>
+          <th>Method</th>
+          <th>Unsubscribe link</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+  </div>
+
+  <div class="empty" id="emptyState">Click <strong>Scan inbox</strong> to begin.</div>
+</main>
+
+<div class="toast-stack" id="toastStack"></div>
+
+<div class="results-modal" id="resultsModal">
+  <div class="results-content">
+    <div class="results-header">
+      <strong id="resultsTitle">Results</strong>
+      <button onclick="closeResults()">Close</button>
+    </div>
+    <div class="results-body" id="resultsBody"></div>
+  </div>
+</div>
+
+<script>
+let allItems = [];
+let filtered = [];
+
+function toast(msg, kind = 'success') {
+  const stack = document.getElementById('toastStack');
+  const el = document.createElement('div');
+  el.className = 'toast ' + kind;
+  el.textContent = msg;
+  stack.appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+async function scan() {
+  const btn = document.getElementById('scanBtn');
+  const subtitle = document.getElementById('subtitle');
+  const limit = parseInt(document.getElementById('limitInput').value, 10) || 500;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Scanning...';
+  subtitle.textContent = 'Connecting to mailbox and parsing headers...';
+  try {
+    const res = await fetch('/spamblok/api/scan', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ limit })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Scan failed');
+    allItems = data.items;
+    subtitle.textContent = `Scanned ${data.mailbox} · found ${allItems.length} mailing lists · ${new Date(data.scannedAt).toLocaleString()}`;
+    render();
+    toast(`Found ${allItems.length} mailing lists`);
+  } catch (err) {
+    toast(err.message, 'error');
+    subtitle.textContent = 'Scan failed: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Scan inbox';
+  }
+}
+
+function render() {
+  const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  filtered = allItems.filter(i =>
+    !q ||
+    i.senderAddress.toLowerCase().includes(q) ||
+    i.senderName.toLowerCase().includes(q) ||
+    i.domain.toLowerCase().includes(q)
+  );
+
+  const tbody = document.getElementById('tbody');
+  tbody.innerHTML = '';
+
+  if (allItems.length === 0) {
+    document.getElementById('emptyState').style.display = 'block';
+    document.getElementById('emptyState').textContent = 'No mailing lists found in scanned messages.';
+    document.getElementById('tableWrap').style.display = 'none';
+    document.getElementById('filterBar').style.display = 'none';
+    return;
+  }
+
+  document.getElementById('emptyState').style.display = 'none';
+  document.getElementById('tableWrap').style.display = 'block';
+  document.getElementById('filterBar').style.display = 'flex';
+
+  for (const it of filtered) {
+    const tr = document.createElement('tr');
+    tr.dataset.uid = it.uid;
+
+    const methodBadges = [];
+    if (it.httpLinks.length) methodBadges.push('<span class="method-badge badge-http">HTTP</span>');
+    if (it.mailtoLinks.length) methodBadges.push('<span class="method-badge badge-mailto">Email</span>');
+    if (it.oneClick) methodBadges.push('<span class="method-badge badge-oneclick">1-Click</span>');
+
+    const linkPreview = it.httpLinks[0]
+      ? `<a href="${escapeHtml(it.httpLinks[0])}" target="_blank" rel="noopener">${escapeHtml(it.httpLinks[0])}</a>`
+      : it.mailtoLinks[0]
+        ? `<span style="color:var(--muted)">mailto: ${escapeHtml(it.mailtoLinks[0].address)}</span>`
+        : '—';
+
+    tr.innerHTML = `
+      <td><input type="checkbox" class="row-check" data-uid="${it.uid}" /></td>
+      <td>
+        <div class="sender">${escapeHtml(it.senderName)}</div>
+        <div class="sender-addr">${escapeHtml(it.senderAddress)}</div>
+      </td>
+      <td><span class="domain">${escapeHtml(it.domain)}</span></td>
+      <td>${methodBadges.join(' ')}</td>
+      <td class="link-cell">${linkPreview}</td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  // wire up checkboxes
+  tbody.querySelectorAll('.row-check').forEach(cb => {
+    cb.addEventListener('change', updateSelectionUI);
+  });
+  updateSelectionUI();
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+function getSelectedUids() {
+  return Array.from(document.querySelectorAll('.row-check:checked')).map(cb => parseInt(cb.dataset.uid, 10));
+}
+
+function updateSelectionUI() {
+  const selected = getSelectedUids();
+  document.getElementById('selCount').textContent = `${selected.length} selected`;
+  document.getElementById('goBtn').disabled = selected.length === 0;
+  // highlight rows
+  document.querySelectorAll('#tbody tr').forEach(tr => {
+    const cb = tr.querySelector('.row-check');
+    tr.classList.toggle('selected', cb && cb.checked);
+  });
+}
+
+async function go() {
+  const uids = getSelectedUids();
+  if (uids.length === 0) return;
+  if (!confirm(`Unsubscribe from ${uids.length} mailing list${uids.length > 1 ? 's' : ''}?`)) return;
+
+  const btn = document.getElementById('goBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>Unsubscribing...';
+
+  try {
+    const res = await fetch('/spamblok/api/unsubscribe', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ uids })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed');
+    showResults(data.results);
+  } catch (err) {
+    toast(err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Unsubscribe selected →';
+  }
+}
+
+function showResults(results) {
+  const ok = results.filter(r => r.ok).length;
+  const fail = results.length - ok;
+  document.getElementById('resultsTitle').textContent = `Results: ${ok} succeeded, ${fail} failed`;
+  const body = document.getElementById('resultsBody');
+  body.innerHTML = results.map(r => `
+    <div class="result-item">
+      <div>
+        <div><strong>${escapeHtml(r.sender || '')}</strong></div>
+        <div style="color:var(--muted); font-size:12px;">
+          ${escapeHtml(r.method || r.error || '')}
+          ${r.status ? ` · HTTP ${r.status}` : ''}
+        </div>
+      </div>
+      <div class="result-status ${r.ok ? 'ok' : 'fail'}">${r.ok ? '✓ OK' : '✗ Failed'}</div>
+    </div>
+  `).join('');
+  document.getElementById('resultsModal').classList.add('open');
+  toast(`${ok} unsubscribed${fail ? `, ${fail} failed` : ''}`, fail ? 'error' : 'success');
+}
+
+function closeResults() {
+  document.getElementById('resultsModal').classList.remove('open');
+}
+
+// wire events
+document.getElementById('scanBtn').addEventListener('click', scan);
+document.getElementById('goBtn').addEventListener('click', go);
+document.getElementById('searchInput').addEventListener('input', render);
+document.getElementById('selectAllBtn').addEventListener('click', () => {
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = true);
+  updateSelectionUI();
+});
+document.getElementById('selectNoneBtn').addEventListener('click', () => {
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = false);
+  updateSelectionUI();
+});
+document.getElementById('masterCheck').addEventListener('change', e => {
+  document.querySelectorAll('.row-check').forEach(cb => cb.checked = e.target.checked);
+  updateSelectionUI();
+});
+</script>
+</body>
+</html>
