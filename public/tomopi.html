@@ -388,6 +388,29 @@
       grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
       gap: 14px;
     }
+    .pi-group {
+      margin-top: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.02);
+      overflow: hidden;
+    }
+    .pi-group summary {
+      cursor: pointer;
+      user-select: none;
+      padding: 11px 13px;
+      font-size: 14px;
+      color: #9fc9ff;
+      font-weight: 700;
+      letter-spacing: 0.01em;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+    .pi-group[open] summary {
+      background: rgba(255,255,255,0.03);
+    }
+    .pi-group-body {
+      padding: 12px;
+    }
     .pi-card {
       background: rgba(20,105,145,0.92);
       border: 1px solid rgba(53,158,211,0.5);
@@ -531,43 +554,154 @@
     </header>
 
     <div class="panel">
-      <h2>Display config (JSON)</h2>
       <div class="pi-box-panel">
-        <div class="pi-box-title"><span class="pi-box-accent"></span><span>PI DISPLAY</span></div>
-        <div class="pi-cards" id="piCards">
-          <button class="pi-card" type="button" data-control="modeSelect" data-title="Mode">
-            <span class="pi-card-label">Mode</span>
-            <span class="pi-card-value pi-value-md" id="piVal-modeSelect">-</span>
-          </button>
-          <button class="pi-card" type="button" data-control="rotateSelect" data-title="Screen Rotation">
-            <span class="pi-card-label">Screen Rotation</span>
-            <span class="pi-card-value pi-value-md" id="piVal-rotateSelect">-</span>
-          </button>
-          <button class="pi-card" type="button" data-control="brightnessSelect" data-title="Brightness">
-            <span class="pi-card-label">Brightness</span>
-            <span class="pi-card-value" id="piVal-brightnessSelect">-</span>
-          </button>
-          <button class="pi-card" type="button" data-control="scheduleEnabled" data-title="Schedule">
-            <span class="pi-card-label">Schedule</span>
-            <span class="pi-card-value pi-value-sm" id="piVal-scheduleEnabled">-</span>
-          </button>
-          <button class="pi-card" type="button" data-control="onTimeInput" data-title="Screen ON at">
-            <span class="pi-card-label">ON Time</span>
-            <span class="pi-card-value pi-value-sm" id="piVal-onTimeInput">-</span>
-          </button>
-          <button class="pi-card" type="button" data-control="offTimeInput" data-title="Screen OFF at">
-            <span class="pi-card-label">OFF Time</span>
-            <span class="pi-card-value pi-value-sm" id="piVal-offTimeInput">-</span>
-          </button>
-          <button class="pi-card" type="button" data-control="fontColorSelect" data-title="Font Color">
-            <span class="pi-card-label">Font Color</span>
-            <span class="pi-card-value pi-value-sm" id="piVal-fontColorSelect">-</span>
-          </button>
-          <button class="pi-card" type="button" data-control="bgColorSelect" data-title="Background">
-            <span class="pi-card-label">Background</span>
-            <span class="pi-card-value pi-value-sm" id="piVal-bgColorSelect">-</span>
-          </button>
-        </div>
+        <details class="pi-group" open>
+          <summary>Display</summary>
+          <div class="pi-group-body">
+            <div class="pi-cards" id="piCards">
+              <button class="pi-card" type="button" data-control="modeSelect" data-title="Mode">
+                <span class="pi-card-label">Mode</span>
+                <span class="pi-card-value pi-value-md" id="piVal-modeSelect">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="rotateSelect" data-title="Screen Rotation">
+                <span class="pi-card-label">Screen Rotation</span>
+                <span class="pi-card-value pi-value-md" id="piVal-rotateSelect">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="brightnessSelect" data-title="Brightness">
+                <span class="pi-card-label">Brightness</span>
+                <span class="pi-card-value" id="piVal-brightnessSelect">-</span>
+              </button>
+            </div>
+          </div>
+        </details>
+        <details class="pi-group" open>
+          <summary>Scheduling</summary>
+          <div class="pi-group-body">
+            <div class="pi-cards">
+              <button class="pi-card" type="button" data-control="scheduleEnabled" data-title="Schedule">
+                <span class="pi-card-label">Schedule</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-scheduleEnabled">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="onTimeInput" data-title="Screen ON at">
+                <span class="pi-card-label">ON Time</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-onTimeInput">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="offTimeInput" data-title="Screen OFF at">
+                <span class="pi-card-label">OFF Time</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-offTimeInput">-</span>
+              </button>
+            </div>
+          </div>
+        </details>
+        <details class="pi-group" open>
+          <summary>Colors &amp; Fonts</summary>
+          <div class="pi-group-body">
+            <div class="pi-cards">
+              <button class="pi-card" type="button" data-control="fontColorSelect" data-title="Font Color">
+                <span class="pi-card-label">Font Color</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-fontColorSelect">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="bgColorSelect" data-title="Background">
+                <span class="pi-card-label">Background</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-bgColorSelect">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="fontSelect" data-title="Font">
+                <span class="pi-card-label">Font</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-fontSelect">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="fontSizeInput" data-title="Font Size">
+                <span class="pi-card-label">Font Size</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-fontSizeInput">-</span>
+              </button>
+            </div>
+          </div>
+        </details>
+        <details class="pi-group" open>
+          <summary>Refreshes</summary>
+          <div class="pi-group-body">
+            <div class="pi-cards">
+              <button class="pi-card" type="button" data-control="refreshSeconds" data-title="Global Refresh">
+                <span class="pi-card-label">Global Refresh</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-refreshSeconds">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="secondsPerSlide" data-title="Seconds per Slide">
+                <span class="pi-card-label">Sec / Slide</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-secondsPerSlide">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="refreshListSeconds" data-title="Refresh List Seconds">
+                <span class="pi-card-label">Refresh List</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-refreshListSeconds">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="itemSeconds" data-title="News Item Seconds">
+                <span class="pi-card-label">News Item</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-itemSeconds">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="refreshNewsSeconds" data-title="News Refresh Seconds">
+                <span class="pi-card-label">News Refresh</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-refreshNewsSeconds">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="refreshStocksSeconds" data-title="Stocks Refresh Seconds">
+                <span class="pi-card-label">Stocks Refresh</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-refreshStocksSeconds">-</span>
+              </button>
+            </div>
+          </div>
+        </details>
+        <details class="pi-group" open>
+          <summary>News Feed &amp; Stock Info</summary>
+          <div class="pi-group-body">
+            <div class="pi-cards">
+              <button class="pi-card" type="button" data-control="transitionSelect" data-title="Transition">
+                <span class="pi-card-label">Transition</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-transitionSelect">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="transitionMs" data-title="Transition Milliseconds">
+                <span class="pi-card-label">Transition MS</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-transitionMs">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="maxHeadlines" data-title="Max Headlines">
+                <span class="pi-card-label">Max Headlines</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-maxHeadlines">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="tickersInput" data-title="Stock Tickers">
+                <span class="pi-card-label">Tickers</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-tickersInput">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="stockFitWidth" data-title="Stock Fit Width">
+                <span class="pi-card-label">Stock Width</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-stockFitWidth">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="stockFitHeight" data-title="Stock Fit Height">
+                <span class="pi-card-label">Stock Height</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-stockFitHeight">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="stockFontMin" data-title="Stock Font Min">
+                <span class="pi-card-label">Stock Font Min</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-stockFontMin">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="stockFontMax" data-title="Stock Font Max">
+                <span class="pi-card-label">Stock Font Max</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-stockFontMax">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="stockLineSpacing" data-title="Stock Line Spacing">
+                <span class="pi-card-label">Line Spacing</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-stockLineSpacing">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="stockMaxLines" data-title="Stock Max Lines">
+                <span class="pi-card-label">Max Lines</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-stockMaxLines">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="stockFontSelect" data-title="Stock Font">
+                <span class="pi-card-label">Stock Font</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-stockFontSelect">-</span>
+              </button>
+              <button class="pi-card" type="button" data-control="rssFeeds" data-title="Custom RSS URLs">
+                <span class="pi-card-label">Custom RSS</span>
+                <span class="pi-card-value pi-value-sm" id="piVal-rssFeeds">-</span>
+              </button>
+            </div>
+          </div>
+        </details>
       </div>
       <div class="pi-edit-overlay" id="piEditOverlay">
         <div class="pi-edit-modal">
@@ -1066,6 +1200,22 @@
       if (!el) return '-';
       if (el.id === 'brightnessSelect') return `${el.value || '--'}%`;
       if (el.id === 'scheduleEnabled') return el.value === 'true' ? 'enabled' : 'always on';
+      if (['refreshSeconds','secondsPerSlide','refreshListSeconds','itemSeconds','refreshNewsSeconds','refreshStocksSeconds'].includes(el.id)) {
+        return `${el.value || '--'} s`;
+      }
+      if (el.id === 'transitionMs') return `${el.value || '--'} ms`;
+      if (el.id === 'tickersInput') {
+        const count = String(el.value || '').split(/[\n,]+/).map(s => s.trim()).filter(Boolean).length;
+        return count ? `${count} symbols` : 'none';
+      }
+      if (el.id === 'rssFeeds') {
+        const count = String(el.value || '').split('\n').map(s => s.trim()).filter(Boolean).length;
+        return count ? `${count} urls` : 'none';
+      }
+      if (el.tagName === 'TEXTAREA') {
+        const txt = String(el.value || '').trim();
+        return txt ? `${txt.slice(0, 18)}${txt.length > 18 ? '…' : ''}` : 'none';
+      }
       if (el.tagName === 'SELECT') {
         return (el.options[el.selectedIndex] && el.options[el.selectedIndex].textContent) || el.value || '-';
       }
@@ -1081,7 +1231,27 @@
         'onTimeInput',
         'offTimeInput',
         'fontColorSelect',
-        'bgColorSelect'
+        'bgColorSelect',
+        'fontSelect',
+        'fontSizeInput',
+        'refreshSeconds',
+        'secondsPerSlide',
+        'refreshListSeconds',
+        'itemSeconds',
+        'refreshNewsSeconds',
+        'refreshStocksSeconds',
+        'transitionSelect',
+        'transitionMs',
+        'maxHeadlines',
+        'tickersInput',
+        'stockFitWidth',
+        'stockFitHeight',
+        'stockFontMin',
+        'stockFontMax',
+        'stockLineSpacing',
+        'stockMaxLines',
+        'stockFontSelect',
+        'rssFeeds'
       ];
       map.forEach((id) => {
         const el = document.getElementById(id);
@@ -1166,6 +1336,13 @@
         time.value = targetEl.value || '';
         piEditBody.appendChild(time);
         saveBtn.addEventListener('click', () => commitPiControl(targetEl, time.value));
+      } else if (targetEl.tagName === 'TEXTAREA') {
+        const ta = targetEl.cloneNode(true);
+        ta.id = '';
+        ta.style.minHeight = '180px';
+        ta.value = targetEl.value || '';
+        piEditBody.appendChild(ta);
+        saveBtn.addEventListener('click', () => commitPiControl(targetEl, ta.value));
       } else {
         const input = targetEl.cloneNode(true);
         input.id = '';
