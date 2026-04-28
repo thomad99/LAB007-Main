@@ -411,6 +411,26 @@
     .pi-group-body {
       padding: 12px;
     }
+    .pi-group--display .pi-card {
+      background: rgba(24, 106, 145, 0.9);
+      border-color: rgba(91, 171, 210, 0.55);
+    }
+    .pi-group--schedule .pi-card {
+      background: rgba(35, 119, 107, 0.88);
+      border-color: rgba(112, 195, 179, 0.5);
+    }
+    .pi-group--color .pi-card {
+      background: rgba(87, 91, 145, 0.88);
+      border-color: rgba(150, 157, 220, 0.5);
+    }
+    .pi-group--refresh .pi-card {
+      background: rgba(116, 95, 66, 0.88);
+      border-color: rgba(194, 164, 122, 0.5);
+    }
+    .pi-group--news .pi-card {
+      background: rgba(105, 71, 114, 0.88);
+      border-color: rgba(178, 133, 190, 0.5);
+    }
     .pi-card {
       background: rgba(20,105,145,0.92);
       border: 1px solid rgba(53,158,211,0.5);
@@ -555,10 +575,10 @@
 
     <div class="panel">
       <div class="pi-box-panel">
-        <details class="pi-group" open>
+        <details class="pi-group pi-group--display" open>
           <summary>Display</summary>
           <div class="pi-group-body">
-            <div class="pi-cards" id="piCards">
+            <div class="pi-cards">
               <button class="pi-card" type="button" data-control="modeSelect" data-title="Mode">
                 <span class="pi-card-label">Mode</span>
                 <span class="pi-card-value pi-value-md" id="piVal-modeSelect">-</span>
@@ -574,7 +594,7 @@
             </div>
           </div>
         </details>
-        <details class="pi-group" open>
+        <details class="pi-group pi-group--schedule">
           <summary>Scheduling</summary>
           <div class="pi-group-body">
             <div class="pi-cards">
@@ -593,7 +613,7 @@
             </div>
           </div>
         </details>
-        <details class="pi-group" open>
+        <details class="pi-group pi-group--color">
           <summary>Colors &amp; Fonts</summary>
           <div class="pi-group-body">
             <div class="pi-cards">
@@ -616,7 +636,7 @@
             </div>
           </div>
         </details>
-        <details class="pi-group" open>
+        <details class="pi-group pi-group--refresh">
           <summary>Refreshes</summary>
           <div class="pi-group-body">
             <div class="pi-cards">
@@ -647,7 +667,7 @@
             </div>
           </div>
         </details>
-        <details class="pi-group" open>
+        <details class="pi-group pi-group--news">
           <summary>News Feed &amp; Stock Info</summary>
           <div class="pi-group-body">
             <div class="pi-cards">
@@ -1044,7 +1064,7 @@
     const simSub = document.getElementById('simSub');
     const simFeed = document.getElementById('simFeed');
     const simTicker = document.getElementById('simTicker');
-    const piCards = document.getElementById('piCards');
+    const piCardButtons = () => Array.from(document.querySelectorAll('.pi-card[data-control]'));
     const piEditOverlay = document.getElementById('piEditOverlay');
     const piEditTitle = document.getElementById('piEditTitle');
     const piEditBody = document.getElementById('piEditBody');
@@ -1621,13 +1641,11 @@
     editor.addEventListener('input', syncControlsFromJson);
     load();
     setInterval(updateSimulator, 1000);
-    if (piCards) {
-      piCards.addEventListener('click', (e) => {
-        const card = e.target.closest('.pi-card');
-        if (!card) return;
+    piCardButtons().forEach((card) => {
+      card.addEventListener('click', () => {
         openPiControl(card.dataset.control, card.dataset.title || 'Edit setting');
       });
-    }
+    });
     piEditClose.addEventListener('click', closePiEditor);
     piEditOverlay.addEventListener('click', (e) => {
       if (e.target === piEditOverlay) closePiEditor();
