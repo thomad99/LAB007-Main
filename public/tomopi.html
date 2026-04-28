@@ -202,6 +202,8 @@
     }
     .ctrl-item input:focus { outline: none; border-color: var(--accent); }
     .ctrl-section { margin-bottom: 20px; }
+    /* Legacy text-based editor sections are hidden now that card UI is primary */
+    .ctrl-section { display: none; }
     .ctrl-section h3 { font-size: 0.9rem; margin: 0 0 12px 0; color: var(--accent); }
     .ctrl-section details {
       border: 1px solid rgba(255,255,255,0.12);
@@ -286,6 +288,23 @@
       border-radius: 12px;
       padding: 12px;
     }
+    .sim-toolbar {
+      display: flex;
+      justify-content: flex-end;
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+    .sim-tool-btn {
+      border: 1px solid rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.04);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+    }
+    .sim-tool-btn:hover { background: rgba(255,255,255,0.1); }
     .sim-display {
       position: relative;
       width: 100%;
@@ -357,6 +376,24 @@
       margin-top: 10px;
       font-size: 12px;
       color: var(--muted);
+    }
+    .sim-wrap:fullscreen {
+      width: 100vw;
+      height: 100vh;
+      padding: 14px;
+      border-radius: 0;
+      border: none;
+      background: #04070d;
+      display: flex;
+      flex-direction: column;
+    }
+    .sim-wrap:fullscreen .sim-display {
+      flex: 1;
+      aspect-ratio: auto;
+      min-height: 0;
+    }
+    .sim-wrap:fullscreen .sim-note {
+      margin-top: 8px;
     }
     .pi-box-panel {
       margin: 0 0 16px 0;
@@ -996,7 +1033,11 @@
 
     <div class="panel">
       <h2>Display simulator</h2>
-      <div class="sim-wrap">
+      <div class="sim-wrap" id="simWrap">
+        <div class="sim-toolbar">
+          <button type="button" class="sim-tool-btn" id="simRefreshBtn">Refresh live data</button>
+          <button type="button" class="sim-tool-btn" id="simFullscreenBtn">Fullscreen</button>
+        </div>
         <div class="sim-display" id="simDisplay">
           <div class="sim-mode-badge" id="simModeBadge">mode</div>
           <div class="sim-content" id="simContent">
@@ -1064,11 +1105,21 @@
     const simSub = document.getElementById('simSub');
     const simFeed = document.getElementById('simFeed');
     const simTicker = document.getElementById('simTicker');
+    const simWrap = document.getElementById('simWrap');
+    const simRefreshBtn = document.getElementById('simRefreshBtn');
+    const simFullscreenBtn = document.getElementById('simFullscreenBtn');
     const piCardButtons = () => Array.from(document.querySelectorAll('.pi-card[data-control]'));
     const piEditOverlay = document.getElementById('piEditOverlay');
     const piEditTitle = document.getElementById('piEditTitle');
     const piEditBody = document.getElementById('piEditBody');
     const piEditClose = document.getElementById('piEditClose');
+    const simLiveData = {
+      generatedAt: null,
+      headlines: [],
+      stocks: [],
+      nextHeadlineIdx: 0,
+      fetchedAtMs: 0
+    };
 
     const CONFIG_URL = '/tomopi/config.json';
     const RSS_PRESETS_DEFAULT = {
@@ -1397,6 +1448,52 @@
       return d.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' });
     }
 
+    function formatSimTickerLine(stocks) {
+      if (!stocks || !stocks.length) return '';
+      return stocks
+        .slice(0, 10)
+        .map((s) => {
+          const sym = String(s.symbol || '').toUpperCase();
+          const p = Number.isFinite(Number(s.price)) ? Number(s.price).toFixed(2) : '--';
+          const c = Number.isFinite(Number(s.changePct)) ? `${Number(s.changePct) >= 0 ? '+' : ''}${Number(s.changePct).toFixed(2)}%` : '';
+          return [sym, p, c].filter(Boolean).join(' ');
+        })
+        .join('   ·   ');
+    }
+
+    async function fetchSimulatorLiveData(force = false) {
+      const json = getJson();
+      if (!json || json.mode !== 'news_feed') return;
+      const nf = json.news_feed || {};
+      const rssFeeds = Array.isArray(nf.rss_feeds) ? nf.rss_feeds : [];
+      const tickers = Array.isArray(nf.tickers) ? nf.tickers : [];
+      if (!rssFeeds.length && !tickers.length) return;
+
+      const refreshMs = Math.max(30, parseInt(nf.refresh_news_seconds || 300, 10)) * 1000;
+      const now = Date.now();
+      if (!force && simLiveData.fetchedAtMs && now - simLiveData.fetchedAtMs < refreshMs) return;
+
+      try {
+        const r = await fetch('/api/tomopi/sim-data', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            rssFeeds,
+            tickers,
+            maxHeadlines: nf.max_headlines || 10
+          })
+        });
+        const data = await r.json().catch(() => ({}));
+        if (!r.ok || !data.ok) return;
+        simLiveData.generatedAt = data.generatedAt || null;
+        simLiveData.headlines = Array.isArray(data.headlines) ? data.headlines : [];
+        simLiveData.stocks = Array.isArray(data.stocks) ? data.stocks : [];
+        simLiveData.fetchedAtMs = now;
+      } catch (_) {
+        // fail softly: simulator will keep previous data/sample text
+      }
+    }
+
     function updateSimulator() {
       const json = getJson();
       if (!json) return;
@@ -1416,8 +1513,24 @@
         bg = json.news_feed.bg_rgb || bg;
         font = json.news_feed.clock_font_name || json.news_feed.text_font_name || font;
         clockSize = json.news_feed.clock_font_size ? `${Math.round(json.news_feed.clock_font_size * 0.3)}px` : '';
-        feedText = 'Sample headline: Markets mixed as tech and energy sectors diverge in early trade.';
-        tickerText = (json.news_feed.tickers || ['TSLA', 'IBRX', 'AAPL']).slice(0, 8).join(' · ');
+        const headlines = simLiveData.headlines || [];
+        if (headlines.length) {
+          const idx = simLiveData.nextHeadlineIdx % headlines.length;
+          feedText = headlines[idx];
+          simLiveData.nextHeadlineIdx = (idx + 1) % headlines.length;
+        } else {
+          feedText = 'Sample headline: Markets mixed as tech and energy sectors diverge in early trade.';
+        }
+        tickerText = formatSimTickerLine(simLiveData.stocks);
+        if (!tickerText) {
+          tickerText = (json.news_feed.tickers || ['TSLA', 'IBRX', 'AAPL']).slice(0, 8).join(' · ');
+        }
+        if (simLiveData.generatedAt) {
+          const t = new Date(simLiveData.generatedAt);
+          if (!Number.isNaN(t.getTime())) {
+            subText = `Live data ${t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+          }
+        }
       } else if (mode === 'clock_basic' && json.clock_basic) {
         fg = json.clock_basic.color_rgb || fg;
         bg = json.clock_basic.bg_rgb || bg;
@@ -1450,6 +1563,7 @@
     function applyModeFromDropdown() {
       applyToEditor(j => { j.mode = modeSelect.value; });
       syncControlsFromJson();
+      fetchSimulatorLiveData(true);
     }
 
     function applyRotateFromDropdown() {
@@ -1548,6 +1662,7 @@
           j.news_feed.stock_font_name = stockFontSelect.value || 'dejavusans';
         }
       });
+      fetchSimulatorLiveData(true);
     }
 
     function populateFontsFromConfig(json) {
@@ -1641,11 +1756,39 @@
     editor.addEventListener('input', syncControlsFromJson);
     load();
     setInterval(updateSimulator, 1000);
+    setInterval(() => { fetchSimulatorLiveData(false); }, 15000);
+    fetchSimulatorLiveData(true);
     piCardButtons().forEach((card) => {
       card.addEventListener('click', () => {
         openPiControl(card.dataset.control, card.dataset.title || 'Edit setting');
       });
     });
+    if (simRefreshBtn) {
+      simRefreshBtn.addEventListener('click', async () => {
+        simRefreshBtn.disabled = true;
+        simRefreshBtn.textContent = 'Refreshing...';
+        await fetchSimulatorLiveData(true);
+        updateSimulator();
+        simRefreshBtn.disabled = false;
+        simRefreshBtn.textContent = 'Refresh live data';
+      });
+    }
+    if (simFullscreenBtn && simWrap) {
+      simFullscreenBtn.addEventListener('click', async () => {
+        try {
+          if (document.fullscreenElement === simWrap) {
+            await document.exitFullscreen();
+          } else {
+            await simWrap.requestFullscreen();
+          }
+        } catch (_) {
+          // browser can block fullscreen without user gesture/permissions
+        }
+      });
+      document.addEventListener('fullscreenchange', () => {
+        simFullscreenBtn.textContent = document.fullscreenElement === simWrap ? 'Exit Fullscreen' : 'Fullscreen';
+      });
+    }
     piEditClose.addEventListener('click', closePiEditor);
     piEditOverlay.addEventListener('click', (e) => {
       if (e.target === piEditOverlay) closePiEditor();

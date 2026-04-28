@@ -7,6 +7,7 @@ const cors = require('cors');
 const fs = require('fs');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
+const { parseStringPromise } = require('xml2js');
 const { router: aimailRouter } = require('./aimail');
 const { registerSpamblokRoutes } = require('./lib/spamblok');
 const fetchFn = global.fetch || ((...args) => import('node-fetch').then(({ default: f }) => f(...args)));
@@ -2362,6 +2363,90 @@ function saveTomoPIConfig(req, res) {
 }
 app.post('/tomopi/config.json', saveTomoPIConfig);
 app.post('/api/tomopi/config', saveTomoPIConfig);
+
+function uniqueStrings(list) {
+  return Array.from(new Set((list || []).map((s) => String(s || '').trim()).filter(Boolean)));
+}
+
+async function fetchTomopiRssHeadlines(url) {
+  try {
+    const res = await fetchFn(url, {
+      headers: { 'User-Agent': 'LAB007-TomoPI-Simulator/1.0', Accept: 'application/rss+xml, application/xml, text/xml;q=0.9,*/*;q=0.8' },
+      signal: AbortSignal.timeout(12000)
+    });
+    if (!res.ok) return [];
+    const xml = await res.text();
+    const parsed = await parseStringPromise(xml, { explicitArray: false, trim: true, mergeAttrs: true });
+    const headlines = [];
+
+    const rssItems = parsed?.rss?.channel?.item;
+    if (rssItems) {
+      const arr = Array.isArray(rssItems) ? rssItems : [rssItems];
+      arr.forEach((it) => {
+        const title = String(it?.title || '').trim();
+        if (title) headlines.push(title);
+      });
+    }
+
+    const atomEntries = parsed?.feed?.entry;
+    if (atomEntries) {
+      const arr = Array.isArray(atomEntries) ? atomEntries : [atomEntries];
+      arr.forEach((it) => {
+        const t = it?.title;
+        const title = String(typeof t === 'object' ? t?._ || '' : t || '').trim();
+        if (title) headlines.push(title);
+      });
+    }
+
+    return uniqueStrings(headlines);
+  } catch {
+    return [];
+  }
+}
+
+async function fetchTomopiStockQuotes(tickers) {
+  const symbols = uniqueStrings(tickers).map((t) => t.toUpperCase()).slice(0, 20);
+  if (!symbols.length) return [];
+  try {
+    const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols.join(','))}`;
+    const res = await fetchFn(url, {
+      headers: { 'User-Agent': 'LAB007-TomoPI-Simulator/1.0' },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!res.ok) return [];
+    const data = await res.json();
+    const out = (data?.quoteResponse?.result || []).map((q) => ({
+      symbol: String(q?.symbol || '').toUpperCase(),
+      price: Number.isFinite(Number(q?.regularMarketPrice)) ? Number(q.regularMarketPrice) : null,
+      changePct: Number.isFinite(Number(q?.regularMarketChangePercent)) ? Number(q.regularMarketChangePercent) : null
+    })).filter((x) => x.symbol);
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+// TomoPI simulator live data (RSS + stock quotes) for browser preview.
+app.post('/api/tomopi/sim-data', async (req, res) => {
+  try {
+    const rssFeeds = uniqueStrings(Array.isArray(req.body?.rssFeeds) ? req.body.rssFeeds : []).slice(0, 8);
+    const tickers = uniqueStrings(Array.isArray(req.body?.tickers) ? req.body.tickers : []).slice(0, 20);
+    const maxHeadlines = Math.max(1, Math.min(30, parseInt(req.body?.maxHeadlines || '8', 10)));
+
+    const feedResults = await Promise.all(rssFeeds.map((u) => fetchTomopiRssHeadlines(u)));
+    const headlines = uniqueStrings(feedResults.flat()).slice(0, maxHeadlines);
+    const stocks = await fetchTomopiStockQuotes(tickers);
+
+    return res.json({
+      ok: true,
+      generatedAt: new Date().toISOString(),
+      headlines,
+      stocks
+    });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message || 'Failed to build simulator data' });
+  }
+});
 
 // TomoPI images: serve at /tomopi/images/* (slideshow folder)
 app.use('/tomopi/images', express.static(tomopiImagesDir));
