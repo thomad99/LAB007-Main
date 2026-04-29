@@ -1096,7 +1096,7 @@
           <div class="sim-mode-badge" id="simModeBadge">mode</div>
           <div class="sim-content" id="simContent">
             <div class="sim-clock" id="simClock">--:--</div>
-            <div class="sim-sub" id="simSub">WebView loading...</div>
+            <div class="sim-sub" id="simSub"></div>
             <div class="sim-feed" id="simFeed"></div>
             <div class="sim-ticker" id="simTicker"></div>
           </div>
@@ -1619,27 +1619,33 @@
       simContent.style.fontFamily = `${font}, "JetBrains Mono", "Fira Code", monospace`;
       const w = simDisplay?.clientWidth || 640;
       const h = simDisplay?.clientHeight || 480;
-      const base = Math.max(24, Math.min(w / 3.4, h / 1.85));
+      const base = Math.max(20, Math.min(w / 3.8, h / 2.2));
       const configuredClockPx = clockSize ? parseInt(clockSize, 10) || 0 : 0;
-      const clockPx = Math.max(Math.round(base), configuredClockPx);
+      const rawClock = Math.max(Math.round(base), configuredClockPx);
+      const maxClockByDevice = w < 520 ? Math.round(w * 0.30) : w < 900 ? Math.round(w * 0.26) : Math.round(w * 0.22);
+      const clockPx = Math.max(18, Math.min(rawClock, maxClockByDevice));
       simClock.style.fontSize = `${clockPx}px`;
-      // Keep secondary text ~60% smaller (40% of clock size).
-      const secondaryPx = Math.max(10, Math.round(clockPx * 0.32));
+      // Keep secondary text much smaller so clock stays primary focus.
+      const secondaryPx = Math.max(9, Math.round(clockPx * 0.22));
       simSub.style.fontSize = `${secondaryPx}px`;
       simFeed.style.fontSize = `${secondaryPx}px`;
-      simTicker.style.fontSize = `${Math.max(9, Math.round(clockPx * 0.28))}px`;
+      simTicker.style.fontSize = `${Math.max(8, Math.round(clockPx * 0.18))}px`;
 
       simClock.textContent = nowClockString();
-      simSub.textContent = subText;
+      simSub.textContent = '';
       simFeed.textContent = feedText || '';
       simTicker.textContent = tickerText || '';
-      simSub.style.display = subText ? '' : 'none';
+      simSub.style.display = 'none';
       simFeed.style.display = feedText ? '' : 'none';
       simTicker.style.display = tickerText ? '' : 'none';
     }
 
     function setSimFullscreenButtonText() {
-      if (simFullscreenBtn) simFullscreenBtn.textContent = 'Fullscreen';
+      if (!simFullscreenBtn) return;
+      const isNativeFullscreen = document.fullscreenElement === simWrap;
+      const isFullscreen = isNativeFullscreen || simForcedFullscreen;
+      simFullscreenBtn.textContent = 'Fullscreen';
+      simFullscreenBtn.style.display = isFullscreen ? 'none' : '';
     }
 
     function setSimForcedFullscreen(on) {

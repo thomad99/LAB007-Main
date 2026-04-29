@@ -2188,15 +2188,16 @@ function mmCreateOriginalContractPdf(contract) {
   const outputPath = path.join(marketingManagerContractDocsDir, `${contract.id}-original.pdf`);
   const body = String(contract.body || '').trim();
   const title = String(contract.title || 'Contract');
-  const scriptPath = path.join(__dirname, 'lib', 'pdf_from_text.py');
-  const py = spawnSync('python', [scriptPath, '--output', outputPath, '--title', title, '--body', body], {
-    encoding: 'utf8'
-  });
-  if (py.status !== 0 || !fs.existsSync(outputPath)) {
-    console.warn('[Marketing Manager] Original PDF build failed:', py.stderr || py.stdout || py.status);
+  const text = `${title}\n\n${body}`;
+  try {
+    // Node-native fallback so created-doc workflow always has an original PDF.
+    fs.writeFileSync(outputPath, mmBuildSignedContractPdfFromText(text, ''));
+    if (!fs.existsSync(outputPath)) return null;
+    return outputPath;
+  } catch (err) {
+    console.warn('[Marketing Manager] Original PDF build failed:', err.message);
     return null;
   }
-  return outputPath;
 }
 
 async function mmNotifyContractSigned(contract, customerName) {
@@ -3209,14 +3210,7 @@ app.get('/api/marketing-manager/contracts/sign/:token/document', (req, res) => {
         res.type('application/pdf');
         return res.sendFile(path.resolve(contract.signedPdfPath));
       }
-      if (contract.signedHtmlPath && fs.existsSync(contract.signedHtmlPath)) {
-        res.type('text/html; charset=utf-8');
-        return res.sendFile(path.resolve(contract.signedHtmlPath));
-      }
-      if (contract.signedTextPath && fs.existsSync(contract.signedTextPath)) {
-        res.type('text/plain; charset=utf-8');
-        return res.sendFile(path.resolve(contract.signedTextPath));
-      }
+      return res.status(500).json({ error: 'Signed PDF missing. Please re-sign the document.' });
     }
     if (!contract.filePath || !fs.existsSync(contract.filePath)) {
       return res.status(404).json({ error: 'Document file not found' });
@@ -3244,22 +3238,7 @@ app.get('/api/marketing-manager/contracts/sign/:token/download', (req, res) => {
       res.setHeader('Content-Disposition', `attachment; filename="${safeTitle || 'contract'}-signed.pdf"`);
       return res.sendFile(path.resolve(contract.signedPdfPath));
     }
-    if (contract.signedHtmlPath && fs.existsSync(contract.signedHtmlPath)) {
-      res.setHeader('Content-Type', 'text/html; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="${safeTitle || 'contract'}-signed.html"`);
-      return res.sendFile(path.resolve(contract.signedHtmlPath));
-    }
-    if (contract.signedTextPath && fs.existsSync(contract.signedTextPath)) {
-      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="${safeTitle || 'contract'}-signed.txt"`);
-      return res.sendFile(path.resolve(contract.signedTextPath));
-    }
-    const state = readMarketingManagerState();
-    const customer = mmFindCustomer(state, contract.customerId);
-    const pdf = mmBuildSignedContractPdf(contract, customer?.name || 'Customer');
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${safeTitle || 'contract'}-signed.pdf"`);
-    return res.send(pdf);
+    return res.status(500).json({ error: 'Signed PDF missing. Please re-sign the document.' });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -3308,6 +3287,14 @@ app.post('/api/marketing-manager/contracts/sign/:token', (req, res) => {
     contract.signedAt = new Date().toISOString();
     const state = readMarketingManagerState();
     const customer = mmFindCustomer(state, contract.customerId);
+    if (!contract.filePath || !fs.existsSync(contract.filePath)) {
+      const originalPdfPath = mmCreateOriginalContractPdf(contract);
+      if (originalPdfPath) {
+        contract.filePath = originalPdfPath;
+        contract.originalName = contract.originalName || `${contract.title || 'contract'}.pdf`;
+        contract.mimeType = contract.mimeType || 'application/pdf';
+      }
+    }
     mmCreateSignedArtifacts(contract, customer?.name || 'Customer');
     writeMarketingContracts(data);
     mmNotifyContractSigned(contract, customer?.name || 'Customer').catch((notifyErr) => {
