@@ -2296,7 +2296,7 @@ function mmEnsureSignatureSection(bodyText) {
     out +
     [
       '---',
-      'Client Acceptance & Signature',
+      'Client Acceptance and Signature',
       '',
       '',
       'Printed Name:',
@@ -2336,7 +2336,7 @@ function mmEnsureSignatureSectionHtml(bodyHtml) {
   return (
     (source ? `${source}\n` : '') +
     `<hr />
-<p><strong>Client Acceptance &amp; Signature</strong></p>
+<p><strong>Client Acceptance and Signature</strong></p>
 <p><br /></p>
 <p><strong>Printed Name:</strong></p>
 <p><br /></p>
@@ -2515,7 +2515,7 @@ function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
     const lineToY = (lineIndex) => 760 - lineIndex * 14;
     const candidateY = lineToY(sigLineIndex) - sigH + 8;
     const sigY = Math.max(72, Math.min(720, candidateY));
-    const sigX = 320;
+    const sigX = 170;
     contentRows.push('q');
     contentRows.push(`${sigW} 0 0 ${sigH} ${sigX} ${sigY} cm`);
     contentRows.push('/Im1 Do');
@@ -3836,6 +3836,44 @@ async function fetchTomopiRssHeadlines(url) {
   }
 }
 
+async function fetchTomopiStockQuoteFromChart(symbol) {
+  try {
+    const safeSymbol = String(symbol || '').toUpperCase().trim();
+    if (!safeSymbol) return null;
+    const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(safeSymbol)}?interval=1d&range=5d`;
+    const res = await fetchFn(url, {
+      headers: { 'User-Agent': 'LAB007-TomoPI-Simulator/1.0' },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!res.ok) return null;
+    const data = await res.json();
+    const chart = data?.chart?.result?.[0];
+    const meta = chart?.meta || {};
+    const closeSeries = chart?.indicators?.quote?.[0]?.close || [];
+    const lastClose = Array.isArray(closeSeries)
+      ? [...closeSeries].reverse().find((v) => Number.isFinite(Number(v)))
+      : null;
+    const price = Number.isFinite(Number(meta?.regularMarketPrice))
+      ? Number(meta.regularMarketPrice)
+      : Number.isFinite(Number(lastClose))
+        ? Number(lastClose)
+        : null;
+    const previousClose = Number.isFinite(Number(meta?.chartPreviousClose))
+      ? Number(meta.chartPreviousClose)
+      : Number.isFinite(Number(meta?.previousClose))
+        ? Number(meta.previousClose)
+        : null;
+    const changePct =
+      Number.isFinite(price) && Number.isFinite(previousClose) && previousClose !== 0
+        ? ((price - previousClose) / previousClose) * 100
+        : null;
+    if (!Number.isFinite(price)) return null;
+    return { symbol: safeSymbol, price, changePct };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchTomopiStockQuotes(tickers) {
   const symbols = uniqueStrings(tickers).map((t) => t.toUpperCase()).slice(0, 20);
   if (!symbols.length) return [];
@@ -3852,9 +3890,19 @@ async function fetchTomopiStockQuotes(tickers) {
       price: Number.isFinite(Number(q?.regularMarketPrice)) ? Number(q.regularMarketPrice) : null,
       changePct: Number.isFinite(Number(q?.regularMarketChangePercent)) ? Number(q.regularMarketChangePercent) : null
     })).filter((x) => x.symbol);
-    return out;
+    const bySymbol = new Map(out.map((x) => [x.symbol, x]));
+    const missingSymbols = symbols.filter((sym) => {
+      const q = bySymbol.get(sym);
+      return !q || !Number.isFinite(Number(q.price));
+    });
+    if (missingSymbols.length) {
+      const fallbackQuotes = await Promise.all(missingSymbols.map((sym) => fetchTomopiStockQuoteFromChart(sym)));
+      fallbackQuotes.filter(Boolean).forEach((q) => bySymbol.set(q.symbol, q));
+    }
+    return symbols.map((sym) => bySymbol.get(sym)).filter(Boolean);
   } catch {
-    return [];
+    const fallbackQuotes = await Promise.all(symbols.map((sym) => fetchTomopiStockQuoteFromChart(sym)));
+    return fallbackQuotes.filter(Boolean);
   }
 }
 

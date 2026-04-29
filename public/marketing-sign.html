@@ -149,7 +149,7 @@
       function stripAutoSignatureSectionHtml(html) {
         const s = String(html || '');
         if (!s) return '';
-        const marker = /<p[^>]*>\s*<strong>\s*Client Acceptance\s*&(?:amp;)?\s*Signature\s*<\/strong>\s*<\/p>/i;
+        const marker = /<p[^>]*>\s*<strong>\s*Client Acceptance\s*(?:&(?:amp;)?|and)\s*Signature\s*<\/strong>\s*<\/p>/i;
         const m = s.match(marker);
         if (!m || typeof m.index !== 'number') return s;
         const cut = s.lastIndexOf('<hr', m.index);
@@ -159,9 +159,9 @@
       function stripAutoSignatureSectionText(text) {
         const s = String(text || '');
         if (!s) return '';
-        const idx = s.search(/\n\s*---\s*\n[\s\S]*Client Acceptance\s*&\s*Signature/i);
+        const idx = s.search(/\n\s*---\s*\n[\s\S]*Client Acceptance\s*(?:&|and)\s*Signature/i);
         if (idx >= 0) return s.slice(0, idx).trim();
-        const idx2 = s.search(/Client Acceptance\s*&\s*Signature/i);
+        const idx2 = s.search(/Client Acceptance\s*(?:&|and)\s*Signature/i);
         if (idx2 >= 0) return s.slice(0, idx2).trim();
         return s;
       }
@@ -191,6 +191,7 @@
           else bodyEl.textContent = stripAutoSignatureSectionText(c.body || '');
           custEl.textContent = 'Customer: ' + (c.customerName || 'Customer');
           if (c.hasDocument && c.documentPath) {
+            bodyEl.style.display = 'none';
             const docUrl = c.documentPath;
             const docName = c.documentName || 'Contract document';
             docMetaEl.textContent = 'Document: ';
@@ -210,6 +211,7 @@
               docViewerEl.innerHTML = '';
             }
           } else {
+            bodyEl.style.display = '';
             docMetaEl.textContent = '';
             docViewerEl.innerHTML = '';
           }

@@ -108,15 +108,15 @@ def main():
 
     if sig_best:
         sig_rect = sig_best[2]
-        # Put signature over/near the actual signature line area.
-        x = min(max(sig_rect.x0 + 120, sig_rect.x1 + 8), page_rect.width - 220)
+        # Keep signature left-justified near the signature field value area.
+        x = min(max(sig_rect.x0 + 8, 90), page_rect.width - 220)
         y = max(40, sig_rect.y0 - 8)
     elif section_best and section_best[0] == sig_page_idx:
         anchor = section_best[2]
-        x = min(max(anchor.x0 + 130, page_rect.width * 0.54), page_rect.width - 220)
+        x = min(max(anchor.x0 + 8, 90), page_rect.width - 220)
         y = min(max(anchor.y1 + 28, 40), page_rect.height - 140)
     else:
-        x = page_rect.width * 0.55
+        x = max(90, page_rect.width * 0.18)
         y = page_rect.height * 0.82
 
     max_w = min(190, page_rect.width - x - 20)
