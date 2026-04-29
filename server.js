@@ -2467,7 +2467,8 @@ function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
       for (let i = 0; i < s.length; i += 100) lines.push(s.slice(i, i + 100));
     }
   });
-  const maxLines = 60;
+  // Keep much more content in fallback PDFs to avoid apparent truncation.
+  const maxLines = 220;
   const finalLines = lines.slice(0, maxLines);
   const sigLineIndexRaw = finalLines.findIndex((ln) => /\bsignature\b/i.test(ln));
   const dateLineIndexRaw = finalLines.findIndex((ln) => /^\s*date\b/i.test(ln));
@@ -2624,9 +2625,20 @@ function mmCreateSignedArtifacts(contract, customerName) {
   const signedHtmlPath = path.join(marketingManagerSignedDocsDir, `${contract.id}-signed.html`);
   fs.writeFileSync(signedHtmlPath, `<div>${injectedHtml}</div>`, 'utf8');
   const signedPdfPath = path.join(marketingManagerSignedDocsDir, `${contract.id}-signed.pdf`);
-  const stamped = mmTryStampOriginalPdf(contract, signedPdfPath);
-  if (!stamped) {
-    fs.writeFileSync(signedPdfPath, mmBuildSignedContractPdfFromText(signedTxt, contract.signatureDataUrl));
+  const hasOriginalPdf =
+    Boolean(contract.filePath) &&
+    fs.existsSync(contract.filePath) &&
+    path.extname(String(contract.originalName || contract.filePath).toLowerCase()) === '.pdf';
+  if (hasOriginalPdf) {
+    const stamped = mmTryStampOriginalPdf(contract, signedPdfPath);
+    if (!stamped) {
+      throw new Error('Could not stamp original PDF with signature. Please verify PDF signer dependencies.');
+    }
+  } else {
+    fs.writeFileSync(
+      signedPdfPath,
+      mmBuildSignedContractPdfFromText(signedTxt, contract.signatureDataUrl)
+    );
   }
   contract.signedTextPath = signedTextPath;
   contract.signedHtmlPath = signedHtmlPath;
@@ -2995,7 +3007,8 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
       signedAt: null,
       signerName: '',
       signDate: '',
-      signatureDataUrl: ''
+      signatureDataUrl: '',
+      sourceType: 'created'
     };
     const originalPdfPath = mmCreateOriginalContractPdf(contract);
     if (originalPdfPath) {
@@ -3053,6 +3066,7 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
         signerName: '',
         signDate: '',
         signatureDataUrl: '',
+        sourceType: 'uploaded',
         filePath: req.file.path,
         originalName: req.file.originalname || title,
         mimeType: req.file.mimetype || 'application/octet-stream',
@@ -3302,7 +3316,11 @@ app.post('/api/marketing-manager/contracts/sign/:token', (req, res) => {
 
     return res.json({ success: true, signedAt: contract.signedAt });
   } catch (error) {
-    return res.status(500).json({ error: error.message });
+    const msg = String(error.message || 'Signing failed');
+    if (/Could not stamp original PDF/i.test(msg)) {
+      return res.status(500).json({ error: msg });
+    }
+    return res.status(500).json({ error: msg });
   }
 });
 
