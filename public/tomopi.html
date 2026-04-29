@@ -397,22 +397,29 @@
       font-size: 1.55em;
       font-weight: 700;
       line-height: 1;
-      color: #5fd6ff;
+      color: #cfe0ef;
+    }
+    .sim-stock-change.pos {
+      color: #4be38b;
     }
     .sim-stock-change.neg {
-      color: #ff8f9c;
+      color: #ff6f7f;
     }
     .sim-stock-foot {
       margin-top: 10px;
       height: 5px;
       width: 44%;
       border-radius: 999px;
-      background: #42c7ff;
-      box-shadow: 0 0 8px rgba(66, 199, 255, 0.45);
+      background: #89a2bb;
+      box-shadow: 0 0 8px rgba(137, 162, 187, 0.45);
+    }
+    .sim-stock-foot.pos {
+      background: #28d17c;
+      box-shadow: 0 0 8px rgba(40, 209, 124, 0.45);
     }
     .sim-stock-foot.neg {
-      background: #ff8f9c;
-      box-shadow: 0 0 8px rgba(255, 143, 156, 0.45);
+      background: #ff5a6d;
+      box-shadow: 0 0 8px rgba(255, 90, 109, 0.45);
     }
     @media (max-width: 640px) {
       .sim-stock-card {
@@ -1611,10 +1618,12 @@
           const sym = String(s?.symbol || '').toUpperCase().trim();
           if (!sym) return null;
           const price = Number.isFinite(Number(s?.price)) ? Number(s.price).toFixed(2) : null;
-          const change = Number.isFinite(Number(s?.changePct))
-            ? `${Number(s.changePct) >= 0 ? '+' : ''}${Number(s.changePct).toFixed(2)}%`
+          const changePct = Number.isFinite(Number(s?.changePct)) ? Number(s.changePct) : null;
+          const change = Number.isFinite(changePct)
+            ? `${Number(changePct) >= 0 ? '+' : ''}${Number(changePct).toFixed(2)}%`
             : '';
-          return { sym, price, change };
+          const direction = Number.isFinite(changePct) ? (changePct > 0 ? 'pos' : changePct < 0 ? 'neg' : 'flat') : 'flat';
+          return { sym, price, change, direction };
         })
         .filter(Boolean);
       if (fromApi.length) return fromApi;
@@ -1627,10 +1636,12 @@
           const price = Number.isFinite(Number(cached?.price))
             ? Number(cached.price).toFixed(2)
             : pseudoPriceForSymbol(sym);
-          const change = Number.isFinite(Number(cached?.changePct))
-            ? `${Number(cached.changePct) >= 0 ? '+' : ''}${Number(cached.changePct).toFixed(2)}%`
+          const changePct = Number.isFinite(Number(cached?.changePct)) ? Number(cached.changePct) : null;
+          const change = Number.isFinite(changePct)
+            ? `${Number(changePct) >= 0 ? '+' : ''}${Number(changePct).toFixed(2)}%`
             : '';
-          return { sym, price, change };
+          const direction = Number.isFinite(changePct) ? (changePct > 0 ? 'pos' : changePct < 0 ? 'neg' : 'flat') : 'flat';
+          return { sym, price, change, direction };
         })
         .filter(Boolean);
     }
@@ -1796,13 +1807,13 @@
       simFeed.textContent = feedText || '';
       simTicker.innerHTML = (tickerItems || [])
         .map((it) => {
-          const neg = String(it.change || '').includes('-');
+          const dir = it.direction === 'neg' ? 'neg' : it.direction === 'pos' ? 'pos' : 'flat';
           return `
           <div class="sim-stock-card">
             <div class="sim-stock-sym">${escapeHtml(it.sym)}</div>
             <div class="sim-stock-price">$${escapeHtml(it.price || '--')}</div>
-            ${it.change ? `<div class="sim-stock-change${neg ? ' neg' : ''}">${escapeHtml(it.change)}</div>` : ''}
-            <div class="sim-stock-foot${neg ? ' neg' : ''}"></div>
+            ${it.change ? `<div class="sim-stock-change ${dir}">${escapeHtml(it.change)}</div>` : ''}
+            <div class="sim-stock-foot ${dir}"></div>
           </div>
         `;
         })

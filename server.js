@@ -2296,9 +2296,16 @@ function mmEnsureSignatureSection(bodyText) {
     out +
     [
       '---',
-      'Printed Name: {{PRINTED_NAME}}',
-      'Client Signature: {{SIGNATURE}}',
-      'Date: {{DATE}}'
+      'Client Acceptance & Signature',
+      '',
+      '',
+      'Printed Name: ______________________________',
+      '',
+      '',
+      'Client Signature: __________________________',
+      '',
+      '',
+      'Date: ____________________'
     ].join('\n')
   );
 }
@@ -2329,9 +2336,13 @@ function mmEnsureSignatureSectionHtml(bodyHtml) {
   return (
     (source ? `${source}\n` : '') +
     `<hr />
-<p><strong>Printed Name:</strong> {{PRINTED_NAME}}</p>
-<p><strong>Client Signature:</strong> {{SIGNATURE}}</p>
-<p><strong>Date:</strong> {{DATE}}</p>`
+<p><strong>Client Acceptance &amp; Signature</strong></p>
+<p><br /></p>
+<p><strong>Printed Name:</strong> ______________________________</p>
+<p><br /></p>
+<p><strong>Client Signature:</strong> __________________________</p>
+<p><br /></p>
+<p><strong>Date:</strong> ____________________</p>`
   );
 }
 
@@ -2384,7 +2395,7 @@ function mmBuildSignedContractPdf(contract, customerName) {
   const finalLines = lines.slice(0, maxLines);
   if (lines.length > maxLines) finalLines.push('... truncated ...');
 
-  const contentRows = ['BT', '/F1 11 Tf', '50 790 Td', '14 TL'];
+  const contentRows = ['BT', '/F1 11 Tf', '50 760 Td', '14 TL'];
   finalLines.forEach((line, idx) => {
     const t = `(${mmPdfEscape(line)}) Tj`;
     if (idx === 0) contentRows.push(t);
@@ -2472,18 +2483,14 @@ function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
   const maxLines = 220;
   const finalLines = lines.slice(0, maxLines);
   const sigLineIndexRaw = finalLines.findIndex((ln) => /\bsignature\b/i.test(ln));
-  const dateLineIndexRaw = finalLines.findIndex((ln) => /^\s*date\b/i.test(ln));
-  const nameLineIndexRaw = finalLines.findIndex((ln) => /printed\s+name|^\s*name\s*[:\-]/i.test(ln));
   const sigLineIndex = sigLineIndexRaw === -1 ? Math.max(finalLines.length - 2, 0) : sigLineIndexRaw;
-  const dateLineIndex = dateLineIndexRaw === -1 ? Math.max(finalLines.length - 1, 0) : dateLineIndexRaw;
-  const nameLineIndex = nameLineIndexRaw === -1 ? Math.max(sigLineIndex + 1, 0) : nameLineIndexRaw;
 
   const parsedSig = mmParseSignatureDataUrl(signatureDataUrl);
   const jpegSig = parsedSig && parsedSig.mime === 'image/jpeg' ? parsedSig : null;
   const jpegDims = jpegSig ? mmGetJpegDimensions(jpegSig.buffer) : null;
   const drawSignature = Boolean(jpegSig && jpegDims);
 
-  const contentRows = ['BT', '/F1 11 Tf', '50 790 Td', '14 TL'];
+  const contentRows = ['BT', '/F1 11 Tf', '50 760 Td', '14 TL'];
   finalLines.forEach((line, idx) => {
     const t = `(${mmPdfEscape(line)}) Tj`;
     if (idx === 0) contentRows.push(t);
@@ -2494,7 +2501,7 @@ function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
     const sigW = 180;
     const aspect = jpegDims.height / jpegDims.width;
     const sigH = Math.max(40, Math.min(90, Math.round(sigW * aspect)));
-    const lineToY = (lineIndex) => 790 - lineIndex * 14;
+    const lineToY = (lineIndex) => 760 - lineIndex * 14;
     const candidateY = lineToY(sigLineIndex) - sigH + 8;
     const sigY = Math.max(72, Math.min(720, candidateY));
     const sigX = 320;
@@ -2502,23 +2509,6 @@ function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
     contentRows.push(`${sigW} 0 0 ${sigH} ${sigX} ${sigY} cm`);
     contentRows.push('/Im1 Do');
     contentRows.push('Q');
-    // reinforce textual placement near signature areas
-    if (nameLineIndex >= 0) {
-      const ny = Math.max(72, Math.min(760, lineToY(nameLineIndex)));
-      contentRows.push('BT');
-      contentRows.push('/F1 11 Tf');
-      contentRows.push(`320 ${ny} Td`);
-      contentRows.push('(Printed name inserted above signature) Tj');
-      contentRows.push('ET');
-    }
-    if (dateLineIndex >= 0) {
-      const dy = Math.max(72, Math.min(760, lineToY(dateLineIndex)));
-      contentRows.push('BT');
-      contentRows.push('/F1 11 Tf');
-      contentRows.push(`320 ${dy} Td`);
-      contentRows.push('(Date inserted) Tj');
-      contentRows.push('ET');
-    }
   }
   const stream = contentRows.join('\n');
   const objects = [];
