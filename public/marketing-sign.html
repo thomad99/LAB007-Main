@@ -130,6 +130,26 @@
         return j;
       }
 
+      function stripAutoSignatureSectionHtml(html) {
+        const s = String(html || '');
+        if (!s) return '';
+        const marker = /<p[^>]*>\s*<strong>\s*Client Acceptance\s*&(?:amp;)?\s*Signature\s*<\/strong>\s*<\/p>/i;
+        const m = s.match(marker);
+        if (!m || typeof m.index !== 'number') return s;
+        const cut = s.lastIndexOf('<hr', m.index);
+        return (cut >= 0 ? s.slice(0, cut) : s.slice(0, m.index)).trim();
+      }
+
+      function stripAutoSignatureSectionText(text) {
+        const s = String(text || '');
+        if (!s) return '';
+        const idx = s.search(/\n\s*---\s*\n[\s\S]*Client Acceptance\s*&\s*Signature/i);
+        if (idx >= 0) return s.slice(0, idx).trim();
+        const idx2 = s.search(/Client Acceptance\s*&\s*Signature/i);
+        if (idx2 >= 0) return s.slice(0, idx2).trim();
+        return s;
+      }
+
       function setSignedUi() {
         signed = true;
         signBtn.disabled = true;
@@ -143,8 +163,8 @@
           const data = await api('/api/marketing-manager/contracts/sign/' + token);
           const c = data.contract || {};
           titleEl.textContent = c.title || 'Contract';
-          if (c.bodyHtml) bodyEl.innerHTML = c.bodyHtml;
-          else bodyEl.textContent = c.body || '';
+          if (c.bodyHtml) bodyEl.innerHTML = stripAutoSignatureSectionHtml(c.bodyHtml);
+          else bodyEl.textContent = stripAutoSignatureSectionText(c.body || '');
           custEl.textContent = 'Customer: ' + (c.customerName || 'Customer');
           if (c.hasDocument && c.documentPath) {
             const docUrl = c.documentPath;

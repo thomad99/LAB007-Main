@@ -566,6 +566,7 @@
           <div class="mm-task-meta" id="mm-contracts-meta" style="margin-top:12px;">
             <button type="button" class="btn-mm" id="mm-new-contract">Create doc to sign</button>
             <button type="button" class="btn-mm-ghost" id="mm-refresh-contracts">Refresh</button>
+            <button type="button" class="btn-mm-danger-outline" id="mm-delete-all-contracts">Delete ALL</button>
           </div>
           <div class="mm-task-meta" style="margin-top:12px;">
             <input type="text" id="mm-contract-create-title" class="mm-input" placeholder="Document title" />
@@ -777,6 +778,12 @@
       await apiForm(`/api/marketing-manager/customers/${cust.id}/contracts/upload`, 'POST', fd);
       if (titleInput) titleInput.value = '';
       if (fileInput) fileInput.value = '';
+      await refresh();
+      await loadContracts();
+    });
+    $('#mm-delete-all-contracts')?.addEventListener('click', async () => {
+      if (!confirm(`Delete ALL contracts and signed files for "${cust.name}"? This cannot be undone.`)) return;
+      await api(`/api/marketing-manager/customers/${cust.id}/contracts`, { method: 'DELETE' });
       await refresh();
       await loadContracts();
     });

@@ -375,6 +375,12 @@
       flex-direction: column;
       justify-content: space-between;
       overflow: hidden;
+      animation: sim-tile-float 7s ease-in-out infinite;
+      transform-origin: 50% 50%;
+      will-change: transform, box-shadow;
+    }
+    .sim-stock-card.updated {
+      animation: sim-tile-spin 700ms cubic-bezier(0.2, 0.75, 0.2, 1), sim-tile-flash 1100ms ease;
     }
     .sim-stock-sym {
       font-size: 0.88em;
@@ -420,6 +426,20 @@
     .sim-stock-foot.neg {
       background: #ff5a6d;
       box-shadow: 0 0 8px rgba(255, 90, 109, 0.45);
+    }
+    @keyframes sim-tile-float {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-2px); }
+    }
+    @keyframes sim-tile-spin {
+      0% { transform: rotateY(0deg) scale(1); }
+      45% { transform: rotateY(88deg) scale(1.03); }
+      100% { transform: rotateY(0deg) scale(1); }
+    }
+    @keyframes sim-tile-flash {
+      0% { box-shadow: 0 0 0 rgba(95, 214, 255, 0), 0 10px 24px rgba(0,0,0,0.34); }
+      35% { box-shadow: 0 0 0 2px rgba(95, 214, 255, 0.35), 0 12px 28px rgba(0,0,0,0.42); }
+      100% { box-shadow: 0 10px 24px rgba(0,0,0,0.34), inset 0 1px 0 rgba(255,255,255,0.06); }
     }
     @media (max-width: 640px) {
       .sim-stock-card {
@@ -1248,6 +1268,8 @@
       headlines: [],
       stocks: [],
       stockCache: {},
+      lastStocksUpdateMs: 0,
+      tickerSnapshot: {},
       nextHeadlineIdx: 0,
       fetchedAtMs: 0,
       lastHeadlineFlipMs: 0
@@ -1704,6 +1726,7 @@
         simLiveData.headlines = Array.isArray(data.headlines) ? data.headlines : [];
         if (Array.isArray(data.stocks) && data.stocks.length) {
           simLiveData.stocks = data.stocks;
+          simLiveData.lastStocksUpdateMs = now;
           data.stocks.forEach((s) => {
             const sym = String(s?.symbol || '').toUpperCase();
             if (!sym) return;
@@ -1808,8 +1831,15 @@
       simTicker.innerHTML = (tickerItems || [])
         .map((it) => {
           const dir = it.direction === 'neg' ? 'neg' : it.direction === 'pos' ? 'pos' : 'flat';
+          const sig = `${it.price || ''}|${it.change || ''}|${dir}`;
+          const prevSig = simLiveData.tickerSnapshot[it.sym];
+          const justUpdated =
+            Boolean(prevSig) &&
+            prevSig !== sig &&
+            simLiveData.lastStocksUpdateMs &&
+            Date.now() - simLiveData.lastStocksUpdateMs < 6000;
           return `
-          <div class="sim-stock-card">
+          <div class="sim-stock-card${justUpdated ? ' updated' : ''}">
             <div class="sim-stock-sym">${escapeHtml(it.sym)}</div>
             <div class="sim-stock-price">$${escapeHtml(it.price || '--')}</div>
             ${it.change ? `<div class="sim-stock-change ${dir}">${escapeHtml(it.change)}</div>` : ''}
@@ -1818,6 +1848,11 @@
         `;
         })
         .join('');
+      simLiveData.tickerSnapshot = (tickerItems || []).reduce((acc, it) => {
+        const dir = it.direction === 'neg' ? 'neg' : it.direction === 'pos' ? 'pos' : 'flat';
+        acc[it.sym] = `${it.price || ''}|${it.change || ''}|${dir}`;
+        return acc;
+      }, {});
       simSub.style.display = 'none';
       simFeed.style.display = feedText ? '' : 'none';
       simTicker.style.display = (tickerItems && tickerItems.length) || tickerText ? '' : 'none';

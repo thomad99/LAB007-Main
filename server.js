@@ -2354,6 +2354,19 @@ function mmInjectSignatureIntoHtml(templateHtml, contract) {
   out = out.replace(/\{\{\s*PRINTED_NAME\s*\}\}/gi, signer);
   out = out.replace(/\{\{\s*SIGNATURE\s*\}\}/gi, signer);
   out = out.replace(/\{\{\s*DATE\s*\}\}/gi, signDate);
+  // If lines contain placeholders/underscores, replace the full value cleanly.
+  out = out.replace(
+    /(<strong>\s*Printed\s+Name\s*:\s*<\/strong>\s*)(?:_+|\.{2,}|&nbsp;|\s)*(?:[^<]*)/gi,
+    `$1${signer}`
+  );
+  out = out.replace(
+    /(<strong>\s*Client\s+Signature\s*:\s*<\/strong>\s*)(?:_+|\.{2,}|&nbsp;|\s)*(?:[^<]*)/gi,
+    `$1${signer}`
+  );
+  out = out.replace(
+    /(<strong>\s*Date\s*:\s*<\/strong>\s*)(?:_+|\.{2,}|&nbsp;|\s)*(?:[^<]*)/gi,
+    `$1${signDate}`
+  );
   return out;
 }
 
@@ -2365,12 +2378,10 @@ function mmInjectSignatureIntoText(templateText, contract) {
   out = out.replace(/\{\{\s*PRINTED_NAME\s*\}\}/gi, signer);
   out = out.replace(/\{\{\s*SIGNATURE\s*\}\}/gi, signer);
   out = out.replace(/\{\{\s*DATE\s*\}\}/gi, signDate);
-  out = out.replace(
-    /^(\s*(?:client\s+)?signature\s*[:\-]\s*)(?:_+|\.{2,}|\s*)$/gim,
-    `$1${signer} (signed)`
-  );
-  out = out.replace(/^(\s*date\s*[:\-]\s*)(?:_+|\.{2,}|\s*)$/gim, `$1${signDate}`);
-  out = out.replace(/^(\s*(?:printed\s+)?name\s*[:\-]\s*)(?:_+|\.{2,}|\s*)$/gim, `$1${signer}`);
+  // Replace full line values to remove underscores/placeholders completely.
+  out = out.replace(/^(\s*(?:client\s+)?signature\s*[:\-]\s*).*$/gim, `$1${signer}`);
+  out = out.replace(/^(\s*date\s*[:\-]\s*).*$/gim, `$1${signDate}`);
+  out = out.replace(/^(\s*(?:printed\s+)?name\s*[:\-]\s*).*$/gim, `$1${signer}`);
   return out;
 }
 
@@ -3175,6 +3186,31 @@ app.delete('/api/marketing-manager/customers/:customerId/contracts/:contractId',
     data.contracts.splice(idx, 1);
     writeMarketingContracts(data);
     return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/marketing-manager/customers/:customerId/contracts', (req, res) => {
+  try {
+    const state = readMarketingManagerState();
+    const c = mmFindCustomer(state, req.params.customerId);
+    if (!c) return res.status(404).json({ error: 'Customer not found' });
+    const data = readMarketingContracts();
+    const toDelete = data.contracts.filter((x) => x.customerId === c.id);
+    toDelete.forEach((contract) => {
+      [contract.filePath, contract.signedTextPath, contract.signedHtmlPath, contract.signedPdfPath].forEach((p) => {
+        if (!p) return;
+        try {
+          if (fs.existsSync(p)) fs.unlinkSync(p);
+        } catch (err) {
+          console.warn('[Marketing Manager] Failed deleting contract file:', p, err.message);
+        }
+      });
+    });
+    data.contracts = data.contracts.filter((x) => x.customerId !== c.id);
+    writeMarketingContracts(data);
+    return res.json({ success: true, deleted: toDelete.length });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
