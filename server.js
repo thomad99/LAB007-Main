@@ -2724,6 +2724,12 @@ function mmNormalizeWebsite(raw) {
   }
 }
 
+function mmNormalizeOptionalLink(raw) {
+  const t = String(raw || '').trim();
+  if (!t) return '';
+  return mmNormalizeWebsite(t);
+}
+
 async function mmTryFetchLogo(websiteUrl) {
   const base = mmNormalizeWebsite(websiteUrl);
   if (!base) return null;
@@ -2776,6 +2782,11 @@ app.post('/api/marketing-manager/customers', async (req, res) => {
     if (!name) return res.status(400).json({ error: 'Customer name is required' });
     const notes = String(req.body?.notes || '').trim();
     const website = mmNormalizeWebsite(req.body?.website);
+    const instagram = mmNormalizeOptionalLink(req.body?.instagram);
+    const facebook = mmNormalizeOptionalLink(req.body?.facebook);
+    const linkedin = mmNormalizeOptionalLink(req.body?.linkedin);
+    const youtube = mmNormalizeOptionalLink(req.body?.youtube);
+    const tiktok = mmNormalizeOptionalLink(req.body?.tiktok);
     const logoUrl = website ? await mmTryFetchLogo(website) : null;
     const state = readMarketingManagerState();
     const customer = {
@@ -2783,6 +2794,11 @@ app.post('/api/marketing-manager/customers', async (req, res) => {
       name,
       notes,
       website,
+      instagram,
+      facebook,
+      linkedin,
+      youtube,
+      tiktok,
       logoUrl,
       createdAt: new Date().toISOString(),
       tasks: []
@@ -2807,6 +2823,11 @@ app.patch('/api/marketing-manager/customers/:customerId', (req, res) => {
       if (nextWebsite) c.website = nextWebsite;
       else if (!String(req.body.website || '').trim()) c.website = '';
     }
+    if (req.body.instagram !== undefined) c.instagram = mmNormalizeOptionalLink(req.body.instagram);
+    if (req.body.facebook !== undefined) c.facebook = mmNormalizeOptionalLink(req.body.facebook);
+    if (req.body.linkedin !== undefined) c.linkedin = mmNormalizeOptionalLink(req.body.linkedin);
+    if (req.body.youtube !== undefined) c.youtube = mmNormalizeOptionalLink(req.body.youtube);
+    if (req.body.tiktok !== undefined) c.tiktok = mmNormalizeOptionalLink(req.body.tiktok);
     if (req.body.logoUrl !== undefined) c.logoUrl = String(req.body.logoUrl || '').trim();
     c.updatedAt = new Date().toISOString();
     writeMarketingManagerState(state);

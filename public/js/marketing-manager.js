@@ -474,6 +474,22 @@
     }
 
     const co = countTasks(cust);
+    const socialRows = [
+      ['Website', cust.website],
+      ['Instagram', cust.instagram],
+      ['Facebook', cust.facebook],
+      ['LinkedIn', cust.linkedin],
+      ['YouTube', cust.youtube],
+      ['TikTok', cust.tiktok]
+    ]
+      .filter(([, v]) => v)
+      .map(
+        ([label, v]) =>
+          `<p class="mm-muted">${escapeHtml(label)}: <a href="${escapeHtml(v)}" target="_blank" rel="noopener" style="color:var(--blue); text-decoration:none;">${escapeHtml(
+            String(v).replace(/^https?:\/\//i, '')
+          )}</a></p>`
+      )
+      .join('');
     const taskOpts = (cust.tasks || [])
       .map(
         (t) => `
@@ -486,7 +502,7 @@
         <div>
           <h2>${escapeHtml(cust.name)}</h2>
           ${cust.logoUrl ? `<img src="${escapeHtml(cust.logoUrl)}" alt="${escapeHtml(cust.name)} logo" style="height:34px; max-width:180px; object-fit:contain; margin:8px 0 4px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); padding:4px;" />` : ''}
-          ${cust.website ? `<p class="mm-muted"><a href="${escapeHtml(cust.website)}" target="_blank" rel="noopener" style="color:var(--blue); text-decoration:none;">${escapeHtml(cust.website.replace(/^https?:\/\//i, ''))}</a></p>` : ''}
+          ${socialRows}
           <p class="mm-muted">${escapeHtml(cust.notes || 'No notes — click Edit.')}</p>
         </div>
         <div class="mm-main-actions">
@@ -499,6 +515,16 @@
         <input type="text" id="mm-edit-name" class="mm-input" value="${escapeHtml(cust.name)}" />
         <label class="mm-notes-label">Website</label>
         <input type="text" id="mm-edit-website" class="mm-input" value="${escapeHtml(cust.website || '')}" placeholder="https://example.com" />
+        <label class="mm-notes-label">Instagram</label>
+        <input type="text" id="mm-edit-instagram" class="mm-input" value="${escapeHtml(cust.instagram || '')}" placeholder="https://instagram.com/..." />
+        <label class="mm-notes-label">Facebook</label>
+        <input type="text" id="mm-edit-facebook" class="mm-input" value="${escapeHtml(cust.facebook || '')}" placeholder="https://facebook.com/..." />
+        <label class="mm-notes-label">LinkedIn</label>
+        <input type="text" id="mm-edit-linkedin" class="mm-input" value="${escapeHtml(cust.linkedin || '')}" placeholder="https://linkedin.com/..." />
+        <label class="mm-notes-label">YouTube</label>
+        <input type="text" id="mm-edit-youtube" class="mm-input" value="${escapeHtml(cust.youtube || '')}" placeholder="https://youtube.com/..." />
+        <label class="mm-notes-label">TikTok</label>
+        <input type="text" id="mm-edit-tiktok" class="mm-input" value="${escapeHtml(cust.tiktok || '')}" placeholder="https://tiktok.com/@..." />
         <label class="mm-notes-label">Notes</label>
         <textarea id="mm-edit-notes" class="mm-textarea" rows="3">${escapeHtml(cust.notes || '')}</textarea>
         <label class="mm-notes-label">Customer logo</label>
@@ -605,10 +631,15 @@
       const name = String($('#mm-edit-name')?.value || '').trim();
       if (!name) return alert('Customer name is required.');
       const website = String($('#mm-edit-website')?.value || '').trim();
+      const instagram = String($('#mm-edit-instagram')?.value || '').trim();
+      const facebook = String($('#mm-edit-facebook')?.value || '').trim();
+      const linkedin = String($('#mm-edit-linkedin')?.value || '').trim();
+      const youtube = String($('#mm-edit-youtube')?.value || '').trim();
+      const tiktok = String($('#mm-edit-tiktok')?.value || '').trim();
       const notes = String($('#mm-edit-notes')?.value || '');
       await api(`/api/marketing-manager/customers/${cust.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ name, website, notes })
+        body: JSON.stringify({ name, website, instagram, facebook, linkedin, youtube, tiktok, notes })
       });
       const logoInput = $('#mm-edit-logo-file');
       const logo = logoInput?.files && logoInput.files[0];
