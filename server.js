@@ -48,6 +48,15 @@ if (!fs.existsSync(marketingReportsDir)) {
 console.log('Marketing reports dir:', marketingReportsDir);
 console.log('Marketing reports index:', marketingReportsIndexPath);
 
+const gscDataDir = (() => {
+  const diskRoot = String(process.env.LAB007_DATA_DIR || process.env.LAB007_DISK_ROOT || '').trim();
+  if (diskRoot) return path.join(path.resolve(diskRoot), 'gsc');
+  return path.join(__dirname, 'data', 'gsc');
+})();
+if (!fs.existsSync(gscDataDir)) fs.mkdirSync(gscDataDir, { recursive: true });
+const gscTokenPath = path.join(gscDataDir, 'oauth-token.json');
+const gscStatePath = path.join(gscDataDir, 'oauth-state.json');
+
 // Marketing Manager state file lives in MarketMG/Clients (matches persistent disk layout on Render).
 // Set LAB007_DATA_DIR=/var/data/lab007 so data is stored at /var/data/lab007/MarketMG/Clients/marketing-manager.json
 // Or set MARKETING_MANAGER_DATA_DIR to the full Clients folder path.
@@ -1649,6 +1658,238 @@ function extractImageAltAuditFromHtml(html, pageUrl) {
   }
   return out;
 }
+
+function readGscToken() {
+  try {
+    if (!fs.existsSync(gscTokenPath)) return null;
+    const raw = fs.readFileSync(gscTokenPath, 'utf8');
+    return JSON.parse(raw);
+  } catch {
+    return null;
+  }
+}
+
+function writeGscToken(token) {
+  fs.writeFileSync(gscTokenPath, JSON.stringify(token || {}, null, 2), 'utf8');
+}
+
+function getGscRootDomain(hostname) {
+  const parts = String(hostname || '').split('.').filter(Boolean);
+  if (parts.length <= 2) return parts.join('.');
+  return parts.slice(-2).join('.');
+}
+
+function buildGscPropertyCandidates(pageUrl) {
+  const u = pageUrl instanceof URL ? pageUrl : new URL(String(pageUrl || ''));
+  const host = String(u.hostname || '').toLowerCase();
+  const noWww = host.replace(/^www\./i, '');
+  const root = getGscRootDomain(noWww);
+  const set = new Set([
+    `${u.protocol}//${host}/`,
+    `${u.protocol}//${noWww}/`,
+    `https://${host}/`,
+    `https://${noWww}/`,
+    `http://${host}/`,
+    `http://${noWww}/`,
+    `sc-domain:${host}`,
+    `sc-domain:${noWww}`,
+    `sc-domain:${root}`
+  ]);
+  return [...set];
+}
+
+async function ensureGscAccessToken() {
+  const token = readGscToken();
+  if (!token || !token.refresh_token) return null;
+  const now = Date.now();
+  if (token.access_token && token.expires_at && token.expires_at - now > 30_000) {
+    return token.access_token;
+  }
+  const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+  const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
+  if (!clientId || !clientSecret) return null;
+  const body = new URLSearchParams({
+    client_id: clientId,
+    client_secret: clientSecret,
+    refresh_token: token.refresh_token,
+    grant_type: 'refresh_token'
+  });
+  const res = await fetchFn('https://oauth2.googleapis.com/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: body.toString()
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok || !data.access_token) return null;
+  const next = {
+    ...token,
+    access_token: data.access_token,
+    expires_at: Date.now() + (Number(data.expires_in || 3600) * 1000)
+  };
+  writeGscToken(next);
+  return next.access_token;
+}
+
+async function gscApi(pathname, opt = {}) {
+  const accessToken = await ensureGscAccessToken();
+  if (!accessToken) throw new Error('GSC_NOT_CONNECTED');
+  const res = await fetchFn(`https://www.googleapis.com/webmasters/v3${pathname}`, {
+    ...opt,
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+      'Content-Type': 'application/json',
+      ...(opt.headers || {})
+    }
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    const msg = data?.error?.message || `Google API error (${res.status})`;
+    throw new Error(msg);
+  }
+  return data;
+}
+
+async function getGscSiteReport(rawUrl) {
+  const pageUrl = /^https?:\/\//i.test(String(rawUrl || ''))
+    ? new URL(String(rawUrl))
+    : new URL(`https://${String(rawUrl || '')}`);
+  const candidates = buildGscPropertyCandidates(pageUrl);
+  let siteEntry = null;
+  let sites = [];
+  try {
+    const sitesData = await gscApi('/sites');
+    sites = (sitesData.siteEntry || []).map((s) => ({
+      siteUrl: String(s.siteUrl || ''),
+      permissionLevel: String(s.permissionLevel || '')
+    }));
+  } catch (error) {
+    if (String(error.message) === 'GSC_NOT_CONNECTED') {
+      return { status: 'not_connected', canUseGsc: false, reason: 'Google Search Console is not connected yet.' };
+    }
+    return { status: 'error', canUseGsc: false, reason: error.message || 'Failed to query Google Search Console.' };
+  }
+  siteEntry = sites.find((s) => candidates.includes(s.siteUrl));
+  if (!siteEntry) {
+    return {
+      status: 'unavailable',
+      canUseGsc: false,
+      reason: 'This site is not verified/accessible in your connected Google Search Console account.',
+      checkedCandidates: candidates
+    };
+  }
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - 90);
+  const payload = {
+    startDate: start.toISOString().slice(0, 10),
+    endDate: end.toISOString().slice(0, 10),
+    dimensions: ['query', 'page'],
+    rowLimit: 250
+  };
+  const path = `/sites/${encodeURIComponent(siteEntry.siteUrl)}/searchAnalytics/query`;
+  const data = await gscApi(path, { method: 'POST', body: JSON.stringify(payload) });
+  const rows = Array.isArray(data.rows) ? data.rows : [];
+  const queries = rows.map((r) => ({
+    query: String((r.keys || [])[0] || ''),
+    page: String((r.keys || [])[1] || ''),
+    clicks: Number(r.clicks || 0),
+    impressions: Number(r.impressions || 0),
+    ctr: Number(r.ctr || 0),
+    position: Number(r.position || 0)
+  }));
+  return {
+    status: 'available',
+    canUseGsc: true,
+    property: siteEntry.siteUrl,
+    permissionLevel: siteEntry.permissionLevel,
+    dateRange: payload.startDate + ' to ' + payload.endDate,
+    summary: {
+      totalQueries: queries.length,
+      totalClicks: queries.reduce((a, x) => a + x.clicks, 0),
+      totalImpressions: queries.reduce((a, x) => a + x.impressions, 0)
+    },
+    queries
+  };
+}
+
+app.get('/api/gsc/connect', (req, res) => {
+  const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+  const redirectUri = String(process.env.GOOGLE_REDIRECT_URI || '').trim();
+  if (!clientId || !redirectUri) {
+    return res.status(500).send('Missing GOOGLE_CLIENT_ID or GOOGLE_REDIRECT_URI');
+  }
+  const state = crypto.randomBytes(18).toString('hex');
+  fs.writeFileSync(gscStatePath, JSON.stringify({ state, createdAt: Date.now() }), 'utf8');
+  const authUrl =
+    'https://accounts.google.com/o/oauth2/v2/auth?' +
+    new URLSearchParams({
+      client_id: clientId,
+      redirect_uri: redirectUri,
+      response_type: 'code',
+      scope: 'https://www.googleapis.com/auth/webmasters.readonly',
+      access_type: 'offline',
+      prompt: 'consent',
+      state
+    }).toString();
+  return res.redirect(authUrl);
+});
+
+app.get('/api/gsc/oauth/callback', async (req, res) => {
+  try {
+    const code = String(req.query?.code || '');
+    const state = String(req.query?.state || '');
+    if (!code) return res.status(400).send('Missing code');
+    if (!fs.existsSync(gscStatePath)) return res.status(400).send('Missing auth state');
+    const stateData = JSON.parse(fs.readFileSync(gscStatePath, 'utf8'));
+    if (!stateData?.state || stateData.state !== state) return res.status(400).send('Invalid auth state');
+    const clientId = String(process.env.GOOGLE_CLIENT_ID || '').trim();
+    const clientSecret = String(process.env.GOOGLE_CLIENT_SECRET || '').trim();
+    const redirectUri = String(process.env.GOOGLE_REDIRECT_URI || '').trim();
+    if (!clientId || !clientSecret || !redirectUri) {
+      return res.status(500).send('Missing Google OAuth environment configuration');
+    }
+    const body = new URLSearchParams({
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+      redirect_uri: redirectUri,
+      grant_type: 'authorization_code'
+    });
+    const tokenRes = await fetchFn('https://oauth2.googleapis.com/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: body.toString()
+    });
+    const tokenData = await tokenRes.json().catch(() => ({}));
+    if (!tokenRes.ok || !tokenData.access_token) {
+      return res.status(500).send(`OAuth token exchange failed: ${tokenData?.error || tokenRes.status}`);
+    }
+    const existing = readGscToken() || {};
+    const refreshToken = tokenData.refresh_token || existing.refresh_token || '';
+    writeGscToken({
+      access_token: tokenData.access_token,
+      refresh_token: refreshToken,
+      scope: tokenData.scope || existing.scope || '',
+      token_type: tokenData.token_type || 'Bearer',
+      expires_at: Date.now() + (Number(tokenData.expires_in || 3600) * 1000)
+    });
+    try { fs.unlinkSync(gscStatePath); } catch {}
+    return res.send('Google Search Console connected successfully. You can close this tab.');
+  } catch (error) {
+    return res.status(500).send(`OAuth callback failed: ${error.message}`);
+  }
+});
+
+app.get('/api/gsc/report', async (req, res) => {
+  try {
+    const rawUrl = String(req.query?.url || '').trim();
+    if (!rawUrl) return res.status(400).json({ error: 'url query parameter is required' });
+    const report = await getGscSiteReport(rawUrl);
+    return res.json(report);
+  } catch (error) {
+    return res.status(500).json({ status: 'error', canUseGsc: false, reason: error.message || 'Failed to load GSC report' });
+  }
+});
 
 app.post('/api/analyze', async (req, res) => {
   try {

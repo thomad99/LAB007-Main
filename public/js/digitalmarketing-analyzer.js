@@ -120,6 +120,7 @@ window.runAnalysis = async function runAnalysis() {
     const text = data.text || '';
     const parsed = parseAnalyzerJson(text);
     renderAnalyzerResults(parsed, url, hostname, data.imageAltAudit || []);
+    await loadGscReport(url);
   } catch (err) {
     clearInterval(stepInterval);
     document.getElementById('analyzer-loading').style.display = 'none';
@@ -447,6 +448,71 @@ function escapeHtml(value) {
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;')
     .replace(/'/g, '&#39;');
+}
+
+async function loadGscReport(url) {
+  const panel = document.getElementById('gsc-panel');
+  const stateEl = document.getElementById('gsc-state');
+  const bodyEl = document.getElementById('gsc-body');
+  if (!panel || !stateEl || !bodyEl) return;
+  panel.style.display = '';
+  stateEl.className = 'gsc-state';
+  stateEl.textContent = 'Checking availability...';
+  bodyEl.innerHTML = '';
+  try {
+    const res = await fetch('/api/gsc/report?url=' + encodeURIComponent(url));
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Failed to load GSC report');
+    if (data.status === 'not_connected') {
+      stateEl.className = 'gsc-state gsc-bad';
+      stateEl.textContent = 'Cannot use GSC (not connected)';
+      bodyEl.innerHTML = `<p style="font-size:13px;color:var(--muted);margin:0 0 10px 0;">${escapeHtml(
+        data.reason || 'Google Search Console is not connected.'
+      )}</p><a class="btn-ghost" href="/api/gsc/connect" style="padding:9px 14px;font-size:12px;">Connect Google Search Console</a>`;
+      return;
+    }
+    if (data.status !== 'available') {
+      stateEl.className = 'gsc-state gsc-bad';
+      stateEl.textContent = 'Cannot use GSC for this site';
+      bodyEl.innerHTML = `<p style="font-size:13px;color:var(--muted);margin:0;">${escapeHtml(
+        data.reason || 'No matching Search Console property access.'
+      )}</p>`;
+      return;
+    }
+    stateEl.className = 'gsc-state gsc-ok';
+    stateEl.textContent = 'GSC available for this site';
+    const rows = Array.isArray(data.queries) ? data.queries : [];
+    const top = rows.slice(0, 50);
+    bodyEl.innerHTML = `
+      <p style="font-size:12px;color:var(--muted);margin:0 0 8px 0;">Property: ${escapeHtml(
+        data.property || ''
+      )} • Range: ${escapeHtml(data.dateRange || '')}</p>
+      <p style="font-size:12px;color:var(--muted);margin:0 0 10px 0;">Queries: ${
+        data.summary?.totalQueries || 0
+      } • Clicks: ${data.summary?.totalClicks || 0} • Impressions: ${
+      data.summary?.totalImpressions || 0
+    }</p>
+      <table class="gsc-table">
+        <thead><tr><th>Query</th><th>Clicks</th><th>Impr.</th><th>CTR</th><th>Pos</th></tr></thead>
+        <tbody>
+          ${top
+            .map(
+              (r) => `<tr>
+              <td title="${escapeHtml(r.page || '')}">${escapeHtml(r.query || '')}</td>
+              <td>${Number(r.clicks || 0)}</td>
+              <td>${Number(r.impressions || 0)}</td>
+              <td>${(Number(r.ctr || 0) * 100).toFixed(1)}%</td>
+              <td>${Number(r.position || 0).toFixed(1)}</td>
+            </tr>`
+            )
+            .join('')}
+        </tbody>
+      </table>`;
+  } catch (err) {
+    stateEl.className = 'gsc-state gsc-bad';
+    stateEl.textContent = 'Cannot use GSC right now';
+    bodyEl.innerHTML = `<p style="font-size:13px;color:var(--muted);margin:0;">${escapeHtml(err.message)}</p>`;
+  }
 }
 
 function showCategoryDetail(cat, cardEl) {
