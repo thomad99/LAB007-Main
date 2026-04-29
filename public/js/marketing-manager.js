@@ -815,7 +815,7 @@
             <input type="text" id="mm-contract-create-title" class="mm-input" placeholder="Document title" />
             <div id="mm-contract-create-body" class="mm-rich-editor" style="margin-top:8px;" contenteditable="true"></div>
             <label class="mm-muted" style="display:flex;gap:10px;align-items:flex-start;margin-top:12px;cursor:pointer;">
-              <input type="checkbox" id="mm-include-agent-sig" style="margin-top:3px;" />
+              <input type="checkbox" id="mm-include-agent-sig" checked style="margin-top:3px;" />
               <span>Include my Agent signature on this document (LAB007), dated today — requires a saved signature above.</span>
             </label>
             <button type="button" class="btn-mm" id="mm-create-contract" style="margin-top:8px;">Save doc for signing</button>
@@ -1015,7 +1015,7 @@
       if (titleEl) titleEl.value = '';
       if (bodyEl) bodyEl.innerHTML = '';
       const incEl = document.getElementById('mm-include-agent-sig');
-      if (incEl) incEl.checked = false;
+      if (incEl) incEl.checked = true;
       await refresh();
       await loadContracts();
     });
@@ -1030,9 +1030,11 @@
       const titleInput = $('#mm-contract-upload-title');
       const file = fileInput?.files && fileInput.files[0];
       if (!file) return alert('Select a document file to upload.');
+      const includeAgent = Boolean(document.getElementById('mm-include-agent-sig')?.checked);
       const fd = new FormData();
       fd.append('document', file);
       if (titleInput?.value?.trim()) fd.append('title', titleInput.value.trim());
+      fd.append('includeAgentSignature', includeAgent ? '1' : '0');
       await apiForm(`/api/marketing-manager/customers/${cust.id}/contracts/upload`, 'POST', fd);
       if (titleInput) titleInput.value = '';
       if (fileInput) fileInput.value = '';

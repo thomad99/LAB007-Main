@@ -2612,6 +2612,99 @@ function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
   return Buffer.from(out, 'utf8');
 }
 
+/** Resolves a Python interpreter that can import PyMuPDF (fitz), with install/venv fallback. */
+function mmEffectivePythonForMarketingPdf() {
+  const pyCandidates = [
+    process.env.MARKETING_MANAGER_PYTHON_BIN,
+    process.env.PYTHON_BIN,
+    process.env.PYTHON,
+    'python3',
+    'python'
+  ].filter(Boolean);
+  const pyBin =
+    pyCandidates.find((bin) => {
+      const check = spawnSync(bin, ['-V'], { encoding: 'utf8' });
+      return !check.error;
+    }) || 'python';
+  let effectivePy = pyBin;
+  let pyCheck = spawnSync(effectivePy, ['-c', 'import fitz'], { encoding: 'utf8' });
+  if (pyCheck.status !== 0) {
+    let pyInstall = spawnSync(effectivePy, ['-m', 'pip', 'install', '--user', 'pymupdf'], { encoding: 'utf8' });
+    if (pyInstall.status !== 0) {
+      spawnSync(effectivePy, ['-m', 'ensurepip', '--upgrade'], { encoding: 'utf8' });
+      pyInstall = spawnSync(effectivePy, ['-m', 'pip', 'install', '--user', 'pymupdf'], { encoding: 'utf8' });
+    }
+    if (pyInstall.status !== 0) {
+      console.warn(
+        '[Marketing Manager] Could not auto-install PyMuPDF:',
+        pyInstall.stderr || pyInstall.stdout || pyInstall.status
+      );
+      const venvDir = path.join(marketingManagerDataDir, 'pyenv');
+      const venvPy =
+        process.platform === 'win32'
+          ? path.join(venvDir, 'Scripts', 'python.exe')
+          : path.join(venvDir, 'bin', 'python');
+      if (!fs.existsSync(venvPy)) {
+        const mkVenv = spawnSync(pyBin, ['-m', 'venv', venvDir], { encoding: 'utf8' });
+        if (mkVenv.status !== 0) {
+          console.warn('[Marketing Manager] Could not create Python venv:', mkVenv.stderr || mkVenv.stdout || mkVenv.status);
+        }
+      }
+      if (fs.existsSync(venvPy)) {
+        spawnSync(venvPy, ['-m', 'ensurepip', '--upgrade'], { encoding: 'utf8' });
+        const venvInstall = spawnSync(venvPy, ['-m', 'pip', 'install', '--upgrade', 'pip', 'setuptools', 'wheel'], {
+          encoding: 'utf8'
+        });
+        if (venvInstall.status !== 0) {
+          console.warn('[Marketing Manager] venv bootstrap warning:', venvInstall.stderr || venvInstall.stdout || venvInstall.status);
+        }
+        const venvPyMuPdf = spawnSync(venvPy, ['-m', 'pip', 'install', 'pymupdf'], { encoding: 'utf8' });
+        if (venvPyMuPdf.status !== 0) {
+          console.warn('[Marketing Manager] venv PyMuPDF install failed:', venvPyMuPdf.stderr || venvPyMuPdf.stdout || venvPyMuPdf.status);
+        } else {
+          effectivePy = venvPy;
+        }
+      }
+    }
+    pyCheck = spawnSync(effectivePy, ['-c', 'import fitz'], { encoding: 'utf8' });
+    if (pyCheck.status !== 0) {
+      console.warn('[Marketing Manager] Python fitz module still unavailable:', pyCheck.stderr || pyCheck.stdout);
+    }
+  }
+  return effectivePy;
+}
+
+/** Appends a new page with Agency (LAB007) signature at end of PDF; leaves existing pages unchanged. */
+function mmStampAgentPageOnPdf(inputPath, outputPath, agentImagePath, dateStr) {
+  try {
+    const stampScript = path.join(__dirname, 'lib', 'pdf_stamp_agent.py');
+    const effectivePy = mmEffectivePythonForMarketingPdf();
+    const py = spawnSync(
+      effectivePy,
+      [
+        stampScript,
+        '--input',
+        inputPath,
+        '--output',
+        outputPath,
+        '--signature',
+        agentImagePath,
+        '--date',
+        String(dateStr || '')
+      ],
+      { encoding: 'utf8' }
+    );
+    if (py.status !== 0 || !fs.existsSync(outputPath)) {
+      console.warn('[Marketing Manager] Agent PDF stamp failed:', py.stderr || py.stdout || py.status);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.warn('[Marketing Manager] Agent PDF stamp error:', error.message);
+    return false;
+  }
+}
+
 function mmTryStampOriginalPdf(contract, signedPdfPath) {
   try {
     if (!contract.filePath || !fs.existsSync(contract.filePath)) return false;
@@ -2623,65 +2716,7 @@ function mmTryStampOriginalPdf(contract, signedPdfPath) {
     const tmpSigPath = path.join(marketingManagerSignedDocsDir, `${contract.id}-sig.${sigExt}`);
     fs.writeFileSync(tmpSigPath, sig.buffer);
     const signerScript = path.join(__dirname, 'lib', 'pdf_signer.py');
-    const pyCandidates = [
-      process.env.MARKETING_MANAGER_PYTHON_BIN,
-      process.env.PYTHON_BIN,
-      process.env.PYTHON,
-      'python3',
-      'python'
-    ].filter(Boolean);
-    const pyBin =
-      pyCandidates.find((bin) => {
-        const check = spawnSync(bin, ['-V'], { encoding: 'utf8' });
-        return !check.error;
-      }) || 'python';
-    let effectivePy = pyBin;
-    let pyCheck = spawnSync(effectivePy, ['-c', 'import fitz'], { encoding: 'utf8' });
-    if (pyCheck.status !== 0) {
-      let pyInstall = spawnSync(effectivePy, ['-m', 'pip', 'install', '--user', 'pymupdf'], { encoding: 'utf8' });
-      if (pyInstall.status !== 0) {
-        spawnSync(effectivePy, ['-m', 'ensurepip', '--upgrade'], { encoding: 'utf8' });
-        pyInstall = spawnSync(effectivePy, ['-m', 'pip', 'install', '--user', 'pymupdf'], { encoding: 'utf8' });
-      }
-      if (pyInstall.status !== 0) {
-        console.warn(
-          '[Marketing Manager] Could not auto-install PyMuPDF:',
-          pyInstall.stderr || pyInstall.stdout || pyInstall.status
-        );
-        // PEP 668 environments (like Render) can block pip --user.
-        // Fall back to a dedicated virtualenv in persistent storage.
-        const venvDir = path.join(marketingManagerDataDir, 'pyenv');
-        const venvPy =
-          process.platform === 'win32'
-            ? path.join(venvDir, 'Scripts', 'python.exe')
-            : path.join(venvDir, 'bin', 'python');
-        if (!fs.existsSync(venvPy)) {
-          const mkVenv = spawnSync(pyBin, ['-m', 'venv', venvDir], { encoding: 'utf8' });
-          if (mkVenv.status !== 0) {
-            console.warn('[Marketing Manager] Could not create Python venv:', mkVenv.stderr || mkVenv.stdout || mkVenv.status);
-          }
-        }
-        if (fs.existsSync(venvPy)) {
-          spawnSync(venvPy, ['-m', 'ensurepip', '--upgrade'], { encoding: 'utf8' });
-          const venvInstall = spawnSync(venvPy, ['-m', 'pip', 'install', '--upgrade', 'pip', 'setuptools', 'wheel'], {
-            encoding: 'utf8'
-          });
-          if (venvInstall.status !== 0) {
-            console.warn('[Marketing Manager] venv bootstrap warning:', venvInstall.stderr || venvInstall.stdout || venvInstall.status);
-          }
-          const venvPyMuPdf = spawnSync(venvPy, ['-m', 'pip', 'install', 'pymupdf'], { encoding: 'utf8' });
-          if (venvPyMuPdf.status !== 0) {
-            console.warn('[Marketing Manager] venv PyMuPDF install failed:', venvPyMuPdf.stderr || venvPyMuPdf.stdout || venvPyMuPdf.status);
-          } else {
-            effectivePy = venvPy;
-          }
-        }
-      }
-      pyCheck = spawnSync(effectivePy, ['-c', 'import fitz'], { encoding: 'utf8' });
-      if (pyCheck.status !== 0) {
-        console.warn('[Marketing Manager] Python fitz module still unavailable:', pyCheck.stderr || pyCheck.stdout);
-      }
-    }
+    const effectivePy = mmEffectivePythonForMarketingPdf();
     const py = spawnSync(
       effectivePy,
       [
@@ -3264,6 +3299,11 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
       const titleRaw = String(req.body?.title || '').trim();
       const title = titleRaw || req.file.originalname || 'Contract document';
       const uploadExt = path.extname(String(req.file.originalname || '').toLowerCase());
+      const includeAgentRaw = req.body?.includeAgentSignature;
+      const includeAgentSignature =
+        includeAgentRaw === true ||
+        includeAgentRaw === 1 ||
+        ['1', 'true', 'on', 'yes'].includes(String(includeAgentRaw || '').trim().toLowerCase());
       let uploadBody = String(req.body?.body || '').trim();
       if (!uploadBody && uploadExt === '.txt') {
         try {
@@ -3273,6 +3313,43 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
         }
       }
       const uploadBodyHtmlRaw = String(req.body?.bodyHtml || '').trim();
+      const createdAt = new Date().toISOString();
+      const genDate = createdAt.slice(0, 10);
+
+      if (includeAgentSignature && uploadExt !== '.pdf') {
+        try {
+          if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        } catch {}
+        return res.status(400).json({
+          error:
+            'Including the Agent signature adds a page to the PDF. Upload a PDF file, or turn off “Include my Agent signature”.'
+        });
+      }
+
+      let agentTmpPath = '';
+      if (includeAgentSignature && uploadExt === '.pdf') {
+        const agent = readMarketingAgentSignature();
+        if (!agent?.signatureDataUrl) {
+          try {
+            if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+          } catch {}
+          return res.status(400).json({
+            error:
+              'Save your Agent signature first (Electronic contracts → Agent signature), or do not include it on upload.'
+          });
+        }
+        const parsedAgent = mmParseSignatureDataUrl(agent.signatureDataUrl);
+        if (!parsedAgent?.buffer?.length) {
+          try {
+            if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+          } catch {}
+          return res.status(400).json({ error: 'Stored Agent signature is invalid. Save it again.' });
+        }
+        const agentExt = parsedAgent.mime === 'image/jpeg' ? 'jpg' : 'png';
+        agentTmpPath = path.join(marketingManagerSignedDocsDir, `upload-agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${agentExt}`);
+        fs.writeFileSync(agentTmpPath, parsedAgent.buffer);
+      }
+
       const contract = {
         id: mmNewId('contract'),
         customerId: c.id,
@@ -3281,7 +3358,7 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
         bodyHtml: mmEnsureSignatureSectionHtml(uploadBodyHtmlRaw || mmPlainTextToHtml(uploadBody)),
         token: crypto.randomBytes(24).toString('hex'),
         status: 'pending',
-        createdAt: new Date().toISOString(),
+        createdAt,
         signedAt: null,
         signerName: '',
         signDate: '',
@@ -3290,8 +3367,40 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
         filePath: req.file.path,
         originalName: req.file.originalname || title,
         mimeType: req.file.mimetype || 'application/octet-stream',
-        fileSize: req.file.size || 0
+        fileSize: req.file.size || 0,
+        includeAgentSignature: Boolean(includeAgentSignature && uploadExt === '.pdf'),
+        agentSignatureDate: includeAgentSignature && uploadExt === '.pdf' ? genDate : ''
       };
+
+      if (includeAgentSignature && uploadExt === '.pdf' && agentTmpPath) {
+        const outPdf = path.join(marketingManagerContractDocsDir, `${contract.id}-with-agent.pdf`);
+        const ok = mmStampAgentPageOnPdf(req.file.path, outPdf, agentTmpPath, genDate);
+        try {
+          if (fs.existsSync(agentTmpPath)) fs.unlinkSync(agentTmpPath);
+        } catch {}
+        if (!ok) {
+          try {
+            if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+          } catch {}
+          try {
+            if (fs.existsSync(outPdf)) fs.unlinkSync(outPdf);
+          } catch {}
+          return res.status(500).json({
+            error: 'Could not append the Agent signature page. Ensure Python and PyMuPDF (pymupdf) are available on the server.'
+          });
+        }
+        try {
+          if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        } catch {}
+        contract.filePath = outPdf;
+        contract.mimeType = 'application/pdf';
+        try {
+          contract.fileSize = fs.statSync(outPdf).size || 0;
+        } catch {
+          contract.fileSize = 0;
+        }
+      }
+
       const data = readMarketingContracts();
       data.contracts.push(contract);
       writeMarketingContracts(data);
