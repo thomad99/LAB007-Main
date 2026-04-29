@@ -520,8 +520,14 @@
       <div class="mm-task-panel">
         <label class="mm-muted">Electronic contracts</label>
         <div class="mm-task-meta" id="mm-contracts-meta">
-          <button type="button" class="btn-mm" id="mm-new-contract">New contract</button>
+          <button type="button" class="btn-mm" id="mm-new-contract">Create doc to sign</button>
           <button type="button" class="btn-mm-ghost" id="mm-refresh-contracts">Refresh</button>
+        </div>
+        <div class="mm-task-meta" style="margin-top:12px;">
+          <input type="text" id="mm-contract-create-title" class="mm-input" placeholder="Document title" />
+          <div id="mm-contract-create-body" class="mm-rich-editor" style="margin-top:8px;" contenteditable="true"></div>
+          <button type="button" class="btn-mm" id="mm-create-contract" style="margin-top:8px;">Save doc for signing</button>
+          <p class="mm-small">Paste rich text directly. A signing section is automatically added if missing.</p>
         </div>
         <div class="mm-task-meta" style="margin-top:12px;">
           <input type="text" id="mm-contract-upload-title" class="mm-input" placeholder="Uploaded document title (optional)" />
@@ -665,19 +671,24 @@
       }
     }
 
-    $('#mm-new-contract')?.addEventListener('click', async () => {
-      const title = prompt('Contract title', `${cust.name} Service Agreement`);
-      if (!title || !title.trim()) return;
-      const body =
-        prompt(
-          'Contract body text',
-          `This agreement is made between LAB007 and ${cust.name}.\n\nScope of work:\n- Digital marketing services\n- Campaign setup and ongoing optimization\n\nBy signing, you agree to the terms and authorize LAB007 to proceed.`
-        ) || '';
-      if (!body.trim()) return alert('Contract body is required.');
+    $('#mm-new-contract')?.addEventListener('click', () => {
+      document.getElementById('mm-contract-create-title')?.focus();
+    });
+    $('#mm-create-contract')?.addEventListener('click', async () => {
+      const titleEl = document.getElementById('mm-contract-create-title');
+      const bodyEl = document.getElementById('mm-contract-create-body');
+      const title = String(titleEl?.value || '').trim();
+      const bodyHtml = String(bodyEl?.innerHTML || '').trim();
+      const body = String(bodyEl?.innerText || '').trim();
+      if (!title) return alert('Document title is required.');
+      if (!body) return alert('Document body is required.');
       await api(`/api/marketing-manager/customers/${cust.id}/contracts`, {
         method: 'POST',
-        body: JSON.stringify({ title: title.trim(), body: body.trim() })
+        body: JSON.stringify({ title, body, bodyHtml })
       });
+      if (titleEl) titleEl.value = '';
+      if (bodyEl) bodyEl.innerHTML = '';
+      await refresh();
       await loadContracts();
     });
 

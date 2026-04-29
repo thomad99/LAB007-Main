@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LAB007 Contract Signing</title>
   <style>
-    :root { --bg:#0a0a0b; --panel:#16161a; --line:rgba(255,255,255,.1); --text:#e8e8e6; --gold:#c9a84c; --muted:#9a9aa3; --ok:#2ecc87; }
+    :root { --bg:#f3f3f1; --panel:#ffffff; --line:rgba(0,0,0,.15); --text:#111111; --gold:#c9a84c; --muted:#5f6368; --ok:#2b8f60; }
     * { box-sizing: border-box; }
     body { margin:0; font-family: Arial, sans-serif; background:var(--bg); color:var(--text); }
     .wrap { max-width: 860px; margin: 28px auto; padding: 0 16px 24px; }
@@ -15,14 +15,14 @@
     .muted { color:var(--muted); }
     .body { white-space:pre-wrap; line-height:1.6; }
     label { display:block; font-size:13px; color:var(--muted); margin:8px 0 6px; }
-    input { width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--line); background:#111114; color:var(--text); }
-    canvas { width:100%; max-width: 620px; height: 190px; border:1px dashed var(--line); border-radius:8px; background:#0d0d10; touch-action:none; }
+    input { width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--text); }
+    canvas { width:100%; max-width: 620px; height: 190px; border:1px dashed var(--line); border-radius:8px; background:#fff; touch-action:none; }
     .row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
     button { border:0; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:700; }
     .gold { background:var(--gold); color:#0a0a0b; }
     .ghost { background:transparent; border:1px solid var(--line); color:var(--text); }
     .ok { color:var(--ok); font-weight:700; }
-    .error { color:#ff6b6b; font-weight:700; }
+    .error { color:#b42318; font-weight:700; }
   </style>
 </head>
 <body>
@@ -79,6 +79,14 @@
       let hasInk = false;
       let signed = false;
 
+      function fillCanvasWhite() {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+
       function pointerXY(ev) {
         const r = canvas.getBoundingClientRect();
         const src = ev.touches ? ev.touches[0] : ev;
@@ -100,7 +108,7 @@
         const p = pointerXY(ev);
         ctx.lineWidth = 2;
         ctx.lineCap = 'round';
-        ctx.strokeStyle = '#e8e8e6';
+        ctx.strokeStyle = '#111111';
         ctx.lineTo(p.x, p.y);
         ctx.stroke();
         hasInk = true;
@@ -111,6 +119,7 @@
       function clearSignature() {
         if (signed) return;
         ctx.clearRect(0, 0, canvas.width, canvas.height);
+        fillCanvasWhite();
         hasInk = false;
       }
 
@@ -134,7 +143,8 @@
           const data = await api('/api/marketing-manager/contracts/sign/' + token);
           const c = data.contract || {};
           titleEl.textContent = c.title || 'Contract';
-          bodyEl.textContent = c.body || '';
+          if (c.bodyHtml) bodyEl.innerHTML = c.bodyHtml;
+          else bodyEl.textContent = c.body || '';
           custEl.textContent = 'Customer: ' + (c.customerName || 'Customer');
           if (c.hasDocument && c.documentPath) {
             const docUrl = c.documentPath;
@@ -166,7 +176,11 @@
             signBtn.textContent = 'Already signed';
             if (c.signatureDataUrl) {
               const img = new Image();
-              img.onload = function () { ctx.drawImage(img, 0, 0, canvas.width, canvas.height); };
+              img.onload = function () {
+                clearSignature();
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                hasInk = true;
+              };
               img.src = c.signatureDataUrl;
             }
             signedMetaEl.className = 'ok';
@@ -203,7 +217,7 @@
         try {
           await api('/api/marketing-manager/contracts/sign/' + token, {
             method: 'POST',
-            body: JSON.stringify({ fullName, date, signatureDataUrl: canvas.toDataURL('image/jpeg', 0.92) })
+            body: JSON.stringify({ fullName, date, signatureDataUrl: canvas.toDataURL('image/png') })
           });
           setSignedUi();
           msgEl.className = 'ok';
@@ -243,6 +257,7 @@
       canvas.addEventListener('touchstart', startDraw, { passive: false });
       canvas.addEventListener('touchmove', moveDraw, { passive: false });
       canvas.addEventListener('touchend', endDraw, { passive: false });
+      fillCanvasWhite();
       load();
     })();
   </script>

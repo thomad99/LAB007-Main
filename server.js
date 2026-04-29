@@ -6,6 +6,7 @@ const path = require('path');
 const cors = require('cors');
 const fs = require('fs');
 const crypto = require('crypto');
+const { spawnSync } = require('child_process');
 const nodemailer = require('nodemailer');
 const multer = require('multer');
 const { parseStringPromise } = require('xml2js');
@@ -1844,6 +1845,7 @@ function mmContractView(c, customerName) {
     customerName: customerName || 'Customer',
     title: c.title,
     body: c.body || '',
+    bodyHtml: c.bodyHtml || '',
     status: c.status || 'pending',
     createdAt: c.createdAt,
     signedAt: c.signedAt || null,
@@ -1931,6 +1933,76 @@ function mmBuildSignedContractText(contract, customerName) {
     String(contract.body || '').trim() || '(No body text)'
   ];
   return lines.join('\n');
+}
+
+function mmEscapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function mmEnsureSignatureSection(bodyText) {
+  const source = String(bodyText || '').trim();
+  const hasSignature = /\bsignature\b/i.test(source);
+  const hasDate = /\bdate\b/i.test(source);
+  const hasName = /\bprinted\s+name\b|\bname\s*[:\-]/i.test(source);
+  if (hasSignature && hasDate && hasName) return source;
+  const out = source ? `${source}\n\n` : '';
+  return (
+    out +
+    [
+      '---',
+      'Printed Name: {{PRINTED_NAME}}',
+      'Client Signature: {{SIGNATURE}}',
+      'Date: {{DATE}}'
+    ].join('\n')
+  );
+}
+
+function mmPlainTextToHtml(text) {
+  const lines = String(text || '').split(/\r?\n/);
+  return lines.map((line) => (line.trim() ? `<p>${mmEscapeHtml(line)}</p>` : '<p><br /></p>')).join('');
+}
+
+function mmHtmlToPlainText(html) {
+  return String(html || '')
+    .replace(/<\s*br\s*\/?>/gi, '\n')
+    .replace(/<\/\s*p\s*>/gi, '\n')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\r/g, '')
+    .replace(/[ \t]+\n/g, '\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
+function mmEnsureSignatureSectionHtml(bodyHtml) {
+  const source = String(bodyHtml || '').trim();
+  const textProbe = mmHtmlToPlainText(source);
+  const hasSignature = /\bsignature\b/i.test(textProbe);
+  const hasDate = /\bdate\b/i.test(textProbe);
+  const hasName = /\bprinted\s+name\b|\bname\s*[:\-]/i.test(textProbe);
+  if (hasSignature && hasDate && hasName) return source;
+  return (
+    (source ? `${source}\n` : '') +
+    `<hr />
+<p><strong>Printed Name:</strong> {{PRINTED_NAME}}</p>
+<p><strong>Client Signature:</strong> {{SIGNATURE}}</p>
+<p><strong>Date:</strong> {{DATE}}</p>`
+  );
+}
+
+function mmInjectSignatureIntoHtml(templateHtml, contract) {
+  const signer = mmEscapeHtml(String(contract.signerName || '').trim());
+  const signDate = mmEscapeHtml(String(contract.signDate || '').trim());
+  let out = String(templateHtml || '');
+  out = out.replace(/\{\{\s*SIGNATURE_NAME\s*\}\}/gi, signer);
+  out = out.replace(/\{\{\s*PRINTED_NAME\s*\}\}/gi, signer);
+  out = out.replace(/\{\{\s*SIGNATURE\s*\}\}/gi, signer);
+  out = out.replace(/\{\{\s*DATE\s*\}\}/gi, signDate);
+  return out;
 }
 
 function mmInjectSignatureIntoText(templateText, contract) {
@@ -2141,19 +2213,63 @@ function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
   return Buffer.from(out, 'utf8');
 }
 
+function mmTryStampOriginalPdf(contract, signedPdfPath) {
+  try {
+    if (!contract.filePath || !fs.existsSync(contract.filePath)) return false;
+    const ext = path.extname(String(contract.originalName || contract.filePath).toLowerCase());
+    if (ext !== '.pdf') return false;
+    const sig = mmParseSignatureDataUrl(contract.signatureDataUrl || '');
+    if (!sig || !sig.buffer || !sig.buffer.length) return false;
+    const sigExt = sig.mime === 'image/jpeg' ? 'jpg' : 'png';
+    const tmpSigPath = path.join(marketingManagerSignedDocsDir, `${contract.id}-sig.${sigExt}`);
+    fs.writeFileSync(tmpSigPath, sig.buffer);
+    const signerScript = path.join(__dirname, 'lib', 'pdf_signer.py');
+    const py = spawnSync(
+      'python',
+      [
+        signerScript,
+        '--input',
+        contract.filePath,
+        '--output',
+        signedPdfPath,
+        '--signature',
+        tmpSigPath,
+        '--name',
+        String(contract.signerName || ''),
+        '--date',
+        String(contract.signDate || '')
+      ],
+      { encoding: 'utf8' }
+    );
+    try {
+      if (fs.existsSync(tmpSigPath)) fs.unlinkSync(tmpSigPath);
+    } catch {}
+    if (py.status !== 0 || !fs.existsSync(signedPdfPath)) {
+      console.warn('[Marketing Manager] PDF signature stamping failed:', py.stderr || py.stdout || py.status);
+      return false;
+    }
+    return true;
+  } catch (error) {
+    console.warn('[Marketing Manager] PDF signature stamping error:', error.message);
+    return false;
+  }
+}
+
 function mmCreateSignedArtifacts(contract, customerName) {
   const baseText = (() => {
     const ext = path.extname(String(contract.originalName || '').toLowerCase());
     if (ext === '.txt' && contract.filePath && fs.existsSync(contract.filePath)) {
       try {
-        return fs.readFileSync(contract.filePath, 'utf8');
+        return mmEnsureSignatureSection(fs.readFileSync(contract.filePath, 'utf8'));
       } catch {
-        return String(contract.body || '');
+        return mmEnsureSignatureSection(contract.body || '');
       }
     }
-    return String(contract.body || '');
+    return mmEnsureSignatureSection(contract.body || '');
   })();
   const injected = mmInjectSignatureIntoText(baseText, contract);
+  const baseHtml = mmEnsureSignatureSectionHtml(contract.bodyHtml || mmPlainTextToHtml(baseText));
+  const injectedHtml = mmInjectSignatureIntoHtml(baseHtml, contract);
   const signedTxt = [
     injected.trim(),
     '',
@@ -2165,9 +2281,16 @@ function mmCreateSignedArtifacts(contract, customerName) {
   ].join('\n');
   const signedTextPath = path.join(marketingManagerSignedDocsDir, `${contract.id}-signed.txt`);
   fs.writeFileSync(signedTextPath, signedTxt, 'utf8');
+  // keep html body for fallback view compatibility only
+  const signedHtmlPath = path.join(marketingManagerSignedDocsDir, `${contract.id}-signed.html`);
+  fs.writeFileSync(signedHtmlPath, `<div>${injectedHtml}</div>`, 'utf8');
   const signedPdfPath = path.join(marketingManagerSignedDocsDir, `${contract.id}-signed.pdf`);
-  fs.writeFileSync(signedPdfPath, mmBuildSignedContractPdfFromText(signedTxt, contract.signatureDataUrl));
+  const stamped = mmTryStampOriginalPdf(contract, signedPdfPath);
+  if (!stamped) {
+    fs.writeFileSync(signedPdfPath, mmBuildSignedContractPdfFromText(signedTxt, contract.signatureDataUrl));
+  }
   contract.signedTextPath = signedTextPath;
+  contract.signedHtmlPath = signedHtmlPath;
   contract.signedPdfPath = signedPdfPath;
 }
 
@@ -2488,7 +2611,10 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
     const c = mmFindCustomer(state, req.params.customerId);
     if (!c) return res.status(404).json({ error: 'Customer not found' });
     const title = String(req.body?.title || '').trim();
-    const body = String(req.body?.body || '').trim();
+    const bodyHtmlRaw = String(req.body?.bodyHtml || '').trim();
+    const bodyHtml = bodyHtmlRaw ? mmEnsureSignatureSectionHtml(bodyHtmlRaw) : '';
+    const bodyRaw = String(req.body?.body || '').trim();
+    const body = mmEnsureSignatureSection(bodyRaw || mmHtmlToPlainText(bodyHtml));
     if (!title) return res.status(400).json({ error: 'Contract title is required' });
     if (!body) return res.status(400).json({ error: 'Contract body is required' });
 
@@ -2498,6 +2624,7 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
       customerId: c.id,
       title,
       body,
+      bodyHtml,
       token,
       status: 'pending',
       createdAt: new Date().toISOString(),
@@ -2528,11 +2655,22 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
 
       const titleRaw = String(req.body?.title || '').trim();
       const title = titleRaw || req.file.originalname || 'Contract document';
+      const uploadExt = path.extname(String(req.file.originalname || '').toLowerCase());
+      let uploadBody = String(req.body?.body || '').trim();
+      if (!uploadBody && uploadExt === '.txt') {
+        try {
+          uploadBody = fs.readFileSync(req.file.path, 'utf8');
+        } catch {
+          uploadBody = '';
+        }
+      }
+      const uploadBodyHtmlRaw = String(req.body?.bodyHtml || '').trim();
       const contract = {
         id: mmNewId('contract'),
         customerId: c.id,
         title,
-        body: String(req.body?.body || '').trim(),
+        body: mmEnsureSignatureSection(uploadBody),
+        bodyHtml: mmEnsureSignatureSectionHtml(uploadBodyHtmlRaw || mmPlainTextToHtml(uploadBody)),
         token: crypto.randomBytes(24).toString('hex'),
         status: 'pending',
         createdAt: new Date().toISOString(),
@@ -2566,7 +2704,7 @@ app.delete('/api/marketing-manager/customers/:customerId/contracts/:contractId',
     );
     if (idx === -1) return res.status(404).json({ error: 'Contract not found' });
     const contract = data.contracts[idx];
-    [contract.filePath, contract.signedTextPath, contract.signedPdfPath].forEach((p) => {
+    [contract.filePath, contract.signedTextPath, contract.signedHtmlPath, contract.signedPdfPath].forEach((p) => {
       if (!p) return;
       try {
         if (fs.existsSync(p)) fs.unlinkSync(p);
@@ -2619,11 +2757,18 @@ app.get('/api/marketing-manager/contracts/:contractId/signed-document', (req, re
     const data = readMarketingContracts();
     const contract = data.contracts.find((x) => x.id === req.params.contractId);
     if (!contract) return res.status(404).json({ error: 'Contract not found' });
-    if ((contract.status || 'pending') !== 'signed' || !contract.signedTextPath || !fs.existsSync(contract.signedTextPath)) {
+    if ((contract.status || 'pending') !== 'signed') {
       return res.status(404).json({ error: 'Signed document not found' });
     }
-    res.type('text/plain; charset=utf-8');
-    return res.sendFile(path.resolve(contract.signedTextPath));
+    if (contract.signedPdfPath && fs.existsSync(contract.signedPdfPath)) {
+      res.type('application/pdf');
+      return res.sendFile(path.resolve(contract.signedPdfPath));
+    }
+    if (contract.signedTextPath && fs.existsSync(contract.signedTextPath)) {
+      res.type('text/plain; charset=utf-8');
+      return res.sendFile(path.resolve(contract.signedTextPath));
+    }
+    return res.status(404).json({ error: 'Signed document not found' });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -2642,6 +2787,7 @@ app.get('/api/marketing-manager/contracts/sign/:token', (req, res) => {
       contract: {
         title: contract.title,
         body: contract.body,
+        bodyHtml: contract.bodyHtml || '',
         status: contract.status || 'pending',
         customerName: customer?.name || 'Customer',
         signerName: contract.signerName || '',
@@ -2669,9 +2815,19 @@ app.get('/api/marketing-manager/contracts/sign/:token/document', (req, res) => {
     const data = readMarketingContracts();
     const contract = data.contracts.find((x) => x.token === token);
     if (!contract) return res.status(404).json({ error: 'Contract not found' });
-    if ((contract.status || 'pending') === 'signed' && contract.signedTextPath && fs.existsSync(contract.signedTextPath)) {
-      res.type('text/plain; charset=utf-8');
-      return res.sendFile(path.resolve(contract.signedTextPath));
+    if ((contract.status || 'pending') === 'signed') {
+      if (contract.signedPdfPath && fs.existsSync(contract.signedPdfPath)) {
+        res.type('application/pdf');
+        return res.sendFile(path.resolve(contract.signedPdfPath));
+      }
+      if (contract.signedHtmlPath && fs.existsSync(contract.signedHtmlPath)) {
+        res.type('text/html; charset=utf-8');
+        return res.sendFile(path.resolve(contract.signedHtmlPath));
+      }
+      if (contract.signedTextPath && fs.existsSync(contract.signedTextPath)) {
+        res.type('text/plain; charset=utf-8');
+        return res.sendFile(path.resolve(contract.signedTextPath));
+      }
     }
     if (!contract.filePath || !fs.existsSync(contract.filePath)) {
       return res.status(404).json({ error: 'Document file not found' });
@@ -2693,13 +2849,25 @@ app.get('/api/marketing-manager/contracts/sign/:token/download', (req, res) => {
     if ((contract.status || 'pending') !== 'signed') {
       return res.status(409).json({ error: 'Contract must be signed before download' });
     }
+    const safeTitle = String(contract.title || 'contract').replace(/[^a-zA-Z0-9_-]+/g, '_');
+    if (contract.signedPdfPath && fs.existsSync(contract.signedPdfPath)) {
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeTitle || 'contract'}-signed.pdf"`);
+      return res.sendFile(path.resolve(contract.signedPdfPath));
+    }
+    if (contract.signedHtmlPath && fs.existsSync(contract.signedHtmlPath)) {
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeTitle || 'contract'}-signed.html"`);
+      return res.sendFile(path.resolve(contract.signedHtmlPath));
+    }
+    if (contract.signedTextPath && fs.existsSync(contract.signedTextPath)) {
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${safeTitle || 'contract'}-signed.txt"`);
+      return res.sendFile(path.resolve(contract.signedTextPath));
+    }
     const state = readMarketingManagerState();
     const customer = mmFindCustomer(state, contract.customerId);
-    const pdf =
-      contract.signedPdfPath && fs.existsSync(contract.signedPdfPath)
-        ? fs.readFileSync(contract.signedPdfPath)
-        : mmBuildSignedContractPdf(contract, customer?.name || 'Customer');
-    const safeTitle = String(contract.title || 'contract').replace(/[^a-zA-Z0-9_-]+/g, '_');
+    const pdf = mmBuildSignedContractPdf(contract, customer?.name || 'Customer');
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${safeTitle || 'contract'}-signed.pdf"`);
     return res.send(pdf);

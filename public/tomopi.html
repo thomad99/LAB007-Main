@@ -309,6 +309,7 @@
       position: relative;
       width: 100%;
       aspect-ratio: 4 / 3;
+      min-height: 260px;
       border-radius: 10px;
       overflow: hidden;
       border: 1px solid rgba(255,255,255,0.12);
@@ -392,8 +393,33 @@
       aspect-ratio: auto;
       min-height: 0;
     }
-    .sim-wrap:fullscreen .sim-note {
-      margin-top: 8px;
+    .sim-wrap.sim-force-fullscreen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      width: 100vw;
+      height: 100dvh;
+      padding: 14px;
+      border-radius: 0;
+      border: none;
+      background: #04070d;
+      display: flex;
+      flex-direction: column;
+    }
+    .sim-wrap.sim-force-fullscreen .sim-display {
+      flex: 1;
+      aspect-ratio: auto;
+      min-height: 0;
+    }
+    body.sim-body-fullscreen {
+      overflow: hidden;
+    }
+    @media (max-width: 768px) {
+      .sim-wrap { padding: 10px; }
+      .sim-toolbar { justify-content: stretch; }
+      .sim-tool-btn { flex: 1; min-height: 40px; }
+      .sim-content { padding: 12px; gap: 8px; }
+      .sim-display { min-height: 220px; }
     }
     .pi-box-panel {
       margin: 0 0 16px 0;
@@ -1044,22 +1070,20 @@
     </div>
 
     <div class="panel">
-      <h2>Display simulator</h2>
+      <h2>WebView</h2>
       <div class="sim-wrap" id="simWrap">
         <div class="sim-toolbar">
-          <button type="button" class="sim-tool-btn" id="simRefreshBtn">Refresh live data</button>
           <button type="button" class="sim-tool-btn" id="simFullscreenBtn">Fullscreen</button>
         </div>
         <div class="sim-display" id="simDisplay">
           <div class="sim-mode-badge" id="simModeBadge">mode</div>
           <div class="sim-content" id="simContent">
             <div class="sim-clock" id="simClock">--:--</div>
-            <div class="sim-sub" id="simSub">Preview loading...</div>
+            <div class="sim-sub" id="simSub">WebView loading...</div>
             <div class="sim-feed" id="simFeed"></div>
             <div class="sim-ticker" id="simTicker"></div>
           </div>
         </div>
-        <p class="sim-note">Live preview of configured mode, colors, font family, and example content.</p>
       </div>
     </div>
 
@@ -1112,6 +1136,7 @@
     const stockMaxLines = document.getElementById('stockMaxLines');
     const stockFontSelect = document.getElementById('stockFontSelect');
     const simModeBadge = document.getElementById('simModeBadge');
+    const simDisplay = document.getElementById('simDisplay');
     const simContent = document.getElementById('simContent');
     const simClock = document.getElementById('simClock');
     const simSub = document.getElementById('simSub');
@@ -1120,6 +1145,7 @@
     const simWrap = document.getElementById('simWrap');
     const simRefreshBtn = document.getElementById('simRefreshBtn');
     const simFullscreenBtn = document.getElementById('simFullscreenBtn');
+    let simForcedFullscreen = false;
     const piCardButtons = () => Array.from(document.querySelectorAll('.pi-card[data-control]'));
     const piEditOverlay = document.getElementById('piEditOverlay');
     const piEditTitle = document.getElementById('piEditTitle');
@@ -1579,7 +1605,13 @@
       simContent.style.background = rgbArrayToCss(bg, '#000');
       simContent.style.color = rgbArrayToCss(fg, '#fff');
       simContent.style.fontFamily = `${font}, "JetBrains Mono", "Fira Code", monospace`;
-      simClock.style.fontSize = clockSize || '';
+      const w = simDisplay?.clientWidth || 640;
+      const h = simDisplay?.clientHeight || 480;
+      const base = Math.max(14, Math.min(w / 4.8, h / 2.9));
+      simClock.style.fontSize = clockSize || `${Math.round(base)}px`;
+      simSub.style.fontSize = `${Math.round(base * 0.26)}px`;
+      simFeed.style.fontSize = `${Math.round(base * 0.24)}px`;
+      simTicker.style.fontSize = `${Math.round(base * 0.2)}px`;
 
       simClock.textContent = nowClockString();
       simSub.textContent = subText;
@@ -1587,6 +1619,44 @@
       simTicker.textContent = tickerText || '';
       simFeed.style.display = feedText ? '' : 'none';
       simTicker.style.display = tickerText ? '' : 'none';
+    }
+
+    function setSimFullscreenButtonText() {
+      const isNativeFullscreen = document.fullscreenElement === simWrap;
+      const isFullscreen = isNativeFullscreen || simForcedFullscreen;
+      if (simFullscreenBtn) simFullscreenBtn.textContent = isFullscreen ? 'Exit Fullscreen' : 'Fullscreen';
+    }
+
+    function setSimForcedFullscreen(on) {
+      simForcedFullscreen = Boolean(on);
+      simWrap.classList.toggle('sim-force-fullscreen', simForcedFullscreen);
+      document.body.classList.toggle('sim-body-fullscreen', simForcedFullscreen);
+      setSimFullscreenButtonText();
+      updateSimulator();
+    }
+
+    async function toggleSimFullscreen() {
+      const isNativeFullscreen = document.fullscreenElement === simWrap;
+      if (isNativeFullscreen) {
+        try { await document.exitFullscreen(); } catch (_) {}
+        setSimFullscreenButtonText();
+        return;
+      }
+      if (simForcedFullscreen) {
+        setSimForcedFullscreen(false);
+        return;
+      }
+      const canNative = typeof simWrap.requestFullscreen === 'function' && Boolean(document.fullscreenEnabled);
+      if (canNative) {
+        try {
+          await simWrap.requestFullscreen();
+          setSimFullscreenButtonText();
+          return;
+        } catch (_) {
+          // mobile browsers can reject native fullscreen; fallback below.
+        }
+      }
+      setSimForcedFullscreen(true);
     }
 
     function applyModeFromDropdown() {
@@ -1803,20 +1873,17 @@
       });
     }
     if (simFullscreenBtn && simWrap) {
-      simFullscreenBtn.addEventListener('click', async () => {
-        try {
-          if (document.fullscreenElement === simWrap) {
-            await document.exitFullscreen();
-          } else {
-            await simWrap.requestFullscreen();
-          }
-        } catch (_) {
-          // browser can block fullscreen without user gesture/permissions
-        }
-      });
+      simFullscreenBtn.addEventListener('click', toggleSimFullscreen);
       document.addEventListener('fullscreenchange', () => {
-        simFullscreenBtn.textContent = document.fullscreenElement === simWrap ? 'Exit Fullscreen' : 'Fullscreen';
+        setSimFullscreenButtonText();
+        updateSimulator();
       });
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && simForcedFullscreen) setSimForcedFullscreen(false);
+      });
+      window.addEventListener('resize', updateSimulator);
+      window.addEventListener('orientationchange', () => setTimeout(updateSimulator, 150));
+      setSimFullscreenButtonText();
     }
     piEditClose.addEventListener('click', closePiEditor);
     piEditOverlay.addEventListener('click', (e) => {
