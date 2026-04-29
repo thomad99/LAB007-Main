@@ -2285,10 +2285,6 @@ async function mmNotifyContractSigned(contract, customerName) {
     console.warn('[Marketing Manager] Signed contract email skipped: no recipient configured');
     return;
   }
-  const signUrlBase = String(process.env.PUBLIC_BASE_URL || process.env.APP_BASE_URL || '').trim();
-  const signPath = `/marketing-manager/sign/${contract.token}`;
-  const signUrl = signUrlBase ? `${signUrlBase.replace(/\/+$/, '')}${signPath}` : signPath;
-  const docUrl = contract.filePath ? `${signUrl}/document` : '';
   const safeTitle = String(contract.title || 'contract').replace(/[^a-zA-Z0-9_-]+/g, '_');
   const signedPdf =
     contract.signedPdfPath && fs.existsSync(contract.signedPdfPath)
@@ -2307,9 +2303,7 @@ async function mmNotifyContractSigned(contract, customerName) {
       `Contract: ${contract.title || 'Untitled contract'}`,
       `Signed by: ${contract.signerName || 'Unknown signer'}`,
       `Date entered: ${contract.signDate || 'N/A'}`,
-      `Signed at: ${contract.signedAt || 'N/A'}`,
-      `Signing link: ${signUrl}`,
-      docUrl ? `Document link: ${docUrl}` : ''
+      `Signed at: ${contract.signedAt || 'N/A'}`
     ]
       .filter(Boolean)
       .join('\n'),
