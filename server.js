@@ -2577,26 +2577,55 @@ function mmTryStampOriginalPdf(contract, signedPdfPath) {
         const check = spawnSync(bin, ['-V'], { encoding: 'utf8' });
         return !check.error;
       }) || 'python';
-    const pyCheck = spawnSync(pyBin, ['-c', 'import fitz'], { encoding: 'utf8' });
+    let effectivePy = pyBin;
+    let pyCheck = spawnSync(effectivePy, ['-c', 'import fitz'], { encoding: 'utf8' });
     if (pyCheck.status !== 0) {
-      let pyInstall = spawnSync(pyBin, ['-m', 'pip', 'install', '--user', 'pymupdf'], { encoding: 'utf8' });
+      let pyInstall = spawnSync(effectivePy, ['-m', 'pip', 'install', '--user', 'pymupdf'], { encoding: 'utf8' });
       if (pyInstall.status !== 0) {
-        spawnSync(pyBin, ['-m', 'ensurepip', '--upgrade'], { encoding: 'utf8' });
-        pyInstall = spawnSync(pyBin, ['-m', 'pip', 'install', '--user', 'pymupdf'], { encoding: 'utf8' });
+        spawnSync(effectivePy, ['-m', 'ensurepip', '--upgrade'], { encoding: 'utf8' });
+        pyInstall = spawnSync(effectivePy, ['-m', 'pip', 'install', '--user', 'pymupdf'], { encoding: 'utf8' });
       }
       if (pyInstall.status !== 0) {
         console.warn(
           '[Marketing Manager] Could not auto-install PyMuPDF:',
           pyInstall.stderr || pyInstall.stdout || pyInstall.status
         );
+        // PEP 668 environments (like Render) can block pip --user.
+        // Fall back to a dedicated virtualenv in persistent storage.
+        const venvDir = path.join(marketingManagerDataDir, 'pyenv');
+        const venvPy =
+          process.platform === 'win32'
+            ? path.join(venvDir, 'Scripts', 'python.exe')
+            : path.join(venvDir, 'bin', 'python');
+        if (!fs.existsSync(venvPy)) {
+          const mkVenv = spawnSync(pyBin, ['-m', 'venv', venvDir], { encoding: 'utf8' });
+          if (mkVenv.status !== 0) {
+            console.warn('[Marketing Manager] Could not create Python venv:', mkVenv.stderr || mkVenv.stdout || mkVenv.status);
+          }
+        }
+        if (fs.existsSync(venvPy)) {
+          spawnSync(venvPy, ['-m', 'ensurepip', '--upgrade'], { encoding: 'utf8' });
+          const venvInstall = spawnSync(venvPy, ['-m', 'pip', 'install', '--upgrade', 'pip', 'setuptools', 'wheel'], {
+            encoding: 'utf8'
+          });
+          if (venvInstall.status !== 0) {
+            console.warn('[Marketing Manager] venv bootstrap warning:', venvInstall.stderr || venvInstall.stdout || venvInstall.status);
+          }
+          const venvPyMuPdf = spawnSync(venvPy, ['-m', 'pip', 'install', 'pymupdf'], { encoding: 'utf8' });
+          if (venvPyMuPdf.status !== 0) {
+            console.warn('[Marketing Manager] venv PyMuPDF install failed:', venvPyMuPdf.stderr || venvPyMuPdf.stdout || venvPyMuPdf.status);
+          } else {
+            effectivePy = venvPy;
+          }
+        }
       }
-      const pyRecheck = spawnSync(pyBin, ['-c', 'import fitz'], { encoding: 'utf8' });
-      if (pyRecheck.status !== 0) {
-        console.warn('[Marketing Manager] Python fitz module still unavailable:', pyRecheck.stderr || pyRecheck.stdout);
+      pyCheck = spawnSync(effectivePy, ['-c', 'import fitz'], { encoding: 'utf8' });
+      if (pyCheck.status !== 0) {
+        console.warn('[Marketing Manager] Python fitz module still unavailable:', pyCheck.stderr || pyCheck.stdout);
       }
     }
     const py = spawnSync(
-      pyBin,
+      effectivePy,
       [
         signerScript,
         '--input',

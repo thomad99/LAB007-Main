@@ -561,24 +561,26 @@
       </div>
 
       <div class="mm-task-panel">
-        <label class="mm-muted">Electronic contracts</label>
-        <div class="mm-task-meta" id="mm-contracts-meta">
-          <button type="button" class="btn-mm" id="mm-new-contract">Create doc to sign</button>
-          <button type="button" class="btn-mm-ghost" id="mm-refresh-contracts">Refresh</button>
-        </div>
-        <div class="mm-task-meta" style="margin-top:12px;">
-          <input type="text" id="mm-contract-create-title" class="mm-input" placeholder="Document title" />
-          <div id="mm-contract-create-body" class="mm-rich-editor" style="margin-top:8px;" contenteditable="true"></div>
-          <button type="button" class="btn-mm" id="mm-create-contract" style="margin-top:8px;">Save doc for signing</button>
-          <p class="mm-small">Paste rich text directly. A signing section is automatically added if missing.</p>
-        </div>
-        <div class="mm-task-meta" style="margin-top:12px;">
-          <input type="text" id="mm-contract-upload-title" class="mm-input" placeholder="Uploaded document title (optional)" />
-          <input type="file" id="mm-contract-upload-file" class="mm-input" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" style="margin-top:8px;" />
-          <button type="button" class="btn-mm" id="mm-upload-contract" style="margin-top:8px;">Upload document for e-sign</button>
-          <p class="mm-small">Supported: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG (max 25MB).</p>
-        </div>
-        <div id="mm-contracts-list" class="mm-task-tool"><p class="mm-muted">Loading contracts…</p></div>
+        <details class="mm-campaign-details" id="mm-contracts-details">
+          <summary>Electronic contracts</summary>
+          <div class="mm-task-meta" id="mm-contracts-meta" style="margin-top:12px;">
+            <button type="button" class="btn-mm" id="mm-new-contract">Create doc to sign</button>
+            <button type="button" class="btn-mm-ghost" id="mm-refresh-contracts">Refresh</button>
+          </div>
+          <div class="mm-task-meta" style="margin-top:12px;">
+            <input type="text" id="mm-contract-create-title" class="mm-input" placeholder="Document title" />
+            <div id="mm-contract-create-body" class="mm-rich-editor" style="margin-top:8px;" contenteditable="true"></div>
+            <button type="button" class="btn-mm" id="mm-create-contract" style="margin-top:8px;">Save doc for signing</button>
+            <p class="mm-small">Paste rich text directly. A signing section is automatically added if missing.</p>
+          </div>
+          <div class="mm-task-meta" style="margin-top:12px;">
+            <input type="text" id="mm-contract-upload-title" class="mm-input" placeholder="Uploaded document title (optional)" />
+            <input type="file" id="mm-contract-upload-file" class="mm-input" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" style="margin-top:8px;" />
+            <button type="button" class="btn-mm" id="mm-upload-contract" style="margin-top:8px;">Upload document for e-sign</button>
+            <p class="mm-small">Supported: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG (max 25MB).</p>
+          </div>
+          <div id="mm-contracts-list" class="mm-task-tool"><p class="mm-muted">Loading contracts…</p></div>
+        </details>
       </div>
     `;
 
@@ -737,6 +739,8 @@
     }
 
     $('#mm-new-contract')?.addEventListener('click', () => {
+      const details = $('#mm-contracts-details');
+      if (details) details.open = true;
       document.getElementById('mm-contract-create-title')?.focus();
     });
     $('#mm-create-contract')?.addEventListener('click', async () => {
@@ -757,7 +761,11 @@
       await loadContracts();
     });
 
-    $('#mm-refresh-contracts')?.addEventListener('click', loadContracts);
+    $('#mm-refresh-contracts')?.addEventListener('click', async () => {
+      const details = $('#mm-contracts-details');
+      if (details) details.open = true;
+      await loadContracts();
+    });
     $('#mm-upload-contract')?.addEventListener('click', async () => {
       const fileInput = $('#mm-contract-upload-file');
       const titleInput = $('#mm-contract-upload-title');
