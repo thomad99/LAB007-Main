@@ -17,6 +17,22 @@
     label { display:block; font-size:13px; color:var(--muted); margin:8px 0 6px; }
     input { width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--text); }
     canvas { width:100%; max-width: 620px; height: 190px; border:1px dashed var(--line); border-radius:8px; background:#fff; touch-action:none; }
+    canvas.signature-success {
+      border-color: rgba(40, 209, 124, 0.85);
+      animation: sig-success-ring 1.4s ease-out 2;
+      box-shadow: 0 0 0 0 rgba(40, 209, 124, 0.45);
+    }
+    @keyframes sig-success-ring {
+      0% {
+        box-shadow: 0 0 0 0 rgba(40, 209, 124, 0.52), 0 0 0 0 rgba(40, 209, 124, 0.3);
+      }
+      70% {
+        box-shadow: 0 0 0 10px rgba(40, 209, 124, 0.1), 0 0 0 20px rgba(40, 209, 124, 0.02);
+      }
+      100% {
+        box-shadow: 0 0 0 0 rgba(40, 209, 124, 0), 0 0 0 0 rgba(40, 209, 124, 0);
+      }
+    }
     .row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
     button { border:0; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:700; }
     .gold { background:var(--gold); color:#0a0a0b; }
@@ -158,6 +174,14 @@
         if (postSignActions) postSignActions.style.display = '';
       }
 
+      function animateSignatureSuccess() {
+        canvas.classList.remove('signature-success');
+        // Restart animation reliably on repeat calls.
+        void canvas.offsetWidth;
+        canvas.classList.add('signature-success');
+        window.setTimeout(() => canvas.classList.remove('signature-success'), 3200);
+      }
+
       async function load() {
         try {
           const data = await api('/api/marketing-manager/contracts/sign/' + token);
@@ -191,6 +215,7 @@
           }
           if (c.status === 'signed') {
             setSignedUi();
+            animateSignatureSuccess();
             nameEl.value = c.signerName || '';
             dateEl.value = c.signDate || '';
             signBtn.textContent = 'Already signed';
@@ -240,6 +265,7 @@
             body: JSON.stringify({ fullName, date, signatureDataUrl: canvas.toDataURL('image/jpeg', 0.92) })
           });
           setSignedUi();
+          animateSignatureSuccess();
           msgEl.className = 'ok';
           msgEl.textContent = 'Contract signed and stored successfully.';
         } catch (err) {

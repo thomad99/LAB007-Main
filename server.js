@@ -2299,13 +2299,13 @@ function mmEnsureSignatureSection(bodyText) {
       'Client Acceptance & Signature',
       '',
       '',
-      'Printed Name: ______________________________',
+      'Printed Name:',
       '',
       '',
-      'Client Signature: __________________________',
+      'Client Signature:',
       '',
       '',
-      'Date: ____________________'
+      'Date:'
     ].join('\n')
   );
 }
@@ -2338,11 +2338,11 @@ function mmEnsureSignatureSectionHtml(bodyHtml) {
     `<hr />
 <p><strong>Client Acceptance &amp; Signature</strong></p>
 <p><br /></p>
-<p><strong>Printed Name:</strong> ______________________________</p>
+<p><strong>Printed Name:</strong></p>
 <p><br /></p>
-<p><strong>Client Signature:</strong> __________________________</p>
+<p><strong>Client Signature:</strong></p>
 <p><br /></p>
-<p><strong>Date:</strong> ____________________</p>`
+<p><strong>Date:</strong></p>`
   );
 }
 
