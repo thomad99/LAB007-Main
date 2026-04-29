@@ -131,7 +131,7 @@
     .form-actions {
       margin-top: 10px;
       display: grid;
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr auto auto auto;
       gap: 10px;
       align-items: center;
     }
@@ -419,6 +419,37 @@
       display: grid;
       gap: 8px;
     }
+    .saved-reports-tools {
+      margin-top: 14px;
+      display: grid;
+      gap: 10px;
+      grid-template-columns: minmax(220px, 1fr) minmax(140px, 180px) minmax(140px, 180px) auto;
+      align-items: end;
+    }
+    .saved-reports-list {
+      margin-top: 12px;
+      display: grid;
+      gap: 8px;
+    }
+    .saved-report-row {
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 10px;
+      background: rgba(255,255,255,0.03);
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .saved-report-main {
+      min-width: 0;
+      display: grid;
+      gap: 4px;
+    }
+    .saved-report-title { font-size: 13px; font-weight: 700; color: #f0f6ff; }
+    .saved-report-meta { font-size: 12px; color: #9fb2d4; }
+    .saved-report-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
     .compare-item {
       border: 1px solid rgba(255,255,255,0.1);
       border-radius: 10px;
@@ -537,6 +568,7 @@
       .compare-grid { grid-template-columns: 1fr; }
       .gauge-row { grid-template-columns: 1fr; }
       .stats-high-level { grid-template-columns: 1fr; }
+      .saved-reports-tools { grid-template-columns: 1fr; }
     }
     @media (max-width: 640px) {
       .form-row { grid-template-columns: 1fr; }
@@ -563,6 +595,7 @@
       <div class="form-actions">
         <input id="reportLabel" class="input small" type="text" placeholder="Optional scan name (example: Home page before fixes)">
         <button id="saveReport" class="btn secondary" type="button">Save Scan</button>
+        <button id="viewSavedReports" class="btn ghost" type="button">View Saved Scans</button>
         <button id="exportPdf" class="btn ghost" type="button">Save as PDF</button>
       </div>
       <p id="status" class="status">Enter a website URL to run SEO + local visibility health checks.</p>
@@ -690,7 +723,7 @@
         </ul>
       </article>
 
-      <article class="card wide-12">
+      <article class="card wide-12" id="saved-scans-section">
         <h2>Saved Scans & Compare</h2>
         <div class="compare-grid">
           <div>
@@ -705,6 +738,15 @@
         </div>
         <div id="compareResults" class="compare-results">
           <div class="helper">Save at least two scans to compare progress over time.</div>
+        </div>
+        <div class="saved-reports-tools">
+          <input id="reportsFilterText" class="input small" type="text" placeholder="Filter by website or label">
+          <input id="reportsFilterFrom" class="input small" type="date">
+          <input id="reportsFilterTo" class="input small" type="date">
+          <button id="clearReportFilters" class="btn ghost" type="button">Clear filters</button>
+        </div>
+        <div id="savedReportsList" class="saved-reports-list">
+          <div class="helper">No saved scans yet.</div>
         </div>
       </article>
 
@@ -724,10 +766,16 @@
       const runBtn = document.getElementById('runAnalysis');
       const saveBtn = document.getElementById('saveReport');
       const exportPdfBtn = document.getElementById('exportPdf');
+      const viewSavedReportsBtn = document.getElementById('viewSavedReports');
       const runCompareBtn = document.getElementById('runCompare');
       const compareBase = document.getElementById('compareBase');
       const compareTarget = document.getElementById('compareTarget');
       const compareResults = document.getElementById('compareResults');
+      const savedReportsList = document.getElementById('savedReportsList');
+      const reportsFilterText = document.getElementById('reportsFilterText');
+      const reportsFilterFrom = document.getElementById('reportsFilterFrom');
+      const reportsFilterTo = document.getElementById('reportsFilterTo');
+      const clearReportFilters = document.getElementById('clearReportFilters');
       const analysisProgress = document.getElementById('analysisProgress');
       const reportGrid = document.getElementById('reportGrid');
       const progressFill = document.getElementById('progressFill');
@@ -762,6 +810,7 @@
       const offPageList = document.getElementById('offPageList');
       const gapList = document.getElementById('gapList');
       let lastAnalysis = null;
+      let allReports = [];
 
       function setStatus(text, isError) {
         statusEl.textContent = text;
@@ -791,6 +840,84 @@
         const val = Number(n) || 0;
         const sign = val > 0 ? '+' : '';
         return sign + val.toLocaleString();
+      }
+
+      function normalizeHost(url) {
+        const raw = String(url || '').trim();
+        if (!raw) return '';
+        try {
+          const withProto = raw.startsWith('http') ? raw : `https://${raw}`;
+          return new URL(withProto).hostname.replace(/^www\./i, '').toLowerCase();
+        } catch {
+          return raw.replace(/^https?:\/\//i, '').replace(/^www\./i, '').split('/')[0].toLowerCase();
+        }
+      }
+
+      function renderSavedReportsList() {
+        const q = String(reportsFilterText?.value || '').trim().toLowerCase();
+        const from = String(reportsFilterFrom?.value || '').trim();
+        const to = String(reportsFilterTo?.value || '').trim();
+        const fromMs = from ? new Date(`${from}T00:00:00`).getTime() : 0;
+        const toMs = to ? new Date(`${to}T23:59:59`).getTime() : 0;
+        const rows = (allReports || []).filter(function (r) {
+          const url = String(r.sourceUrl || '').toLowerCase();
+          const label = String(r.label || '').toLowerCase();
+          const host = normalizeHost(r.sourceUrl);
+          if (q && !url.includes(q) && !label.includes(q) && !host.includes(q)) return false;
+          const savedMs = new Date(r.savedAt || '').getTime();
+          if (fromMs && (!savedMs || savedMs < fromMs)) return false;
+          if (toMs && (!savedMs || savedMs > toMs)) return false;
+          return true;
+        });
+        if (!rows.length) {
+          savedReportsList.innerHTML = '<div class="helper">No saved scans match this filter.</div>';
+          return;
+        }
+        savedReportsList.innerHTML = rows.map(function (r) {
+          const score = Number(r.summary?.healthPercent) || 0;
+          const stamp = String(r.savedAt || '').replace('T', ' ').slice(0, 16);
+          const host = normalizeHost(r.sourceUrl);
+          return (
+            '<div class="saved-report-row">' +
+              '<div class="saved-report-main">' +
+                '<div class="saved-report-title">' + esc(r.label || host || 'Saved scan') + '</div>' +
+                '<div class="saved-report-meta">' + esc(host || r.sourceUrl || '') + ' • ' + esc(stamp) + ' • Score ' + score + '%</div>' +
+              '</div>' +
+              '<div class="saved-report-actions">' +
+                '<button type="button" class="btn secondary" data-report-select="' + esc(r.id) + '">Select</button>' +
+                '<button type="button" class="btn ghost" data-report-delete="' + esc(r.id) + '">Delete</button>' +
+              '</div>' +
+            '</div>'
+          );
+        }).join('');
+
+        Array.from(savedReportsList.querySelectorAll('[data-report-select]')).forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            const id = btn.getAttribute('data-report-select');
+            if (!id) return;
+            if (compareBase) compareBase.value = id;
+            if (compareTarget && compareTarget.value === id && allReports[0]?.id) {
+              compareTarget.value = allReports[0].id === id ? (allReports[1]?.id || id) : allReports[0].id;
+            }
+            setStatus('Report selected in compare baseline.', false);
+          });
+        });
+        Array.from(savedReportsList.querySelectorAll('[data-report-delete]')).forEach(function (btn) {
+          btn.addEventListener('click', async function () {
+            const id = btn.getAttribute('data-report-delete');
+            if (!id) return;
+            if (!window.confirm('Delete this saved scan?')) return;
+            try {
+              const resp = await fetch('/api/marketing-analyzer/reports/' + encodeURIComponent(id), { method: 'DELETE' });
+              const data = await resp.json().catch(function () { return {}; });
+              if (!resp.ok) throw new Error(data.error || 'Failed to delete scan');
+              setStatus('Saved scan deleted.', false);
+              await loadSavedReports();
+            } catch (error) {
+              setStatus(error.message || 'Failed to delete saved scan.', true);
+            }
+          });
+        });
       }
 
       function deltaClass(value, invert) {
@@ -913,9 +1040,11 @@
           const data = await resp.json();
           if (!resp.ok) throw new Error(data.error || 'Failed to load reports');
           const reports = Array.isArray(data.reports) ? data.reports : [];
+          allReports = reports;
           if (!reports.length) {
             compareBase.innerHTML = '<option value="">No saved scans yet</option>';
             compareTarget.innerHTML = '<option value="">No saved scans yet</option>';
+            renderSavedReportsList();
             return;
           }
           const opts = reports.map(function (r) {
@@ -929,9 +1058,12 @@
             compareBase.value = reports[1].id;
             compareTarget.value = reports[0].id;
           }
+          renderSavedReportsList();
         } catch (error) {
           compareBase.innerHTML = '<option value="">Could not load scans</option>';
           compareTarget.innerHTML = '<option value="">Could not load scans</option>';
+          allReports = [];
+          renderSavedReportsList();
         }
       }
 
@@ -1122,6 +1254,18 @@
         window.print();
       });
       runCompareBtn.addEventListener('click', runCompare);
+      viewSavedReportsBtn.addEventListener('click', function () {
+        document.getElementById('saved-scans-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      reportsFilterText.addEventListener('input', renderSavedReportsList);
+      reportsFilterFrom.addEventListener('change', renderSavedReportsList);
+      reportsFilterTo.addEventListener('change', renderSavedReportsList);
+      clearReportFilters.addEventListener('click', function () {
+        reportsFilterText.value = '';
+        reportsFilterFrom.value = '';
+        reportsFilterTo.value = '';
+        renderSavedReportsList();
+      });
       siteUrl.addEventListener('keydown', function (ev) {
         if (ev.key === 'Enter') {
           ev.preventDefault();

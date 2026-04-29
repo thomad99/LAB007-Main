@@ -207,6 +207,7 @@
                         <button type="button" class="btn-mm-tiny" data-open-contract="${escapeHtml(ct.signPath)}">Open</button>
                         <button type="button" class="btn-mm-tiny" data-copy-contract="${escapeHtml(ct.signPath)}">Copy link</button>
                         ${ct.signedDocumentPath ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.signedDocumentPath)}" target="_blank" rel="noopener" style="text-decoration:none;">Signed file</a>` : ''}
+                        <button type="button" class="btn-mm-tiny-danger" data-delete-contract-browser="${escapeHtml(ct.id)}" data-delete-contract-customer="${escapeHtml(ct.customerId || '')}">Delete</button>
                         <button type="button" class="btn-mm-ghost" data-jump-customer="${escapeHtml(ct.customerId || '')}" style="padding:4px 10px;font-size:11px;">Customer</button>
                       </div>
                     </div>
@@ -261,6 +262,18 @@
         selectedId = cid;
         render();
         document.getElementById('mm-main')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
+    el.querySelectorAll('[data-delete-contract-browser]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const contractId = btn.getAttribute('data-delete-contract-browser');
+        const customerId = btn.getAttribute('data-delete-contract-customer');
+        if (!contractId || !customerId) return;
+        if (!confirm('Delete this contract/document and all signed copies?')) return;
+        await api(`/api/marketing-manager/customers/${customerId}/contracts/${contractId}`, {
+          method: 'DELETE'
+        });
+        await refresh();
       });
     });
   }
@@ -733,13 +746,13 @@
       <div class="mm-main-head">
         <div>
           <h2>${escapeHtml(cust.name)}</h2>
-          ${cust.logoUrl ? `<img src="${escapeHtml(cust.logoUrl)}" alt="${escapeHtml(cust.name)} logo" style="height:34px; max-width:180px; object-fit:contain; margin:8px 0 4px; border-radius:6px; border:1px solid rgba(255,255,255,0.1); background:rgba(255,255,255,0.03); padding:4px;" />` : ''}
+          ${cust.logoUrl ? `<img src="${escapeHtml(cust.logoUrl)}" alt="${escapeHtml(cust.name)} logo" class="mm-customer-logo" />` : ''}
           ${socialRows}
           <p class="mm-muted">${escapeHtml(cust.notes || 'No notes — click Edit.')}</p>
         </div>
         <div class="mm-main-actions">
-          <button type="button" class="btn-mm-ghost" id="mm-edit-customer">Edit customer</button>
-          <button type="button" class="btn-mm-danger" id="mm-del-customer">Delete</button>
+          <button type="button" class="mm-icon-btn" id="mm-edit-customer" aria-label="Edit customer" title="Edit customer">✎</button>
+          <button type="button" class="mm-icon-btn mm-icon-btn-danger" id="mm-del-customer" aria-label="Delete customer" title="Delete customer">🗑</button>
         </div>
       </div>
       <div id="mm-customer-edit-panel" class="mm-edit-panel" style="display:none;">
@@ -773,23 +786,22 @@
         <div class="mm-dash-card"><div class="mm-dash-val">${co.total}</div><div class="mm-dash-label">All tasks</div></div>
       </div>
 
-      <div class="mm-add-task">
-        <h3>Add task from template</h3>
-        <div class="mm-add-buttons">
-          <button type="button" class="btn-mm" id="mm-add-directory">Directory listings</button>
-          <button type="button" class="btn-mm" id="mm-add-keywords">Keywords helper</button>
-        </div>
-        <details class="mm-campaign-details">
-          <summary>Campaign starters (${state.catalog.campaigns?.length || 0})</summary>
-          <div class="mm-campaign-grid" id="mm-campaign-buttons"></div>
-        </details>
-      </div>
-
       <div class="mm-task-panel">
-        <label class="mm-muted">Active task</label>
-        <select id="mm-task-select" class="mm-select">${taskOpts || '<option value="">No tasks yet</option>'}</select>
-        <div id="mm-task-meta" class="mm-task-meta"></div>
-        <div id="mm-task-tool" class="mm-task-tool"></div>
+        <details class="mm-campaign-details" id="mm-tasks-details">
+          <summary>Tasks</summary>
+          <div class="mm-add-task">
+            <h3>Add task from template</h3>
+            <div class="mm-add-buttons">
+              <button type="button" class="btn-mm" id="mm-add-directory">Directory listings</button>
+              <button type="button" class="btn-mm" id="mm-add-keywords">Keywords helper</button>
+            </div>
+          </div>
+
+          <label class="mm-muted">Active task</label>
+          <select id="mm-task-select" class="mm-select">${taskOpts || '<option value="">No tasks yet</option>'}</select>
+          <div id="mm-task-meta" class="mm-task-meta"></div>
+          <div id="mm-task-tool" class="mm-task-tool"></div>
+        </details>
       </div>
 
       <div class="mm-task-panel">
@@ -811,28 +823,49 @@
             <button type="button" class="btn-mm-ghost" id="mm-refresh-contracts">Refresh</button>
             <button type="button" class="btn-mm-danger-outline" id="mm-delete-all-contracts">Delete ALL</button>
           </div>
-          <div class="mm-task-meta" style="margin-top:12px;">
-            <input type="text" id="mm-contract-create-title" class="mm-input" placeholder="Document title" />
-            <div id="mm-contract-create-body" class="mm-rich-editor" style="margin-top:8px;" contenteditable="true"></div>
-            <label class="mm-muted" style="display:flex;gap:10px;align-items:flex-start;margin-top:12px;cursor:pointer;">
-              <input type="checkbox" id="mm-include-agent-sig" checked style="margin-top:3px;" />
-              <span>Include my Agent signature on this document (LAB007), dated today — requires a saved signature above.</span>
-            </label>
-            <button type="button" class="btn-mm" id="mm-create-contract" style="margin-top:8px;">Save doc for signing</button>
-            <p class="mm-small">Paste rich text directly. A signing section is automatically added if missing.</p>
-          </div>
-          <div class="mm-task-meta" style="margin-top:12px;">
-            <input type="text" id="mm-contract-upload-title" class="mm-input" placeholder="Uploaded document title (optional)" />
-            <input type="file" id="mm-contract-upload-file" class="mm-input" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" style="margin-top:8px;" />
-            <button type="button" class="btn-mm" id="mm-upload-contract" style="margin-top:8px;">Upload document for e-sign</button>
-            <p class="mm-small">Supported: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG (max 25MB).</p>
-          </div>
-          <div id="mm-contracts-list" class="mm-task-tool"><p class="mm-muted">Loading contracts…</p></div>
+          <details class="mm-campaign-details" id="mm-contract-create-details" style="margin-top:12px;">
+            <summary>Create a doc to sign</summary>
+            <div class="mm-task-meta" style="margin-top:12px;">
+              <input type="text" id="mm-contract-create-title" class="mm-input" placeholder="Document title" />
+              <div id="mm-contract-create-body" class="mm-rich-editor" style="margin-top:8px;" contenteditable="true"></div>
+              <label class="mm-muted" style="display:flex;gap:10px;align-items:flex-start;margin-top:12px;cursor:pointer;">
+                <input type="checkbox" id="mm-include-agent-sig" checked style="margin-top:3px;" />
+                <span>Include my Agent signature on this document (LAB007), dated today — requires a saved signature above.</span>
+              </label>
+              <button type="button" class="btn-mm" id="mm-create-contract" style="margin-top:8px;">Save doc for signing</button>
+              <p class="mm-small">Paste rich text directly. A signing section is automatically added if missing.</p>
+            </div>
+          </details>
+          <details class="mm-campaign-details" id="mm-contract-upload-details" style="margin-top:12px;">
+            <summary>Upload a doc for signing</summary>
+            <div class="mm-task-meta" style="margin-top:12px;">
+              <input type="text" id="mm-contract-upload-title" class="mm-input" placeholder="Uploaded document title (optional)" />
+              <input type="file" id="mm-contract-upload-file" class="mm-input" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" style="margin-top:8px;" />
+              <button type="button" class="btn-mm" id="mm-upload-contract" style="margin-top:8px;">Upload document for e-sign</button>
+              <p class="mm-small">Supported: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG (max 25MB).</p>
+            </div>
+          </details>
+          <details class="mm-campaign-details" id="mm-contract-view-details" style="margin-top:12px;">
+            <summary>View contracts</summary>
+            <div id="mm-contracts-list" class="mm-task-tool"><p class="mm-muted">Loading contracts…</p></div>
+          </details>
+        </details>
+      </div>
+      <div class="mm-task-panel">
+        <details class="mm-campaign-details" id="mm-campaign-starters-details">
+          <summary>Campaign starters (${state.catalog.campaigns?.length || 0})</summary>
+          <div class="mm-campaign-grid" id="mm-campaign-buttons"></div>
         </details>
       </div>
     `;
 
     const campGrid = $('#mm-campaign-buttons');
+    const tasksDetails = $('#mm-tasks-details');
+    if (tasksDetails) tasksDetails.open = false;
+    const contractsDetails = $('#mm-contracts-details');
+    if (contractsDetails) contractsDetails.open = false;
+    const campaignDetails = $('#mm-campaign-starters-details');
+    if (campaignDetails) campaignDetails.open = false;
     if (campGrid) {
       campGrid.innerHTML = (state.catalog.campaigns || [])
         .map(
@@ -994,6 +1027,8 @@
     $('#mm-new-contract')?.addEventListener('click', () => {
       const details = $('#mm-contracts-details');
       if (details) details.open = true;
+      const createDetails = $('#mm-contract-create-details');
+      if (createDetails) createDetails.open = true;
       document.getElementById('mm-contract-create-title')?.focus();
     });
     $('#mm-create-contract')?.addEventListener('click', async () => {
@@ -1016,6 +1051,8 @@
       if (bodyEl) bodyEl.innerHTML = '';
       const incEl = document.getElementById('mm-include-agent-sig');
       if (incEl) incEl.checked = true;
+      const viewDetails = $('#mm-contract-view-details');
+      if (viewDetails) viewDetails.open = true;
       await refresh();
       await loadContracts();
     });
@@ -1023,6 +1060,8 @@
     $('#mm-refresh-contracts')?.addEventListener('click', async () => {
       const details = $('#mm-contracts-details');
       if (details) details.open = true;
+      const viewDetails = $('#mm-contract-view-details');
+      if (viewDetails) viewDetails.open = true;
       await loadContracts();
     });
     $('#mm-upload-contract')?.addEventListener('click', async () => {
@@ -1038,6 +1077,8 @@
       await apiForm(`/api/marketing-manager/customers/${cust.id}/contracts/upload`, 'POST', fd);
       if (titleInput) titleInput.value = '';
       if (fileInput) fileInput.value = '';
+      const viewDetails = $('#mm-contract-view-details');
+      if (viewDetails) viewDetails.open = true;
       await refresh();
       await loadContracts();
     });

@@ -558,126 +558,11 @@
   <div class="analyzer-inner">
     <div class="analyzer-header">
       <div class="section-tag">Free SEO Analyzer</div>
-      <h2>Deep site health report<br>in seconds</h2>
-      <p>AI analysis across 10 ranking factors — from metadata and speed to backlinks, local presence, and keyword positioning.</p>
-      <div class="coverage-badges">
-        <span class="badge"><span class="badge-dot"></span>SEO & Metadata</span>
-        <span class="badge"><span class="badge-dot"></span>Page Speed</span>
-        <span class="badge"><span class="badge-dot"></span>Mobile / UX</span>
-        <span class="badge"><span class="badge-dot"></span>Backlinks</span>
-        <span class="badge"><span class="badge-dot"></span>Google Business</span>
-        <span class="badge"><span class="badge-dot"></span>Bing Places</span>
-        <span class="badge"><span class="badge-dot"></span>Apple Maps</span>
-        <span class="badge"><span class="badge-dot"></span>Keywords</span>
-        <span class="badge"><span class="badge-dot"></span>Schema / Structured Data</span>
-        <span class="badge"><span class="badge-dot"></span>Social Signals</span>
+      <h2>Analyzer moved to its own page</h2>
+      <p>Run, save, compare, and manage website audit reports in the dedicated Marketing Analyzer workspace.</p>
+      <div class="hero-actions" style="margin-top:14px;">
+        <a class="btn-primary btn-hero" href="/marketing-analyzer">Open Marketing Analyzer</a>
       </div>
-    </div>
-
-    <!-- URL Input -->
-    <div class="url-area">
-      <div class="url-row">
-        <input type="text" class="url-input" id="urlInput" placeholder="yourdomain.com" />
-        <button class="url-submit" id="analyzeBtn" onclick="runAnalysis()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-          Analyze Site
-        </button>
-      </div>
-    </div>
-
-    <!-- States -->
-    <div id="analyzer-idle">
-      <div class="idle-icon">🔍</div>
-      <p>Enter a URL above to get your full SEO health report</p>
-    </div>
-
-    <div id="analyzer-loading">
-      <div class="loading-center">
-        <div class="loading-spinner"></div>
-        <div class="loading-title">Analyzing your site</div>
-        <div class="loading-url" id="loading-url-display"></div>
-        <div class="loading-steps" id="loading-steps">
-          <div class="loading-step pending" id="step-0"><div class="step-indicator">1</div>Checking domain & HTTPS</div>
-          <div class="loading-step pending" id="step-1"><div class="step-indicator">2</div>Scanning metadata & SEO signals</div>
-          <div class="loading-step pending" id="step-2"><div class="step-indicator">3</div>Auditing page speed & Core Web Vitals</div>
-          <div class="loading-step pending" id="step-3"><div class="step-indicator">4</div>Evaluating mobile & UX</div>
-          <div class="loading-step pending" id="step-4"><div class="step-indicator">5</div>Checking local listings (Google, Bing, Apple)</div>
-          <div class="loading-step pending" id="step-5"><div class="step-indicator">6</div>Estimating backlink profile</div>
-          <div class="loading-step pending" id="step-6"><div class="step-indicator">7</div>Analyzing keywords & content signals</div>
-          <div class="loading-step pending" id="step-7"><div class="step-indicator">8</div>Checking schema & structured data</div>
-          <div class="loading-step pending" id="step-8"><div class="step-indicator">9</div>Reviewing social & Open Graph signals</div>
-          <div class="loading-step pending" id="step-9"><div class="step-indicator">10</div>Generating recommendations</div>
-        </div>
-      </div>
-    </div>
-
-    <div id="analyzer-results">
-      <!-- Overall score row -->
-      <div class="results-top">
-        <div class="score-ring-wrap">
-          <div class="score-ring">
-            <svg viewBox="0 0 150 150">
-              <circle cx="75" cy="75" r="58" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="10"/>
-              <circle id="score-arc" cx="75" cy="75" r="58" fill="none" stroke-width="10"
-                stroke-linecap="round" stroke-dasharray="364" stroke-dashoffset="364"
-                style="transition: stroke-dashoffset 1.2s cubic-bezier(0.23,1,0.32,1)"/>
-            </svg>
-            <div class="score-ring-inner">
-              <div class="score-num" id="overall-score">0</div>
-              <div class="score-label">/ 100</div>
-            </div>
-          </div>
-          <div class="score-grade" id="score-grade"></div>
-        </div>
-        <div class="results-summary">
-          <div class="results-url" id="results-url-display"></div>
-          <div class="results-title" id="results-headline"></div>
-          <div class="results-meta" id="results-meta"></div>
-          <div class="score-breakdown" id="score-breakdown"></div>
-        </div>
-      </div>
-
-      <!-- Category tiles -->
-      <div class="cat-grid" id="cat-grid"></div>
-
-      <!-- Detail panel -->
-      <div class="detail-panel" id="detail-panel">
-        <div class="detail-header">
-          <div class="detail-title" id="detail-title">Select a category above</div>
-          <div class="detail-score-badge" id="detail-badge"></div>
-        </div>
-        <div class="findings" id="detail-findings"></div>
-      </div>
-
-      <!-- Quick wins -->
-      <div class="quick-wins" id="quick-wins-section">
-        <div class="quick-wins-title">⚡ Quick Wins — Do These First</div>
-        <div class="quick-wins-grid" id="quick-wins-grid"></div>
-      </div>
-
-      <div class="img-alt-audit" id="image-alt-audit" style="display:none;">
-        <div class="img-alt-head">
-          <div class="img-alt-title">🖼️ Image ALT Audit</div>
-          <div class="img-alt-meta" id="image-alt-meta"></div>
-        </div>
-        <div class="img-alt-list" id="image-alt-list"></div>
-      </div>
-
-      <div class="gsc-panel" id="gsc-panel" style="display:none;">
-        <div class="gsc-head">
-          <div class="gsc-title">🔎 Google Search Console</div>
-          <div class="gsc-state" id="gsc-state"></div>
-        </div>
-        <div id="gsc-body"></div>
-      </div>
-
-      <!-- Recommendations -->
-      <div class="recs-section">
-        <div class="recs-title">📋 Full Recommendations</div>
-        <div class="recs-grid" id="rec-list"></div>
-      </div>
-
-      <div class="disclaimer">Analysis is AI-generated based on domain signals and publicly available patterns. Scores are indicative estimates. For precise metrics, connect Google Search Console, PageSpeed Insights, and Ahrefs/SEMrush APIs.</div>
     </div>
   </div>
 </div>
@@ -685,7 +570,10 @@
 <!-- FOOTER -->
 <div class="footer">
   <div class="footer-logo">LAB007</div>
-  <a href="/marketing-manager" class="btn-ghost" style="padding:8px 14px;font-size:12px;">Marketing Manager</a>
+  <div style="display:flex;gap:10px;flex-wrap:wrap;">
+    <a href="/marketing-manager" class="btn-ghost" style="padding:8px 14px;font-size:12px;">Marketing Manager</a>
+    <a href="/marketing-analyzer" class="btn-ghost" style="padding:8px 14px;font-size:12px;">Analyzer</a>
+  </div>
   <div class="footer-copy">© 2026 LAB007 AI Tech. All rights reserved.</div>
 </div>
 

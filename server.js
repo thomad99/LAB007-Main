@@ -1523,6 +1523,28 @@ app.get('/api/marketing-analyzer/reports/:id', (req, res) => {
   }
 });
 
+app.delete('/api/marketing-analyzer/reports/:id', (req, res) => {
+  try {
+    const id = String(req.params.id || '').trim();
+    if (!id) return res.status(400).json({ error: 'Report id is required.' });
+    const filePath = path.join(marketingReportsDir, `${id}.json`);
+    if (fs.existsSync(filePath)) {
+      try {
+        fs.unlinkSync(filePath);
+      } catch (error) {
+        console.error('Failed deleting marketing report file:', error);
+      }
+    }
+    const index = readMarketingReportsIndex();
+    const next = index.filter((r) => String(r.id || '') !== id);
+    writeMarketingReportsIndex(next);
+    return res.json({ success: true, deleted: id });
+  } catch (error) {
+    console.error('Failed to delete marketing report:', error);
+    return res.status(500).json({ error: 'Failed to delete report.' });
+  }
+});
+
 app.post('/api/marketing-analyzer/reports', (req, res) => {
   try {
     const analysis = req.body?.analysis;
