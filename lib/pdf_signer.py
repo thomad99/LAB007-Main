@@ -62,6 +62,8 @@ def _pick_section_anchor(doc):
         doc,
         [
             "Client Acceptance & Signature",
+            "Client Acceptanace and Signature",
+            "Client Acceptanace & Signature",
             "Client Acceptance and Signature",
             "Acceptance & Signature",
             "Acceptance and Signature",
@@ -109,12 +111,12 @@ def main():
     if sig_best:
         sig_rect = sig_best[2]
         # Keep signature left-justified near the signature field value area.
-        x = min(max(sig_rect.x0 + 8, 90), page_rect.width - 220)
+        x = min(max(sig_rect.x1 + 8, 150), page_rect.width - 220)
         y = max(40, sig_rect.y0 - 8)
     elif section_best and section_best[0] == sig_page_idx:
         anchor = section_best[2]
-        x = min(max(anchor.x0 + 8, 90), page_rect.width - 220)
-        y = min(max(anchor.y1 + 28, 40), page_rect.height - 140)
+        x = min(max(anchor.x0 + 10, 60), page_rect.width - 220)
+        y = min(max(anchor.y1 + 96, 40), page_rect.height - 140)
     else:
         x = max(90, page_rect.width * 0.18)
         y = page_rect.height * 0.82
@@ -134,7 +136,7 @@ def main():
     if name_best:
         npage = doc[name_best[0]]
         nr = name_best[2]
-        npt = fitz.Point(min(nr.x1 + 8, npage.rect.width - 200), nr.y1 - 1)
+        npt = fitz.Point(min(max(nr.x1 + 8, 150), npage.rect.width - 200), nr.y1 - 1)
         npage.insert_text(npt, args.name, fontsize=10, color=(0, 0, 0), overlay=True)
     else:
         npt = fitz.Point(sig_box.x0, min(page_rect.height - 40, sig_box.y1 + 18))
@@ -144,7 +146,7 @@ def main():
     if date_best:
         dpage = doc[date_best[0]]
         dr = date_best[2]
-        dpt = fitz.Point(min(dr.x1 + 8, dpage.rect.width - 200), dr.y1 - 1)
+        dpt = fitz.Point(min(max(dr.x1 + 8, 150), dpage.rect.width - 200), dr.y1 - 1)
         dpage.insert_text(dpt, args.date, fontsize=10, color=(0, 0, 0), overlay=True)
     else:
         dpt = fitz.Point(sig_box.x0, min(page_rect.height - 24, sig_box.y1 + 34))
