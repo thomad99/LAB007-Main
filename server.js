@@ -72,6 +72,10 @@ const marketingManagerPath = path.join(marketingManagerDataDir, 'marketing-manag
 if (!fs.existsSync(marketingManagerDataDir)) {
   fs.mkdirSync(marketingManagerDataDir, { recursive: true });
 }
+const marketingManagerLogosDir = path.join(marketingManagerDataDir, 'logos');
+if (!fs.existsSync(marketingManagerLogosDir)) {
+  fs.mkdirSync(marketingManagerLogosDir, { recursive: true });
+}
 if (!fs.existsSync(marketingManagerPath) && fs.existsSync(legacyMarketingManagerPath)) {
   try {
     fs.copyFileSync(legacyMarketingManagerPath, marketingManagerPath);
@@ -2086,10 +2090,6 @@ const marketingManagerContractsPath = path.join(marketingManagerDataDir, 'market
 const marketingManagerContractDocsDir = path.join(marketingManagerDataDir, 'contracts');
 if (!fs.existsSync(marketingManagerContractDocsDir)) {
   fs.mkdirSync(marketingManagerContractDocsDir, { recursive: true });
-}
-const marketingManagerLogosDir = path.join(marketingManagerDataDir, 'logos');
-if (!fs.existsSync(marketingManagerLogosDir)) {
-  fs.mkdirSync(marketingManagerLogosDir, { recursive: true });
 }
 const marketingManagerSignedDocsDir = path.join(marketingManagerContractDocsDir, 'signed');
 if (!fs.existsSync(marketingManagerSignedDocsDir)) {
