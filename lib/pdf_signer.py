@@ -3,7 +3,6 @@ import os
 import sys
 
 import fitz  # PyMuPDF
-from PIL import Image
 
 
 def _pick_best_rect(doc, needles):
@@ -44,8 +43,9 @@ def main():
     if not os.path.exists(args.signature):
         raise FileNotFoundError(f"Signature image not found: {args.signature}")
 
-    with Image.open(args.signature) as im:
-        sw, sh = im.size
+    sig_pix = fitz.Pixmap(args.signature)
+    sw, sh = sig_pix.width, sig_pix.height
+    sig_pix = None
     if sw <= 0 or sh <= 0:
         raise RuntimeError("Invalid signature image dimensions")
 
