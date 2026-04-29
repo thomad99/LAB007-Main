@@ -1580,7 +1580,7 @@
         clockSize = json.news_feed.clock_font_size ? `${Math.round(json.news_feed.clock_font_size * 0.3)}px` : '';
         const headlines = simLiveData.headlines || [];
         if (headlines.length) {
-          const intervalSec = Math.max(1, parseInt(json.news_feed.item_seconds || 10, 10));
+          const intervalSec = Math.max(1, parseInt(json.news_feed.item_seconds || 60, 10));
           const now = Date.now();
           if (!simLiveData.lastHeadlineFlipMs) simLiveData.lastHeadlineFlipMs = now;
           const elapsed = now - simLiveData.lastHeadlineFlipMs;
@@ -1619,14 +1619,15 @@
       simContent.style.fontFamily = `${font}, "JetBrains Mono", "Fira Code", monospace`;
       const w = simDisplay?.clientWidth || 640;
       const h = simDisplay?.clientHeight || 480;
-      const base = Math.max(20, Math.min(w / 4.2, h / 2.2));
-      const clockPx = clockSize ? parseInt(clockSize, 10) || Math.round(base) : Math.round(base);
+      const base = Math.max(24, Math.min(w / 3.4, h / 1.85));
+      const configuredClockPx = clockSize ? parseInt(clockSize, 10) || 0 : 0;
+      const clockPx = Math.max(Math.round(base), configuredClockPx);
       simClock.style.fontSize = `${clockPx}px`;
       // Keep secondary text ~60% smaller (40% of clock size).
-      const secondaryPx = Math.max(11, Math.round(clockPx * 0.4));
+      const secondaryPx = Math.max(10, Math.round(clockPx * 0.32));
       simSub.style.fontSize = `${secondaryPx}px`;
       simFeed.style.fontSize = `${secondaryPx}px`;
-      simTicker.style.fontSize = `${Math.max(10, Math.round(clockPx * 0.36))}px`;
+      simTicker.style.fontSize = `${Math.max(9, Math.round(clockPx * 0.28))}px`;
 
       simClock.textContent = nowClockString();
       simSub.textContent = subText;
