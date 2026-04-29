@@ -1655,9 +1655,7 @@
           const sym = String(raw || '').toUpperCase().trim();
           if (!sym) return null;
           const cached = simLiveData.stockCache[sym];
-          const price = Number.isFinite(Number(cached?.price))
-            ? Number(cached.price).toFixed(2)
-            : pseudoPriceForSymbol(sym);
+          const price = Number.isFinite(Number(cached?.price)) ? Number(cached.price).toFixed(2) : null;
           const changePct = Number.isFinite(Number(cached?.changePct)) ? Number(cached.changePct) : null;
           const change = Number.isFinite(changePct)
             ? `${Number(changePct) >= 0 ? '+' : ''}${Number(changePct).toFixed(2)}%`
@@ -1666,15 +1664,6 @@
           return { sym, price, change, direction };
         })
         .filter(Boolean);
-    }
-
-    function pseudoPriceForSymbol(symbol) {
-      const s = String(symbol || '').toUpperCase();
-      let hash = 0;
-      for (let i = 0; i < s.length; i += 1) hash = (hash * 31 + s.charCodeAt(i)) % 100000;
-      const base = 10 + (hash % 490);
-      const cents = (hash % 100) / 100;
-      return (base + cents).toFixed(2);
     }
 
     function formatTickerFallbackFromSymbols(symbols) {
@@ -1686,9 +1675,7 @@
           const sym = String(raw || '').toUpperCase().trim();
           if (!sym) return '';
           const cached = simLiveData.stockCache[sym];
-          const price = Number.isFinite(Number(cached?.price))
-            ? Number(cached.price).toFixed(2)
-            : pseudoPriceForSymbol(sym);
+          const price = Number.isFinite(Number(cached?.price)) ? Number(cached.price).toFixed(2) : '--';
           const change = Number.isFinite(Number(cached?.changePct))
             ? `${Number(cached.changePct) >= 0 ? '+' : ''}${Number(cached.changePct).toFixed(2)}%`
             : '';
@@ -1706,7 +1693,8 @@
       const tickers = Array.isArray(nf.tickers) ? nf.tickers : [];
       if (!rssFeeds.length && !tickers.length) return;
 
-      const refreshMs = Math.max(30, parseInt(nf.refresh_news_seconds || 300, 10)) * 1000;
+      const stockRefreshSec = Math.max(15, parseInt(nf.refresh_stocks_seconds || nf.refresh_news_seconds || 300, 10));
+      const refreshMs = stockRefreshSec * 1000;
       const now = Date.now();
       if (!force && simLiveData.fetchedAtMs && now - simLiveData.fetchedAtMs < refreshMs) return;
 
