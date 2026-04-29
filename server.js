@@ -2160,7 +2160,10 @@ function mmValidSignatureDataUrl(value) {
 }
 
 function mmContractView(c, customerName) {
-  const signedDocPath = c.status === 'signed' && c.signedTextPath ? `/api/marketing-manager/contracts/${c.id}/signed-document` : '';
+  const signedDocPath =
+    c.status === 'signed' && (c.signedPdfPath || c.signedTextPath)
+      ? `/api/marketing-manager/contracts/${c.id}/signed-document`
+      : '';
   return {
     id: c.id,
     customerId: c.customerId,
@@ -2179,6 +2182,21 @@ function mmContractView(c, customerName) {
     documentPath: c.filePath ? `/api/marketing-manager/contracts/${c.id}/document` : '',
     signedDocumentPath: signedDocPath
   };
+}
+
+function mmCreateOriginalContractPdf(contract) {
+  const outputPath = path.join(marketingManagerContractDocsDir, `${contract.id}-original.pdf`);
+  const body = String(contract.body || '').trim();
+  const title = String(contract.title || 'Contract');
+  const scriptPath = path.join(__dirname, 'lib', 'pdf_from_text.py');
+  const py = spawnSync('python', [scriptPath, '--output', outputPath, '--title', title, '--body', body], {
+    encoding: 'utf8'
+  });
+  if (py.status !== 0 || !fs.existsSync(outputPath)) {
+    console.warn('[Marketing Manager] Original PDF build failed:', py.stderr || py.stdout || py.status);
+    return null;
+  }
+  return outputPath;
 }
 
 async function mmNotifyContractSigned(contract, customerName) {
@@ -2451,7 +2469,6 @@ function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
   });
   const maxLines = 60;
   const finalLines = lines.slice(0, maxLines);
-  if (lines.length > maxLines) finalLines.push('... truncated ...');
   const sigLineIndexRaw = finalLines.findIndex((ln) => /\bsignature\b/i.test(ln));
   const dateLineIndexRaw = finalLines.findIndex((ln) => /^\s*date\b/i.test(ln));
   const nameLineIndexRaw = finalLines.findIndex((ln) => /printed\s+name|^\s*name\s*[:\-]/i.test(ln));
@@ -2980,6 +2997,17 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
       signDate: '',
       signatureDataUrl: ''
     };
+    const originalPdfPath = mmCreateOriginalContractPdf(contract);
+    if (originalPdfPath) {
+      contract.filePath = originalPdfPath;
+      contract.originalName = `${title}.pdf`;
+      contract.mimeType = 'application/pdf';
+      try {
+        contract.fileSize = fs.statSync(originalPdfPath).size || 0;
+      } catch {
+        contract.fileSize = 0;
+      }
+    }
     const data = readMarketingContracts();
     data.contracts.push(contract);
     writeMarketingContracts(data);
