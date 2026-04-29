@@ -132,8 +132,30 @@ def main():
 
     page.insert_image(sig_box, filename=args.signature, keep_proportion=True, overlay=True)
 
-    # Printed name placement
-    if name_best:
+    # Always stamp a visible section header/labels near the signature area so users
+    # can clearly see the signed block even when source PDFs have inconsistent fields.
+    heading_y = sig_box.y0 - 26
+    if heading_y < 20:
+        heading_y = min(page_rect.height - 64, sig_box.y1 + 12)
+    page.insert_text(
+        fitz.Point(sig_box.x0, heading_y),
+        "Client Acceptance and Signature",
+        fontsize=11,
+        fontname="helv",
+        color=(0, 0, 0),
+        overlay=True,
+    )
+    sig_label_y = max(24, sig_box.y0 - 8)
+    page.insert_text(
+        fitz.Point(sig_box.x0, sig_label_y),
+        "Client Signature:",
+        fontsize=10,
+        color=(0, 0, 0),
+        overlay=True,
+    )
+
+    # Printed name placement: prefer a field on the same page as signature.
+    if name_best and name_best[0] == sig_page_idx:
         npage = doc[name_best[0]]
         nr = name_best[2]
         npt = fitz.Point(min(max(nr.x1 + 8, 150), npage.rect.width - 200), nr.y1 - 1)
@@ -142,8 +164,8 @@ def main():
         npt = fitz.Point(sig_box.x0, min(page_rect.height - 40, sig_box.y1 + 18))
         page.insert_text(npt, f"Printed Name: {args.name}", fontsize=10, color=(0, 0, 0), overlay=True)
 
-    # Date placement
-    if date_best:
+    # Date placement: prefer a field on the same page as signature.
+    if date_best and date_best[0] == sig_page_idx:
         dpage = doc[date_best[0]]
         dr = date_best[2]
         dpt = fitz.Point(min(max(dr.x1 + 8, 150), dpage.rect.width - 200), dr.y1 - 1)
@@ -151,6 +173,25 @@ def main():
     else:
         dpt = fitz.Point(sig_box.x0, min(page_rect.height - 24, sig_box.y1 + 34))
         page.insert_text(dpt, f"Date: {args.date}", fontsize=10, color=(0, 0, 0), overlay=True)
+
+    # Always include explicit signer/date lines immediately below the signature image.
+    # This guarantees visibility even if matched fields were elsewhere on the page.
+    footer_name_y = min(page_rect.height - 36, sig_box.y1 + 18)
+    footer_date_y = min(page_rect.height - 20, footer_name_y + 16)
+    page.insert_text(
+        fitz.Point(sig_box.x0, footer_name_y),
+        f"Printed Name: {args.name}",
+        fontsize=10,
+        color=(0, 0, 0),
+        overlay=True,
+    )
+    page.insert_text(
+        fitz.Point(sig_box.x0, footer_date_y),
+        f"Date: {args.date}",
+        fontsize=10,
+        color=(0, 0, 0),
+        overlay=True,
+    )
 
     if os.path.exists(args.output):
         os.remove(args.output)

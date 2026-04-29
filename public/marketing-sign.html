@@ -37,6 +37,19 @@
     button { border:0; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:700; }
     .gold { background:var(--gold); color:#0a0a0b; }
     .ghost { background:transparent; border:1px solid var(--line); color:var(--text); }
+    .post-sign-actions {
+      background: linear-gradient(180deg, rgba(201, 168, 76, 0.16), rgba(201, 168, 76, 0.08));
+      border: 1px solid rgba(201, 168, 76, 0.32);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .post-sign-actions .ghost {
+      background: rgba(255, 255, 255, 0.65);
+      border-color: rgba(201, 168, 76, 0.55);
+    }
+    .post-sign-actions .ghost:hover {
+      background: rgba(255, 255, 255, 0.9);
+    }
     .ok { color:var(--ok); font-weight:700; }
     .error { color:#b42318; font-weight:700; }
   </style>
@@ -65,7 +78,7 @@
         <button class="ghost" id="clearBtn" type="button">Clear signature</button>
         <button class="gold" id="signBtn" type="button">Sign contract</button>
       </div>
-      <div class="row" id="postSignActions" style="display:none;">
+      <div class="row post-sign-actions" id="postSignActions" style="display:none;">
         <button class="ghost" id="downloadBtn" type="button">Download signed copy</button>
         <button class="ghost" id="emailCopyBtn" type="button">Email signed copy</button>
       </div>

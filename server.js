@@ -2008,8 +2008,7 @@ const MM_CAMPAIGN_PRESETS = [
   {
     key: 'brand_positioning',
     title: 'Brand Positioning & Messaging',
-    description:
-      'Define who you are, what makes you different, and why customers should care. (Because “we’re passionate about quality” is basically the beige wallpaper of marketing.)'
+    description: ''
   },
   {
     key: 'target_audience',
@@ -3338,6 +3337,15 @@ app.get('/api/marketing-manager/contracts/sign/:token/download', (req, res) => {
     if ((contract.status || 'pending') !== 'signed') {
       return res.status(409).json({ error: 'Contract must be signed before download' });
     }
+    // Regenerate signed artifacts on demand so rendering fixes apply to existing signed contracts.
+    const state = readMarketingManagerState();
+    const customer = mmFindCustomer(state, contract.customerId);
+    try {
+      mmCreateSignedArtifacts(contract, customer?.name || 'Customer');
+      writeMarketingContracts(data);
+    } catch (regenError) {
+      console.warn('[Marketing Manager] Could not refresh signed artifacts for download:', regenError.message);
+    }
     const safeTitle = String(contract.title || 'contract').replace(/[^a-zA-Z0-9_-]+/g, '_');
     if (contract.signedPdfPath && fs.existsSync(contract.signedPdfPath)) {
       res.setHeader('Content-Type', 'application/pdf');
@@ -3361,6 +3369,12 @@ app.post('/api/marketing-manager/contracts/sign/:token/email-copy', async (req, 
     if (!contract) return res.status(404).json({ error: 'Contract not found' });
     const state = readMarketingManagerState();
     const customer = mmFindCustomer(state, contract.customerId);
+    try {
+      mmCreateSignedArtifacts(contract, customer?.name || 'Customer');
+      writeMarketingContracts(data);
+    } catch (regenError) {
+      console.warn('[Marketing Manager] Could not refresh signed artifacts for email:', regenError.message);
+    }
     await mmSendSignedCopyByEmail(contract, customer?.name || 'Customer', toEmail);
     return res.json({ success: true });
   } catch (error) {

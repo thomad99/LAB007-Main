@@ -377,11 +377,15 @@
     }
 
     if (task.kind === 'campaign') {
+      const showDescription = String(task.description || '').trim();
       tool.innerHTML = `
-        <p>${escapeHtml(task.description || '')}</p>
-        <label class="mm-notes-label">Campaign notes</label>
-        <textarea class="mm-textarea" id="mm-camp-notes" rows="5">${escapeHtml(task.notes || '')}</textarea>
-        <button type="button" class="btn-mm" id="mm-camp-save">Save</button>
+        ${showDescription ? `<p>${escapeHtml(showDescription)}</p>` : ''}
+        <details class="mm-campaign-details">
+          <summary>Campaign notes</summary>
+          <label class="mm-notes-label">Campaign notes</label>
+          <textarea class="mm-textarea" id="mm-camp-notes" rows="5">${escapeHtml(task.notes || '')}</textarea>
+          <button type="button" class="btn-mm" id="mm-camp-save">Save</button>
+        </details>
       `;
       $('#mm-camp-save')?.addEventListener('click', async () => {
         await patchTask(cust.id, task.id, { notes: $('#mm-camp-notes').value });
