@@ -6,7 +6,8 @@
     data: { customers: [] },
     catalog: { directory: { usa: [], paid: [] }, campaigns: [] },
     contractStats: { total: 0, pending: 0, signed: 0 },
-    contracts: []
+    contracts: [],
+    agentSig: { hasSignature: false, updatedAt: null, signatureDataUrl: '' }
   };
   let selectedId = null;
   const contractBrowser = {
@@ -93,16 +94,22 @@
   }
 
   async function refresh() {
-    const [st, cat, cstats, contractsResp] = await Promise.all([
+    const [st, cat, cstats, contractsResp, agentResp] = await Promise.all([
       api('/api/marketing-manager/state'),
       api('/api/marketing-manager/catalog'),
       api('/api/marketing-manager/contracts/stats').catch(() => ({ total: 0, pending: 0, signed: 0 })),
-      api('/api/marketing-manager/contracts').catch(() => ({ contracts: [] }))
+      api('/api/marketing-manager/contracts').catch(() => ({ contracts: [] })),
+      api('/api/marketing-manager/agent-signature').catch(() => ({ hasSignature: false }))
     ]);
     state.data = st;
     state.catalog = cat;
     state.contractStats = cstats || { total: 0, pending: 0, signed: 0 };
     state.contracts = (contractsResp && contractsResp.contracts) || [];
+    state.agentSig = {
+      hasSignature: Boolean(agentResp?.hasSignature && agentResp?.signatureDataUrl),
+      updatedAt: agentResp?.updatedAt || null,
+      signatureDataUrl: agentResp?.signatureDataUrl || ''
+    };
     if (selectedId && !state.data.customers.find((c) => c.id === selectedId)) selectedId = null;
     if (!selectedId && state.data.customers.length) selectedId = state.data.customers[0].id;
     render();
@@ -188,6 +195,11 @@
                       <div class="mm-contract-row-main">
                         <div class="mm-contract-row-title">${escapeHtml(ct.title || 'Contract')}</div>
                         <div class="mm-small">${escapeHtml(ct.customerName || 'Customer')} • Created ${escapeHtml(fmtDate(ct.createdAt))}</div>
+                        ${
+                          ct.includeAgentSignature && ct.agentSignatureDate
+                            ? `<div class="mm-small">Agent on doc: ${escapeHtml(ct.agentSignatureDate)}</div>`
+                            : ''
+                        }
                         ${ct.signedAt ? `<div class="mm-small">Signed ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerName || 'Signer')}</div>` : ''}
                       </div>
                       <div class="mm-contract-row-actions">
@@ -579,6 +591,111 @@
     return false;
   }
 
+  function bindAgentSignatureUi() {
+    const canvas = document.getElementById('mm-agent-sig-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const statusEl = document.getElementById('mm-agent-sig-status');
+    let drawing = false;
+    let hasInk = false;
+
+    function fillWhite() {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    }
+
+    function pointerXY(ev) {
+      const r = canvas.getBoundingClientRect();
+      const src = ev.touches ? ev.touches[0] : ev;
+      const x = (src.clientX - r.left) * (canvas.width / r.width);
+      const y = (src.clientY - r.top) * (canvas.height / r.height);
+      return { x, y };
+    }
+
+    function startDraw(ev) {
+      ev.preventDefault();
+      drawing = true;
+      const p = pointerXY(ev);
+      ctx.beginPath();
+      ctx.moveTo(p.x, p.y);
+    }
+    function moveDraw(ev) {
+      if (!drawing) return;
+      ev.preventDefault();
+      const p = pointerXY(ev);
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.strokeStyle = '#111111';
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+      hasInk = true;
+    }
+    function endDraw() {
+      drawing = false;
+    }
+
+    fillWhite();
+    const existingUrl = state.agentSig?.signatureDataUrl;
+    if (existingUrl) {
+      const img = new Image();
+      img.onload = () => {
+        fillWhite();
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        hasInk = true;
+        if (statusEl) statusEl.textContent = 'Saved signature loaded — draw to replace.';
+      };
+      img.onerror = () => {
+        if (statusEl) statusEl.textContent = 'Could not load saved signature.';
+      };
+      img.src = existingUrl;
+    } else if (statusEl) {
+      statusEl.textContent = 'No Agent signature saved yet.';
+    }
+
+    canvas.addEventListener('mousedown', startDraw);
+    canvas.addEventListener('mousemove', moveDraw);
+    window.addEventListener('mouseup', endDraw);
+    canvas.addEventListener('touchstart', startDraw, { passive: false });
+    canvas.addEventListener('touchmove', moveDraw, { passive: false });
+    canvas.addEventListener('touchend', endDraw, { passive: false });
+
+    $('#mm-agent-sig-clear')?.addEventListener('click', () => {
+      fillWhite();
+      hasInk = false;
+      if (statusEl) statusEl.textContent = 'Cleared.';
+    });
+    $('#mm-agent-sig-save')?.addEventListener('click', async () => {
+      if (!hasInk) return alert('Draw your signature first.');
+      try {
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
+        await api('/api/marketing-manager/agent-signature', {
+          method: 'POST',
+          body: JSON.stringify({ signatureDataUrl: dataUrl })
+        });
+        state.agentSig = {
+          hasSignature: true,
+          signatureDataUrl: dataUrl,
+          updatedAt: new Date().toISOString()
+        };
+        if (statusEl) statusEl.textContent = 'Saved on server.';
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+    $('#mm-agent-sig-remove')?.addEventListener('click', async () => {
+      if (!confirm('Remove the saved Agent signature from the server?')) return;
+      try {
+        await api('/api/marketing-manager/agent-signature', { method: 'DELETE' });
+        state.agentSig = { hasSignature: false, signatureDataUrl: '', updatedAt: null };
+        fillWhite();
+        hasInk = false;
+        if (statusEl) statusEl.textContent = 'Removed.';
+      } catch (e) {
+        alert(e.message);
+      }
+    });
+  }
+
   function renderMain() {
     const main = $('#mm-main');
     if (!main) return;
@@ -678,6 +795,17 @@
       <div class="mm-task-panel">
         <details class="mm-campaign-details" id="mm-contracts-details">
           <summary>Electronic contracts</summary>
+          <details class="mm-campaign-details mm-agent-sig-wrap">
+            <summary>Agent signature (you)</summary>
+            <p class="mm-small">Draw once and save. JPEG is used for PDF embedding. Check the box below when creating a doc to include your signature as Agency (LAB007), dated the day you generate the document.</p>
+            <canvas id="mm-agent-sig-canvas" width="520" height="140" class="mm-agent-sig-canvas"></canvas>
+            <div class="mm-task-meta" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+              <button type="button" class="btn-mm-ghost" id="mm-agent-sig-clear">Clear</button>
+              <button type="button" class="btn-mm" id="mm-agent-sig-save">Save Agent signature</button>
+              <button type="button" class="btn-mm-danger-outline" id="mm-agent-sig-remove">Remove saved</button>
+              <span class="mm-muted" id="mm-agent-sig-status" style="font-size:11px;"></span>
+            </div>
+          </details>
           <div class="mm-task-meta" id="mm-contracts-meta" style="margin-top:12px;">
             <button type="button" class="btn-mm" id="mm-new-contract">Create doc to sign</button>
             <button type="button" class="btn-mm-ghost" id="mm-refresh-contracts">Refresh</button>
@@ -686,6 +814,10 @@
           <div class="mm-task-meta" style="margin-top:12px;">
             <input type="text" id="mm-contract-create-title" class="mm-input" placeholder="Document title" />
             <div id="mm-contract-create-body" class="mm-rich-editor" style="margin-top:8px;" contenteditable="true"></div>
+            <label class="mm-muted" style="display:flex;gap:10px;align-items:flex-start;margin-top:12px;cursor:pointer;">
+              <input type="checkbox" id="mm-include-agent-sig" style="margin-top:3px;" />
+              <span>Include my Agent signature on this document (LAB007), dated today — requires a saved signature above.</span>
+            </label>
             <button type="button" class="btn-mm" id="mm-create-contract" style="margin-top:8px;">Save doc for signing</button>
             <p class="mm-small">Paste rich text directly. A signing section is automatically added if missing.</p>
           </div>
@@ -803,6 +935,11 @@
                 <div style="min-width:0;">
                   <div style="font-weight:600;">${escapeHtml(ct.title || 'Contract')}</div>
                   <div class="mm-small">Created: ${escapeHtml(fmtDate(ct.createdAt))}</div>
+                  ${
+                    ct.includeAgentSignature && ct.agentSignatureDate
+                      ? `<div class="mm-small">Agent on document: ${escapeHtml(ct.agentSignatureDate)}</div>`
+                      : ''
+                  }
                   ${ct.signedAt ? `<div class="mm-small">Signed: ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerName || 'Signer')}</div>` : ''}
                 </div>
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
@@ -862,17 +999,23 @@
     $('#mm-create-contract')?.addEventListener('click', async () => {
       const titleEl = document.getElementById('mm-contract-create-title');
       const bodyEl = document.getElementById('mm-contract-create-body');
+      const includeAgent = Boolean(document.getElementById('mm-include-agent-sig')?.checked);
       const title = String(titleEl?.value || '').trim();
       const bodyHtml = String(bodyEl?.innerHTML || '').trim();
       const body = String(bodyEl?.innerText || '').trim();
       if (!title) return alert('Document title is required.');
       if (!body) return alert('Document body is required.');
+      if (includeAgent && !state.agentSig?.signatureDataUrl) {
+        return alert('Save your Agent signature first, or uncheck “Include my Agent signature”.');
+      }
       await api(`/api/marketing-manager/customers/${cust.id}/contracts`, {
         method: 'POST',
-        body: JSON.stringify({ title, body, bodyHtml })
+        body: JSON.stringify({ title, body, bodyHtml, includeAgentSignature: includeAgent })
       });
       if (titleEl) titleEl.value = '';
       if (bodyEl) bodyEl.innerHTML = '';
+      const incEl = document.getElementById('mm-include-agent-sig');
+      if (incEl) incEl.checked = false;
       await refresh();
       await loadContracts();
     });
@@ -902,6 +1045,7 @@
       await refresh();
       await loadContracts();
     });
+    bindAgentSignatureUi();
     loadContracts();
 
     const sel = $('#mm-task-select');

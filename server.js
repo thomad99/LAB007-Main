@@ -2095,6 +2095,8 @@ if (!fs.existsSync(marketingManagerSignedDocsDir)) {
   fs.mkdirSync(marketingManagerSignedDocsDir, { recursive: true });
 }
 
+const marketingManagerAgentSignaturePath = path.join(marketingManagerDataDir, 'agent-signature.json');
+
 const mmAllowedContractExt = new Set(['.pdf', '.doc', '.docx', '.txt', '.png', '.jpg', '.jpeg']);
 const marketingContractsUpload = multer({
   storage: multer.diskStorage({
@@ -2179,7 +2181,53 @@ function mmContractView(c, customerName) {
     hasDocument: Boolean(c.filePath),
     documentName: c.originalName || '',
     documentPath: c.filePath ? `/api/marketing-manager/contracts/${c.id}/document` : '',
-    signedDocumentPath: signedDocPath
+    signedDocumentPath: signedDocPath,
+    includeAgentSignature: Boolean(c.includeAgentSignature),
+    agentSignatureDate: c.agentSignatureDate || ''
+  };
+}
+
+function readMarketingAgentSignature() {
+  try {
+    if (!fs.existsSync(marketingManagerAgentSignaturePath)) return null;
+    const raw = fs.readFileSync(marketingManagerAgentSignaturePath, 'utf8');
+    const data = JSON.parse(raw);
+    if (!data || typeof data !== 'object') return null;
+    const signatureDataUrl = String(data.signatureDataUrl || '').trim();
+    if (!signatureDataUrl || !mmValidSignatureDataUrl(signatureDataUrl)) return null;
+    return {
+      signatureDataUrl,
+      updatedAt: data.updatedAt || null
+    };
+  } catch {
+    return null;
+  }
+}
+
+function writeMarketingAgentSignature(signatureDataUrl) {
+  const dir = path.dirname(marketingManagerAgentSignaturePath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  const payload = {
+    signatureDataUrl: String(signatureDataUrl || '').trim(),
+    updatedAt: new Date().toISOString()
+  };
+  fs.writeFileSync(marketingManagerAgentSignaturePath, JSON.stringify(payload, null, 2), 'utf8');
+  return payload;
+}
+
+/** Appends Agency block after client section; dateStr is YYYY-MM-DD (document generation date). */
+function mmAppendAgentSignatureBlocks(bodyText, bodyHtml, signatureDataUrl, dateStr) {
+  const safeDate = String(dateStr || '').trim();
+  const textAppend = `\n\n---\nAgency representative (LAB007)\nDate: ${safeDate}\nAgent Signature:\n`;
+  const escSrc = String(signatureDataUrl || '').replace(/"/g, '&quot;');
+  const htmlAppend = `<hr />
+<p><strong>Agency representative (LAB007)</strong></p>
+<p><strong>Date:</strong> ${mmEscapeHtml(safeDate)}</p>
+<p><strong>Agent Signature:</strong></p>
+<p><img alt="Agent signature" src="${escSrc}" style="max-height:96px;max-width:320px;border:1px solid rgba(0,0,0,0.12);border-radius:6px;background:#fff;" /></p>`;
+  return {
+    body: String(bodyText || '') + textAppend,
+    bodyHtml: String(bodyHtml || '') + htmlAppend
   };
 }
 
@@ -2188,9 +2236,10 @@ function mmCreateOriginalContractPdf(contract) {
   const body = String(contract.body || '').trim();
   const title = String(contract.title || 'Contract');
   const text = `${title}\n\n${body}`;
+  const agentSig = String(contract._agentSigForPdf || '').trim();
   try {
     // Node-native fallback so created-doc workflow always has an original PDF.
-    fs.writeFileSync(outputPath, mmBuildSignedContractPdfFromText(text, ''));
+    fs.writeFileSync(outputPath, mmBuildSignedContractPdfFromText(text, agentSig));
     if (!fs.existsSync(outputPath)) return null;
     return outputPath;
   } catch (err) {
@@ -2492,7 +2541,16 @@ function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
   // Keep much more content in fallback PDFs to avoid apparent truncation.
   const maxLines = 220;
   const finalLines = lines.slice(0, maxLines);
-  const sigLineIndexRaw = finalLines.findIndex((ln) => /\bsignature\b/i.test(ln));
+  let sigLineIndexRaw = -1;
+  for (let i = finalLines.length - 1; i >= 0; i -= 1) {
+    if (/\bAgent Signature\b/i.test(finalLines[i])) {
+      sigLineIndexRaw = i;
+      break;
+    }
+  }
+  if (sigLineIndexRaw === -1) {
+    sigLineIndexRaw = finalLines.findIndex((ln) => /\bsignature\b/i.test(ln));
+  }
   const sigLineIndex = sigLineIndexRaw === -1 ? Math.max(finalLines.length - 2, 0) : sigLineIndexRaw;
 
   const parsedSig = mmParseSignatureDataUrl(signatureDataUrl);
@@ -2831,6 +2889,46 @@ app.get('/api/marketing-manager/catalog', (req, res) => {
   });
 });
 
+app.get('/api/marketing-manager/agent-signature', (req, res) => {
+  try {
+    const agent = readMarketingAgentSignature();
+    if (!agent) {
+      return res.json({ hasSignature: false, updatedAt: null, signatureDataUrl: '' });
+    }
+    return res.json({
+      hasSignature: true,
+      updatedAt: agent.updatedAt || null,
+      signatureDataUrl: agent.signatureDataUrl
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/marketing-manager/agent-signature', (req, res) => {
+  try {
+    const signatureDataUrl = String(req.body?.signatureDataUrl || '').trim();
+    if (!signatureDataUrl || !mmValidSignatureDataUrl(signatureDataUrl)) {
+      return res.status(400).json({ error: 'Valid signature image (PNG or JPEG data URL) is required' });
+    }
+    const saved = writeMarketingAgentSignature(signatureDataUrl);
+    return res.json({ success: true, updatedAt: saved.updatedAt });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.delete('/api/marketing-manager/agent-signature', (req, res) => {
+  try {
+    if (fs.existsSync(marketingManagerAgentSignaturePath)) {
+      fs.unlinkSync(marketingManagerAgentSignaturePath);
+    }
+    return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.get('/api/marketing-manager/state', (req, res) => {
   return res.json(readMarketingManagerState());
 });
@@ -3090,12 +3188,29 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
     const c = mmFindCustomer(state, req.params.customerId);
     if (!c) return res.status(404).json({ error: 'Customer not found' });
     const title = String(req.body?.title || '').trim();
+    const includeAgentSignature = Boolean(req.body?.includeAgentSignature);
     const bodyHtmlRaw = String(req.body?.bodyHtml || '').trim();
-    const bodyHtml = bodyHtmlRaw ? mmEnsureSignatureSectionHtml(bodyHtmlRaw) : '';
+    let bodyHtml = bodyHtmlRaw ? mmEnsureSignatureSectionHtml(bodyHtmlRaw) : '';
     const bodyRaw = String(req.body?.body || '').trim();
-    const body = mmEnsureSignatureSection(bodyRaw || mmHtmlToPlainText(bodyHtml));
+    let body = mmEnsureSignatureSection(bodyRaw || mmHtmlToPlainText(bodyHtml));
     if (!title) return res.status(400).json({ error: 'Contract title is required' });
     if (!body) return res.status(400).json({ error: 'Contract body is required' });
+
+    const createdAt = new Date().toISOString();
+    const genDate = createdAt.slice(0, 10);
+    let agentSigForPdf = '';
+    if (includeAgentSignature) {
+      const agent = readMarketingAgentSignature();
+      if (!agent?.signatureDataUrl) {
+        return res.status(400).json({
+          error: 'Save your Agent signature first (Electronic contracts → Agent signature), or uncheck “Include Agent signature”.'
+        });
+      }
+      const appended = mmAppendAgentSignatureBlocks(body, bodyHtml, agent.signatureDataUrl, genDate);
+      body = appended.body;
+      bodyHtml = appended.bodyHtml;
+      agentSigForPdf = agent.signatureDataUrl;
+    }
 
     const token = crypto.randomBytes(24).toString('hex');
     const contract = {
@@ -3106,14 +3221,16 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
       bodyHtml,
       token,
       status: 'pending',
-      createdAt: new Date().toISOString(),
+      createdAt,
       signedAt: null,
       signerName: '',
       signDate: '',
       signatureDataUrl: '',
-      sourceType: 'created'
+      sourceType: 'created',
+      includeAgentSignature,
+      agentSignatureDate: includeAgentSignature ? genDate : ''
     };
-    const originalPdfPath = mmCreateOriginalContractPdf(contract);
+    const originalPdfPath = mmCreateOriginalContractPdf({ ...contract, _agentSigForPdf: agentSigForPdf });
     if (originalPdfPath) {
       contract.filePath = originalPdfPath;
       contract.originalName = `${title}.pdf`;
@@ -3782,6 +3899,7 @@ app.get('/tomopi', (req, res) => {
 // Backing file is tomopi-data/config.json so Pi can simply refer to "config.json"
 const tomopiConfigPath = path.join(__dirname, 'tomopi-data', 'config.json');
 const tomopiImagesDir = path.join(__dirname, 'tomopi-data', 'images');
+const tomopiStockCachePath = path.join(__dirname, 'tomopi-data', 'stock-cache.json');
 if (!fs.existsSync(tomopiImagesDir)) {
   fs.mkdirSync(tomopiImagesDir, { recursive: true });
 }
@@ -3834,6 +3952,65 @@ app.post('/api/tomopi/config', saveTomoPIConfig);
 
 function uniqueStrings(list) {
   return Array.from(new Set((list || []).map((s) => String(s || '').trim()).filter(Boolean)));
+}
+
+function readTomopiStockCache() {
+  try {
+    if (!fs.existsSync(tomopiStockCachePath)) return { quotes: {} };
+    const raw = fs.readFileSync(tomopiStockCachePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || typeof parsed.quotes !== 'object') return { quotes: {} };
+    return parsed;
+  } catch {
+    return { quotes: {} };
+  }
+}
+
+function writeTomopiStockCache(cacheData) {
+  try {
+    const dir = path.dirname(tomopiStockCachePath);
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    fs.writeFileSync(tomopiStockCachePath, JSON.stringify(cacheData, null, 2), 'utf8');
+  } catch (error) {
+    console.warn('[TomoPI] Could not write stock cache:', error.message);
+  }
+}
+
+function cacheTomopiQuotes(quotes) {
+  const cache = readTomopiStockCache();
+  if (!cache.quotes || typeof cache.quotes !== 'object') cache.quotes = {};
+  const nowIso = new Date().toISOString();
+  (quotes || []).forEach((q) => {
+    const sym = String(q?.symbol || '').toUpperCase().trim();
+    if (!sym) return;
+    if (!Number.isFinite(Number(q?.price))) return;
+    cache.quotes[sym] = {
+      symbol: sym,
+      price: Number(q.price),
+      changePct: Number.isFinite(Number(q?.changePct)) ? Number(q.changePct) : null,
+      fetchedAt: nowIso
+    };
+  });
+  writeTomopiStockCache(cache);
+}
+
+function getTomopiCachedQuotes(symbols) {
+  const cache = readTomopiStockCache();
+  const quotes = cache && cache.quotes && typeof cache.quotes === 'object' ? cache.quotes : {};
+  return (symbols || [])
+    .map((sym) => {
+      const key = String(sym || '').toUpperCase().trim();
+      const q = quotes[key];
+      if (!q || !Number.isFinite(Number(q.price))) return null;
+      return {
+        symbol: key,
+        price: Number(q.price),
+        changePct: Number.isFinite(Number(q.changePct)) ? Number(q.changePct) : null,
+        fromCache: true,
+        fetchedAt: q.fetchedAt || null
+      };
+    })
+    .filter(Boolean);
 }
 
 async function fetchTomopiRssHeadlines(url) {
@@ -3935,10 +4112,24 @@ async function fetchTomopiStockQuotes(tickers) {
       const fallbackQuotes = await Promise.all(missingSymbols.map((sym) => fetchTomopiStockQuoteFromChart(sym)));
       fallbackQuotes.filter(Boolean).forEach((q) => bySymbol.set(q.symbol, q));
     }
-    return symbols.map((sym) => bySymbol.get(sym)).filter(Boolean);
+    const finalQuotes = symbols.map((sym) => bySymbol.get(sym)).filter(Boolean);
+    if (finalQuotes.length) cacheTomopiQuotes(finalQuotes);
+    const stillMissing = symbols.filter((sym) => !finalQuotes.find((q) => q.symbol === sym));
+    if (!stillMissing.length) return finalQuotes;
+    const cached = getTomopiCachedQuotes(stillMissing);
+    const merged = [...finalQuotes];
+    cached.forEach((q) => merged.push(q));
+    return merged;
   } catch {
     const fallbackQuotes = await Promise.all(symbols.map((sym) => fetchTomopiStockQuoteFromChart(sym)));
-    return fallbackQuotes.filter(Boolean);
+    const finalQuotes = fallbackQuotes.filter(Boolean);
+    if (finalQuotes.length) cacheTomopiQuotes(finalQuotes);
+    const stillMissing = symbols.filter((sym) => !finalQuotes.find((q) => q.symbol === sym));
+    if (!stillMissing.length) return finalQuotes;
+    const cached = getTomopiCachedQuotes(stillMissing);
+    const merged = [...finalQuotes];
+    cached.forEach((q) => merged.push(q));
+    return merged;
   }
 }
 
@@ -3961,6 +4152,15 @@ app.post('/api/tomopi/sim-data', async (req, res) => {
     });
   } catch (error) {
     return res.status(500).json({ ok: false, error: error.message || 'Failed to build simulator data' });
+  }
+});
+
+app.get('/api/tomopi/stocks/cache', (req, res) => {
+  try {
+    const cache = readTomopiStockCache();
+    return res.json({ ok: true, quotes: cache.quotes || {} });
+  } catch (error) {
+    return res.status(500).json({ ok: false, error: error.message || 'Failed to read stock cache' });
   }
 });
 
