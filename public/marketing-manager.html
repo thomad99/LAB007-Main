@@ -65,6 +65,8 @@ h1{font-family:'Source Serif 4',serif;font-weight:700;font-size:clamp(34px,5vw,5
 .mm-dash-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px;margin-top:8px;margin-bottom:8px}
 .mm-dash-inline{margin:18px 0 24px}
 .mm-dash-card{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:14px 16px;text-align:center}
+.mm-dash-card.mm-clickable{cursor:pointer;transition:border-color .2s,background .2s,transform .2s}
+.mm-dash-card.mm-clickable:hover{border-color:rgba(201,168,76,.45);background:rgba(201,168,76,.08);transform:translateY(-1px)}
 .mm-dash-val{font-family:'Source Serif 4',serif;font-size:26px;font-weight:700;color:#fff}
 .mm-dash-label{font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin-top:4px}
 .mm-accent-todo{border-top:3px solid #6b6b75}.mm-accent-started{border-top:3px solid var(--amber)}.mm-accent-done{border-top:3px solid var(--green)}
@@ -106,6 +108,16 @@ h1{font-family:'Source Serif 4',serif;font-weight:700;font-size:clamp(34px,5vw,5
 .mm-like-title{font-family:'Source Serif 4',serif;font-size:14px;margin:18px 0 10px;color:#fff}.mm-like-list{list-style:none;display:flex;flex-direction:column;gap:8px}
 .mm-like-list li{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:8px 12px;background:var(--panel);border-radius:8px;border:1px solid var(--border);font-size:13px}
 .mm-notes-label{display:block;font-size:11px;color:var(--muted);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.08em}
+.mm-contract-browser{margin-top:14px;padding:16px;border:1px solid var(--border);border-radius:10px;background:var(--dark)}
+.mm-contract-browser-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.mm-contract-browser h3{font-family:'Source Serif 4',serif;font-size:17px;color:#fff}
+.mm-contract-filters{display:flex;gap:10px;flex-wrap:wrap;margin-top:12px}
+.mm-contract-filters .mm-select{max-width:260px;margin-top:0}
+.mm-contract-list{margin-top:12px;display:flex;flex-direction:column;gap:8px}
+.mm-contract-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--panel)}
+.mm-contract-row-main{min-width:0}
+.mm-contract-row-title{font-weight:600;color:#fff}
+.mm-contract-row-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
 @media (max-width:768px){nav{padding:14px 20px}.wrap{padding-top:84px}.section{padding:16px 20px 50px}.mm-layout{grid-template-columns:1fr}.mm-sidebar{position:relative;top:0}}
 </style>
 </head>

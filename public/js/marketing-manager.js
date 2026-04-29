@@ -5,9 +5,15 @@
   const state = {
     data: { customers: [] },
     catalog: { directory: { usa: [], paid: [] }, campaigns: [] },
-    contractStats: { total: 0, pending: 0, signed: 0 }
+    contractStats: { total: 0, pending: 0, signed: 0 },
+    contracts: []
   };
   let selectedId = null;
+  const contractBrowser = {
+    open: false,
+    status: 'all',
+    customerId: 'all'
+  };
 
   const $ = (sel) => document.querySelector(sel);
   const escapeHtml = (s) =>
@@ -87,14 +93,16 @@
   }
 
   async function refresh() {
-    const [st, cat, cstats] = await Promise.all([
+    const [st, cat, cstats, contractsResp] = await Promise.all([
       api('/api/marketing-manager/state'),
       api('/api/marketing-manager/catalog'),
-      api('/api/marketing-manager/contracts/stats').catch(() => ({ total: 0, pending: 0, signed: 0 }))
+      api('/api/marketing-manager/contracts/stats').catch(() => ({ total: 0, pending: 0, signed: 0 })),
+      api('/api/marketing-manager/contracts').catch(() => ({ contracts: [] }))
     ]);
     state.data = st;
     state.catalog = cat;
     state.contractStats = cstats || { total: 0, pending: 0, signed: 0 };
+    state.contracts = (contractsResp && contractsResp.contracts) || [];
     if (selectedId && !state.data.customers.find((c) => c.id === selectedId)) selectedId = null;
     if (!selectedId && state.data.customers.length) selectedId = state.data.customers[0].id;
     render();
@@ -104,6 +112,18 @@
     const g = globalStats();
     const el = $('#mm-overview');
     if (!el) return;
+    const statusFilter = contractBrowser.status || 'all';
+    const customerFilter = contractBrowser.customerId || 'all';
+    const allContracts = state.contracts || [];
+    const filteredContracts = allContracts.filter((ct) => {
+      const st = String(ct.status || 'pending');
+      if (statusFilter !== 'all' && st !== statusFilter) return false;
+      if (customerFilter !== 'all' && String(ct.customerId || '') !== customerFilter) return false;
+      return true;
+    });
+    const customerOptions = (state.data.customers || [])
+      .map((c) => `<option value="${escapeHtml(c.id)}"${customerFilter === c.id ? ' selected' : ''}>${escapeHtml(c.name || 'Customer')}</option>`)
+      .join('');
     el.innerHTML = `
       <div class="mm-dash-grid">
         <div class="mm-dash-card">
@@ -126,20 +146,111 @@
           <div class="mm-dash-val">${g.completed}</div>
           <div class="mm-dash-label">Completed</div>
         </div>
-        <div class="mm-dash-card">
+        <div class="mm-dash-card mm-clickable" data-contract-filter="all">
           <div class="mm-dash-val">${state.contractStats.total || 0}</div>
           <div class="mm-dash-label">Contracts total</div>
         </div>
-        <div class="mm-dash-card mm-accent-started">
+        <div class="mm-dash-card mm-accent-started mm-clickable" data-contract-filter="pending">
           <div class="mm-dash-val">${state.contractStats.pending || 0}</div>
           <div class="mm-dash-label">Contracts pending</div>
         </div>
-        <div class="mm-dash-card mm-accent-done">
+        <div class="mm-dash-card mm-accent-done mm-clickable" data-contract-filter="signed">
           <div class="mm-dash-val">${state.contractStats.signed || 0}</div>
           <div class="mm-dash-label">Contracts signed</div>
         </div>
       </div>
+      <div class="mm-contract-browser" id="mm-contract-browser" style="display:${contractBrowser.open ? '' : 'none'};">
+        <div class="mm-contract-browser-head">
+          <h3>Contracts browser</h3>
+          <button type="button" class="btn-mm-ghost" id="mm-contract-browser-close">Close</button>
+        </div>
+        <div class="mm-contract-filters">
+          <select id="mm-contract-status-filter" class="mm-select">
+            <option value="all"${statusFilter === 'all' ? ' selected' : ''}>All statuses</option>
+            <option value="pending"${statusFilter === 'pending' ? ' selected' : ''}>Pending only</option>
+            <option value="signed"${statusFilter === 'signed' ? ' selected' : ''}>Signed only</option>
+          </select>
+          <select id="mm-contract-customer-filter" class="mm-select">
+            <option value="all">All customers</option>
+            ${customerOptions}
+          </select>
+        </div>
+        <p class="mm-small">${filteredContracts.length} contract(s) shown</p>
+        <div class="mm-contract-list">
+          ${
+            filteredContracts.length
+              ? filteredContracts
+                  .map((ct) => {
+                    const stClass = ct.status === 'signed' ? 'mm-st-done' : 'mm-st-started';
+                    const stLabel = ct.status === 'signed' ? 'Signed' : 'Pending';
+                    return `
+                    <div class="mm-contract-row">
+                      <div class="mm-contract-row-main">
+                        <div class="mm-contract-row-title">${escapeHtml(ct.title || 'Contract')}</div>
+                        <div class="mm-small">${escapeHtml(ct.customerName || 'Customer')} • Created ${escapeHtml(fmtDate(ct.createdAt))}</div>
+                        ${ct.signedAt ? `<div class="mm-small">Signed ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerName || 'Signer')}</div>` : ''}
+                      </div>
+                      <div class="mm-contract-row-actions">
+                        <span class="mm-status-badge ${stClass}">${stLabel}</span>
+                        <button type="button" class="btn-mm-tiny" data-open-contract="${escapeHtml(ct.signPath)}">Open</button>
+                        <button type="button" class="btn-mm-tiny" data-copy-contract="${escapeHtml(ct.signPath)}">Copy link</button>
+                        ${ct.signedDocumentPath ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.signedDocumentPath)}" target="_blank" rel="noopener" style="text-decoration:none;">Signed file</a>` : ''}
+                        <button type="button" class="btn-mm-ghost" data-jump-customer="${escapeHtml(ct.customerId || '')}" style="padding:4px 10px;font-size:11px;">Customer</button>
+                      </div>
+                    </div>
+                  `;
+                  })
+                  .join('')
+              : '<p class="mm-muted">No contracts match this filter.</p>'
+          }
+        </div>
+      </div>
     `;
+    el.querySelectorAll('[data-contract-filter]').forEach((card) => {
+      card.addEventListener('click', () => {
+        contractBrowser.open = true;
+        contractBrowser.status = card.getAttribute('data-contract-filter') || 'all';
+        renderOverview();
+      });
+    });
+    $('#mm-contract-browser-close')?.addEventListener('click', () => {
+      contractBrowser.open = false;
+      renderOverview();
+    });
+    $('#mm-contract-status-filter')?.addEventListener('change', (e) => {
+      contractBrowser.status = e.target.value || 'all';
+      renderOverview();
+    });
+    $('#mm-contract-customer-filter')?.addEventListener('change', (e) => {
+      contractBrowser.customerId = e.target.value || 'all';
+      renderOverview();
+    });
+    el.querySelectorAll('[data-open-contract]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = btn.getAttribute('data-open-contract');
+        if (!p) return;
+        window.open(p, '_blank', 'noopener');
+      });
+    });
+    el.querySelectorAll('[data-copy-contract]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const p = btn.getAttribute('data-copy-contract');
+        if (!p) return;
+        const full = `${window.location.origin}${p}`;
+        const ok = await copyText(full);
+        if (ok) alert('Signing link copied.');
+        else prompt('Copy signing link', full);
+      });
+    });
+    el.querySelectorAll('[data-jump-customer]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const cid = btn.getAttribute('data-jump-customer');
+        if (!cid) return;
+        selectedId = cid;
+        render();
+        document.getElementById('mm-main')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    });
   }
 
   function renderCustomerList() {

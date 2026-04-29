@@ -3062,6 +3062,28 @@ app.get('/api/marketing-manager/customers/:customerId/contracts', (req, res) => 
   }
 });
 
+app.get('/api/marketing-manager/contracts', (req, res) => {
+  try {
+    const state = readMarketingManagerState();
+    const data = readMarketingContracts();
+    const byCustomer = new Map((state.customers || []).map((c) => [c.id, c.name || 'Customer']));
+    const statusFilter = String(req.query?.status || '').trim().toLowerCase();
+    const customerFilter = String(req.query?.customerId || '').trim();
+    const contracts = data.contracts
+      .filter((x) => {
+        const st = (x.status || 'pending').toLowerCase();
+        if (statusFilter && statusFilter !== 'all' && st !== statusFilter) return false;
+        if (customerFilter && customerFilter !== 'all' && x.customerId !== customerFilter) return false;
+        return true;
+      })
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+      .map((x) => mmContractView(x, byCustomer.get(x.customerId) || 'Customer'));
+    return res.json({ contracts });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) => {
   try {
     const state = readMarketingManagerState();
