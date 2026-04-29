@@ -17,6 +17,19 @@ def _pick_best_rect(doc, needles):
     return best
 
 
+def _pick_section_anchor(doc):
+    # Prefer explicit signature section headings on later pages.
+    return _pick_best_rect(
+        doc,
+        [
+            "Client Acceptance & Signature",
+            "Client Acceptance and Signature",
+            "Acceptance & Signature",
+            "Acceptance and Signature",
+        ],
+    )
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True)
@@ -40,18 +53,28 @@ def main():
     if doc.page_count == 0:
         raise RuntimeError("Input PDF has no pages")
 
+    section_best = _pick_section_anchor(doc)
     sig_best = _pick_best_rect(doc, ["Client Signature", "Signature", "Authorized Signature"])
     date_best = _pick_best_rect(doc, ["Date", "Signed Date"])
     name_best = _pick_best_rect(doc, ["Printed Name", "Full Name", "Name"])
 
-    sig_page_idx = sig_best[0] if sig_best else doc.page_count - 1
+    sig_page_idx = (
+        sig_best[0]
+        if sig_best
+        else (section_best[0] if section_best else doc.page_count - 1)
+    )
     page = doc[sig_page_idx]
     page_rect = page.rect
 
     if sig_best:
         sig_rect = sig_best[2]
-        x = min(sig_rect.x1 + 10, page_rect.width - 200)
-        y = max(40, sig_rect.y0 - 6)
+        # Put signature over/near the actual signature line area.
+        x = min(max(sig_rect.x0 + 120, sig_rect.x1 + 8), page_rect.width - 220)
+        y = max(40, sig_rect.y0 - 8)
+    elif section_best and section_best[0] == sig_page_idx:
+        anchor = section_best[2]
+        x = min(max(anchor.x0 + 130, page_rect.width * 0.54), page_rect.width - 220)
+        y = min(max(anchor.y1 + 28, 40), page_rect.height - 140)
     else:
         x = page_rect.width * 0.55
         y = page_rect.height * 0.82

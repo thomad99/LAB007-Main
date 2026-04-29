@@ -152,7 +152,10 @@
         const site = c.website ? c.website.replace(/^https?:\/\//i, '').replace(/\/$/, '') : '';
         return `
       <button type="button" class="mm-cust-btn${active}" data-id="${c.id}">
-        <span class="mm-cust-name">${escapeHtml(c.name)}</span>
+        <span class="mm-cust-row">
+          ${c.logoUrl ? `<img class="mm-cust-logo" src="${escapeHtml(c.logoUrl)}" alt="${escapeHtml(c.name)} logo" />` : ''}
+          <span class="mm-cust-name">${escapeHtml(c.name)}</span>
+        </span>
         <span class="mm-cust-meta">${counts.completed}/${counts.total} done${site ? ` • ${escapeHtml(site)}` : ''}</span>
       </button>`;
       })
@@ -491,6 +494,20 @@
           <button type="button" class="btn-mm-danger" id="mm-del-customer">Delete</button>
         </div>
       </div>
+      <div id="mm-customer-edit-panel" class="mm-edit-panel" style="display:none;">
+        <label class="mm-notes-label">Customer name</label>
+        <input type="text" id="mm-edit-name" class="mm-input" value="${escapeHtml(cust.name)}" />
+        <label class="mm-notes-label">Website</label>
+        <input type="text" id="mm-edit-website" class="mm-input" value="${escapeHtml(cust.website || '')}" placeholder="https://example.com" />
+        <label class="mm-notes-label">Notes</label>
+        <textarea id="mm-edit-notes" class="mm-textarea" rows="3">${escapeHtml(cust.notes || '')}</textarea>
+        <label class="mm-notes-label">Customer logo</label>
+        <input type="file" id="mm-edit-logo-file" class="mm-input" accept="image/*" />
+        <div class="mm-edit-actions">
+          <button type="button" class="btn-mm" id="mm-save-customer">Save customer</button>
+          <button type="button" class="btn-mm-ghost" id="mm-cancel-edit-customer">Cancel</button>
+        </div>
+      </div>
       <div class="mm-dash-grid mm-dash-inline">
         <div class="mm-dash-card mm-accent-todo"><div class="mm-dash-val">${co.not_started}</div><div class="mm-dash-label">Not started</div></div>
         <div class="mm-dash-card mm-accent-started"><div class="mm-dash-val">${co.started}</div><div class="mm-dash-label">Started</div></div>
@@ -576,13 +593,30 @@
     });
 
     $('#mm-edit-customer')?.addEventListener('click', async () => {
-      const name = prompt('Customer name', cust.name);
-      if (!name || !name.trim()) return;
-      const notes = prompt('Notes', cust.notes || '') ?? '';
+      const panel = $('#mm-customer-edit-panel');
+      if (!panel) return;
+      panel.style.display = panel.style.display === 'none' ? '' : 'none';
+    });
+    $('#mm-cancel-edit-customer')?.addEventListener('click', () => {
+      const panel = $('#mm-customer-edit-panel');
+      if (panel) panel.style.display = 'none';
+    });
+    $('#mm-save-customer')?.addEventListener('click', async () => {
+      const name = String($('#mm-edit-name')?.value || '').trim();
+      if (!name) return alert('Customer name is required.');
+      const website = String($('#mm-edit-website')?.value || '').trim();
+      const notes = String($('#mm-edit-notes')?.value || '');
       await api(`/api/marketing-manager/customers/${cust.id}`, {
         method: 'PATCH',
-        body: JSON.stringify({ name: name.trim(), notes })
+        body: JSON.stringify({ name, website, notes })
       });
+      const logoInput = $('#mm-edit-logo-file');
+      const logo = logoInput?.files && logoInput.files[0];
+      if (logo) {
+        const fd = new FormData();
+        fd.append('logo', logo);
+        await apiForm(`/api/marketing-manager/customers/${cust.id}/logo`, 'POST', fd);
+      }
       await refresh();
     });
 

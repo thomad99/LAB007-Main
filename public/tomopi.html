@@ -372,6 +372,7 @@
       padding: 4px 10px;
       letter-spacing: 0.03em;
       text-transform: uppercase;
+      cursor: pointer;
     }
     .sim-note {
       margin-top: 10px;
@@ -381,35 +382,47 @@
     .sim-wrap:fullscreen {
       width: 100vw;
       height: 100vh;
-      padding: 14px;
+      padding: 0;
       border-radius: 0;
       border: none;
       background: #04070d;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
     .sim-wrap:fullscreen .sim-display {
       flex: 1;
       aspect-ratio: auto;
       min-height: 0;
+      border-radius: 0;
+      border: none;
+    }
+    .sim-wrap:fullscreen .sim-toolbar {
+      display: none;
     }
     .sim-wrap.sim-force-fullscreen {
       position: fixed;
       inset: 0;
       z-index: 9999;
-      width: 100vw;
+      width: 100dvw;
       height: 100dvh;
-      padding: 14px;
+      padding: 0;
       border-radius: 0;
       border: none;
       background: #04070d;
       display: flex;
       flex-direction: column;
+      overflow: hidden;
     }
     .sim-wrap.sim-force-fullscreen .sim-display {
       flex: 1;
       aspect-ratio: auto;
       min-height: 0;
+      border-radius: 0;
+      border: none;
+    }
+    .sim-wrap.sim-force-fullscreen .sim-toolbar {
+      display: none;
     }
     body.sim-body-fullscreen {
       overflow: hidden;
@@ -420,6 +433,10 @@
       .sim-tool-btn { flex: 1; min-height: 40px; }
       .sim-content { padding: 12px; gap: 8px; }
       .sim-display { min-height: 220px; }
+      .sim-wrap:fullscreen .sim-content,
+      .sim-wrap.sim-force-fullscreen .sim-content {
+        padding: 10px;
+      }
     }
     .pi-box-panel {
       margin: 0 0 16px 0;
@@ -1553,7 +1570,7 @@
       let font = 'dejavusans';
       let feedText = '';
       let tickerText = '';
-      let subText = nowDateString();
+      let subText = '';
       let clockSize = '';
 
       if (mode === 'news_feed' && json.news_feed) {
@@ -1580,26 +1597,21 @@
         if (!tickerText) {
           tickerText = (json.news_feed.tickers || ['TSLA', 'IBRX', 'AAPL']).slice(0, 8).join(' · ');
         }
-        if (simLiveData.generatedAt) {
-          const t = new Date(simLiveData.generatedAt);
-          if (!Number.isNaN(t.getTime())) {
-            subText = `Live data ${t.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
-          }
-        }
+        // Keep WebView clock-focused: no live-data timestamp text.
       } else if (mode === 'clock_basic' && json.clock_basic) {
         fg = json.clock_basic.color_rgb || fg;
         bg = json.clock_basic.bg_rgb || bg;
         font = json.clock_basic.font_name || font;
         clockSize = json.clock_basic.font_size ? `${Math.round(json.clock_basic.font_size * 0.3)}px` : '';
-        feedText = 'Basic clock mode';
+        feedText = '';
       } else if (mode === 'slideshow' && json.slideshow?.clock) {
         fg = json.slideshow.clock.color_rgb || fg;
         font = json.slideshow.clock.font_name || font;
         clockSize = json.slideshow.clock.font_size ? `${Math.round(json.slideshow.clock.font_size * 0.3)}px` : '';
         bg = [18, 18, 22];
-        subText = 'Slideshow image + clock overlay';
+        subText = '';
       } else {
-        feedText = `${mode} mode preview`;
+        feedText = '';
       }
 
       simContent.style.background = rgbArrayToCss(bg, '#000');
@@ -1607,24 +1619,26 @@
       simContent.style.fontFamily = `${font}, "JetBrains Mono", "Fira Code", monospace`;
       const w = simDisplay?.clientWidth || 640;
       const h = simDisplay?.clientHeight || 480;
-      const base = Math.max(14, Math.min(w / 4.8, h / 2.9));
-      simClock.style.fontSize = clockSize || `${Math.round(base)}px`;
-      simSub.style.fontSize = `${Math.round(base * 0.26)}px`;
-      simFeed.style.fontSize = `${Math.round(base * 0.24)}px`;
-      simTicker.style.fontSize = `${Math.round(base * 0.2)}px`;
+      const base = Math.max(20, Math.min(w / 4.2, h / 2.2));
+      const clockPx = clockSize ? parseInt(clockSize, 10) || Math.round(base) : Math.round(base);
+      simClock.style.fontSize = `${clockPx}px`;
+      // Keep secondary text ~60% smaller (40% of clock size).
+      const secondaryPx = Math.max(11, Math.round(clockPx * 0.4));
+      simSub.style.fontSize = `${secondaryPx}px`;
+      simFeed.style.fontSize = `${secondaryPx}px`;
+      simTicker.style.fontSize = `${Math.max(10, Math.round(clockPx * 0.36))}px`;
 
       simClock.textContent = nowClockString();
       simSub.textContent = subText;
       simFeed.textContent = feedText || '';
       simTicker.textContent = tickerText || '';
+      simSub.style.display = subText ? '' : 'none';
       simFeed.style.display = feedText ? '' : 'none';
       simTicker.style.display = tickerText ? '' : 'none';
     }
 
     function setSimFullscreenButtonText() {
-      const isNativeFullscreen = document.fullscreenElement === simWrap;
-      const isFullscreen = isNativeFullscreen || simForcedFullscreen;
-      if (simFullscreenBtn) simFullscreenBtn.textContent = isFullscreen ? 'Exit Fullscreen' : 'Fullscreen';
+      if (simFullscreenBtn) simFullscreenBtn.textContent = 'Fullscreen';
     }
 
     function setSimForcedFullscreen(on) {
@@ -1657,6 +1671,14 @@
         }
       }
       setSimForcedFullscreen(true);
+    }
+
+    async function backToWebViewMenu() {
+      if (document.fullscreenElement === simWrap) {
+        try { await document.exitFullscreen(); } catch (_) {}
+      }
+      if (simForcedFullscreen) setSimForcedFullscreen(false);
+      modeSelect?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
 
     function applyModeFromDropdown() {
@@ -1884,6 +1906,10 @@
       window.addEventListener('resize', updateSimulator);
       window.addEventListener('orientationchange', () => setTimeout(updateSimulator, 150));
       setSimFullscreenButtonText();
+    }
+    if (simModeBadge) {
+      simModeBadge.title = 'Back to menu';
+      simModeBadge.addEventListener('click', backToWebViewMenu);
     }
     piEditClose.addEventListener('click', closePiEditor);
     piEditOverlay.addEventListener('click', (e) => {

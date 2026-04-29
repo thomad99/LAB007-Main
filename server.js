@@ -177,6 +177,7 @@ console.warn('SMTP_USER or SMTP_PASS not configured - contact form emails will n
 // Serve LAB007 images (before project apps to avoid conflicts)
 app.use('/images', express.static(path.join(__dirname, 'LAB007', 'Images')));
 app.use('/uploads/ggppi-tracker', express.static(ggppiUploadDir));
+app.use('/marketmg/logos', express.static(marketingManagerLogosDir));
 
 // Serve webdesign static page
 app.get('/webdesign', (req, res) => {
@@ -1613,6 +1614,42 @@ app.post('/api/marketing-analyzer/compare', (req, res) => {
 // ── Digital Marketing: Anthropic SEO analyzer proxy (used by /digitalmarketing) ──
 const ANTHROPIC_ANALYZE_MODEL = process.env.ANTHROPIC_ANALYZE_MODEL || 'claude-sonnet-4-5';
 
+function extractImageAltAuditFromHtml(html, pageUrl) {
+  const out = [];
+  const seen = new Set();
+  const base = pageUrl instanceof URL ? pageUrl : null;
+  const tagRx = /<img\b[^>]*>/gi;
+  const srcRx = /\bsrc\s*=\s*["']([^"']+)["']/i;
+  const altRx = /\balt\s*=\s*["']([^"']*)["']/i;
+  let m;
+  while ((m = tagRx.exec(String(html || '')))) {
+    const tag = m[0] || '';
+    const srcM = tag.match(srcRx);
+    if (!srcM || !srcM[1]) continue;
+    const rawSrc = srcM[1].trim();
+    let src = rawSrc;
+    try {
+      if (base) src = new URL(rawSrc, base).toString();
+    } catch {}
+    if (seen.has(src)) continue;
+    seen.add(src);
+    const altM = tag.match(altRx);
+    const alt = altM ? String(altM[1] || '').trim() : '';
+    const fileName = (() => {
+      try {
+        const u = new URL(src);
+        const p = u.pathname || '';
+        return p.split('/').filter(Boolean).pop() || src;
+      } catch {
+        return src.split('/').filter(Boolean).pop() || src;
+      }
+    })();
+    out.push({ src, fileName, alt, missingAlt: !alt });
+    if (out.length >= 300) break;
+  }
+  return out;
+}
+
 app.post('/api/analyze', async (req, res) => {
   try {
     const prompt = req.body?.prompt;
@@ -1652,7 +1689,30 @@ app.post('/api/analyze', async (req, res) => {
     if (!text) {
       return res.status(500).json({ success: false, error: 'Empty response from Anthropic' });
     }
-    return res.json({ success: true, text });
+    let imageAltAudit = [];
+    const scanUrlRaw = String(req.body?.url || '').trim();
+    if (scanUrlRaw) {
+      try {
+        const scanUrl = /^https?:\/\//i.test(scanUrlRaw) ? new URL(scanUrlRaw) : new URL(`https://${scanUrlRaw}`);
+        if (!isPrivateHostname(scanUrl.hostname)) {
+          const pageRes = await fetchFn(scanUrl.toString(), {
+            redirect: 'follow',
+            headers: {
+              'User-Agent':
+                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+              Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+            }
+          });
+          if (pageRes.ok) {
+            const html = await pageRes.text();
+            imageAltAudit = extractImageAltAuditFromHtml(html, scanUrl);
+          }
+        }
+      } catch {
+        imageAltAudit = [];
+      }
+    }
+    return res.json({ success: true, text, imageAltAudit });
   } catch (error) {
     console.error('/api/analyze error:', error);
     return res.status(500).json({ success: false, error: error.message || 'Analyze failed' });
@@ -1786,6 +1846,10 @@ const marketingManagerContractDocsDir = path.join(marketingManagerDataDir, 'cont
 if (!fs.existsSync(marketingManagerContractDocsDir)) {
   fs.mkdirSync(marketingManagerContractDocsDir, { recursive: true });
 }
+const marketingManagerLogosDir = path.join(marketingManagerDataDir, 'logos');
+if (!fs.existsSync(marketingManagerLogosDir)) {
+  fs.mkdirSync(marketingManagerLogosDir, { recursive: true });
+}
 const marketingManagerSignedDocsDir = path.join(marketingManagerContractDocsDir, 'signed');
 if (!fs.existsSync(marketingManagerSignedDocsDir)) {
   fs.mkdirSync(marketingManagerSignedDocsDir, { recursive: true });
@@ -1809,6 +1873,23 @@ const marketingContractsUpload = multer({
       cb(new Error('Unsupported file type. Use PDF, DOC, DOCX, TXT, PNG, JPG, or JPEG.'));
       return;
     }
+    cb(null, true);
+  }
+});
+
+const marketingCustomerLogoUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, marketingManagerLogosDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(String(file.originalname || '').toLowerCase()) || '.png';
+      const safeExt = ['.png', '.jpg', '.jpeg', '.webp', '.gif', '.svg'].includes(ext) ? ext : '.png';
+      cb(null, `cust-logo-${Date.now()}-${Math.random().toString(36).slice(2, 8)}${safeExt}`);
+    }
+  }),
+  limits: { fileSize: 1024 * 1024 * 8 },
+  fileFilter: (req, file, cb) => {
+    const ok = /^image\//i.test(String(file.mimetype || ''));
+    if (!ok) return cb(new Error('Logo must be an image file'));
     cb(null, true);
   }
 });
@@ -2450,12 +2531,37 @@ app.patch('/api/marketing-manager/customers/:customerId', (req, res) => {
     if (!c) return res.status(404).json({ error: 'Customer not found' });
     if (req.body.name !== undefined) c.name = String(req.body.name || '').trim() || c.name;
     if (req.body.notes !== undefined) c.notes = String(req.body.notes || '').trim();
+    if (req.body.website !== undefined) {
+      const nextWebsite = mmNormalizeWebsite(req.body.website);
+      if (nextWebsite) c.website = nextWebsite;
+      else if (!String(req.body.website || '').trim()) c.website = '';
+    }
+    if (req.body.logoUrl !== undefined) c.logoUrl = String(req.body.logoUrl || '').trim();
     c.updatedAt = new Date().toISOString();
     writeMarketingManagerState(state);
     return res.json({ customer: c });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
+});
+
+app.post('/api/marketing-manager/customers/:customerId/logo', (req, res) => {
+  marketingCustomerLogoUpload.single('logo')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Logo upload failed' });
+    try {
+      const state = readMarketingManagerState();
+      const c = mmFindCustomer(state, req.params.customerId);
+      if (!c) return res.status(404).json({ error: 'Customer not found' });
+      if (!req.file) return res.status(400).json({ error: 'Logo file is required' });
+      const logoUrl = `/marketmg/logos/${req.file.filename}`;
+      c.logoUrl = logoUrl;
+      c.updatedAt = new Date().toISOString();
+      writeMarketingManagerState(state);
+      return res.json({ customer: c, logoUrl });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
 });
 
 app.delete('/api/marketing-manager/customers/:customerId', (req, res) => {
@@ -2798,7 +2904,7 @@ app.get('/api/marketing-manager/contracts/sign/:token', (req, res) => {
         documentName: contract.originalName || '',
         documentPath: contract.filePath ? `/api/marketing-manager/contracts/sign/${token}/document` : '',
         signedDocumentPath:
-          contract.status === 'signed' && contract.signedTextPath
+          contract.status === 'signed' && (contract.signedPdfPath || contract.signedTextPath)
             ? `/api/marketing-manager/contracts/sign/${token}/document`
             : ''
       }

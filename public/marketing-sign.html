@@ -217,7 +217,7 @@
         try {
           await api('/api/marketing-manager/contracts/sign/' + token, {
             method: 'POST',
-            body: JSON.stringify({ fullName, date, signatureDataUrl: canvas.toDataURL('image/png') })
+            body: JSON.stringify({ fullName, date, signatureDataUrl: canvas.toDataURL('image/jpeg', 0.92) })
           });
           setSignedUi();
           msgEl.className = 'ok';

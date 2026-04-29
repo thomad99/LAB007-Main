@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -56,6 +56,8 @@ h1{font-family:'Source Serif 4',serif;font-weight:700;font-size:clamp(34px,5vw,5
 .mm-sidebar-head h3{font-family:'Source Serif 4',serif;font-size:14px;color:#fff}
 .mm-cust-list{display:flex;flex-direction:column;gap:8px;max-height:min(65vh,560px);overflow-y:auto}
 .mm-cust-btn{display:flex;flex-direction:column;align-items:flex-start;gap:4px;width:100%;text-align:left;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--panel);color:var(--text);cursor:pointer;font-family:inherit;font-size:13px;transition:border-color .2s,background .2s}
+.mm-cust-row{display:flex;align-items:center;gap:10px;width:100%}
+.mm-cust-logo{width:28px;height:28px;border-radius:7px;object-fit:contain;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);padding:2px;flex:0 0 auto}
 .mm-cust-btn:hover{border-color:rgba(201,168,76,.35)}
 .mm-cust-btn.is-active{border-color:rgba(201,168,76,.55);background:rgba(201,168,76,.06)}
 .mm-cust-name{font-weight:600;color:#fff}.mm-cust-meta{font-size:11px;color:var(--muted)}
@@ -89,6 +91,8 @@ h1{font-family:'Source Serif 4',serif;font-weight:700;font-size:clamp(34px,5vw,5
 .mm-st-started{background:rgba(245,166,35,.12);color:var(--amber);border:1px solid rgba(245,166,35,.25)}
 .mm-st-done{background:rgba(46,204,135,.12);color:var(--green);border:1px solid rgba(46,204,135,.22)}
 .mm-task-tool{margin-top:8px}.mm-dir-section h4{font-family:'Source Serif 4',serif;font-size:13px;color:var(--gold);margin:16px 0 10px}
+.mm-edit-panel{margin:10px 0 16px;padding:14px;border-radius:10px;border:1px solid var(--border);background:rgba(255,255,255,.02)}
+.mm-edit-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
 .mm-dir-rows{display:flex;flex-direction:column;gap:6px}.mm-dir-row{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--panel);border:1px solid var(--border);font-size:12px}
 .mm-dir-row input{width:18px;height:18px;accent-color:var(--gold);cursor:pointer}.mm-dir-name{color:var(--text)}
 .mm-dir-link{color:var(--blue);font-size:11px;text-decoration:none;white-space:nowrap}.mm-dir-link:hover{text-decoration:underline}

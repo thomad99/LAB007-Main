@@ -96,9 +96,15 @@ window.runAnalysis = async function runAnalysis() {
     const res = await fetch('/api/analyze', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ prompt: buildSeoPrompt(url, hostname) })
+      body: JSON.stringify({ prompt: buildSeoPrompt(url, hostname), url })
     });
-    const data = await res.json();
+    const raw = await res.text();
+    let data = {};
+    try {
+      data = JSON.parse(raw);
+    } catch {
+      throw new Error(`Analyzer response was not JSON (status ${res.status})`);
+    }
     clearInterval(stepInterval);
     steps.forEach((s) => {
       s.className = 'loading-step done';
@@ -112,9 +118,8 @@ window.runAnalysis = async function runAnalysis() {
     await new Promise((r) => setTimeout(r, 600));
 
     const text = data.text || '';
-    const clean = text.replace(/```json|```/g, '').trim();
-    const parsed = JSON.parse(clean);
-    renderAnalyzerResults(parsed, url, hostname);
+    const parsed = parseAnalyzerJson(text);
+    renderAnalyzerResults(parsed, url, hostname, data.imageAltAudit || []);
   } catch (err) {
     clearInterval(stepInterval);
     document.getElementById('analyzer-loading').style.display = 'none';
@@ -123,6 +128,21 @@ window.runAnalysis = async function runAnalysis() {
     document.getElementById('analyzeBtn').disabled = false;
   }
 };
+
+function parseAnalyzerJson(text) {
+  const clean = String(text || '').replace(/```json|```/g, '').trim();
+  try {
+    return JSON.parse(clean);
+  } catch {
+    const start = clean.indexOf('{');
+    const end = clean.lastIndexOf('}');
+    if (start >= 0 && end > start) {
+      const slice = clean.slice(start, end + 1);
+      return JSON.parse(slice);
+    }
+    throw new Error('Could not parse analyzer JSON output');
+  }
+}
 
 function buildSeoPrompt(url, hostname) {
   return `You are an expert SEO analyst. Analyze the website: ${url}
@@ -275,7 +295,7 @@ function getScoreClass(score) {
   return 'bad';
 }
 
-function renderAnalyzerResults(data, url, hostname) {
+function renderAnalyzerResults(data, url, hostname, imageAltAudit) {
   document.getElementById('analyzer-loading').style.display = 'none';
   document.getElementById('analyzer-results').style.display = 'block';
   document.getElementById('analyzeBtn').disabled = false;
@@ -388,11 +408,45 @@ function renderAnalyzerResults(data, url, hostname) {
     )
     .join('');
 
+  const imgAuditWrap = document.getElementById('image-alt-audit');
+  const imgAuditMeta = document.getElementById('image-alt-meta');
+  const imgAuditList = document.getElementById('image-alt-list');
+  if (imgAuditWrap && imgAuditMeta && imgAuditList) {
+    const rows = Array.isArray(imageAltAudit) ? imageAltAudit : [];
+    if (!rows.length) {
+      imgAuditWrap.style.display = 'none';
+    } else {
+      const missing = rows.filter((r) => r.missingAlt).length;
+      imgAuditMeta.textContent = `${rows.length} images scanned • ${missing} missing alt`;
+      imgAuditList.innerHTML = rows
+        .slice(0, 120)
+        .map((r) => {
+          const altText = (r.alt || '').trim();
+          return `<div class="img-alt-row">
+            <div class="img-alt-file" title="${escapeHtml(r.fileName || r.src || '')}">${escapeHtml(r.fileName || r.src || '')}</div>
+            <div class="img-alt-text" title="${escapeHtml(altText || '(missing alt)')}">${escapeHtml(altText || '(missing alt)')}</div>
+            <span class="img-alt-badge ${r.missingAlt ? 'img-alt-missing' : 'img-alt-ok'}">${r.missingAlt ? 'Missing' : 'OK'}</span>
+          </div>`;
+        })
+        .join('');
+      imgAuditWrap.style.display = '';
+    }
+  }
+
   setTimeout(
     () =>
       document.getElementById('analyzer-results').scrollIntoView({ behavior: 'smooth', block: 'start' }),
     200
   );
+}
+
+function escapeHtml(value) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
 }
 
 function showCategoryDetail(cat, cardEl) {
