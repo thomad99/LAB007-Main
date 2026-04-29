@@ -2565,8 +2565,38 @@ function mmTryStampOriginalPdf(contract, signedPdfPath) {
     const tmpSigPath = path.join(marketingManagerSignedDocsDir, `${contract.id}-sig.${sigExt}`);
     fs.writeFileSync(tmpSigPath, sig.buffer);
     const signerScript = path.join(__dirname, 'lib', 'pdf_signer.py');
+    const pyCandidates = [
+      process.env.MARKETING_MANAGER_PYTHON_BIN,
+      process.env.PYTHON_BIN,
+      process.env.PYTHON,
+      'python3',
+      'python'
+    ].filter(Boolean);
+    const pyBin =
+      pyCandidates.find((bin) => {
+        const check = spawnSync(bin, ['-V'], { encoding: 'utf8' });
+        return !check.error;
+      }) || 'python';
+    const pyCheck = spawnSync(pyBin, ['-c', 'import fitz'], { encoding: 'utf8' });
+    if (pyCheck.status !== 0) {
+      let pyInstall = spawnSync(pyBin, ['-m', 'pip', 'install', '--user', 'pymupdf'], { encoding: 'utf8' });
+      if (pyInstall.status !== 0) {
+        spawnSync(pyBin, ['-m', 'ensurepip', '--upgrade'], { encoding: 'utf8' });
+        pyInstall = spawnSync(pyBin, ['-m', 'pip', 'install', '--user', 'pymupdf'], { encoding: 'utf8' });
+      }
+      if (pyInstall.status !== 0) {
+        console.warn(
+          '[Marketing Manager] Could not auto-install PyMuPDF:',
+          pyInstall.stderr || pyInstall.stdout || pyInstall.status
+        );
+      }
+      const pyRecheck = spawnSync(pyBin, ['-c', 'import fitz'], { encoding: 'utf8' });
+      if (pyRecheck.status !== 0) {
+        console.warn('[Marketing Manager] Python fitz module still unavailable:', pyRecheck.stderr || pyRecheck.stdout);
+      }
+    }
     const py = spawnSync(
-      'python',
+      pyBin,
       [
         signerScript,
         '--input',

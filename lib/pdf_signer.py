@@ -1,8 +1,48 @@
 import argparse
 import os
+import site
+import subprocess
 import sys
 
-import fitz  # PyMuPDF
+def _ensure_fitz():
+    try:
+        import fitz as _fitz  # type: ignore
+        return _fitz
+    except ModuleNotFoundError:
+        pass
+
+    # Make user site-packages importable even when PYTHONNOUSERSITE is set.
+    try:
+        user_site = site.getusersitepackages()
+        if user_site and user_site not in sys.path:
+            sys.path.append(user_site)
+        import fitz as _fitz  # type: ignore
+        return _fitz
+    except Exception:
+        pass
+
+    # Last resort: install PyMuPDF at runtime for this interpreter.
+    subprocess.run([sys.executable, "-m", "ensurepip", "--upgrade"], capture_output=True, text=True)
+    install = subprocess.run(
+        [sys.executable, "-m", "pip", "install", "--user", "pymupdf"],
+        capture_output=True,
+        text=True,
+    )
+    if install.returncode != 0:
+        raise ModuleNotFoundError(
+            "No module named 'fitz' and failed to install pymupdf: "
+            + (install.stderr or install.stdout or "unknown pip error")
+        )
+
+    user_site = site.getusersitepackages()
+    if user_site and user_site not in sys.path:
+        sys.path.append(user_site)
+
+    import fitz as _fitz  # type: ignore
+    return _fitz
+
+
+fitz = _ensure_fitz()  # PyMuPDF
 
 
 def _pick_best_rect(doc, needles):
