@@ -24,22 +24,49 @@
     .body { white-space:pre-wrap; line-height:1.6; }
     label { display:block; font-size:13px; color:var(--muted); margin:8px 0 6px; }
     input { width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--text); }
-    canvas { width:100%; max-width: 620px; height: 190px; border:1px dashed var(--line); border-radius:8px; background:#fff; touch-action:none; }
-    canvas.signature-success {
-      border-color: rgba(40, 209, 124, 0.85);
-      animation: sig-success-ring 1.4s ease-out 2;
-      box-shadow: 0 0 0 0 rgba(40, 209, 124, 0.45);
+    .sig-pad-wrap {
+      display: block;
+      width: 100%;
+      max-width: 620px;
+      border-radius: 10px;
+      padding: 3px;
+      box-sizing: border-box;
+      background: transparent;
+      transition: box-shadow 0.2s ease;
     }
-    @keyframes sig-success-ring {
-      0% {
-        box-shadow: 0 0 0 0 rgba(40, 209, 124, 0.52), 0 0 0 0 rgba(40, 209, 124, 0.3);
+    .sig-pad-wrap.sig-saving {
+      animation: sig-pad-blue-pulse 0.95s ease-in-out infinite;
+      box-shadow: 0 0 0 2px #2563eb, 0 0 18px rgba(37, 99, 235, 0.35);
+    }
+    @keyframes sig-pad-blue-pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 2px #2563eb, 0 0 14px rgba(37, 99, 235, 0.3);
       }
-      70% {
-        box-shadow: 0 0 0 10px rgba(40, 209, 124, 0.1), 0 0 0 20px rgba(40, 209, 124, 0.02);
+      50% {
+        box-shadow: 0 0 0 5px rgba(96, 165, 250, 0.85), 0 0 28px rgba(37, 99, 235, 0.55);
       }
-      100% {
-        box-shadow: 0 0 0 0 rgba(40, 209, 124, 0), 0 0 0 0 rgba(40, 209, 124, 0);
+    }
+    .sig-pad-wrap.sig-saved {
+      animation: sig-pad-green-pulse 1.15s ease-out 3;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.9), 0 0 22px rgba(34, 197, 94, 0.35);
+    }
+    @keyframes sig-pad-green-pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.95), 0 0 18px rgba(34, 197, 94, 0.25);
       }
+      45% {
+        box-shadow: 0 0 0 7px rgba(34, 197, 94, 0.35), 0 0 34px rgba(34, 197, 94, 0.4);
+      }
+    }
+    canvas {
+      width: 100%;
+      max-width: 620px;
+      height: 190px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #fff;
+      touch-action: none;
+      display: block;
     }
     .row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
     button { border:0; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:700; }
@@ -83,7 +110,9 @@
       <label for="signDate">Date</label>
       <input id="signDate" type="date" />
       <label>Signature</label>
-      <canvas id="sigCanvas" width="620" height="190"></canvas>
+      <div class="sig-pad-wrap" id="sigPadWrap" aria-live="polite">
+        <canvas id="sigCanvas" width="620" height="190"></canvas>
+      </div>
       <div class="row">
         <button class="ghost" id="clearBtn" type="button">Clear signature</button>
         <button class="gold" id="signBtn" type="button">Sign contract</button>
@@ -113,6 +142,7 @@
       const emailCopyBtn = document.getElementById('emailCopyBtn');
       const postSignActions = document.getElementById('postSignActions');
       const canvas = document.getElementById('sigCanvas');
+      const sigPadWrap = document.getElementById('sigPadWrap');
       const ctx = canvas.getContext('2d');
       let drawing = false;
       let hasInk = false;
@@ -160,6 +190,7 @@
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         fillCanvasWhite();
         hasInk = false;
+        sigPadWrap.classList.remove('sig-saving', 'sig-saved');
       }
 
       async function api(path, opt) {
@@ -198,11 +229,11 @@
       }
 
       function animateSignatureSuccess() {
-        canvas.classList.remove('signature-success');
-        // Restart animation reliably on repeat calls.
-        void canvas.offsetWidth;
-        canvas.classList.add('signature-success');
-        window.setTimeout(() => canvas.classList.remove('signature-success'), 3200);
+        sigPadWrap.classList.remove('sig-saving');
+        sigPadWrap.classList.remove('sig-saved');
+        void sigPadWrap.offsetWidth;
+        sigPadWrap.classList.add('sig-saved');
+        window.setTimeout(() => sigPadWrap.classList.remove('sig-saved'), 4200);
       }
 
       async function load() {
@@ -266,8 +297,6 @@
       }
 
       signBtn.addEventListener('click', async function () {
-        msgEl.className = 'muted';
-        msgEl.textContent = 'Saving signature...';
         const fullName = nameEl.value.trim();
         const date = dateEl.value;
         if (!fullName) {
@@ -285,16 +314,28 @@
           msgEl.textContent = 'Please draw your signature.';
           return;
         }
+        msgEl.className = 'muted';
+        msgEl.textContent = 'Saving signature...';
+        sigPadWrap.classList.remove('sig-saved');
+        sigPadWrap.classList.add('sig-saving');
+        signBtn.disabled = true;
+        const t0 = Date.now();
+        const minSavingMs = 550;
         try {
           await api('/api/marketing-manager/contracts/sign/' + token, {
             method: 'POST',
             body: JSON.stringify({ fullName, date, signatureDataUrl: canvas.toDataURL('image/jpeg', 0.92) })
           });
+          const elapsed = Date.now() - t0;
+          if (elapsed < minSavingMs) await new Promise((r) => setTimeout(r, minSavingMs - elapsed));
+          sigPadWrap.classList.remove('sig-saving');
           setSignedUi();
           animateSignatureSuccess();
           msgEl.className = 'ok';
           msgEl.textContent = 'Contract signed and stored successfully.';
         } catch (err) {
+          sigPadWrap.classList.remove('sig-saving');
+          signBtn.disabled = false;
           msgEl.className = 'error';
           msgEl.textContent = err.message;
         }

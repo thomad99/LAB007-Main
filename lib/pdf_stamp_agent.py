@@ -63,7 +63,12 @@ def main():
     page = doc.new_page(width=ref.width, height=ref.height)
     r = page.rect
     margin_x = 50
-    y = 72
+    # Keep agency block close to (but above) the client signature area that is
+    # stamped near the bottom of the same last page.
+    reserved_client_bottom = 170
+    reserved_agent_block = 140
+    gap_between_blocks = 24
+    y = max(72, r.y1 - (reserved_client_bottom + reserved_agent_block + gap_between_blocks))
 
     page.insert_text(
         fitz.Point(margin_x, y),
