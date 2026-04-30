@@ -1,0 +1,193 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CLEANAI — Session report</title>
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; background: #fff; color: #111; padding: 20px 16px 48px; }
+    .wrap { max-width: 680px; margin: 0 auto; }
+    .logo { width: 120px; display: block; margin: 0 auto 12px; }
+    h1 { text-align: center; font-size: 1.5rem; margin: 0 0 6px; }
+    .muted { color: #555; text-align: center; font-size: 0.92rem; margin-bottom: 20px; }
+    .pill { display: inline-block; background: #f3f4f6; border-radius: 999px; padding: 4px 10px; font-size: 0.82rem; margin: 4px 4px 0 0; }
+    .toolbar { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
+    .toolbar a { color: #0066cc; font-weight: 600; text-decoration: none; }
+    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
+    .cap-title { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 8px; }
+    ul.issue-list { padding-left: 18px; margin: 8px 0 0; }
+    ul.issue-list li { margin-bottom: 8px; line-height: 1.38; }
+    code { font-size: 0.78rem; word-break: break-all; background: #f9fafb; padding: 2px 5px; border-radius: 4px; }
+    .stat-row { margin-top: 10px; font-size: 0.95rem; }
+    .empty { color: #888; text-align: center; padding: 24px 8px; }
+    small.type-hint { opacity: 0.75; font-weight: normal; margin-left: 4px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <img class="logo" src="/images/LAB007-GOLD-TRANS.PNG" alt="LAB007" />
+    <h1>CLEANAI scan report</h1>
+    <p class="muted" id="subhead">Loading…</p>
+
+    <div class="toolbar">
+      <a href="/cleanai">← New scan</a>
+      <a href="/cleanai/dashboard">Dashboard</a>
+    </div>
+
+    <div id="summary" style="display:none" class="card">
+      <span class="pill" id="sumProvider"></span>
+      <span class="pill" id="sumCaptures"></span>
+      <span class="pill" id="sumIssues"></span>
+      <div class="stat-row" id="byTypeWrap"></div>
+      <div class="stat-row" style="margin-top:8px;font-size:0.82rem;color:#64748b" id="timeRange"></div>
+    </div>
+
+    <div id="timeline"></div>
+    <p class="empty" id="fallback" style="display:none"></p>
+  </div>
+
+  <script>
+    (function () {
+      function sessionIdFromPath() {
+        var m = window.location.pathname.match(/\/cleanai\/report\/([^/]+)/);
+        return m ? decodeURIComponent(m[1]) : '';
+      }
+
+      function typePretty(t) {
+        var map = {
+          coffee_stain: 'Coffee stain',
+          floor_mark: 'Floor mark',
+          fridge_smudge: 'Fridge / smudge',
+          sink_clutter: 'Sink clutter',
+          dirty_tap: 'Tap / faucet',
+          water_floor: 'Wet floor',
+          counter_crumbs: 'Counter crumbs',
+          other: 'Other'
+        };
+        return map[String(t || '').toLowerCase()] || t || 'other';
+      }
+
+      function formatAt(iso) {
+        try {
+          return new Date(iso).toLocaleString(undefined, {
+            weekday: 'short',
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: 'numeric',
+            minute: '2-digit',
+            second: '2-digit'
+          });
+        } catch (e) {
+          return String(iso || '');
+        }
+      }
+
+      var id = sessionIdFromPath();
+      var subhead = document.getElementById('subhead');
+
+      if (!id) {
+        subhead.textContent = 'Missing session.';
+        var fb = document.getElementById('fallback');
+        fb.style.display = 'block';
+        fb.textContent = 'Open this page from CLEANAI after you stop a scan.';
+        return;
+      }
+
+      subhead.innerHTML = 'Session ID: <code>' + id + '</code>';
+
+      fetch('/api/cleanai/sessions/' + encodeURIComponent(id))
+        .then(function (r) {
+          return r.json().then(function (j) {
+            if (!r.ok) throw new Error(j.error || 'Could not load');
+            return j;
+          });
+        })
+        .then(function (data) {
+          var S = data.session;
+          document.getElementById('summary').style.display = 'block';
+
+          document.getElementById('sumProvider').textContent = 'Vision: ' + (S.provider || 'auto');
+          document.getElementById('sumCaptures').textContent =
+            'Captures: ' + ((S.captures || []).length);
+          document.getElementById('sumIssues').textContent =
+            'Issues logged: ' + (data.summary && data.summary.issueOccurrences !== undefined
+              ? data.summary.issueOccurrences
+              : 0);
+
+          var byType =
+            data.summary && data.summary.byType && typeof data.summary.byType === 'object'
+              ? data.summary.byType
+              : {};
+          var bw = document.getElementById('byTypeWrap');
+          bw.innerHTML = '<strong>By type:</strong><br>';
+          var keys = Object.keys(byType);
+          if (!keys.length) {
+            bw.appendChild(document.createTextNode('none'));
+          } else {
+            keys.sort();
+            keys.forEach(function (k) {
+              var span = document.createElement('span');
+              span.className = 'pill';
+              span.textContent = typePretty(k) + ' × ' + byType[k];
+              bw.appendChild(span);
+            });
+          }
+
+          var tr = document.getElementById('timeRange');
+          tr.textContent =
+            'Recorded: ' + formatAt(S.startedAt || '') +
+            (S.stoppedAt ? ' → ' + formatAt(S.stoppedAt) : ' (still open/no end stamped)');
+
+          var tl = document.getElementById('timeline');
+          var frames = Array.isArray(S.captures) ? S.captures : [];
+          var fbEl = document.getElementById('fallback');
+
+          if (!frames.length) {
+            fbEl.style.display = 'block';
+            fbEl.textContent = 'No snapshots were logged for this session.';
+            return;
+          }
+
+          frames.forEach(function (f) {
+            var card = document.createElement('div');
+            card.className = 'card';
+            var capTitle = document.createElement('div');
+            capTitle.className = 'cap-title';
+            var n = Array.isArray(f.issues) ? f.issues.length : 0;
+            capTitle.textContent = 'Snapshot — ' + formatAt(f.at) + ' · ' + n + ' issue' + (n === 1 ? '' : 's');
+            card.appendChild(capTitle);
+
+            var list = document.createElement('ul');
+            list.className = 'issue-list';
+            var issues = Array.isArray(f.issues) ? f.issues : [];
+            if (!issues.length) {
+              var liEmpty = document.createElement('li');
+              liEmpty.textContent = '(no issues)';
+              list.appendChild(liEmpty);
+            } else {
+              issues.forEach(function (issue) {
+                var li = document.createElement('li');
+                var label = issue.label || 'Issue';
+                li.appendChild(document.createTextNode(label));
+                var hint = document.createElement('small');
+                hint.className = 'type-hint';
+                hint.textContent = '(' + typePretty(issue.type || 'other') + ')';
+                li.appendChild(hint);
+                list.appendChild(li);
+              });
+            }
+            card.appendChild(list);
+            tl.appendChild(card);
+          });
+        })
+        .catch(function (err) {
+          document.getElementById('fallback').style.display = 'block';
+          document.getElementById('fallback').textContent = err.message || 'Load failed.';
+        });
+    })();
+  </script>
+</body>
+</html>

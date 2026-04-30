@@ -60,6 +60,23 @@ if (!fs.existsSync(cursorAiProjectsRoot)) {
 }
 console.log('CursorAI projects dir:', cursorAiProjectsRoot);
 
+const cleanAiDataDir = (() => {
+  const explicit = String(process.env.CLEANAI_DATA_DIR || '').trim();
+  if (explicit) return path.resolve(explicit);
+  const diskRoot = String(process.env.LAB007_DATA_DIR || process.env.LAB007_DISK_ROOT || '').trim();
+  if (diskRoot) return path.join(path.resolve(diskRoot), 'CleanAI');
+  return path.join(__dirname, 'data', 'CleanAI');
+})();
+const cleanAiSessionsDir = path.join(cleanAiDataDir, 'sessions');
+const cleanAiConfigPath = path.join(cleanAiDataDir, 'cleanai-config.json');
+if (!fs.existsSync(cleanAiDataDir)) {
+  fs.mkdirSync(cleanAiDataDir, { recursive: true });
+}
+if (!fs.existsSync(cleanAiSessionsDir)) {
+  fs.mkdirSync(cleanAiSessionsDir, { recursive: true });
+}
+console.log('CLEANAI data dir:', cleanAiDataDir);
+
 const gscDataDir = (() => {
   const diskRoot = String(process.env.LAB007_DATA_DIR || process.env.LAB007_DISK_ROOT || '').trim();
   if (diskRoot) return path.join(path.resolve(diskRoot), 'gsc');
@@ -234,6 +251,24 @@ app.get('/marketing-manager/sign/:token', (req, res) => {
 
 app.get('/cursorai', (req, res) => {
   const p = path.join(__dirname, 'public', 'cursorai.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
+});
+
+app.get('/cleanai', (req, res) => {
+  const p = path.join(__dirname, 'public', 'cleanai.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
+});
+
+app.get('/cleanai/dashboard', (req, res) => {
+  const p = path.join(__dirname, 'public', 'cleanai-dashboard.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
+});
+
+app.get('/cleanai/report/:sessionId', (req, res) => {
+  const p = path.join(__dirname, 'public', 'cleanai-report.html');
   if (fs.existsSync(p)) return res.sendFile(p);
   return res.status(404).send('Not found');
 });
@@ -2346,6 +2381,535 @@ app.post('/api/cursorai/create-project', async (req, res) => {
   } catch (error) {
     console.error('/api/cursorai/create-project error:', error);
     return res.status(500).json({ error: error.message || 'Failed to create project' });
+  }
+});
+
+const CLEAN_AI_TYPES = new Set([
+  'coffee_stain',
+  'floor_mark',
+  'fridge_smudge',
+  'sink_clutter',
+  'dirty_tap',
+  'water_floor',
+  'counter_crumbs',
+  'other'
+]);
+
+const CLEANAI_DEFAULT_LOOKFOR = [
+  'Coffee stains on countertops',
+  'Marks or scuffs on the floor',
+  'Fingerprints or smudges on the fridge or stainless appliances',
+  'Objects or dishes left inside the sink',
+  'Dirty or limescaled tap / faucet',
+  'Water patches or wet spots on the floor',
+  'Crumbs or food debris on countertops'
+];
+
+function cleanAiNormalizeLookForList(rawList) {
+  const seen = new Set();
+  const out = [];
+  const arr = Array.isArray(rawList) ? rawList : [];
+  for (const line of arr) {
+    const s = String(line || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!s || seen.has(s.toLowerCase())) continue;
+    seen.add(s.toLowerCase());
+    out.push(s);
+    if (out.length >= 50) break;
+  }
+  return out;
+}
+
+function readCleanAiConfig() {
+  try {
+    if (!fs.existsSync(cleanAiConfigPath)) {
+      const seed = { lookFor: [...CLEANAI_DEFAULT_LOOKFOR], updatedAt: new Date().toISOString() };
+      fs.writeFileSync(cleanAiConfigPath, JSON.stringify(seed, null, 2), 'utf8');
+      return seed;
+    }
+    const j = JSON.parse(fs.readFileSync(cleanAiConfigPath, 'utf8'));
+    const lookFor = cleanAiNormalizeLookForList(j.lookFor);
+    if (!lookFor.length) {
+      return { lookFor: [...CLEANAI_DEFAULT_LOOKFOR], updatedAt: new Date().toISOString() };
+    }
+    return { lookFor, updatedAt: j.updatedAt || null };
+  } catch {
+    return { lookFor: [...CLEANAI_DEFAULT_LOOKFOR], updatedAt: null };
+  }
+}
+
+function writeCleanAiConfig(lookFor) {
+  const next = {
+    lookFor: cleanAiNormalizeLookForList(lookFor),
+    updatedAt: new Date().toISOString()
+  };
+  if (!next.lookFor.length) next.lookFor = [...CLEANAI_DEFAULT_LOOKFOR];
+  fs.writeFileSync(cleanAiConfigPath, JSON.stringify(next, null, 2), 'utf8');
+  return next;
+}
+
+function buildCleanAiSystemPrompt(lookForItems) {
+  const items = Array.isArray(lookForItems) ? lookForItems : [];
+  const bulletBlock = items.length
+    ? items.map((s) => `- ${s}`).join('\n')
+    : CLEANAI_DEFAULT_LOOKFOR.map((s) => `- ${s}`).join('\n');
+  return `You analyze photos of indoor spaces for cleaning and housekeeping quality. Be conservative: only flag issues you can reasonably justify from the pixels.
+
+Spot these checklist priorities when visibly present:
+${bulletBlock}
+
+Also generally note similar cleanliness problems (dusty surfaces, spilled liquids, cluttered surfaces) when obvious.
+
+Respond with JSON ONLY (no markdown, no commentary):
+{"issues":[{"label":"short label","type":"coffee_stain|floor_mark|fridge_smudge|sink_clutter|dirty_tap|water_floor|counter_crumbs|other","x":0,"y":0,"w":0,"h":0}]}
+
+Requirements:
+- x,y,w,h are normalized 0-1 vs full image width/height; x,y is top-left of the region enclosing the visible problem.
+- w,h at least ~0.02 when possible.
+- At most 12 issues per frame; use empty issues array when nothing is clearly visible.
+- Prefer type "other" if the checklist does not contain a fitting category.`;
+}
+
+function cleanAiSessionPath(id) {
+  const sid = String(id || '').trim();
+  if (!/^[a-f0-9-]{36}$/i.test(sid)) return null;
+  return path.join(cleanAiSessionsDir, `${sid}.json`);
+}
+
+function readCleanAiSession(sessionId) {
+  const fp = cleanAiSessionPath(sessionId);
+  if (!fp || !fs.existsSync(fp)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(fp, 'utf8'));
+  } catch {
+    return null;
+  }
+}
+
+function writeCleanAiSession(session) {
+  const fp = cleanAiSessionPath(session.id);
+  if (!fp) throw new Error('Invalid session');
+  fs.writeFileSync(fp, JSON.stringify(session, null, 2), 'utf8');
+}
+
+function cleanAiParseDataUrl(imageDataUrl) {
+  const raw = String(imageDataUrl || '').trim();
+  const m = raw.match(/^data:image\/(png|jpe?g|webp);base64,([a-z0-9+/=\s]+)$/i);
+  if (!m) return null;
+  const ext = String(m[1] || '').toLowerCase();
+  const mime =
+    ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+  const base64 = String(m[2] || '').replace(/\s+/g, '');
+  if (!base64.length || base64.length > 12_000_000) return null;
+  return { mime, base64, dataUrl: raw.length > 512_000 ? `data:${mime};base64,${base64}` : raw };
+}
+
+function cleanAiNormalizeIssues(rawIssues) {
+  if (!Array.isArray(rawIssues)) return [];
+  const out = [];
+  for (const item of rawIssues.slice(0, 16)) {
+    const label = String(item.label || item.issue || '').trim().slice(0, 120);
+    if (!label) continue;
+    let type = String(item.type || 'other').toLowerCase().replace(/\s+/g, '_');
+    if (!CLEAN_AI_TYPES.has(type)) type = 'other';
+    const nx = Number(item.x);
+    const ny = Number(item.y);
+    const nw = Number(item.w);
+    const nh = Number(item.h);
+    if (!Number.isFinite(nx) || !Number.isFinite(ny) || !Number.isFinite(nw) || !Number.isFinite(nh)) continue;
+    const x = Math.max(0, Math.min(1, nx));
+    const y = Math.max(0, Math.min(1, ny));
+    const w = Math.max(0.02, Math.min(1 - x, nw));
+    const h = Math.max(0.02, Math.min(1 - y, nh));
+    out.push({ label, type, x, y, w, h });
+  }
+  return out;
+}
+
+async function cleanAiVisionOpenAi(apiKey, imageDataUrlForApi, systemPrompt) {
+  const model = process.env.CLEANAI_OPENAI_MODEL || 'gpt-4o-mini';
+  const sys = systemPrompt || buildCleanAiSystemPrompt(readCleanAiConfig().lookFor);
+
+  const r = await fetchFn('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      temperature: 0.1,
+      max_tokens: 1200,
+      messages: [
+        { role: 'system', content: sys },
+        {
+          role: 'user',
+          content: [
+            { type: 'text', text: 'Analyze this camera frame for visible cleaning issues. Return JSON only.' },
+            { type: 'image_url', image_url: { url: imageDataUrlForApi, detail: 'low' } }
+          ]
+        }
+      ]
+    })
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j?.error?.message || `OpenAI request failed (${r.status})`);
+  return String(j?.choices?.[0]?.message?.content || '').trim();
+}
+
+async function cleanAiVisionAnthropic(apiKey, mime, base64, systemPrompt) {
+  const model =
+    process.env.CLEANAI_ANTHROPIC_MODEL ||
+    process.env.CURSORAI_ANTHROPIC_MODEL ||
+    process.env.ANTHROPIC_ANALYZE_MODEL ||
+    'claude-sonnet-4-5';
+  const sys = systemPrompt || buildCleanAiSystemPrompt(readCleanAiConfig().lookFor);
+
+  const r = await fetchFn('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 1200,
+      system: sys,
+      messages: [
+        {
+          role: 'user',
+          content: [
+            {
+              type: 'image',
+              source: { type: 'base64', media_type: mime, data: base64 }
+            },
+            { type: 'text', text: 'Analyze this camera frame for visible cleaning issues. Return JSON only.' }
+          ]
+        }
+      ]
+    })
+  });
+  const j = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(j?.error?.message || `Anthropic request failed (${r.status})`);
+  return (j.content || []).map((c) => c.text || '').join('').trim();
+}
+
+function cleanAiParseIssuesFromText(text) {
+  const clean = String(text || '').replace(/```json|```/gi, '').trim();
+  let parsed = null;
+  try {
+    parsed = JSON.parse(clean);
+  } catch {
+    const i = clean.indexOf('{');
+    const k = clean.lastIndexOf('}');
+    if (i >= 0 && k > i) {
+      try {
+        parsed = JSON.parse(clean.slice(i, k + 1));
+      } catch {}
+    }
+  }
+  const issues = cleanAiNormalizeIssues(parsed?.issues || parsed?.detections);
+  return { issues };
+}
+
+async function cleanAiAnalyzeImage(provider, parsed, systemPrompt) {
+  const openAiKey = String(process.env.OPENAI_API_KEY || process.env.OPENAI_KEY || '').trim();
+  const anthropicKey = String(process.env.ANTHROPIC_API_KEY || '').trim();
+  let text = '';
+
+  const runOpenAi = async () => {
+    if (!openAiKey) throw new Error('OPENAI_API_KEY not configured.');
+    text = await cleanAiVisionOpenAi(openAiKey, parsed.dataUrl, systemPrompt);
+  };
+  const runAnthropic = async () => {
+    if (!anthropicKey) throw new Error('ANTHROPIC_API_KEY not configured.');
+    text = await cleanAiVisionAnthropic(anthropicKey, parsed.mime, parsed.base64, systemPrompt);
+  };
+
+  if (provider === 'openai') {
+    await runOpenAi();
+  } else if (provider === 'claude') {
+    await runAnthropic();
+  } else {
+    if (openAiKey) {
+      try {
+        await runOpenAi();
+      } catch (eOpen) {
+        if (anthropicKey) await runAnthropic();
+        else throw eOpen;
+      }
+    } else if (anthropicKey) await runAnthropic();
+    else {
+      throw new Error('Configure OPENAI_API_KEY or ANTHROPIC_API_KEY.');
+    }
+  }
+
+  return cleanAiParseIssuesFromText(text).issues || [];
+}
+
+function cleanAiAppendCapture(sessionId, issues, parsedProvider) {
+  const sess = readCleanAiSession(sessionId);
+  if (!sess) throw new Error('Session not found');
+  if (sess.stoppedAt) throw new Error('Session already ended');
+
+  const at = new Date().toISOString();
+  const sanitized = Array.isArray(issues) ? issues.map((it) => ({ ...it })) : [];
+
+  sess.captures = Array.isArray(sess.captures) ? sess.captures : [];
+  sess.captures.push({
+    at,
+    provider: parsedProvider || sess.provider || 'auto',
+    issueCount: sanitized.length,
+    issues: sanitized
+  });
+  if (parsedProvider === 'openai' || parsedProvider === 'claude') {
+    sess.provider = parsedProvider;
+  }
+  sess.updatedAt = at;
+  writeCleanAiSession(sess);
+  return sess;
+}
+
+function cleanAiListSessionsBrief() {
+  let files = [];
+  try {
+    files = fs.readdirSync(cleanAiSessionsDir).filter((f) => f.endsWith('.json'));
+  } catch {
+    return [];
+  }
+  const sessions = [];
+  for (const f of files) {
+    const fp = path.join(cleanAiSessionsDir, f);
+    try {
+      const s = JSON.parse(fs.readFileSync(fp, 'utf8'));
+      if (!s || !s.id) continue;
+      const caps = Array.isArray(s.captures) ? s.captures : [];
+      let issueTouches = 0;
+      const types = {};
+      for (const c of caps) {
+        for (const issue of Array.isArray(c.issues) ? c.issues : []) {
+          issueTouches++;
+          const t = String(issue.type || 'other').toLowerCase();
+          types[t] = (types[t] || 0) + 1;
+        }
+      }
+      sessions.push({
+        id: s.id,
+        startedAt: s.startedAt || null,
+        stoppedAt: s.stoppedAt || null,
+        provider: s.provider || 'auto',
+        captureCount: caps.length,
+        issueOccurrencesTotal: issueTouches,
+        issueTypesSeen: Object.keys(types).length
+      });
+    } catch {
+      /* skip */
+    }
+  }
+  sessions.sort((a, b) => String(b.startedAt || '').localeCompare(String(a.startedAt || '')));
+  return sessions;
+}
+
+function cleanAiGlobalStatsFromDisk() {
+  const brief = cleanAiListSessionsBrief();
+  const byType = {};
+  let captures = 0;
+  let issuesTotal = 0;
+  let completed = 0;
+  for (const row of brief) {
+    const sess = readCleanAiSession(row.id);
+    if (!sess || !Array.isArray(sess.captures)) continue;
+    if (sess.stoppedAt) completed++;
+    captures += sess.captures.length;
+    for (const cap of sess.captures) {
+      for (const issue of Array.isArray(cap.issues) ? cap.issues : []) {
+        issuesTotal++;
+        const t = String(issue.type || 'other').toLowerCase();
+        byType[t] = (byType[t] || 0) + 1;
+      }
+    }
+  }
+  return {
+    sessionCount: brief.length,
+    completedSessionCount: completed,
+    totalCaptures: captures,
+    totalIssueOccurrences: issuesTotal,
+    byType,
+    checklistSize: readCleanAiConfig().lookFor.length
+  };
+}
+
+app.get('/api/cleanai/config', (req, res) => {
+  try {
+    const c = readCleanAiConfig();
+    return res.json({ lookFor: c.lookFor, updatedAt: c.updatedAt });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to load config' });
+  }
+});
+
+app.put('/api/cleanai/config', (req, res) => {
+  try {
+    const next = writeCleanAiConfig(req.body?.lookFor);
+    return res.json({ ok: true, lookFor: next.lookFor, updatedAt: next.updatedAt });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to save config' });
+  }
+});
+
+app.post('/api/cleanai/sessions/start', (req, res) => {
+  try {
+    const provider = String(req.body?.provider || 'auto').trim().toLowerCase();
+    const id = crypto.randomUUID();
+    const startedAt = new Date().toISOString();
+    const sessProvider =
+      provider === 'openai' ? 'openai' : provider === 'claude' ? 'claude' : provider === 'auto' ? 'auto' : 'auto';
+    const session = {
+      id,
+      startedAt,
+      stoppedAt: null,
+      provider: sessProvider,
+      captures: [],
+      updatedAt: startedAt
+    };
+    writeCleanAiSession(session);
+    return res.json({ ok: true, sessionId: id, startedAt });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to start session' });
+  }
+});
+
+app.post('/api/cleanai/sessions/:sessionId/stop', (req, res) => {
+  try {
+    const sessionId = String(req.params.sessionId || '').trim();
+    const sess = readCleanAiSession(sessionId);
+    if (!sess) return res.status(404).json({ error: 'Session not found' });
+    const at = new Date().toISOString();
+    sess.stoppedAt = sess.stoppedAt || at;
+    sess.updatedAt = at;
+    if (!sess.provider) sess.provider = 'auto';
+    writeCleanAiSession(sess);
+
+    let issueTouches = 0;
+    const byType = {};
+    const timeline = [];
+    for (const c of sess.captures || []) {
+      for (const issue of Array.isArray(c.issues) ? c.issues : []) {
+        issueTouches++;
+        const t = String(issue.type || 'other').toLowerCase();
+        byType[t] = (byType[t] || 0) + 1;
+      }
+      if (Array.isArray(c.issues)) {
+        for (const issue of c.issues) {
+          timeline.push({
+            at: c.at,
+            label: issue.label,
+            type: issue.type || 'other'
+          });
+        }
+      }
+    }
+    return res.json({
+      ok: true,
+      session: {
+        id: sess.id,
+        startedAt: sess.startedAt,
+        stoppedAt: sess.stoppedAt,
+        captureCount: (sess.captures || []).length,
+        provider: sess.provider
+      },
+      summary: {
+        issueOccurrences: issueTouches,
+        byType
+      },
+      timeline,
+      reportUrl: `/cleanai/report/${encodeURIComponent(sess.id)}`
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to stop session' });
+  }
+});
+
+app.get('/api/cleanai/sessions', (req, res) => {
+  try {
+    return res.json({ ok: true, sessions: cleanAiListSessionsBrief() });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to list sessions' });
+  }
+});
+
+app.get('/api/cleanai/sessions/:sessionId', (req, res) => {
+  try {
+    const sessionId = String(req.params.sessionId || '').trim();
+    const sess = readCleanAiSession(sessionId);
+    if (!sess) return res.status(404).json({ error: 'Session not found' });
+
+    let issueTouches = 0;
+    const byType = {};
+    for (const c of sess.captures || []) {
+      for (const issue of Array.isArray(c.issues) ? c.issues : []) {
+        issueTouches++;
+        const t = String(issue.type || 'other').toLowerCase();
+        byType[t] = (byType[t] || 0) + 1;
+      }
+    }
+    return res.json({
+      ok: true,
+      session: sess,
+      summary: {
+        captureCount: (sess.captures || []).length,
+        issueOccurrences: issueTouches,
+        byType
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to load session' });
+  }
+});
+
+app.get('/api/cleanai/stats', (req, res) => {
+  try {
+    return res.json({ ok: true, stats: cleanAiGlobalStatsFromDisk() });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to load stats' });
+  }
+});
+
+app.post('/api/cleanai/analyze', async (req, res) => {
+  try {
+    const imageDataUrl =
+      typeof req.body?.image === 'string' ? req.body.image.trim() : typeof req.body?.imageDataUrl === 'string'
+        ? req.body.imageDataUrl.trim()
+        : '';
+    const provider = String(req.body?.provider || 'auto').trim().toLowerCase();
+    const sessionIdRaw = typeof req.body?.sessionId === 'string' ? req.body.sessionId.trim() : '';
+    if (!imageDataUrl.startsWith('data:image/')) {
+      return res.status(400).json({ error: 'image must be a data URL (JPEG/PNG/WebP base64).' });
+    }
+    const parsed = cleanAiParseDataUrl(imageDataUrl);
+    if (!parsed) return res.status(400).json({ error: 'Invalid or oversized image payload.' });
+
+    const cfg = readCleanAiConfig();
+    const systemPrompt = buildCleanAiSystemPrompt(cfg.lookFor);
+    let issues = await cleanAiAnalyzeImage(provider, parsed, systemPrompt);
+
+    let loggedToSession = false;
+    if (sessionIdRaw) {
+      const sessBefore = readCleanAiSession(sessionIdRaw);
+      if (!sessBefore) {
+        return res.status(404).json({ error: 'Invalid or unknown session id' });
+      }
+      if (sessBefore.stoppedAt) {
+        return res.status(410).json({ error: 'Session already ended — start a new scan.' });
+      }
+      cleanAiAppendCapture(sessionIdRaw, issues, provider);
+      loggedToSession = true;
+    }
+
+    return res.json({ ok: true, issues, sessionId: sessionIdRaw || null, logged: loggedToSession });
+  } catch (error) {
+    console.error('/api/cleanai/analyze error:', error);
+    return res.status(500).json({ error: error.message || 'Analysis failed' });
   }
 });
 
