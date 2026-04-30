@@ -48,6 +48,18 @@ if (!fs.existsSync(marketingReportsDir)) {
 console.log('Marketing reports dir:', marketingReportsDir);
 console.log('Marketing reports index:', marketingReportsIndexPath);
 
+const cursorAiProjectsRoot = (() => {
+  const explicit = String(process.env.CURSORAI_PROJECTS_DIR || '').trim();
+  if (explicit) return path.resolve(explicit);
+  const diskRoot = String(process.env.LAB007_DATA_DIR || process.env.LAB007_DISK_ROOT || '').trim();
+  if (diskRoot) return path.join(path.resolve(diskRoot), 'CursorAgent');
+  return path.join(__dirname, 'data', 'CursorAgent');
+})();
+if (!fs.existsSync(cursorAiProjectsRoot)) {
+  fs.mkdirSync(cursorAiProjectsRoot, { recursive: true });
+}
+console.log('CursorAI projects dir:', cursorAiProjectsRoot);
+
 const gscDataDir = (() => {
   const diskRoot = String(process.env.LAB007_DATA_DIR || process.env.LAB007_DISK_ROOT || '').trim();
   if (diskRoot) return path.join(path.resolve(diskRoot), 'gsc');
@@ -191,6 +203,7 @@ console.warn('SMTP_USER or SMTP_PASS not configured - contact form emails will n
 app.use('/images', express.static(path.join(__dirname, 'LAB007', 'Images')));
 app.use('/uploads/ggppi-tracker', express.static(ggppiUploadDir));
 app.use('/marketmg/logos', express.static(marketingManagerLogosDir));
+app.use('/cursorai/projects', express.static(cursorAiProjectsRoot));
 
 // Serve webdesign static page
 app.get('/webdesign', (req, res) => {
@@ -215,6 +228,12 @@ app.get('/marketing-manager', (req, res) => {
 
 app.get('/marketing-manager/sign/:token', (req, res) => {
   const p = path.join(__dirname, 'public', 'marketing-sign.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
+});
+
+app.get('/cursorai', (req, res) => {
+  const p = path.join(__dirname, 'public', 'cursorai.html');
   if (fs.existsSync(p)) return res.sendFile(p);
   return res.status(404).send('Not found');
 });
@@ -2168,6 +2187,168 @@ app.post('/api/analyze', async (req, res) => {
   }
 });
 
+function cursorAiSlug(input) {
+  return String(input || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '')
+    .slice(0, 60);
+}
+
+function cursorAiSafeRelPath(filePath) {
+  const raw = String(filePath || '').trim().replace(/\\/g, '/');
+  if (!raw) return null;
+  if (raw.startsWith('/') || raw.includes('..')) return null;
+  return raw;
+}
+
+async function cursorAiGenerateFiles(provider, prompt, projectName) {
+  const openAiKey = String(process.env.OPENAI_API_KEY || process.env.OPENAI_KEY || '').trim();
+  const anthropicKey = String(process.env.ANTHROPIC_API_KEY || '').trim();
+  const picked =
+    provider === 'auto'
+      ? anthropicKey
+        ? 'claude'
+        : openAiKey
+        ? 'openai'
+        : ''
+      : provider;
+  if (!picked) throw new Error('No API key configured (OPENAI_API_KEY/OPENAI_KEY or ANTHROPIC_API_KEY).');
+
+  const buildPrompt = `Create a small web project for "${projectName}" from this request:
+${prompt}
+
+Return ONLY valid JSON with this exact shape:
+{
+  "summary": "short summary",
+  "files": [
+    { "path": "index.html", "content": "<!doctype html>..." }
+  ]
+}
+
+Rules:
+- 1 to 8 files only
+- include index.html
+- plain web stack only (html/css/js)
+- do not include markdown fences
+`;
+
+  let text = '';
+  if (picked === 'openai') {
+    if (!openAiKey) throw new Error('OPENAI_API_KEY/OPENAI_KEY is missing.');
+    const r = await fetchFn('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${openAiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: process.env.CURSORAI_OPENAI_MODEL || 'gpt-4o-mini',
+        temperature: 0.2,
+        messages: [
+          { role: 'system', content: 'You are a careful web code generator.' },
+          { role: 'user', content: buildPrompt }
+        ]
+      })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j?.error?.message || `OpenAI request failed (${r.status})`);
+    text = String(j?.choices?.[0]?.message?.content || '').trim();
+  } else if (picked === 'claude') {
+    if (!anthropicKey) throw new Error('ANTHROPIC_API_KEY is missing.');
+    const r = await fetchFn('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': anthropicKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: process.env.CURSORAI_ANTHROPIC_MODEL || 'claude-sonnet-4-5',
+        max_tokens: 7000,
+        messages: [{ role: 'user', content: buildPrompt }]
+      })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j?.error?.message || `Anthropic request failed (${r.status})`);
+    text = (j.content || []).map((c) => c.text || '').join('').trim();
+  } else {
+    throw new Error('provider must be auto, openai, or claude');
+  }
+
+  const clean = text.replace(/```json|```/gi, '').trim();
+  let parsed = null;
+  try {
+    parsed = JSON.parse(clean);
+  } catch {
+    const i = clean.indexOf('{');
+    const k = clean.lastIndexOf('}');
+    if (i >= 0 && k > i) parsed = JSON.parse(clean.slice(i, k + 1));
+  }
+  if (!parsed || !Array.isArray(parsed.files) || !parsed.files.length) {
+    return {
+      summary: 'Generated single file fallback',
+      files: [{ path: 'index.html', content: clean || '<!doctype html><title>CursorAI</title><h1>No output</h1>' }]
+    };
+  }
+  return parsed;
+}
+
+app.post('/api/cursorai/create-project', async (req, res) => {
+  try {
+    const projectName = String(req.body?.projectName || '').trim();
+    const prompt = String(req.body?.prompt || '').trim();
+    const provider = String(req.body?.provider || 'auto').trim().toLowerCase();
+    if (!projectName) return res.status(400).json({ error: 'projectName is required' });
+    if (!prompt) return res.status(400).json({ error: 'prompt is required' });
+    const projectSlug = cursorAiSlug(projectName) || 'project';
+    const folderName = `${projectSlug}-${Date.now()}`;
+    const projectDir = path.join(cursorAiProjectsRoot, folderName);
+    fs.mkdirSync(projectDir, { recursive: true });
+
+    const generated = await cursorAiGenerateFiles(provider, prompt, projectName);
+    const files = Array.isArray(generated.files) ? generated.files.slice(0, 20) : [];
+    const written = [];
+    for (const f of files) {
+      const rel = cursorAiSafeRelPath(f?.path);
+      if (!rel) continue;
+      const outPath = path.join(projectDir, rel);
+      const outDir = path.dirname(outPath);
+      if (!outDir.startsWith(projectDir)) continue;
+      fs.mkdirSync(outDir, { recursive: true });
+      const content = String(f?.content || '');
+      fs.writeFileSync(outPath, content, 'utf8');
+      written.push(rel);
+    }
+    if (!written.length) {
+      fs.writeFileSync(
+        path.join(projectDir, 'index.html'),
+        '<!doctype html><html><body><h1>CursorAI</h1><p>No valid files were generated.</p></body></html>',
+        'utf8'
+      );
+      written.push('index.html');
+    }
+
+    const meta = {
+      projectName,
+      folderName,
+      prompt,
+      provider,
+      summary: String(generated.summary || ''),
+      files: written,
+      createdAt: new Date().toISOString()
+    };
+    fs.writeFileSync(path.join(projectDir, 'cursorai-meta.json'), JSON.stringify(meta, null, 2), 'utf8');
+    const primary = written.includes('index.html') ? 'index.html' : written[0];
+    const previewUrl = `/cursorai/projects/${encodeURIComponent(folderName)}/${primary}`;
+    return res.json({ ok: true, ...meta, previewUrl });
+  } catch (error) {
+    console.error('/api/cursorai/create-project error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to create project' });
+  }
+});
+
 // ── Marketing Manager API (customers + tasks); file path: marketingManagerPath (see boot logs) ──
 
 const MM_DIRECTORY_USA = [
@@ -3341,12 +3522,20 @@ app.patch('/api/marketing-manager/customers/:customerId/tasks/:taskId', (req, re
     if (!task) return res.status(404).json({ error: 'Task not found' });
 
     if (req.body.status !== undefined) {
-      const s = String(req.body.status || '').trim();
-      if (!['not_started', 'started', 'completed'].includes(s)) {
+      let s = String(req.body.status || '').trim();
+      if (s === 'started') s = 'in_progress';
+      if (!['not_started', 'in_progress', 'parked', 'completed'].includes(s)) {
         return res.status(400).json({ error: 'Invalid status' });
       }
       task.status = s;
     }
+    if (req.body.title !== undefined) {
+      const title = String(req.body.title || '').trim();
+      if (!title) return res.status(400).json({ error: 'Task title is required' });
+      task.title = title;
+    }
+    if (req.body.description !== undefined) task.description = String(req.body.description || '');
+    if (req.body.descriptionHtml !== undefined) task.descriptionHtml = String(req.body.descriptionHtml || '');
     if (task.kind === 'directory' && req.body.checklist !== undefined) {
       if (!Array.isArray(req.body.checklist)) return res.status(400).json({ error: 'checklist must be an array' });
       const byId = new Map(task.checklist.map((row) => [row.id, row]));

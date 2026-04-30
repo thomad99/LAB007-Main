@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LAB007 CursorAI</title>
+  <meta name="description" content="LAB007 CursorAI project generator" />
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <link rel="shortcut icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <link rel="apple-touch-icon" href="/images/lab007 Icon.PNG" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #fff;
+      color: #111;
+    }
+    .wrap {
+      max-width: 940px;
+      margin: 0 auto;
+      padding: 28px 20px 44px;
+    }
+    .logo {
+      display: block;
+      width: 170px;
+      max-width: 70%;
+      margin: 0 auto 12px;
+    }
+    h1 {
+      text-align: center;
+      margin: 6px 0 22px;
+      font-size: 1.8rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .panel {
+      border: 1px solid #e7e7e7;
+      border-radius: 14px;
+      padding: 16px;
+      background: #fff;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 180px;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    input, textarea, select, button {
+      width: 100%;
+      border: 1px solid #d7d7d7;
+      border-radius: 10px;
+      padding: 11px 12px;
+      font: inherit;
+      background: #fff;
+    }
+    textarea { min-height: 150px; resize: vertical; }
+    button {
+      background: #111;
+      color: #fff;
+      border-color: #111;
+      cursor: pointer;
+      font-weight: 600;
+      margin-top: 10px;
+    }
+    button[disabled] { opacity: 0.6; cursor: wait; }
+    .status {
+      margin-top: 10px;
+      min-height: 1.2rem;
+      color: #555;
+      font-size: 0.95rem;
+    }
+    .result {
+      display: none;
+      margin-top: 16px;
+      border: 1px solid #ececec;
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .result a { color: #0a58ca; word-break: break-all; }
+    .files { margin: 10px 0 0; padding-left: 18px; }
+    @media (max-width: 700px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <img class="logo" src="/images/LAB007-GOLD-TRANS.PNG" alt="LAB007 logo" />
+    <h1>CursorAI</h1>
+    <section class="panel">
+      <div class="grid">
+        <input id="projectName" placeholder="Project name (e.g. landing-page-v1)" />
+        <select id="provider" aria-label="AI provider">
+          <option value="auto">Auto (use available key)</option>
+          <option value="openai">OpenAI</option>
+          <option value="claude">Claude</option>
+        </select>
+      </div>
+      <textarea id="prompt" placeholder="Describe what to build..."></textarea>
+      <button id="createBtn">Create project on persistent disk</button>
+      <div class="status" id="statusText"></div>
+
+      <div class="result" id="resultBox">
+        <div><strong>Project folder:</strong> <span id="projectFolder"></span></div>
+        <div><strong>Preview:</strong> <a id="previewLink" href="#" target="_blank" rel="noopener">Open generated project</a></div>
+        <div><strong>Files:</strong></div>
+        <ul class="files" id="filesList"></ul>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (function () {
+      const projectNameEl = document.getElementById('projectName');
+      const promptEl = document.getElementById('prompt');
+      const providerEl = document.getElementById('provider');
+      const createBtn = document.getElementById('createBtn');
+      const statusText = document.getElementById('statusText');
+      const resultBox = document.getElementById('resultBox');
+      const projectFolder = document.getElementById('projectFolder');
+      const previewLink = document.getElementById('previewLink');
+      const filesList = document.getElementById('filesList');
+
+      function setStatus(message) {
+        statusText.textContent = message || '';
+      }
+
+      createBtn.addEventListener('click', async () => {
+        const projectName = (projectNameEl.value || '').trim();
+        const prompt = (promptEl.value || '').trim();
+        const provider = (providerEl.value || 'auto').trim();
+        if (!projectName) {
+          setStatus('Project name is required.');
+          projectNameEl.focus();
+          return;
+        }
+        if (!prompt) {
+          setStatus('Prompt is required.');
+          promptEl.focus();
+          return;
+        }
+
+        createBtn.disabled = true;
+        setStatus('Generating files and writing to persistent disk...');
+        resultBox.style.display = 'none';
+        filesList.innerHTML = '';
+
+        try {
+          const res = await fetch('/api/cursorai/create-project', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ projectName, prompt, provider })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Failed to create project');
+          projectFolder.textContent = 'CursorAgent/' + data.folderName;
+          previewLink.href = data.previewUrl;
+          previewLink.textContent = data.previewUrl;
+          (data.files || []).forEach((f) => {
+            const li = document.createElement('li');
+            li.textContent = f;
+            filesList.appendChild(li);
+          });
+          resultBox.style.display = 'block';
+          setStatus('Project created successfully.');
+        } catch (error) {
+          setStatus(error.message || 'Failed to create project.');
+        } finally {
+          createBtn.disabled = false;
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

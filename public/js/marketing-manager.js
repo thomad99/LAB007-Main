@@ -23,23 +23,20 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  const textToHtml = (s) => escapeHtml(String(s || '')).replace(/\n/g, '<br>');
 
   function statusClass(st) {
     if (st === 'completed') return 'mm-st-done';
-    if (st === 'started') return 'mm-st-started';
+    if (st === 'parked') return 'mm-st-parked';
+    if (st === 'started' || st === 'in_progress') return 'mm-st-started';
     return 'mm-st-todo';
   }
 
   function statusLabel(st) {
     if (st === 'completed') return 'Completed';
-    if (st === 'started') return 'Started';
+    if (st === 'parked') return 'Parked';
+    if (st === 'started' || st === 'in_progress') return 'In progress';
     return 'Not started';
-  }
-
-  function cycleStatus(st) {
-    if (st === 'not_started') return 'started';
-    if (st === 'started') return 'completed';
-    return 'not_started';
   }
 
   function countTasks(c) {
@@ -47,7 +44,8 @@
     return {
       total: t.length,
       not_started: t.filter((x) => x.status === 'not_started').length,
-      started: t.filter((x) => x.status === 'started').length,
+      in_progress: t.filter((x) => x.status === 'started' || x.status === 'in_progress').length,
+      parked: t.filter((x) => x.status === 'parked').length,
       completed: t.filter((x) => x.status === 'completed').length
     };
   }
@@ -64,16 +62,18 @@
     let total = 0;
     let ns = 0;
     let s = 0;
+    let p = 0;
     let c = 0;
     customers.forEach((cust) => {
       (cust.tasks || []).forEach((t) => {
         total += 1;
         if (t.status === 'not_started') ns += 1;
-        else if (t.status === 'started') s += 1;
+        else if (t.status === 'parked') p += 1;
+        else if (t.status === 'started' || t.status === 'in_progress') s += 1;
         else c += 1;
       });
     });
-    return { customers: customers.length, total, not_started: ns, started: s, completed: c };
+    return { customers: customers.length, total, not_started: ns, in_progress: s, parked: p, completed: c };
   }
 
   async function api(path, opt) {
@@ -146,8 +146,12 @@
           <div class="mm-dash-label">Not started</div>
         </div>
         <div class="mm-dash-card mm-accent-started">
-          <div class="mm-dash-val">${g.started}</div>
-          <div class="mm-dash-label">Started</div>
+          <div class="mm-dash-val">${g.in_progress}</div>
+          <div class="mm-dash-label">In progress</div>
+        </div>
+        <div class="mm-dash-card mm-accent-parked">
+          <div class="mm-dash-val">${g.parked}</div>
+          <div class="mm-dash-label">Parked</div>
         </div>
         <div class="mm-dash-card mm-accent-done">
           <div class="mm-dash-val">${g.completed}</div>
@@ -831,7 +835,8 @@
       </div>
       <div class="mm-dash-grid mm-dash-inline">
         <div class="mm-dash-card mm-accent-todo"><div class="mm-dash-val">${co.not_started}</div><div class="mm-dash-label">Not started</div></div>
-        <div class="mm-dash-card mm-accent-started"><div class="mm-dash-val">${co.started}</div><div class="mm-dash-label">Started</div></div>
+        <div class="mm-dash-card mm-accent-started"><div class="mm-dash-val">${co.in_progress}</div><div class="mm-dash-label">In progress</div></div>
+        <div class="mm-dash-card mm-accent-parked"><div class="mm-dash-val">${co.parked}</div><div class="mm-dash-label">Parked</div></div>
         <div class="mm-dash-card mm-accent-done"><div class="mm-dash-val">${co.completed}</div><div class="mm-dash-label">Completed</div></div>
         <div class="mm-dash-card"><div class="mm-dash-val">${co.total}</div><div class="mm-dash-label">All tasks</div></div>
       </div>
@@ -1183,13 +1188,92 @@
       meta.innerHTML = `
         <div class="mm-task-bar">
           <span class="mm-status-badge ${statusClass(task.status)}">${statusLabel(task.status)}</span>
-          <button type="button" class="btn-mm-ghost" id="mm-cycle-status">Cycle status</button>
+          <label class="mm-muted" for="mm-task-status" style="font-size:11px;">Status</label>
+          <select id="mm-task-status" class="mm-select" style="max-width:180px;margin-top:0;">
+            <option value="not_started"${task.status === 'not_started' ? ' selected' : ''}>Not started</option>
+            <option value="in_progress"${task.status === 'in_progress' || task.status === 'started' ? ' selected' : ''}>In progress</option>
+            <option value="parked"${task.status === 'parked' ? ' selected' : ''}>Parked</option>
+            <option value="completed"${task.status === 'completed' ? ' selected' : ''}>Complete</option>
+          </select>
           <button type="button" class="btn-mm-danger-outline" id="mm-del-task">Delete task</button>
         </div>
+        <div class="mm-task-meta">
+          <label class="mm-notes-label">Task title</label>
+          <input id="mm-task-title" class="mm-input" type="text" value="${escapeHtml(task.title || '')}" />
+          <label class="mm-notes-label">Task details (rich text)</label>
+          <div class="mm-edit-actions" style="margin:0 0 8px;">
+            <button type="button" class="btn-mm-tiny" data-ed-cmd="bold">Bold</button>
+            <button type="button" class="btn-mm-tiny" data-ed-cmd="italic">Italic</button>
+            <button type="button" class="btn-mm-tiny" data-ed-cmd="underline">Underline</button>
+            <button type="button" class="btn-mm-tiny" data-ed-cmd="insertUnorderedList">Bullet list</button>
+            <button type="button" class="btn-mm-tiny" data-ed-block="P">Body</button>
+            <button type="button" class="btn-mm-tiny" data-ed-block="H2">H2</button>
+            <button type="button" class="btn-mm-tiny" data-ed-block="H3">H3</button>
+          </div>
+          <div id="mm-task-description" class="mm-rich-editor mm-task-editor" contenteditable="true">${task.descriptionHtml || textToHtml(task.description || task.notes || '')}</div>
+          <div id="mm-task-save-status" class="mm-small" style="margin-top:8px;"></div>
+        </div>
       `;
-      $('#mm-cycle-status')?.addEventListener('click', async () => {
-        await patchTask(cust.id, task.id, { status: cycleStatus(task.status) });
+      $('#mm-task-status')?.addEventListener('change', async () => {
+        const status = String($('#mm-task-status')?.value || 'not_started');
+        await patchTask(cust.id, task.id, { status });
       });
+      meta.querySelectorAll('[data-ed-cmd]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const cmd = btn.getAttribute('data-ed-cmd');
+          if (!cmd) return;
+          document.execCommand(cmd, false);
+          document.getElementById('mm-task-description')?.focus();
+        });
+      });
+      meta.querySelectorAll('[data-ed-block]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const tag = btn.getAttribute('data-ed-block');
+          if (!tag) return;
+          document.execCommand('formatBlock', false, tag);
+          document.getElementById('mm-task-description')?.focus();
+          queueTaskTextSave();
+        });
+      });
+      const taskTitleEl = $('#mm-task-title');
+      const taskDescEl = $('#mm-task-description');
+      const taskSaveStatusEl = $('#mm-task-save-status');
+      let saveTimer = null;
+      let saving = false;
+      let queued = false;
+      const doSaveTaskText = async () => {
+        if (saving) {
+          queued = true;
+          return;
+        }
+        const title = String($('#mm-task-title')?.value || '').trim();
+        if (!title) {
+          if (taskSaveStatusEl) taskSaveStatusEl.textContent = 'Task title is required.';
+          return;
+        }
+        const html = String($('#mm-task-description')?.innerHTML || '').trim();
+        const text = String($('#mm-task-description')?.innerText || '').trim();
+        try {
+          saving = true;
+          if (taskSaveStatusEl) taskSaveStatusEl.textContent = 'Saving...';
+          await patchTask(cust.id, task.id, { title, descriptionHtml: html, description: text });
+          if (taskSaveStatusEl) taskSaveStatusEl.textContent = 'Saved';
+        } finally {
+          saving = false;
+          if (queued) {
+            queued = false;
+            doSaveTaskText();
+          }
+        }
+      };
+      const queueTaskTextSave = () => {
+        if (saveTimer) clearTimeout(saveTimer);
+        saveTimer = setTimeout(doSaveTaskText, 450);
+      };
+      taskTitleEl?.addEventListener('input', queueTaskTextSave);
+      taskDescEl?.addEventListener('input', queueTaskTextSave);
+      taskTitleEl?.addEventListener('blur', doSaveTaskText);
+      taskDescEl?.addEventListener('blur', doSaveTaskText);
       $('#mm-del-task')?.addEventListener('click', async () => {
         if (!confirm('Delete this task?')) return;
         await api(`/api/marketing-manager/customers/${cust.id}/tasks/${task.id}`, { method: 'DELETE' });
