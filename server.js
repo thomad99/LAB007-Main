@@ -3757,6 +3757,15 @@ app.get('/api/marketing-manager/contracts/sign/:token/document', (req, res) => {
     const contract = data.contracts.find((x) => x.token === token);
     if (!contract) return res.status(404).json({ error: 'Contract not found' });
     if ((contract.status || 'pending') === 'signed') {
+      // Refresh signed artifacts on view so layout fixes apply immediately.
+      try {
+        const state = readMarketingManagerState();
+        const customer = mmFindCustomer(state, contract.customerId);
+        mmCreateSignedArtifacts(contract, customer?.name || 'Customer');
+        writeMarketingContracts(data);
+      } catch (regenError) {
+        console.warn('[Marketing Manager] Could not refresh signed artifacts for view:', regenError.message);
+      }
       if (contract.signedPdfPath && fs.existsSync(contract.signedPdfPath)) {
         res.type('application/pdf');
         return res.sendFile(path.resolve(contract.signedPdfPath));
