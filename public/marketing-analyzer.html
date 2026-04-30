@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Marketing Analyzer | LAB007</title>
   <meta name="description" content="Website health analyzer for SEO, local visibility, listing checks, and action-focused recommendations.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #0a0b0f;
@@ -20,6 +23,7 @@
       --warn: #ffd58a;
     }
     * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
     body {
       margin: 0;
       font-family: Inter, "Segoe UI", Roboto, Arial, sans-serif;
@@ -44,8 +48,7 @@
     }
     .topbar {
       display: flex;
-      align-items: center;
-      justify-content: space-between;
+      align-items: flex-start;
       gap: 12px;
       flex-wrap: wrap;
     }
@@ -63,20 +66,6 @@
       font-size: clamp(28px, 4vw, 40px);
       line-height: 1;
       letter-spacing: -0.02em;
-    }
-    .go-back {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 999px;
-      border: 1px solid rgba(213,181,107,.36);
-      color: #f3dfb2;
-      text-decoration: none;
-      padding: 8px 14px;
-      font-size: 12px;
-      font-weight: 700;
-      letter-spacing: 0.04em;
-      background: rgba(213,181,107,.06);
     }
     .form-row {
       margin-top: 12px;
@@ -131,7 +120,7 @@
     .form-actions {
       margin-top: 10px;
       display: grid;
-      grid-template-columns: 1fr auto auto auto;
+      grid-template-columns: 1fr auto;
       gap: 10px;
       align-items: center;
     }
@@ -175,7 +164,7 @@
       display: block;
     }
     .post-scan-grid {
-      grid-template-columns: 1fr auto auto;
+      grid-template-columns: 1fr auto;
       margin-top: 0;
     }
     .results-area {
@@ -184,55 +173,47 @@
     .results-area.is-visible {
       display: grid;
     }
+    /* Match Digital Marketing page footer */
     .footer {
       border-top: 1px solid var(--line);
       padding: 40px 48px;
       display: flex;
       align-items: center;
       justify-content: space-between;
-      gap: 14px;
+      max-width: 1200px;
+      margin: 0 auto;
       flex-wrap: wrap;
-      max-width: min(1200px, 94vw);
-      margin: 32px auto 24px;
-      width: 100%;
+      gap: 12px;
     }
     .footer-logo {
-      font-family: Georgia, "Times New Roman", serif;
+      font-family: 'Syne', sans-serif;
       font-size: 16px;
       font-weight: 700;
       color: var(--gold);
     }
-    .footer-links {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      justify-content: center;
-      flex: 1;
+    .footer-copy {
+      font-size: 12px;
+      color: rgba(255,255,255,0.2);
     }
-    .btn-footer {
+    .footer .btn-ghost {
       background: transparent;
       color: var(--text);
       border: 1px solid var(--line);
-      font-family: inherit;
+      font-family: 'Syne', sans-serif;
       font-weight: 600;
       font-size: 12px;
       padding: 8px 14px;
       border-radius: 8px;
       text-decoration: none;
+      display: inline-block;
     }
-    .btn-footer:hover {
-      border-color: rgba(213,181,107,.45);
+    .footer .btn-ghost:hover {
+      border-color: rgba(255,255,255,0.2);
+      background: rgba(255,255,255,0.04);
       color: var(--gold);
-      background: rgba(213,181,107,.06);
     }
-    .footer-copy {
-      font-size: 12px;
-      color: rgba(255,255,255,.22);
-      width: 100%;
-      text-align: center;
-    }
-    @media (min-width: 769px) {
-      .footer-copy { width: auto; text-align: right; }
+    @media (max-width: 768px) {
+      .footer { flex-direction: column; text-align: center; padding: 30px 24px; }
     }
     .grid {
       display: grid;
@@ -668,27 +649,26 @@
 </head>
 <body>
   <main class="wrap">
-    <section class="panel">
+    <section class="panel analyzer-intro">
       <div class="topbar">
         <div>
           <p class="kicker">LAB007 Analytics</p>
           <h1>Marketing Analyzer</h1>
         </div>
-        <a class="go-back" href="/digitalmarketing">Back to Digital Marketing</a>
       </div>
       <div class="form-row">
-        <input id="siteUrl" class="input" type="text" placeholder="Enter website URL (example.com)">
-        <button id="runAnalysis" class="btn" type="button">Analyze Website</button>
+        <input id="siteUrl" class="input" type="text" placeholder="Enter website URL (example.com)" autocomplete="url">
+        <button id="runAnalysis" class="btn" type="button">Analyze</button>
       </div>
-      <div class="form-actions">
-        <input id="reportLabel" class="input small" type="text" placeholder="Optional scan name (example: Home page before fixes)">
-        <button id="saveReport" class="btn secondary" type="button">Save Scan</button>
-        <button id="viewSavedReports" class="btn ghost" type="button">View Saved Scans</button>
-        <button id="exportPdf" class="btn ghost" type="button">Save as PDF</button>
-      </div>
-      <p id="status" class="status">Enter a website URL to run SEO + local visibility health checks.</p>
-      <p class="helper">This report checks on-page SEO signals, local presence indicators (Google Maps, Apple Maps, Yelp references), social preview tags, and recommendations against best-practice benchmarks.</p>
+      <p id="status" class="status">Enter a website URL to run a site health scan.</p>
     </section>
+
+    <div id="postScanActions" class="post-scan-actions panel">
+      <div class="form-actions post-scan-grid">
+        <input id="reportLabel" class="input small" type="text" placeholder="Optional scan name (e.g. Home page before fixes)">
+        <button id="saveReport" class="btn secondary" type="button" disabled>Save Scan</button>
+      </div>
+    </div>
 
     <section id="analysisProgress" class="analysis-progress" aria-live="polite">
       <div class="progress-wrap">
@@ -705,7 +685,7 @@
       </div>
     </section>
 
-    <section id="reportGrid" class="grid">
+    <section id="resultsDashboard" class="grid results-area" aria-live="polite">
       <article class="scoreboard">
         <div class="gauge-row">
           <div class="gauge-card">
@@ -811,7 +791,16 @@
         </ul>
       </article>
 
-      <article class="card wide-12" id="saved-scans-section">
+      <article class="card wide-12">
+        <h2>Best-practice Gap Summary</h2>
+        <ul id="gapList" class="list">
+          <li>Run an analysis to compare this site against core marketing SEO best practices.</li>
+        </ul>
+      </article>
+    </section>
+
+    <section id="saved-scans-section" class="grid">
+      <article class="card wide-12">
         <h2>Saved Scans & Compare</h2>
         <div class="compare-grid">
           <div>
@@ -837,15 +826,21 @@
           <div class="helper">No saved scans yet.</div>
         </div>
       </article>
-
-      <article class="card wide-12">
-        <h2>Best-practice Gap Summary</h2>
-        <ul id="gapList" class="list">
-          <li>Run an analysis to compare this site against core marketing SEO best practices.</li>
-        </ul>
-      </article>
     </section>
   </main>
+
+  <div class="footer">
+    <div class="footer-logo">LAB007</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;flex:1;">
+      <a href="/" class="btn-ghost">Home</a>
+      <a href="/digitalmarketing" class="btn-ghost">Digital Marketing</a>
+      <a href="/marketing-manager" class="btn-ghost">Marketing Manager</a>
+      <a href="/marketing-analyzer" class="btn-ghost">Analyzer</a>
+      <a href="#saved-scans-section" class="btn-ghost">Saved Scans</a>
+      <a href="/contact" class="btn-ghost">Contact</a>
+    </div>
+    <div class="footer-copy">© 2026 LAB007 AI Tech. All rights reserved.</div>
+  </div>
 
   <script>
     (function () {
@@ -853,8 +848,7 @@
       const reportLabel = document.getElementById('reportLabel');
       const runBtn = document.getElementById('runAnalysis');
       const saveBtn = document.getElementById('saveReport');
-      const exportPdfBtn = document.getElementById('exportPdf');
-      const viewSavedReportsBtn = document.getElementById('viewSavedReports');
+      const postScanActions = document.getElementById('postScanActions');
       const runCompareBtn = document.getElementById('runCompare');
       const compareBase = document.getElementById('compareBase');
       const compareTarget = document.getElementById('compareTarget');
@@ -865,7 +859,7 @@
       const reportsFilterTo = document.getElementById('reportsFilterTo');
       const clearReportFilters = document.getElementById('clearReportFilters');
       const analysisProgress = document.getElementById('analysisProgress');
-      const reportGrid = document.getElementById('reportGrid');
+      const resultsDashboard = document.getElementById('resultsDashboard');
       const progressFill = document.getElementById('progressFill');
       const progressLabel = document.getElementById('progressLabel');
       const progressSteps = Array.from(document.querySelectorAll('#progressSteps .progress-step'));
@@ -1177,7 +1171,7 @@
         } catch (error) {
           setStatus(error.message || 'Failed to save scan.', true);
         } finally {
-          saveBtn.disabled = false;
+          saveBtn.disabled = !lastAnalysis;
         }
       }
 
@@ -1224,10 +1218,11 @@
         }
 
         setStatus('Analyzing website health...', false);
+        const hadPrevious = !!lastAnalysis;
         runBtn.disabled = true;
         saveBtn.disabled = true;
-        exportPdfBtn.disabled = true;
-        reportGrid.style.display = 'none';
+        resultsDashboard.classList.remove('is-visible');
+        postScanActions.classList.remove('is-visible');
         analysisProgress.classList.add('is-on');
         const progress = startProgressSequence();
 
@@ -1321,30 +1316,27 @@
           progress.complete();
           window.setTimeout(function () {
             analysisProgress.classList.remove('is-on');
-            reportGrid.style.display = '';
+            resultsDashboard.classList.add('is-visible');
+            postScanActions.classList.add('is-visible');
           }, 420);
           setStatus('Analysis complete. Review recommendations and start with the highest-impact gaps.', false);
         } catch (error) {
           progress.fail();
           analysisProgress.classList.remove('is-on');
-          reportGrid.style.display = '';
+          if (hadPrevious) {
+            resultsDashboard.classList.add('is-visible');
+            postScanActions.classList.add('is-visible');
+          }
           setStatus(error.message || 'Failed to analyze website.', true);
         } finally {
           runBtn.disabled = false;
-          saveBtn.disabled = false;
-          exportPdfBtn.disabled = false;
+          saveBtn.disabled = !lastAnalysis;
         }
       }
 
       runBtn.addEventListener('click', run);
       saveBtn.addEventListener('click', saveCurrentReport);
-      exportPdfBtn.addEventListener('click', function () {
-        window.print();
-      });
       runCompareBtn.addEventListener('click', runCompare);
-      viewSavedReportsBtn.addEventListener('click', function () {
-        document.getElementById('saved-scans-section')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-      });
       reportsFilterText.addEventListener('input', renderSavedReportsList);
       reportsFilterFrom.addEventListener('change', renderSavedReportsList);
       reportsFilterTo.addEventListener('change', renderSavedReportsList);
