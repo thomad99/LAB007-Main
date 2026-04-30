@@ -1106,6 +1106,7 @@
     });
 
     $('#mm-upload-contract')?.addEventListener('click', async () => {
+      const uploadBtn = $('#mm-upload-contract');
       const fileInput = $('#mm-contract-upload-file');
       const titleInput = $('#mm-contract-upload-title');
       const file = fileInput?.files && fileInput.files[0];
@@ -1115,13 +1116,27 @@
       fd.append('document', file);
       if (titleInput?.value?.trim()) fd.append('title', titleInput.value.trim());
       fd.append('includeAgentSignature', includeAgent ? '1' : '0');
-      await apiForm(`/api/marketing-manager/customers/${cust.id}/contracts/upload`, 'POST', fd);
-      if (titleInput) titleInput.value = '';
-      if (fileInput) fileInput.value = '';
-      const viewDetails = $('#mm-contract-view-details');
-      if (viewDetails) viewDetails.open = true;
-      await refresh();
-      await loadContracts();
+      const originalLabel = uploadBtn?.textContent || 'Create E-Sign Doc';
+      try {
+        if (uploadBtn) {
+          uploadBtn.classList.add('is-loading');
+          uploadBtn.textContent = 'Creating...';
+          uploadBtn.disabled = true;
+        }
+        await apiForm(`/api/marketing-manager/customers/${cust.id}/contracts/upload`, 'POST', fd);
+        if (titleInput) titleInput.value = '';
+        if (fileInput) fileInput.value = '';
+        const viewDetails = $('#mm-contract-view-details');
+        if (viewDetails) viewDetails.open = true;
+        await refresh();
+        await loadContracts();
+      } finally {
+        if (uploadBtn) {
+          uploadBtn.classList.remove('is-loading');
+          uploadBtn.textContent = originalLabel;
+          uploadBtn.disabled = false;
+        }
+      }
     });
     bindAgentSignatureUi();
     loadContracts();
