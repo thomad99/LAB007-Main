@@ -123,7 +123,15 @@ window.runAnalysis = async function runAnalysis() {
 
     const text = data.text || '';
     const parsed = parseAnalyzerJson(text);
-    renderAnalyzerResults(parsed, url, hostname, data.imageAltAudit || []);
+    renderAnalyzerResults(
+      parsed,
+      url,
+      hostname,
+      data.imageAltAudit || [],
+      data.pageMetaAudit || [],
+      data.siteKeywords || [],
+      Number(data.pagesScanned || 0)
+    );
     await loadGscReport(url);
   } catch (err) {
     clearInterval(stepInterval);
@@ -300,7 +308,7 @@ function getScoreClass(score) {
   return 'bad';
 }
 
-function renderAnalyzerResults(data, url, hostname, imageAltAudit) {
+function renderAnalyzerResults(data, url, hostname, imageAltAudit, pageMetaAudit, siteKeywords, pagesScanned) {
   document.getElementById('analyzer-loading').style.display = 'none';
   document.getElementById('analyzer-results').style.display = 'block';
   document.getElementById('analyzeBtn').disabled = false;
@@ -435,6 +443,57 @@ function renderAnalyzerResults(data, url, hostname, imageAltAudit) {
         })
         .join('');
       imgAuditWrap.style.display = '';
+    }
+  }
+
+  const pageMetaWrap = document.getElementById('page-meta-audit');
+  const pageMetaSummary = document.getElementById('page-meta-summary');
+  const pageMetaList = document.getElementById('page-meta-list');
+  if (pageMetaWrap && pageMetaSummary && pageMetaList) {
+    const rows = Array.isArray(pageMetaAudit) ? pageMetaAudit : [];
+    if (!rows.length) {
+      pageMetaWrap.style.display = 'none';
+    } else {
+      const missingTitle = rows.filter((r) => !String(r.title || '').trim()).length;
+      const missingDesc = rows.filter((r) => !String(r.metaDescription || '').trim()).length;
+      const scannedLabel = pagesScanned ? `${pagesScanned} pages scanned` : `${rows.length} pages listed`;
+      pageMetaSummary.textContent = `${scannedLabel} • ${missingTitle} missing titles • ${missingDesc} missing descriptions`;
+      pageMetaList.innerHTML = rows
+        .slice(0, 220)
+        .map((r) => {
+          const title = String(r.title || '').trim() || '(missing title)';
+          const desc = String(r.metaDescription || '').trim() || '(missing description)';
+          return `<div class="img-alt-row">
+            <div class="img-alt-file" title="${escapeHtml(r.url || '')}">${escapeHtml(r.url || '')}</div>
+            <div class="img-alt-text" title="${escapeHtml(title)}">${escapeHtml(title)}</div>
+            <div class="img-alt-text" title="${escapeHtml(desc)}">${escapeHtml(desc)}</div>
+          </div>`;
+        })
+        .join('');
+      pageMetaWrap.style.display = '';
+    }
+  }
+
+  const keywordWrap = document.getElementById('site-keywords-audit');
+  const keywordSummary = document.getElementById('site-keywords-summary');
+  const keywordList = document.getElementById('site-keywords-list');
+  if (keywordWrap && keywordSummary && keywordList) {
+    const rows = Array.isArray(siteKeywords) ? siteKeywords : [];
+    if (!rows.length) {
+      keywordWrap.style.display = 'none';
+    } else {
+      keywordSummary.textContent = `${rows.length} keywords extracted from scanned pages`;
+      keywordList.innerHTML = rows
+        .slice(0, 220)
+        .map((r) => {
+          const kw = String(r.keyword || '').trim();
+          const cnt = Number(r.count || 0);
+          return `<span class="score-chip ${cnt >= 12 ? 'good' : cnt >= 6 ? 'warn' : 'bad'}">${escapeHtml(
+            kw
+          )} (${cnt})</span>`;
+        })
+        .join('');
+      keywordWrap.style.display = '';
     }
   }
 

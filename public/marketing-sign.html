@@ -118,8 +118,8 @@
         <button class="gold" id="signBtn" type="button">Sign contract</button>
       </div>
       <div class="row post-sign-actions" id="postSignActions" style="display:none;">
+        <button class="ghost" id="viewBtn" type="button">View signed copy</button>
         <button class="ghost" id="downloadBtn" type="button">Download signed copy</button>
-        <button class="ghost" id="emailCopyBtn" type="button">Email signed copy</button>
       </div>
       <p id="statusMsg" class="muted"></p>
     </div>
@@ -138,8 +138,8 @@
       const dateEl = document.getElementById('signDate');
       const signBtn = document.getElementById('signBtn');
       const clearBtn = document.getElementById('clearBtn');
+      const viewBtn = document.getElementById('viewBtn');
       const downloadBtn = document.getElementById('downloadBtn');
-      const emailCopyBtn = document.getElementById('emailCopyBtn');
       const postSignActions = document.getElementById('postSignActions');
       const canvas = document.getElementById('sigCanvas');
       const sigPadWrap = document.getElementById('sigPadWrap');
@@ -232,8 +232,8 @@
         sigPadWrap.classList.remove('sig-saving');
         sigPadWrap.classList.remove('sig-saved');
         void sigPadWrap.offsetWidth;
+        // Keep the green success state visible after save.
         sigPadWrap.classList.add('sig-saved');
-        window.setTimeout(() => sigPadWrap.classList.remove('sig-saved'), 4200);
       }
 
       async function load() {
@@ -342,27 +342,13 @@
       });
 
       clearBtn.addEventListener('click', clearSignature);
+      viewBtn.addEventListener('click', function () {
+        if (!signed) return;
+        window.open('/api/marketing-manager/contracts/sign/' + token + '/document', '_blank', 'noopener');
+      });
       downloadBtn.addEventListener('click', function () {
         if (!signed) return;
         window.open('/api/marketing-manager/contracts/sign/' + token + '/download', '_blank', 'noopener');
-      });
-      emailCopyBtn.addEventListener('click', async function () {
-        if (!signed) return;
-        const email = (prompt('Send signed copy to which email address?') || '').trim();
-        if (!email) return;
-        try {
-          msgEl.className = 'muted';
-          msgEl.textContent = 'Sending signed copy...';
-          await api('/api/marketing-manager/contracts/sign/' + token + '/email-copy', {
-            method: 'POST',
-            body: JSON.stringify({ email: email })
-          });
-          msgEl.className = 'ok';
-          msgEl.textContent = 'Signed copy emailed successfully.';
-        } catch (err) {
-          msgEl.className = 'error';
-          msgEl.textContent = err.message;
-        }
       });
       canvas.addEventListener('mousedown', startDraw);
       canvas.addEventListener('mousemove', moveDraw);

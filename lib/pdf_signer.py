@@ -110,6 +110,79 @@ def _stamp_client_on_last_page_bottom(page, page_rect, signature_path, name, dat
     )
 
 
+def _stamp_client_below_agent_block(page, page_rect, signature_path, name, date_str):
+    """
+    When an Agency block exists on the page (uploaded-doc flow), place the client
+    signature block directly underneath it instead of at the very bottom.
+    """
+    hits = page.search_for("Agent Signature:")
+    if not hits:
+        return False
+
+    margin_x = 50
+    r = page_rect
+    anchor = hits[-1]
+    # Start a little below "Agent Signature:" label + image space.
+    y_head = anchor.y1 + 120
+
+    sig_pix = fitz.Pixmap(signature_path)
+    sw, sh = sig_pix.width, sig_pix.height
+    sig_pix = None
+    if sw <= 0 or sh <= 0:
+        raise RuntimeError("Invalid signature image dimensions")
+
+    max_w = min(200, r.width - 2 * margin_x)
+    ratio = sh / sw
+    sig_h = max(36, min(80, max_w * ratio))
+
+    # Layout top -> bottom
+    y_label = y_head + 18
+    y_sig_top = y_label + 8
+    y_name = y_sig_top + sig_h + 18
+    y_date = y_name + 15
+    y_bottom = y_date + 8
+
+    # If this would run off page, tell caller to use bottom-placement fallback.
+    if y_bottom > r.y1 - 36:
+        return False
+
+    page.insert_text(
+        fitz.Point(margin_x, y_head),
+        "Client Acceptance and Signature",
+        fontsize=11,
+        fontname="helv",
+        color=(0, 0, 0),
+        overlay=True,
+    )
+    page.insert_text(
+        fitz.Point(margin_x, y_label),
+        "Client Signature:",
+        fontsize=10,
+        fontname="helv",
+        color=(0, 0, 0),
+        overlay=True,
+    )
+    sig_box = fitz.Rect(margin_x, y_sig_top, margin_x + max_w, y_sig_top + sig_h)
+    page.insert_image(sig_box, filename=signature_path, keep_proportion=True, overlay=True)
+    page.insert_text(
+        fitz.Point(margin_x, y_name),
+        f"Printed Name: {name}",
+        fontsize=10,
+        fontname="helv",
+        color=(0, 0, 0),
+        overlay=True,
+    )
+    page.insert_text(
+        fitz.Point(margin_x, y_date),
+        f"Date: {date_str}",
+        fontsize=10,
+        fontname="helv",
+        color=(0, 0, 0),
+        overlay=True,
+    )
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--input", required=True)
@@ -135,7 +208,11 @@ def main():
     page_rect = page.rect
 
     try:
-        _stamp_client_on_last_page_bottom(page, page_rect, args.signature, args.name, args.date)
+        # Uploaded-doc flow adds an "Agency representative (LAB007)" block to the
+        # last page first. In that case, place the client block directly under it.
+        used_near_agent = _stamp_client_below_agent_block(page, page_rect, args.signature, args.name, args.date)
+        if not used_near_agent:
+            _stamp_client_on_last_page_bottom(page, page_rect, args.signature, args.name, args.date)
     except RuntimeError:
         # Not enough room: append a new page and stamp there.
         page = doc.new_page(width=page_rect.width, height=page_rect.height)

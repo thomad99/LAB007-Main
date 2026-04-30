@@ -1685,6 +1685,189 @@ function extractImageAltAuditFromHtml(html, pageUrl) {
   return out;
 }
 
+function extractPageMetaFromHtml(html, pageUrl) {
+  const src = String(html || '');
+  const titleMatch = src.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
+  const metaMatch = src.match(
+    /<meta[^>]+name\s*=\s*["']description["'][^>]*content\s*=\s*["']([\s\S]*?)["'][^>]*>/i
+  );
+  const ogMatch = src.match(
+    /<meta[^>]+property\s*=\s*["']og:description["'][^>]*content\s*=\s*["']([\s\S]*?)["'][^>]*>/i
+  );
+  const title = titleMatch ? String(titleMatch[1] || '').replace(/\s+/g, ' ').trim() : '';
+  const metaDescription = metaMatch
+    ? String(metaMatch[1] || '').replace(/\s+/g, ' ').trim()
+    : ogMatch
+    ? String(ogMatch[1] || '').replace(/\s+/g, ' ').trim()
+    : '';
+  return {
+    url: pageUrl instanceof URL ? pageUrl.toString() : String(pageUrl || ''),
+    title,
+    metaDescription
+  };
+}
+
+function extractKeywordsFromHtml(html) {
+  const cleaned = String(html || '')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
+  const stop = new Set([
+    'the',
+    'and',
+    'for',
+    'that',
+    'with',
+    'you',
+    'your',
+    'from',
+    'this',
+    'are',
+    'was',
+    'were',
+    'have',
+    'has',
+    'had',
+    'but',
+    'not',
+    'can',
+    'all',
+    'our',
+    'out',
+    'about',
+    'into',
+    'more',
+    'than',
+    'they',
+    'them',
+    'their',
+    'will',
+    'what',
+    'when',
+    'where',
+    'who',
+    'why',
+    'how',
+    'www',
+    'http',
+    'https',
+    'com',
+    'org',
+    'net',
+    'home',
+    'page'
+  ]);
+  const counts = new Map();
+  const rx = /\b[a-z][a-z0-9-]{2,}\b/g;
+  let m;
+  while ((m = rx.exec(cleaned))) {
+    const w = m[0];
+    if (!w || stop.has(w)) continue;
+    counts.set(w, (counts.get(w) || 0) + 1);
+  }
+  return counts;
+}
+
+function extractInternalLinks(html, pageUrl, rootHost) {
+  const out = [];
+  const seen = new Set();
+  const hrefRx = /<a\b[^>]*href\s*=\s*["']([^"']+)["'][^>]*>/gi;
+  let m;
+  while ((m = hrefRx.exec(String(html || '')))) {
+    const raw = String(m[1] || '').trim();
+    if (!raw) continue;
+    if (/^(mailto:|tel:|javascript:|#)/i.test(raw)) continue;
+    let u;
+    try {
+      u = new URL(raw, pageUrl);
+    } catch {
+      continue;
+    }
+    if (!/^https?:$/i.test(u.protocol)) continue;
+    if (String(u.hostname || '').toLowerCase() !== rootHost) continue;
+    if (/\.(pdf|png|jpe?g|gif|webp|svg|zip|mp4|mp3|docx?|xlsx?|pptx?)$/i.test(u.pathname)) continue;
+    u.hash = '';
+    const norm = u.toString();
+    if (seen.has(norm)) continue;
+    seen.add(norm);
+    out.push(norm);
+    if (out.length >= 80) break;
+  }
+  return out;
+}
+
+async function collectAnalyzerSiteData(startUrl) {
+  const maxPages = 16;
+  const maxImages = 600;
+  const rootHost = String(startUrl.hostname || '').toLowerCase();
+  const queue = [startUrl.toString()];
+  const visited = new Set();
+  const pageMetaAudit = [];
+  const imageAltAudit = [];
+  const imgSeen = new Set();
+  const keywordCounts = new Map();
+  while (queue.length && visited.size < maxPages) {
+    const next = queue.shift();
+    if (!next || visited.has(next)) continue;
+    visited.add(next);
+    let pageRes;
+    try {
+      pageRes = await fetchFn(next, {
+        redirect: 'follow',
+        headers: {
+          'User-Agent':
+            'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
+          Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+      });
+    } catch {
+      continue;
+    }
+    if (!pageRes || !pageRes.ok) continue;
+    const ctype = String(pageRes.headers.get('content-type') || '').toLowerCase();
+    if (!ctype.includes('text/html')) continue;
+    let html = '';
+    try {
+      html = await pageRes.text();
+    } catch {
+      continue;
+    }
+    const finalUrl = (() => {
+      try {
+        return new URL(pageRes.url || next);
+      } catch {
+        return new URL(next);
+      }
+    })();
+    pageMetaAudit.push(extractPageMetaFromHtml(html, finalUrl));
+    const imgs = extractImageAltAuditFromHtml(html, finalUrl);
+    for (const img of imgs) {
+      const key = String(img.src || '').trim();
+      if (!key || imgSeen.has(key)) continue;
+      imgSeen.add(key);
+      imageAltAudit.push({ ...img, page: finalUrl.toString() });
+      if (imageAltAudit.length >= maxImages) break;
+    }
+    const kws = extractKeywordsFromHtml(html);
+    kws.forEach((v, k) => keywordCounts.set(k, (keywordCounts.get(k) || 0) + v));
+    const links = extractInternalLinks(html, finalUrl, rootHost);
+    for (const link of links) {
+      if (!visited.has(link) && !queue.includes(link)) queue.push(link);
+      if (queue.length >= maxPages * 4) break;
+    }
+  }
+  const siteKeywords = [...keywordCounts.entries()]
+    .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
+    .slice(0, 220)
+    .map(([keyword, count]) => ({ keyword, count }));
+  return { imageAltAudit, pageMetaAudit, siteKeywords, pagesScanned: visited.size };
+}
+
 function readGscToken() {
   try {
     if (!fs.existsSync(gscTokenPath)) return null;
@@ -1957,29 +2140,28 @@ app.post('/api/analyze', async (req, res) => {
       return res.status(500).json({ success: false, error: 'Empty response from Anthropic' });
     }
     let imageAltAudit = [];
+    let pageMetaAudit = [];
+    let siteKeywords = [];
+    let pagesScanned = 0;
     const scanUrlRaw = String(req.body?.url || '').trim();
     if (scanUrlRaw) {
       try {
         const scanUrl = /^https?:\/\//i.test(scanUrlRaw) ? new URL(scanUrlRaw) : new URL(`https://${scanUrlRaw}`);
         if (!isPrivateHostname(scanUrl.hostname)) {
-          const pageRes = await fetchFn(scanUrl.toString(), {
-            redirect: 'follow',
-            headers: {
-              'User-Agent':
-                'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36',
-              Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
-            }
-          });
-          if (pageRes.ok) {
-            const html = await pageRes.text();
-            imageAltAudit = extractImageAltAuditFromHtml(html, scanUrl);
-          }
+          const crawl = await collectAnalyzerSiteData(scanUrl);
+          imageAltAudit = crawl.imageAltAudit || [];
+          pageMetaAudit = crawl.pageMetaAudit || [];
+          siteKeywords = crawl.siteKeywords || [];
+          pagesScanned = Number(crawl.pagesScanned || 0);
         }
       } catch {
         imageAltAudit = [];
+        pageMetaAudit = [];
+        siteKeywords = [];
+        pagesScanned = 0;
       }
     }
-    return res.json({ success: true, text, imageAltAudit });
+    return res.json({ success: true, text, imageAltAudit, pageMetaAudit, siteKeywords, pagesScanned });
   } catch (error) {
     console.error('/api/analyze error:', error);
     return res.status(500).json({ success: false, error: error.message || 'Analyze failed' });
