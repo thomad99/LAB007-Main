@@ -186,7 +186,7 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-title { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 700; color: #fff; margin-bottom: 8px; }
-  .loading-url { font-size: 13px; color: var(--gold); margin-bottom: 28px; }
+  .loading-url { font-size: 13px; color: var(--gold); margin-bottom: 28px; word-break: break-all; padding: 0 12px; text-align: center; }
   .loading-steps { width: 100%; max-width: 380px; }
   .loading-step {
     display: flex; align-items: center; gap: 12px;
@@ -552,6 +552,116 @@
       <h3>Analytics & Reporting</h3>
       <p>Clear dashboards that show exactly what's working and what's not.</p>
       <ul class="service-items"><li>GA4 & Search Console setup</li><li>Monthly performance reports</li><li>Conversion tracking</li><li>Competitor benchmarking</li></ul>
+    </div>
+  </div>
+</section>
+
+<section id="analyzer" class="analyzer-section">
+  <div class="analyzer-inner">
+    <div class="analyzer-header">
+      <h2>Website SEO Analyzer</h2>
+      <p>AI-powered analysis across 10 dimensions — technical SEO, speed, mobile, backlinks, local, schema, and more.</p>
+    </div>
+
+    <div class="coverage-badges" aria-hidden="true">
+      <span class="badge"><span class="badge-dot"></span> 10 categories</span>
+      <span class="badge"><span class="badge-dot"></span> Actionable findings</span>
+      <span class="badge"><span class="badge-dot"></span> Quick wins</span>
+      <span class="badge"><span class="badge-dot"></span> GSC when connected</span>
+    </div>
+
+    <div class="url-area">
+      <div class="url-row">
+        <input id="urlInput" class="url-input" type="text" placeholder="Enter your website URL (e.g. example.com)" autocomplete="url" aria-label="Website URL">
+        <button id="analyzeBtn" class="url-submit" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          Analyze
+        </button>
+      </div>
+    </div>
+
+    <div id="analyzer-idle">
+      <div class="idle-icon" aria-hidden="true">🔍</div>
+      <p>Enter a URL above to generate your SEO health report.</p>
+    </div>
+
+    <div id="analyzer-loading">
+      <div class="loading-center">
+        <div class="loading-spinner" aria-hidden="true"></div>
+        <div class="loading-title">Analyzing your website…</div>
+        <div id="loading-url-display" class="loading-url"></div>
+        <div class="loading-steps">
+          <div class="loading-step pending"><span class="step-indicator"></span><span>Fetching signals</span></div>
+          <div class="loading-step pending"><span class="step-indicator"></span><span>Evaluating SEO & metadata</span></div>
+          <div class="loading-step pending"><span class="step-indicator"></span><span>Reviewing performance & mobile</span></div>
+          <div class="loading-step pending"><span class="step-indicator"></span><span>Scoring backlinks & local</span></div>
+          <div class="loading-step pending"><span class="step-indicator"></span><span>Building recommendations</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="analyzer-results">
+      <div class="results-top">
+        <div class="score-ring-wrap">
+          <div class="score-ring">
+            <svg viewBox="0 0 120 120" aria-hidden="true">
+              <circle cx="60" cy="60" r="58" fill="none" stroke="var(--border)" stroke-width="8"></circle>
+              <circle id="score-arc" cx="60" cy="60" r="58" fill="none" stroke="var(--green)" stroke-width="8"
+                stroke-linecap="round" stroke-dasharray="364" stroke-dashoffset="364"
+                style="transition: stroke-dashoffset 0.9s ease, stroke 0.3s ease;"></circle>
+            </svg>
+            <div class="score-ring-inner">
+              <div id="overall-score" class="score-num">0</div>
+              <div class="score-label">Overall</div>
+              <div id="score-grade" class="score-grade">—</div>
+            </div>
+          </div>
+        </div>
+        <div class="results-summary">
+          <div id="results-url-display" class="results-url"></div>
+          <div id="results-headline" class="results-title"></div>
+          <div id="results-meta" class="results-meta"></div>
+          <div id="score-breakdown" class="score-breakdown"></div>
+        </div>
+      </div>
+
+      <div id="cat-grid" class="cat-grid"></div>
+
+      <div class="detail-panel">
+        <div class="detail-header">
+          <div id="detail-title" class="detail-title"></div>
+          <div id="detail-badge" class="detail-score-badge good"></div>
+        </div>
+        <div id="detail-findings" class="findings"></div>
+      </div>
+
+      <div class="quick-wins">
+        <div class="quick-wins-title">⚡ Quick wins</div>
+        <div id="quick-wins-grid" class="quick-wins-grid"></div>
+      </div>
+
+      <div class="recs-section">
+        <div class="recs-title">📋 Prioritized recommendations</div>
+        <div id="rec-list" class="recs-grid"></div>
+      </div>
+
+      <div id="image-alt-audit" class="img-alt-audit" style="display:none;">
+        <div class="img-alt-head">
+          <div class="img-alt-title">Image alt text audit</div>
+          <div id="image-alt-meta" class="img-alt-meta"></div>
+        </div>
+        <div id="image-alt-list" class="img-alt-list"></div>
+      </div>
+
+      <div id="gsc-panel" class="gsc-panel">
+        <div class="gsc-head">
+          <div class="gsc-title">Google Search Console</div>
+          <div id="gsc-state" class="gsc-state"></div>
+        </div>
+        <div id="gsc-body"></div>
+      </div>
+
+      <p class="disclaimer">Analysis is generated from AI-assisted interpretation of public signals and may omit items only visible in your stack. Use alongside Search Console and real crawl data for production decisions.</p>
     </div>
   </div>
 </section>

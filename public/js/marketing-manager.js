@@ -604,8 +604,45 @@
     return false;
   }
 
+  function readMmMainUiState() {
+    const main = document.getElementById('mm-main');
+    if (!main || !document.getElementById('mm-task-select')) return null;
+    return {
+      taskId: document.getElementById('mm-task-select')?.value || null,
+      tasksOpen: document.getElementById('mm-tasks-details')?.open,
+      contractsOpen: document.getElementById('mm-contracts-details')?.open,
+      agentOpen: document.getElementById('mm-agent-sig-details')?.open,
+      createOpen: document.getElementById('mm-contract-create-details')?.open,
+      uploadOpen: document.getElementById('mm-contract-upload-details')?.open,
+      viewOpen: document.getElementById('mm-contract-view-details')?.open,
+      campOpen: document.getElementById('mm-campaign-starters-details')?.open
+    };
+  }
+
+  function restoreMmMainUi(prev) {
+    if (!prev) return;
+    const sel = document.getElementById('mm-task-select');
+    if (sel && prev.taskId) {
+      const ok = Array.from(sel.options || []).some((o) => o.value === prev.taskId);
+      if (ok) sel.value = prev.taskId;
+    }
+    const setOpen = (id, v) => {
+      if (!v) return;
+      const el = document.getElementById(id);
+      if (el) el.open = true;
+    };
+    setOpen('mm-tasks-details', prev.tasksOpen);
+    setOpen('mm-contracts-details', prev.contractsOpen);
+    setOpen('mm-agent-sig-details', prev.agentOpen);
+    setOpen('mm-contract-create-details', prev.createOpen);
+    setOpen('mm-contract-upload-details', prev.uploadOpen);
+    setOpen('mm-contract-view-details', prev.viewOpen);
+    setOpen('mm-campaign-starters-details', prev.campOpen);
+  }
+
   function bindAgentSignatureUi() {
     const canvas = document.getElementById('mm-agent-sig-canvas');
+    const frame = document.getElementById('mm-sig-frame');
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const statusEl = document.getElementById('mm-agent-sig-status');
@@ -679,6 +716,9 @@
     });
     $('#mm-agent-sig-save')?.addEventListener('click', async () => {
       if (!hasInk) return alert('Draw your signature first.');
+      frame?.classList.remove('mm-sig-saved');
+      frame?.classList.add('mm-sig-saving');
+      if (statusEl) statusEl.textContent = 'Saving…';
       try {
         const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
         await api('/api/marketing-manager/agent-signature', {
@@ -690,9 +730,15 @@
           signatureDataUrl: dataUrl,
           updatedAt: new Date().toISOString()
         };
+        frame?.classList.remove('mm-sig-saving');
+        frame?.classList.add('mm-sig-saved');
         if (statusEl) statusEl.textContent = 'Saved on server.';
+        window.setTimeout(() => frame?.classList.remove('mm-sig-saved'), 2800);
       } catch (e) {
+        frame?.classList.remove('mm-sig-saving');
         alert(e.message);
+      } finally {
+        frame?.classList.remove('mm-sig-saving');
       }
     });
     $('#mm-agent-sig-remove')?.addEventListener('click', async () => {
@@ -712,6 +758,7 @@
   function renderMain() {
     const main = $('#mm-main');
     if (!main) return;
+    const prevUi = readMmMainUiState();
     const cust = state.data.customers.find((c) => c.id === selectedId);
     if (!cust) {
       main.innerHTML = `<p class="mm-muted">Select or add a client to manage tasks.</p>`;
@@ -807,10 +854,15 @@
       <div class="mm-task-panel">
         <details class="mm-campaign-details" id="mm-contracts-details">
           <summary>Electronic contracts</summary>
-          <details class="mm-campaign-details mm-agent-sig-wrap">
+          <details class="mm-campaign-details mm-agent-sig-wrap" id="mm-agent-sig-details">
             <summary>Agent signature (you)</summary>
             <p class="mm-small">Draw once and save. JPEG is used for PDF embedding. Check the box below when creating a doc to include your signature as Agency (LAB007), dated the day you generate the document.</p>
-            <canvas id="mm-agent-sig-canvas" width="520" height="140" class="mm-agent-sig-canvas"></canvas>
+            <div class="mm-sig-frame" id="mm-sig-frame">
+              <div class="mm-sig-frame-rot" aria-hidden="true"></div>
+              <div class="mm-sig-frame-inner">
+                <canvas id="mm-agent-sig-canvas" width="520" height="140" class="mm-agent-sig-canvas"></canvas>
+              </div>
+            </div>
             <div class="mm-task-meta" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
               <button type="button" class="btn-mm-ghost" id="mm-agent-sig-clear">Clear</button>
               <button type="button" class="btn-mm" id="mm-agent-sig-save">Save Agent signature</button>
@@ -818,11 +870,6 @@
               <span class="mm-muted" id="mm-agent-sig-status" style="font-size:11px;"></span>
             </div>
           </details>
-          <div class="mm-task-meta" id="mm-contracts-meta" style="margin-top:12px;">
-            <button type="button" class="btn-mm" id="mm-new-contract">Create doc to sign</button>
-            <button type="button" class="btn-mm-ghost" id="mm-refresh-contracts">Refresh</button>
-            <button type="button" class="btn-mm-danger-outline" id="mm-delete-all-contracts">Delete ALL</button>
-          </div>
           <details class="mm-campaign-details" id="mm-contract-create-details" style="margin-top:12px;">
             <summary>Create a doc to sign</summary>
             <div class="mm-task-meta" style="margin-top:12px;">
@@ -860,12 +907,6 @@
     `;
 
     const campGrid = $('#mm-campaign-buttons');
-    const tasksDetails = $('#mm-tasks-details');
-    if (tasksDetails) tasksDetails.open = false;
-    const contractsDetails = $('#mm-contracts-details');
-    if (contractsDetails) contractsDetails.open = false;
-    const campaignDetails = $('#mm-campaign-starters-details');
-    if (campaignDetails) campaignDetails.open = false;
     if (campGrid) {
       campGrid.innerHTML = (state.catalog.campaigns || [])
         .map(
@@ -958,6 +999,10 @@
             <span class="mm-pill">Customer contracts: ${contracts.length}</span>
             <span class="mm-pill">Pending: ${pendingCount}</span>
             <span class="mm-pill">Signed: ${signedCount}</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;margin-left:auto;align-items:center;">
+              <button type="button" class="btn-mm-tiny" id="mm-refresh-contracts-inline">Refresh list</button>
+              <button type="button" class="btn-mm-tiny-danger" id="mm-delete-all-contracts-inline">Delete all</button>
+            </div>
           </div>` +
           contracts
           .map((ct) => {
@@ -1019,18 +1064,18 @@
             await loadContracts();
           });
         });
+        $('#mm-refresh-contracts-inline')?.addEventListener('click', () => loadContracts());
+        $('#mm-delete-all-contracts-inline')?.addEventListener('click', async () => {
+          if (!confirm(`Delete ALL contracts and signed files for "${cust.name}"? This cannot be undone.`)) return;
+          await api(`/api/marketing-manager/customers/${cust.id}/contracts`, { method: 'DELETE' });
+          await refresh();
+          await loadContracts();
+        });
       } catch (err) {
         listEl.innerHTML = `<p class="mm-error">${escapeHtml(err.message)}</p>`;
       }
     }
 
-    $('#mm-new-contract')?.addEventListener('click', () => {
-      const details = $('#mm-contracts-details');
-      if (details) details.open = true;
-      const createDetails = $('#mm-contract-create-details');
-      if (createDetails) createDetails.open = true;
-      document.getElementById('mm-contract-create-title')?.focus();
-    });
     $('#mm-create-contract')?.addEventListener('click', async () => {
       const titleEl = document.getElementById('mm-contract-create-title');
       const bodyEl = document.getElementById('mm-contract-create-body');
@@ -1057,13 +1102,6 @@
       await loadContracts();
     });
 
-    $('#mm-refresh-contracts')?.addEventListener('click', async () => {
-      const details = $('#mm-contracts-details');
-      if (details) details.open = true;
-      const viewDetails = $('#mm-contract-view-details');
-      if (viewDetails) viewDetails.open = true;
-      await loadContracts();
-    });
     $('#mm-upload-contract')?.addEventListener('click', async () => {
       const fileInput = $('#mm-contract-upload-file');
       const titleInput = $('#mm-contract-upload-title');
@@ -1079,12 +1117,6 @@
       if (fileInput) fileInput.value = '';
       const viewDetails = $('#mm-contract-view-details');
       if (viewDetails) viewDetails.open = true;
-      await refresh();
-      await loadContracts();
-    });
-    $('#mm-delete-all-contracts')?.addEventListener('click', async () => {
-      if (!confirm(`Delete ALL contracts and signed files for "${cust.name}"? This cannot be undone.`)) return;
-      await api(`/api/marketing-manager/customers/${cust.id}/contracts`, { method: 'DELETE' });
       await refresh();
       await loadContracts();
     });
@@ -1126,7 +1158,12 @@
     if (sel) {
       sel.addEventListener('change', updateTaskChrome);
       if (!sel.value && tasks[0]) sel.value = tasks[0].id;
+      if (prevUi?.taskId) {
+        const ok = Array.from(sel.options || []).some((o) => o.value === prevUi.taskId);
+        if (ok) sel.value = prevUi.taskId;
+      }
     }
+    restoreMmMainUi(prevUi);
     updateTaskChrome();
   }
 
