@@ -3305,8 +3305,23 @@ app.post('/api/marketing-manager/customers/:customerId/tasks', (req, res) => {
         createdAt: now,
         updatedAt: now
       };
+    } else if (kind === 'manual') {
+      const title = String(req.body?.title || '').trim();
+      const description = String(req.body?.description || '').trim();
+      if (!title) return res.status(400).json({ error: 'Manual task title is required' });
+      task = {
+        id: mmNewId('task'),
+        kind: 'campaign',
+        campaignKey: 'manual',
+        title,
+        description,
+        status: 'not_started',
+        notes: '',
+        createdAt: now,
+        updatedAt: now
+      };
     } else {
-      return res.status(400).json({ error: 'kind must be directory, keywords, or campaign' });
+      return res.status(400).json({ error: 'kind must be directory, keywords, campaign, or manual' });
     }
 
     c.tasks.push(task);

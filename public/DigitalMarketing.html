@@ -48,11 +48,6 @@
   }
   .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; }
   .nav-logo img { height: 44px; width: auto; }
-  .nav-back {
-    color: var(--muted); text-decoration: none; font-size: 13px;
-    display: flex; align-items: center; gap: 6px; transition: color 0.2s;
-  }
-  .nav-back:hover { color: var(--gold); }
   .nav-actions { display: flex; align-items: center; gap: 16px; }
   .btn-primary {
     background: var(--gold); color: var(--black); border: none;
@@ -483,13 +478,9 @@
 <!-- NAV -->
 <nav>
   <a href="/" class="nav-logo">
-    <img src="/images/LAB007-GOLD.png" onerror="this.onerror=null;this.src=\"/images/logo.png\";" alt="LAB007" height="44">
+    <img src="/images/LAB007-GOLD-TRANS.PNG" onerror="this.onerror=null;this.src=\"/images/logo.png\";" alt="LAB007" height="44">
   </a>
   <div class="nav-actions">
-    <a href="/" class="nav-back">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m15 18-6-6 6-6"/></svg>
-      Home
-    </a>
     <button class="hamburger-btn" id="hamburgerBtn" type="button" aria-label="Menu"><span></span><span></span><span></span></button>
   </div>
 </nav>
@@ -499,6 +490,8 @@
   <a href="/">Home</a>
   <a href="/digitalmarketing" class="active">Digital Marketing</a>
   <a href="/marketing-manager">Marketing Manager</a>
+  <a href="/marketing-analyzer">Analyzer</a>
+  <a href="/contact">Contact</a>
   <div class="nav-menu-footer">LAB007 AI TECH &copy; 2026</div>
 </div>
 

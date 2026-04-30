@@ -839,13 +839,29 @@
       <div class="mm-task-panel">
         <details class="mm-campaign-details" id="mm-tasks-details">
           <summary>Tasks</summary>
-          <div class="mm-add-task">
-            <h3>Add task from template</h3>
-            <div class="mm-add-buttons">
-              <button type="button" class="btn-mm" id="mm-add-directory">Directory listings</button>
-              <button type="button" class="btn-mm" id="mm-add-keywords">Keywords helper</button>
+          <details class="mm-campaign-details" id="mm-task-manual-details" style="margin-top:10px;">
+            <summary>Add task manually</summary>
+            <div class="mm-task-meta" style="margin-top:10px;">
+              <input type="text" id="mm-manual-task-title" class="mm-input" placeholder="Task title (required)" />
+              <textarea id="mm-manual-task-description" class="mm-textarea" rows="3" style="margin-top:8px;" placeholder="Task description (optional)"></textarea>
+              <button type="button" class="btn-mm" id="mm-add-manual-task" style="margin-top:8px;">Create task</button>
             </div>
-          </div>
+          </details>
+          <details class="mm-campaign-details" id="mm-task-keywords-details" style="margin-top:10px;">
+            <summary>Keyword helper</summary>
+            <div class="mm-task-meta" style="margin-top:10px;">
+              <p class="mm-small" style="margin:0 0 8px;">Adds a dedicated Keywords task with LIKE-list workflow and notes.</p>
+              <button type="button" class="btn-mm" id="mm-add-keywords">Add keyword helper task</button>
+            </div>
+          </details>
+          <details class="mm-campaign-details" id="mm-task-templates-details" style="margin-top:10px;">
+            <summary>Task templates</summary>
+            <div class="mm-task-meta" style="margin-top:10px;">
+              <button type="button" class="btn-mm" id="mm-add-directory">Directory listings</button>
+              <div class="mm-small" style="margin:10px 0 6px;">Campaign starter templates</div>
+              <div class="mm-campaign-grid" id="mm-task-templates-buttons"></div>
+            </div>
+          </details>
 
           <label class="mm-muted">Active task</label>
           <select id="mm-task-select" class="mm-select">${taskOpts || '<option value="">No tasks yet</option>'}</select>
@@ -901,15 +917,9 @@
           </details>
         </details>
       </div>
-      <div class="mm-task-panel">
-        <details class="mm-campaign-details" id="mm-campaign-starters-details">
-          <summary>Campaign starters (${state.catalog.campaigns?.length || 0})</summary>
-          <div class="mm-campaign-grid" id="mm-campaign-buttons"></div>
-        </details>
-      </div>
     `;
 
-    const campGrid = $('#mm-campaign-buttons');
+    const campGrid = $('#mm-task-templates-buttons');
     if (campGrid) {
       campGrid.innerHTML = (state.catalog.campaigns || [])
         .map(
@@ -929,6 +939,21 @@
         });
       });
     }
+
+    $('#mm-add-manual-task')?.addEventListener('click', async () => {
+      const title = String($('#mm-manual-task-title')?.value || '').trim();
+      const description = String($('#mm-manual-task-description')?.value || '').trim();
+      if (!title) return alert('Task title is required.');
+      await api(`/api/marketing-manager/customers/${cust.id}/tasks`, {
+        method: 'POST',
+        body: JSON.stringify({ kind: 'manual', title, description })
+      });
+      const t = $('#mm-manual-task-title');
+      const d = $('#mm-manual-task-description');
+      if (t) t.value = '';
+      if (d) d.value = '';
+      await refresh();
+    });
 
     $('#mm-add-directory')?.addEventListener('click', async () => {
       await api(`/api/marketing-manager/customers/${cust.id}/tasks`, {

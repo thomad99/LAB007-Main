@@ -14,6 +14,54 @@
     .doc-card-scroll iframe, .doc-iframe { max-width: 100% !important; display: block; }
     .doc-iframe { width: 100%; border: none; border-radius: 6px; height: min(32vh, 300px); min-height: 200px; }
     .sign-section { scroll-margin-top: 16px; }
+    .view-full-btn {
+      margin-top: 10px;
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .view-full-btn:hover { background: rgba(0,0,0,.04); }
+    .contract-fullscreen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #fff;
+      display: none;
+      flex-direction: column;
+    }
+    .contract-fullscreen.open { display: flex; }
+    .contract-fullscreen-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+    .contract-fullscreen-body {
+      flex: 1;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 10px;
+      background: #fafafa;
+    }
+    .contract-fullscreen-body iframe,
+    .contract-fullscreen-body img {
+      width: 100%;
+      max-width: 100%;
+      border: 1px solid rgba(0,0,0,.08);
+      border-radius: 8px;
+      background: #fff;
+    }
+    .contract-fullscreen-body iframe {
+      height: calc(100vh - 84px);
+      min-height: 520px;
+    }
     @media (max-width: 640px) {
       .doc-card-scroll { max-height: min(22vh, 180px); padding: 8px; }
       .doc-iframe { height: min(20vh, 160px) !important; min-height: 120px !important; }
@@ -101,6 +149,7 @@
       <p class="muted" style="font-size:13px; margin:0 0 8px;">Review the document below, then scroll down the page to enter your details and sign.</p>
       <div id="docViewer" class="doc-card-scroll"></div>
       <div class="body doc-card-scroll" id="bodyText" style="margin-top:10px; white-space:pre-wrap; line-height:1.6;"></div>
+      <button id="viewContractFullBtn" class="view-full-btn" type="button">View Contract (Full Screen)</button>
       <p class="muted" id="signedMeta"></p>
     </div>
     <div class="card sign-section" id="signCard">
@@ -124,6 +173,13 @@
       <p id="statusMsg" class="muted"></p>
     </div>
   </div>
+  <div id="contractFullscreen" class="contract-fullscreen" aria-hidden="true">
+    <div class="contract-fullscreen-head">
+      <strong>Contract</strong>
+      <button id="closeContractFullBtn" class="ghost" type="button">Back</button>
+    </div>
+    <div id="contractFullscreenBody" class="contract-fullscreen-body"></div>
+  </div>
   <script>
     (function () {
       const token = location.pathname.split('/').pop();
@@ -134,6 +190,10 @@
       const docMetaEl = document.getElementById('docMeta');
       const docViewerEl = document.getElementById('docViewer');
       const signedMetaEl = document.getElementById('signedMeta');
+      const viewContractFullBtn = document.getElementById('viewContractFullBtn');
+      const contractFullscreen = document.getElementById('contractFullscreen');
+      const contractFullscreenBody = document.getElementById('contractFullscreenBody');
+      const closeContractFullBtn = document.getElementById('closeContractFullBtn');
       const nameEl = document.getElementById('fullName');
       const dateEl = document.getElementById('signDate');
       const signBtn = document.getElementById('signBtn');
@@ -147,6 +207,8 @@
       let drawing = false;
       let hasInk = false;
       let signed = false;
+      let fullContractMode = 'none';
+      let fullContractPayload = '';
 
       function fillCanvasWhite() {
         ctx.save();
@@ -260,15 +322,23 @@
             if (lower.endsWith('.pdf')) {
               docViewerEl.innerHTML =
                 '<iframe class="doc-iframe" src="' + docUrl + '" title="Contract document"></iframe>';
+              fullContractMode = 'iframe';
+              fullContractPayload = docUrl;
             } else if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
               docViewerEl.innerHTML = '<img src="' + docUrl + '" alt="Contract document" style="max-width:100%;border:1px solid rgba(255,255,255,.1);border-radius:8px;" />';
+              fullContractMode = 'image';
+              fullContractPayload = docUrl;
             } else {
               docViewerEl.innerHTML = '';
+              fullContractMode = 'none';
+              fullContractPayload = '';
             }
           } else {
             bodyEl.style.display = '';
             docMetaEl.textContent = '';
             docViewerEl.innerHTML = '';
+            fullContractMode = 'html';
+            fullContractPayload = c.bodyHtml ? stripAutoSignatureSectionHtml(c.bodyHtml) : stripAutoSignatureSectionText(c.body || '');
           }
           if (c.status === 'signed') {
             setSignedUi();
@@ -342,6 +412,31 @@
       });
 
       clearBtn.addEventListener('click', clearSignature);
+      viewContractFullBtn.addEventListener('click', function () {
+        if (!contractFullscreen || !contractFullscreenBody) return;
+        if (fullContractMode === 'iframe' && fullContractPayload) {
+          contractFullscreenBody.innerHTML =
+            '<iframe src="' + fullContractPayload + '" title="Contract document full screen"></iframe>';
+        } else if (fullContractMode === 'image' && fullContractPayload) {
+          contractFullscreenBody.innerHTML =
+            '<img src="' + fullContractPayload + '" alt="Contract document full screen" />';
+        } else if (fullContractMode === 'html') {
+          contractFullscreenBody.innerHTML =
+            '<div class="body" style="white-space:pre-wrap;line-height:1.6;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;padding:14px;">' +
+            String(fullContractPayload || bodyEl.innerHTML || bodyEl.textContent || '') +
+            '</div>';
+        } else {
+          contractFullscreenBody.innerHTML =
+            '<p class="muted">No contract preview available.</p>';
+        }
+        contractFullscreen.classList.add('open');
+        contractFullscreen.setAttribute('aria-hidden', 'false');
+      });
+      closeContractFullBtn.addEventListener('click', function () {
+        contractFullscreen.classList.remove('open');
+        contractFullscreen.setAttribute('aria-hidden', 'true');
+        contractFullscreenBody.innerHTML = '';
+      });
       viewBtn.addEventListener('click', function () {
         if (!signed) return;
         window.open('/api/marketing-manager/contracts/sign/' + token + '/document', '_blank', 'noopener');
