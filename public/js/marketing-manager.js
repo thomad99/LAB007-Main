@@ -719,23 +719,26 @@
       frame?.classList.remove('mm-sig-saved');
       frame?.classList.add('mm-sig-saving');
       if (statusEl) statusEl.textContent = 'Saving…';
+      const t0 = Date.now();
+      const minSavingMs = 600;
       try {
         const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
         await api('/api/marketing-manager/agent-signature', {
           method: 'POST',
           body: JSON.stringify({ signatureDataUrl: dataUrl })
         });
+        const elapsed = Date.now() - t0;
+        if (elapsed < minSavingMs) await new Promise((r) => setTimeout(r, minSavingMs - elapsed));
+        frame?.classList.remove('mm-sig-saving');
+        frame?.classList.add('mm-sig-saved');
         state.agentSig = {
           hasSignature: true,
           signatureDataUrl: dataUrl,
           updatedAt: new Date().toISOString()
         };
-        frame?.classList.remove('mm-sig-saving');
-        frame?.classList.add('mm-sig-saved');
         if (statusEl) statusEl.textContent = 'Saved on server.';
-        window.setTimeout(() => frame?.classList.remove('mm-sig-saved'), 2800);
+        window.setTimeout(() => frame?.classList.remove('mm-sig-saved'), 3200);
       } catch (e) {
-        frame?.classList.remove('mm-sig-saving');
         alert(e.message);
       } finally {
         frame?.classList.remove('mm-sig-saving');
@@ -888,7 +891,7 @@
             <div class="mm-task-meta" style="margin-top:12px;">
               <input type="text" id="mm-contract-upload-title" class="mm-input" placeholder="Uploaded document title (optional)" />
               <input type="file" id="mm-contract-upload-file" class="mm-input" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" style="margin-top:8px;" />
-              <button type="button" class="btn-mm" id="mm-upload-contract" style="margin-top:8px;">Upload document for e-sign</button>
+              <button type="button" class="btn-mm" id="mm-upload-contract" style="margin-top:8px;">Create E-Sign Doc</button>
               <p class="mm-small">Supported: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG (max 25MB).</p>
             </div>
           </details>

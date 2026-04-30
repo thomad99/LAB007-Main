@@ -48,6 +48,10 @@ window.scrollToMarketingManager = function scrollToMarketingManager() {
       if (e.key === 'Enter') window.runAnalysis();
     });
   }
+  const analyzeBtn = document.getElementById('analyzeBtn');
+  if (analyzeBtn) {
+    analyzeBtn.addEventListener('click', () => window.runAnalysis());
+  }
 })();
 
 window.runAnalysis = async function runAnalysis() {
