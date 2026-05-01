@@ -2615,36 +2615,48 @@ function cleanAiParseIssuesFromText(text) {
 async function cleanAiAnalyzeImage(provider, parsed, systemPrompt) {
   const openAiKey = String(process.env.OPENAI_API_KEY || process.env.OPENAI_KEY || '').trim();
   const anthropicKey = String(process.env.ANTHROPIC_API_KEY || '').trim();
-  let text = '';
 
-  const runOpenAi = async () => {
-    if (!openAiKey) throw new Error('OPENAI_API_KEY not configured.');
-    text = await cleanAiVisionOpenAi(openAiKey, parsed.dataUrl, systemPrompt);
-  };
-  const runAnthropic = async () => {
-    if (!anthropicKey) throw new Error('ANTHROPIC_API_KEY not configured.');
-    text = await cleanAiVisionAnthropic(anthropicKey, parsed.mime, parsed.base64, systemPrompt);
-  };
+  async function parseOpenAi() {
+    const text = await cleanAiVisionOpenAi(openAiKey, parsed.dataUrl, systemPrompt);
+    return cleanAiParseIssuesFromText(text).issues || [];
+  }
+  async function parseAnthropic() {
+    const text = await cleanAiVisionAnthropic(anthropicKey, parsed.mime, parsed.base64, systemPrompt);
+    return cleanAiParseIssuesFromText(text).issues || [];
+  }
 
   if (provider === 'openai') {
-    await runOpenAi();
-  } else if (provider === 'claude') {
-    await runAnthropic();
-  } else {
-    if (openAiKey) {
-      try {
-        await runOpenAi();
-      } catch (eOpen) {
-        if (anthropicKey) await runAnthropic();
-        else throw eOpen;
-      }
-    } else if (anthropicKey) await runAnthropic();
-    else {
-      throw new Error('Configure OPENAI_API_KEY or ANTHROPIC_API_KEY.');
+    if (!openAiKey) throw new Error('OPENAI_API_KEY not configured.');
+    return parseOpenAi();
+  }
+  if (provider === 'claude') {
+    if (!anthropicKey) throw new Error('ANTHROPIC_API_KEY not configured.');
+    return parseAnthropic();
+  }
+
+  // Auto: OpenAI first; if it errors or finds zero issues, try Claude when a key exists (≤2 passes per frame).
+  if (!openAiKey && !anthropicKey) {
+    throw new Error('Configure OPENAI_API_KEY or ANTHROPIC_API_KEY.');
+  }
+
+  let fromOpenAi = [];
+
+  if (openAiKey) {
+    try {
+      fromOpenAi = await parseOpenAi();
+      if (fromOpenAi.length > 0 || !anthropicKey) return fromOpenAi;
+    } catch (eOpen) {
+      if (!anthropicKey) throw eOpen;
+      // First pass failed → second pass with Claude
+      return parseAnthropic();
     }
   }
 
-  return cleanAiParseIssuesFromText(text).issues || [];
+  try {
+    return await parseAnthropic();
+  } catch (eAnth) {
+    return fromOpenAi;
+  }
 }
 
 function cleanAiAppendCapture(sessionId, issues, parsedProvider) {

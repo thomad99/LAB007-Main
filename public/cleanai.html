@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#ffffff" />
+  <meta name="theme-color" content="#0d0d10" />
   <title>LAB007 CLEANAI</title>
   <meta name="description" content="LAB007 CLEANAI — room scan for cleaning issues" />
   <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
@@ -17,19 +17,34 @@
       height: 100dvh;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: #f4f4f5;
+      background: radial-gradient(120% 100% at 50% 0%, #17171c 0%, #070709 62%, #020203 100%);
       color: #111;
       -webkit-tap-highlight-color: transparent;
     }
     body {
-      padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0) env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
+      padding: calc(10px + env(safe-area-inset-top, 0))
+        calc(10px + env(safe-area-inset-right, 0))
+        calc(12px + env(safe-area-inset-bottom, 0))
+        calc(10px + env(safe-area-inset-left, 0));
     }
     .shell {
+      --phone-radius: clamp(26px, 8vw, 42px);
       display: flex;
       flex-direction: column;
       height: 100%;
       max-height: 100%;
       overflow: hidden;
+      border-radius: var(--phone-radius);
+      isolation: isolate;
+      /* Neon red lip + bloom around rounded handset edge */
+      box-shadow:
+        0 0 0 1px rgba(255, 180, 200, 0.25),
+        0 0 0 3px rgba(255, 32, 64, 0.95),
+        0 0 22px rgba(255, 0, 76, 0.55),
+        0 0 52px rgba(255, 0, 53, 0.32),
+        0 0 88px rgba(255, 0, 72, 0.12),
+        inset 0 0 0 1px rgba(255, 99, 120, 0.28),
+        inset 0 0 28px rgba(255, 0, 50, 0.07);
     }
     .topbar {
       flex: 0 0 auto;
@@ -235,12 +250,39 @@
       .panel-body select { padding: 11px 12px; }
     }
     @media (min-width: 600px) {
-      .shell { max-width: 480px; margin: 0 auto; border-left: 1px solid #e5e5e5; border-right: 1px solid #e5e5e5; }
-      body { background: #e8e8ea; }
+      body {
+        padding: calc(24px + env(safe-area-inset-top)) 28px calc(28px + env(safe-area-inset-bottom));
+        background:
+          radial-gradient(ellipse at 50% 0%, #2a1730 0%, transparent 55%),
+          radial-gradient(120% 90% at 50% 100%, #0a0a11 0%, #030305 70%);
+      }
+      .shell {
+        max-width: min(440px, 100%);
+        margin: 0 auto;
+      }
+    }
+
+    /** Full-screen attention pulse when new spots are flagged (skipped if prefers-reduced-motion) */
+    .clean-flash {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483646;
+      pointer-events: none;
+      background: linear-gradient(
+        160deg,
+        rgba(253, 224, 71, 0.55),
+        rgba(255, 255, 255, 0.65)
+      );
+      opacity: 0;
+      transition: opacity 0.045s linear;
+    }
+    .clean-flash.is-on {
+      opacity: 1;
     }
   </style>
 </head>
 <body>
+  <div id="cleanFlash" class="clean-flash" aria-hidden="true"></div>
   <div class="shell">
     <header class="topbar">
       <img src="/images/LAB007-GOLD-TRANS.PNG" alt="" decoding="async" style="width:36px;height:auto" />
@@ -271,13 +313,13 @@
         <div class="panel-body">
           <label for="provider">Vision API</label>
           <select id="provider" aria-label="Vision provider">
-            <option value="auto">Auto (try OpenAI, then Claude)</option>
+            <option value="auto">Auto — OpenAI, then Claude if no issues</option>
             <option value="openai">OpenAI</option>
             <option value="claude">Claude</option>
           </select>
           <a href="/cleanai/dashboard">Dashboard &amp; checklist</a>
           <p class="fine">
-            ~1 snapshot per second while recording; labels show on preview. Issues (not photos) are saved on disk until you stop, then your session report opens. AI guesses only—verify before chemicals or repairs.
+            Recording stops automatically after ~10 seconds (caps API cost per run). About 1 snapshot per second while active. When the AI flags <strong>more</strong> spots than the previous frame, the phone plays a short ding, flashes lightly, and may vibrate (Android)—mute switch can silence sounds on some devices; “Reduce motion” turns off flash. Labels show on preview; issues only (no photos) are logged until stop, then the report opens. Verify before chemicals or repairs.
           </p>
         </div>
       </details>
@@ -296,9 +338,89 @@
 
       var stream = null;
       var timer = null;
+      var autoStopTimer = null;
+      /** Max recording length — keeps per-session API volume predictable */
+      var AUTO_RECORD_MS = 10000;
+
+      function clearAutoStop() {
+        if (autoStopTimer) {
+          clearTimeout(autoStopTimer);
+          autoStopTimer = null;
+        }
+      }
+
       var busy = false;
       var sessionId = null;
       var maxLongEdge = 1280;
+
+      /** Count of issues returned on the prior successful analyze (for ding / flash edge detection). */
+      var prevIssueCount = 0;
+      /** Web Audio output for ding (created on tap). */
+      var audioRingCtx = null;
+
+      function respectsReducedFlash() {
+        try {
+          return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        } catch (e) {
+          return false;
+        }
+      }
+
+      function primeCleanAudioSync() {
+        try {
+          var AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return;
+          if (!audioRingCtx) audioRingCtx = new AC();
+          var p = audioRingCtx.resume && audioRingCtx.resume();
+          if (p && p.catch) p.catch(function () {});
+        } catch (e2) {}
+      }
+
+      function playCleanTone() {
+        try {
+          var AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return;
+          if (!audioRingCtx) audioRingCtx = new AC();
+          if (audioRingCtx.state === 'suspended') audioRingCtx.resume();
+
+          function chime(freqHz, delaySec, attackSec, sustainSec) {
+            var t0 = audioRingCtx.currentTime + delaySec;
+            var osc = audioRingCtx.createOscillator();
+            var g = audioRingCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freqHz;
+            g.gain.setValueAtTime(0.001, t0);
+            g.gain.exponentialRampToValueAtTime(0.11, t0 + Math.max(0.015, attackSec));
+            g.gain.exponentialRampToValueAtTime(0.001, t0 + sustainSec + attackSec);
+            osc.connect(g);
+            g.connect(audioRingCtx.destination);
+            osc.start(t0);
+            osc.stop(t0 + sustainSec + attackSec + 0.04);
+          }
+
+          chime(932, 0, 0.02, 0.09);
+          chime(1397, 0.11, 0.02, 0.13);
+        } catch (e3) {}
+      }
+
+      function pulseScreenFlash() {
+        if (respectsReducedFlash()) return;
+        var el = document.getElementById('cleanFlash');
+        if (!el) return;
+        el.classList.add('is-on');
+        window.setTimeout(function () {
+          el.classList.remove('is-on');
+        }, 110);
+      }
+
+      /** When new cleanup spots appear (count goes up vs last frame). */
+      function signalNewCleaningFindings() {
+        playCleanTone();
+        pulseScreenFlash();
+        try {
+          if (navigator.vibrate) navigator.vibrate([30, 60, 25]);
+        } catch (v) {}
+      }
 
       function setStatus(text) {
         statusBar.textContent = text || '';
@@ -370,7 +492,12 @@
           })
           .then(function (data) {
             var issues = data.issues || [];
-            setStatus(issues.length ? issues.length + ' issue(s) — last frame' : 'Clean — last frame');
+            var n = issues.length;
+            if (n > prevIssueCount && n > 0) {
+              signalNewCleaningFindings();
+            }
+            prevIssueCount = n;
+            setStatus(n ? n + ' issue(s) — last frame' : 'Clean — last frame');
             renderIssues(issues);
           })
           .catch(function (err) {
@@ -382,8 +509,11 @@
       }
 
       async function start() {
+        primeCleanAudioSync();
+        prevIssueCount = 0;
         setStatus('');
         clearOverlay();
+        clearAutoStop();
         btnStart.disabled = true;
         providerSel.disabled = true;
         try {
@@ -411,7 +541,11 @@
           if (timer) clearInterval(timer);
           timer = setInterval(captureAndAnalyze, 1000);
           btnStop.disabled = false;
-          setStatus('Recording… ~1 fps');
+          setStatus('Recording… ~10s max, ~1 fps');
+          autoStopTimer = setTimeout(function () {
+            autoStopTimer = null;
+            stop();
+          }, AUTO_RECORD_MS);
         } catch (err) {
           try {
             if (sessionId) {
@@ -421,11 +555,13 @@
           sessionId = null;
           btnStart.disabled = false;
           providerSel.disabled = false;
+          clearAutoStop();
           setStatus((err.message || 'Camera error').slice(0, 140));
         }
       }
 
       function releaseCamera() {
+        clearAutoStop();
         if (timer) {
           clearInterval(timer);
           timer = null;
