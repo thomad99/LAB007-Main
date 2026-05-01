@@ -2682,6 +2682,21 @@ function cleanAiAppendCapture(sessionId, issues, parsedProvider) {
   return sess;
 }
 
+/** Count issues in captures; by default excludes items marked dismissed on the report. */
+function cleanAiCountIssuesInCaptures(captures, excludeDismissed = true) {
+  let issueTouches = 0;
+  const byType = {};
+  for (const c of captures || []) {
+    for (const issue of Array.isArray(c.issues) ? c.issues : []) {
+      if (excludeDismissed && issue.dismissed) continue;
+      issueTouches++;
+      const t = String(issue.type || 'other').toLowerCase();
+      byType[t] = (byType[t] || 0) + 1;
+    }
+  }
+  return { issueTouches, byType };
+}
+
 function cleanAiListSessionsBrief() {
   let files = [];
   try {
@@ -2696,15 +2711,9 @@ function cleanAiListSessionsBrief() {
       const s = JSON.parse(fs.readFileSync(fp, 'utf8'));
       if (!s || !s.id) continue;
       const caps = Array.isArray(s.captures) ? s.captures : [];
-      let issueTouches = 0;
-      const types = {};
-      for (const c of caps) {
-        for (const issue of Array.isArray(c.issues) ? c.issues : []) {
-          issueTouches++;
-          const t = String(issue.type || 'other').toLowerCase();
-          types[t] = (types[t] || 0) + 1;
-        }
-      }
+      const agg = cleanAiCountIssuesInCaptures(caps, true);
+      const issueTouches = agg.issueTouches;
+      const types = agg.byType;
       sessions.push({
         id: s.id,
         startedAt: s.startedAt || null,
@@ -2733,12 +2742,10 @@ function cleanAiGlobalStatsFromDisk() {
     if (!sess || !Array.isArray(sess.captures)) continue;
     if (sess.stoppedAt) completed++;
     captures += sess.captures.length;
-    for (const cap of sess.captures) {
-      for (const issue of Array.isArray(cap.issues) ? cap.issues : []) {
-        issuesTotal++;
-        const t = String(issue.type || 'other').toLowerCase();
-        byType[t] = (byType[t] || 0) + 1;
-      }
+    const agg = cleanAiCountIssuesInCaptures(sess.captures, true);
+    issuesTotal += agg.issueTouches;
+    for (const [t, n] of Object.entries(agg.byType)) {
+      byType[t] = (byType[t] || 0) + n;
     }
   }
   return {
@@ -2802,17 +2809,14 @@ app.post('/api/cleanai/sessions/:sessionId/stop', (req, res) => {
     if (!sess.provider) sess.provider = 'auto';
     writeCleanAiSession(sess);
 
-    let issueTouches = 0;
-    const byType = {};
+    const aggStop = cleanAiCountIssuesInCaptures(sess.captures, true);
+    const issueTouches = aggStop.issueTouches;
+    const byType = aggStop.byType;
     const timeline = [];
     for (const c of sess.captures || []) {
-      for (const issue of Array.isArray(c.issues) ? c.issues : []) {
-        issueTouches++;
-        const t = String(issue.type || 'other').toLowerCase();
-        byType[t] = (byType[t] || 0) + 1;
-      }
       if (Array.isArray(c.issues)) {
         for (const issue of c.issues) {
+          if (issue.dismissed) continue;
           timeline.push({
             at: c.at,
             label: issue.label,
@@ -2856,26 +2860,51 @@ app.get('/api/cleanai/sessions/:sessionId', (req, res) => {
     const sess = readCleanAiSession(sessionId);
     if (!sess) return res.status(404).json({ error: 'Session not found' });
 
-    let issueTouches = 0;
-    const byType = {};
-    for (const c of sess.captures || []) {
-      for (const issue of Array.isArray(c.issues) ? c.issues : []) {
-        issueTouches++;
-        const t = String(issue.type || 'other').toLowerCase();
-        byType[t] = (byType[t] || 0) + 1;
-      }
-    }
+    const agg = cleanAiCountIssuesInCaptures(sess.captures, true);
     return res.json({
       ok: true,
       session: sess,
       summary: {
         captureCount: (sess.captures || []).length,
-        issueOccurrences: issueTouches,
-        byType
+        issueOccurrences: agg.issueTouches,
+        byType: agg.byType
       }
     });
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Failed to load session' });
+  }
+});
+
+app.post('/api/cleanai/sessions/:sessionId/dismiss-issue', (req, res) => {
+  try {
+    const sessionId = String(req.params.sessionId || '').trim();
+    const captureAt = String(req.body?.captureAt || '').trim();
+    const issueIndex = Number(req.body?.issueIndex);
+    if (!captureAt) return res.status(400).json({ error: 'captureAt is required' });
+    if (!Number.isInteger(issueIndex) || issueIndex < 0) {
+      return res.status(400).json({ error: 'issueIndex must be a non-negative integer' });
+    }
+    const sess = readCleanAiSession(sessionId);
+    if (!sess) return res.status(404).json({ error: 'Session not found' });
+    const cap = (sess.captures || []).find((c) => c.at === captureAt);
+    if (!cap || !Array.isArray(cap.issues) || issueIndex >= cap.issues.length) {
+      return res.status(404).json({ error: 'Capture or issue not found' });
+    }
+    cap.issues[issueIndex] = { ...cap.issues[issueIndex], dismissed: true };
+    cap.issueCount = cap.issues.filter((x) => !x.dismissed).length;
+    sess.updatedAt = new Date().toISOString();
+    writeCleanAiSession(sess);
+    const agg = cleanAiCountIssuesInCaptures(sess.captures, true);
+    return res.json({
+      ok: true,
+      summary: {
+        captureCount: (sess.captures || []).length,
+        issueOccurrences: agg.issueTouches,
+        byType: agg.byType
+      }
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Dismiss failed' });
   }
 });
 

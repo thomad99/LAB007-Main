@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0d0d10" />
+  <meta name="theme-color" content="#f8fafc" />
   <title>LAB007 CLEANAI</title>
   <meta name="description" content="LAB007 CLEANAI — room scan for cleaning issues" />
   <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
@@ -17,34 +17,21 @@
       height: 100dvh;
       overflow: hidden;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: radial-gradient(120% 100% at 50% 0%, #17171c 0%, #070709 62%, #020203 100%);
+      background: #f1f5f9;
       color: #111;
       -webkit-tap-highlight-color: transparent;
     }
     body {
-      padding: calc(10px + env(safe-area-inset-top, 0))
-        calc(10px + env(safe-area-inset-right, 0))
-        calc(12px + env(safe-area-inset-bottom, 0))
-        calc(10px + env(safe-area-inset-left, 0));
+      padding: env(safe-area-inset-top, 0) env(safe-area-inset-right, 0)
+        env(safe-area-inset-bottom, 0) env(safe-area-inset-left, 0);
     }
     .shell {
-      --phone-radius: clamp(26px, 8vw, 42px);
       display: flex;
       flex-direction: column;
       height: 100%;
       max-height: 100%;
       overflow: hidden;
-      border-radius: var(--phone-radius);
-      isolation: isolate;
-      /* Neon red lip + bloom around rounded handset edge */
-      box-shadow:
-        0 0 0 1px rgba(255, 180, 200, 0.25),
-        0 0 0 3px rgba(255, 32, 64, 0.95),
-        0 0 22px rgba(255, 0, 76, 0.55),
-        0 0 52px rgba(255, 0, 53, 0.32),
-        0 0 88px rgba(255, 0, 72, 0.12),
-        inset 0 0 0 1px rgba(255, 99, 120, 0.28),
-        inset 0 0 28px rgba(255, 0, 50, 0.07);
+      background: #fff;
     }
     .topbar {
       flex: 0 0 auto;
@@ -54,7 +41,7 @@
       gap: 10px;
       padding: 8px 12px;
       background: #fff;
-      border-bottom: 1px solid #e5e5e5;
+      border-bottom: 1px solid #e5e7eb;
     }
     .topbar img {
       width: 36px;
@@ -67,6 +54,11 @@
       font-weight: 700;
       letter-spacing: 0.06em;
     }
+
+    /**
+     * Camera area — neon outline only (no rounded “phone” chrome).
+     * idle: cyan-blue · recording: green · shutter: white pulse · hit: red pulse
+     */
     .view-panel {
       flex: 1 1 auto;
       min-height: 0;
@@ -76,7 +68,35 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      position: relative;
+      transition: box-shadow 0.2s ease;
     }
+    .view-panel.edge-idle {
+      box-shadow:
+        inset 0 0 0 3px rgba(56, 189, 248, 0.95),
+        0 0 22px rgba(14, 165, 233, 0.45),
+        0 0 44px rgba(56, 189, 248, 0.18);
+    }
+    .view-panel.edge-recording {
+      box-shadow:
+        inset 0 0 0 3px rgba(74, 222, 128, 0.98),
+        0 0 26px rgba(34, 197, 94, 0.5),
+        0 0 52px rgba(74, 222, 128, 0.22);
+    }
+    .view-panel.edge-shutter {
+      box-shadow:
+        inset 0 0 0 8px rgba(255, 255, 255, 0.92),
+        0 0 48px rgba(255, 255, 255, 0.55) !important;
+      transition: box-shadow 0.04s ease-out;
+    }
+    .view-panel.edge-hit {
+      box-shadow:
+        inset 0 0 0 4px rgba(248, 113, 113, 0.98),
+        0 0 36px rgba(239, 68, 68, 0.65),
+        0 0 64px rgba(220, 38, 38, 0.35) !important;
+      transition: box-shadow 0.08s ease-out;
+    }
+
     .stage {
       position: relative;
       width: 100%;
@@ -96,29 +116,44 @@
       padding: 0;
       min-height: 0;
     }
-    /* Wraps scaled canvas so overlay percentages match pixels */
+
     .preview-frame {
       position: relative;
-      display: block;
-      max-width: 100%;
+      width: 100%;
+      height: 100%;
       max-height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       line-height: 0;
     }
-    video {
-      position: absolute;
-      width: 0;
-      height: 0;
-      opacity: 0;
-      pointer-events: none;
-    }
-    canvas#liveView {
-      display: block;
-      width: auto;
-      height: auto;
-      max-width: 100%;
+
+    video#cam {
+      display: none;
+      width: 100%;
+      height: 100%;
       max-height: 100%;
       object-fit: contain;
+      background: #000;
+      position: relative;
+      z-index: 1;
     }
+    .preview-frame.is-live video#cam {
+      display: block;
+    }
+
+    /* Hidden canvas — still receives drawImage for JPEG upload */
+    canvas#liveView {
+      position: absolute;
+      width: 1px;
+      height: 1px;
+      opacity: 0;
+      pointer-events: none;
+      bottom: 0;
+      right: 0;
+      overflow: hidden;
+    }
+
     .preview-frame .overlay {
       position: absolute;
       left: 0;
@@ -126,7 +161,9 @@
       width: 100%;
       height: 100%;
       pointer-events: none;
+      z-index: 2;
     }
+
     .tag {
       position: absolute;
       border: 2px solid rgba(251, 191, 36, 0.95);
@@ -155,10 +192,11 @@
       margin-top: 4px;
       margin-bottom: 0;
     }
+
     .control-panel {
       flex: 0 0 auto;
       background: #fff;
-      border-top: 1px solid #e5e5e5;
+      border-top: 1px solid #e5e7eb;
       padding: 12px;
       padding-bottom: max(12px, env(safe-area-inset-bottom, 12px));
     }
@@ -199,7 +237,7 @@
     }
     details.panel-more {
       margin-top: 10px;
-      border: 1px solid #e5e5e5;
+      border: 1px solid #e5e7eb;
       border-radius: 10px;
       padding: 0 12px;
       font-size: 0.82rem;
@@ -250,51 +288,29 @@
       .panel-body select { padding: 11px 12px; }
     }
     @media (min-width: 600px) {
-      body {
-        padding: calc(24px + env(safe-area-inset-top)) 28px calc(28px + env(safe-area-inset-bottom));
-        background:
-          radial-gradient(ellipse at 50% 0%, #2a1730 0%, transparent 55%),
-          radial-gradient(120% 90% at 50% 100%, #0a0a11 0%, #030305 70%);
-      }
+      body { background: #e2e8f0; }
       .shell {
-        max-width: min(440px, 100%);
+        max-width: 520px;
         margin: 0 auto;
+        border-left: 1px solid #e5e7eb;
+        border-right: 1px solid #e5e7eb;
       }
-    }
-
-    /** Full-screen attention pulse when new spots are flagged (skipped if prefers-reduced-motion) */
-    .clean-flash {
-      position: fixed;
-      inset: 0;
-      z-index: 2147483646;
-      pointer-events: none;
-      background: linear-gradient(
-        160deg,
-        rgba(253, 224, 71, 0.55),
-        rgba(255, 255, 255, 0.65)
-      );
-      opacity: 0;
-      transition: opacity 0.045s linear;
-    }
-    .clean-flash.is-on {
-      opacity: 1;
     }
   </style>
 </head>
 <body>
-  <div id="cleanFlash" class="clean-flash" aria-hidden="true"></div>
   <div class="shell">
     <header class="topbar">
       <img src="/images/LAB007-GOLD-TRANS.PNG" alt="" decoding="async" style="width:36px;height:auto" />
       <h1>CLEANAI</h1>
     </header>
 
-    <section class="view-panel" aria-label="Camera preview">
+    <section class="view-panel edge-idle" id="viewPanel" aria-label="Camera preview">
       <div class="stage" id="stage">
         <div class="stage-inner" id="stageInner">
-          <video id="cam" playsinline muted></video>
-          <div class="preview-frame">
-            <canvas id="liveView"></canvas>
+          <div class="preview-frame" id="previewFrame">
+            <video id="cam" playsinline muted></video>
+            <canvas id="liveView" width="2" height="2"></canvas>
             <div class="overlay" id="overlay" aria-hidden="true"></div>
           </div>
         </div>
@@ -319,7 +335,7 @@
           </select>
           <a href="/cleanai/dashboard">Dashboard &amp; checklist</a>
           <p class="fine">
-            Recording stops automatically after ~10 seconds (caps API cost per run). About 1 snapshot per second while active. When the AI flags <strong>more</strong> spots than the previous frame, the phone plays a short ding, flashes lightly, and may vibrate (Android)—mute switch can silence sounds on some devices; “Reduce motion” turns off flash. Labels show on preview; issues only (no photos) are logged until stop, then the report opens. Verify before chemicals or repairs.
+            Recording stops after ~15 seconds. Live camera stays on; each ~1s snapshot flashes a <strong>white</strong> rim (shutter). Outline is <strong>blue</strong> when idle, <strong>green</strong> while recording, <strong>red</strong> briefly when new spots are detected (plus optional ding / vibrate). Labels draw over the live feed. Verify before chemicals or repairs.
           </p>
         </div>
       </details>
@@ -331,6 +347,8 @@
       var cam = document.getElementById('cam');
       var liveView = document.getElementById('liveView');
       var overlay = document.getElementById('overlay');
+      var previewFrame = document.getElementById('previewFrame');
+      var viewPanel = document.getElementById('viewPanel');
       var btnStart = document.getElementById('btnStart');
       var btnStop = document.getElementById('btnStop');
       var statusBar = document.getElementById('statusBar');
@@ -339,8 +357,7 @@
       var stream = null;
       var timer = null;
       var autoStopTimer = null;
-      /** Max recording length — keeps per-session API volume predictable */
-      var AUTO_RECORD_MS = 10000;
+      var AUTO_RECORD_MS = 15000;
 
       function clearAutoStop() {
         if (autoStopTimer) {
@@ -353,9 +370,7 @@
       var sessionId = null;
       var maxLongEdge = 1280;
 
-      /** Count of issues returned on the prior successful analyze (for ding / flash edge detection). */
       var prevIssueCount = 0;
-      /** Web Audio output for ding (created on tap). */
       var audioRingCtx = null;
 
       function respectsReducedFlash() {
@@ -364,6 +379,32 @@
         } catch (e) {
           return false;
         }
+      }
+
+      function setEdgeIdle() {
+        viewPanel.classList.remove('edge-recording', 'edge-shutter', 'edge-hit');
+        viewPanel.classList.add('edge-idle');
+      }
+
+      function setEdgeRecording() {
+        viewPanel.classList.remove('edge-idle', 'edge-shutter', 'edge-hit');
+        viewPanel.classList.add('edge-recording');
+      }
+
+      function pulseShutterWhite() {
+        if (respectsReducedFlash()) return;
+        viewPanel.classList.add('edge-shutter');
+        window.setTimeout(function () {
+          viewPanel.classList.remove('edge-shutter');
+        }, 72);
+      }
+
+      function pulseEdgeRed() {
+        if (respectsReducedFlash()) return;
+        viewPanel.classList.add('edge-hit');
+        window.setTimeout(function () {
+          viewPanel.classList.remove('edge-hit');
+        }, 420);
       }
 
       function primeCleanAudioSync() {
@@ -403,20 +444,9 @@
         } catch (e3) {}
       }
 
-      function pulseScreenFlash() {
-        if (respectsReducedFlash()) return;
-        var el = document.getElementById('cleanFlash');
-        if (!el) return;
-        el.classList.add('is-on');
-        window.setTimeout(function () {
-          el.classList.remove('is-on');
-        }, 110);
-      }
-
-      /** When new cleanup spots appear (count goes up vs last frame). */
       function signalNewCleaningFindings() {
         playCleanTone();
-        pulseScreenFlash();
+        pulseEdgeRed();
         try {
           if (navigator.vibrate) navigator.vibrate([30, 60, 25]);
         } catch (v) {}
@@ -471,6 +501,7 @@
       function captureAndAnalyze() {
         if (!stream || busy || !sessionId) return;
         if (cam.readyState < cam.HAVE_METADATA) return;
+        pulseShutterWhite();
         var ctx = liveView.getContext('2d');
         if (!sizeCanvasFromVideo(ctx)) return;
         busy = true;
@@ -538,10 +569,13 @@
           });
           cam.srcObject = stream;
           await cam.play();
+          previewFrame.classList.add('is-live');
+          setEdgeRecording();
+
           if (timer) clearInterval(timer);
           timer = setInterval(captureAndAnalyze, 1000);
           btnStop.disabled = false;
-          setStatus('Recording… ~10s max, ~1 fps');
+          setStatus('Recording… ~15s max, live camera, ~1 fps');
           autoStopTimer = setTimeout(function () {
             autoStopTimer = null;
             stop();
@@ -553,6 +587,8 @@
             }
           } catch (ignore) {}
           sessionId = null;
+          previewFrame.classList.remove('is-live');
+          setEdgeIdle();
           btnStart.disabled = false;
           providerSel.disabled = false;
           clearAutoStop();
@@ -562,6 +598,8 @@
 
       function releaseCamera() {
         clearAutoStop();
+        previewFrame.classList.remove('is-live');
+        setEdgeIdle();
         if (timer) {
           clearInterval(timer);
           timer = null;
@@ -578,7 +616,9 @@
         busy = false;
         clearOverlay();
         var c = liveView.getContext('2d');
-        c.clearRect(0, 0, liveView.width, liveView.height);
+        if (liveView.width && liveView.height) {
+          c.clearRect(0, 0, liveView.width, liveView.height);
+        }
       }
 
       function stop() {

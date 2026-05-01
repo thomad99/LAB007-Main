@@ -7,41 +7,253 @@
   <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
   <style>
     * { box-sizing: border-box; }
-    body { margin: 0; font-family: system-ui, sans-serif; background: #fff; color: #111; padding: 20px 16px 48px; }
-    .wrap { max-width: 680px; margin: 0 auto; }
-    .logo { width: 120px; display: block; margin: 0 auto 12px; }
-    h1 { text-align: center; font-size: 1.5rem; margin: 0 0 6px; }
-    .muted { color: #555; text-align: center; font-size: 0.92rem; margin-bottom: 20px; }
-    .pill { display: inline-block; background: #f3f4f6; border-radius: 999px; padding: 4px 10px; font-size: 0.82rem; margin: 4px 4px 0 0; }
-    .toolbar { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; margin-bottom: 20px; }
-    .toolbar a { color: #0066cc; font-weight: 600; text-decoration: none; }
-    .card { border: 1px solid #e5e7eb; border-radius: 12px; padding: 14px 16px; margin-bottom: 14px; }
-    .cap-title { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: #64748b; margin-bottom: 8px; }
-    ul.issue-list { padding-left: 18px; margin: 8px 0 0; }
-    ul.issue-list li { margin-bottom: 8px; line-height: 1.38; }
-    code { font-size: 0.78rem; word-break: break-all; background: #f9fafb; padding: 2px 5px; border-radius: 4px; }
-    .stat-row { margin-top: 10px; font-size: 0.95rem; }
-    .empty { color: #888; text-align: center; padding: 24px 8px; }
-    small.type-hint { opacity: 0.75; font-weight: normal; margin-left: 4px; }
+    :root {
+      --ca-navy-1: #1e3a8a;
+      --ca-navy-2: #172554;
+      --ca-navy-3: #0f172a;
+      --ca-tile-border: rgba(147, 197, 253, 0.42);
+      --ca-page-bg: #f1f5f9;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+      background: var(--ca-page-bg);
+      color: #0f172a;
+      padding: 22px 16px 48px;
+    }
+    .wrap { max-width: 760px; margin: 0 auto; }
+
+    .ca-logo {
+      width: min(200px, 52vw);
+      height: auto;
+      display: block;
+      margin: 0 auto 12px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: clamp(1.35rem, 4vw, 1.6rem);
+      margin: 0 0 8px;
+      font-weight: 800;
+      letter-spacing: 0.03em;
+      color: var(--ca-navy-2);
+    }
+
+    .muted {
+      color: #475569;
+      text-align: center;
+      font-size: 0.88rem;
+      margin-bottom: 16px;
+      line-height: 1.45;
+    }
+    .muted code {
+      font-size: 0.78rem;
+      background: #e2e8f0;
+      padding: 2px 6px;
+      border-radius: 6px;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-bottom: 22px;
+    }
+    .toolbar a {
+      font-weight: 700;
+      color: var(--ca-navy-1);
+      text-decoration: none;
+      padding: 8px 4px;
+      border-bottom: 2px solid transparent;
+    }
+    .toolbar a:hover { border-bottom-color: var(--ca-navy-1); }
+
+    /** Full-viewport-width primary CTA on phones */
+    .ca-new-capture-bleed {
+      margin-bottom: 22px;
+      margin-left: -16px;
+      margin-right: -16px;
+    }
+    .ca-btn-new-capture {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 56px;
+      padding: 18px 20px;
+      font-size: 1.05rem;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #fff;
+      text-decoration: none;
+      border: 1px solid var(--ca-tile-border);
+      border-radius: 0;
+      background: linear-gradient(155deg, #2563eb 0%, var(--ca-navy-1) 42%, var(--ca-navy-2) 100%);
+      box-shadow:
+        0 10px 32px rgba(30, 58, 138, 0.38),
+        inset 0 1px 0 rgba(255, 255, 255, 0.12);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .ca-btn-new-capture:active {
+      filter: brightness(1.05);
+      transform: scale(0.995);
+    }
+    @media (min-width: 600px) {
+      .ca-new-capture-bleed {
+        margin-left: 0;
+        margin-right: 0;
+      }
+      .ca-btn-new-capture {
+        border-radius: 14px;
+      }
+    }
+
+    .ca-banner-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(min(100%, 132px), 1fr));
+      gap: 10px;
+      margin-bottom: 22px;
+    }
+
+    .ca-banner-tile {
+      background: linear-gradient(155deg, var(--ca-navy-1) 0%, var(--ca-navy-2) 52%, var(--ca-navy-3) 100%);
+      color: #fff;
+      border-radius: 14px;
+      padding: 14px 12px;
+      text-align: center;
+      border: 1px solid var(--ca-tile-border);
+      box-shadow:
+        0 10px 26px rgba(30, 58, 138, 0.26),
+        inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    }
+    .ca-banner-tile b {
+      font-size: 1.35rem;
+      font-weight: 800;
+      display: block;
+      letter-spacing: -0.02em;
+    }
+    .ca-banner-tile span {
+      font-size: 0.65rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      opacity: 0.92;
+      margin-top: 6px;
+      display: block;
+      font-weight: 600;
+    }
+
+    .ca-time-strip {
+      font-size: 0.82rem;
+      color: #475569;
+      text-align: center;
+      margin-bottom: 22px;
+      padding: 12px 14px;
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+    }
+
+    .snapshot-card {
+      background: #fff;
+      border-radius: 14px;
+      border: 1px solid #e2e8f0;
+      padding: 14px 14px 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 4px 14px rgba(15, 23, 42, 0.06);
+    }
+
+    .cap-title {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.07em;
+      color: #64748b;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .ca-issue-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: stretch;
+    }
+
+    .ca-issue-tile {
+      position: relative;
+      flex: 1 1 160px;
+      min-width: min(100%, 148px);
+      max-width: 100%;
+      padding: 14px 42px 14px 14px;
+      border-radius: 14px;
+      background: linear-gradient(145deg, #2563eb 0%, var(--ca-navy-1) 42%, var(--ca-navy-2) 100%);
+      color: #fff;
+      border: 1px solid var(--ca-tile-border);
+      box-shadow: 0 6px 18px rgba(30, 58, 138, 0.22);
+    }
+
+    .ca-issue-tile .lbl {
+      font-size: 0.92rem;
+      font-weight: 700;
+      line-height: 1.35;
+      margin: 0;
+    }
+
+    .ca-issue-tile .typ {
+      font-size: 0.72rem;
+      opacity: 0.88;
+      margin-top: 6px;
+      font-weight: 600;
+      text-transform: capitalize;
+    }
+
+    .ca-dismiss {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      width: 34px;
+      height: 34px;
+      padding: 0;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.18);
+      color: rgba(255, 255, 255, 0.95);
+      transition: background 0.15s;
+    }
+    .ca-dismiss:hover { background: rgba(248, 113, 113, 0.45); }
+    .ca-dismiss:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .empty-snap {
+      font-size: 0.88rem;
+      color: #64748b;
+      margin: 4px 0 0;
+    }
+
+    .empty { color: #64748b; text-align: center; padding: 28px 12px; font-size: 0.92rem; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <img class="logo" src="/images/LAB007-GOLD-TRANS.PNG" alt="LAB007" />
+    <img class="ca-logo" src="/images/LAB007-LOGO-TRANS.png" alt="LAB007" />
     <h1>CLEANAI scan report</h1>
     <p class="muted" id="subhead">Loading…</p>
 
     <div class="toolbar">
-      <a href="/cleanai">← New scan</a>
       <a href="/cleanai/dashboard">Dashboard</a>
     </div>
 
-    <div id="summary" style="display:none" class="card">
-      <span class="pill" id="sumProvider"></span>
-      <span class="pill" id="sumCaptures"></span>
-      <span class="pill" id="sumIssues"></span>
-      <div class="stat-row" id="byTypeWrap"></div>
-      <div class="stat-row" style="margin-top:8px;font-size:0.82rem;color:#64748b" id="timeRange"></div>
+    <div class="ca-new-capture-bleed">
+      <a href="/cleanai" class="ca-btn-new-capture">New capture</a>
+    </div>
+
+    <div id="bannerArea" style="display:none">
+      <div class="ca-banner-grid" id="statBanner" aria-label="Session summary"></div>
+      <div class="ca-time-strip" id="timeRange"></div>
     </div>
 
     <div id="timeline"></div>
@@ -50,6 +262,12 @@
 
   <script>
     (function () {
+      var TRASH_SVG =
+        '<svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/>' +
+        '<path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>' +
+        '<line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>';
+
       function sessionIdFromPath() {
         var m = window.location.pathname.match(/\/cleanai\/report\/([^/]+)/);
         return m ? decodeURIComponent(m[1]) : '';
@@ -85,108 +303,193 @@
         }
       }
 
-      var id = sessionIdFromPath();
-      var subhead = document.getElementById('subhead');
-
-      if (!id) {
-        subhead.textContent = 'Missing session.';
-        var fb = document.getElementById('fallback');
-        fb.style.display = 'block';
-        fb.textContent = 'Open this page from CLEANAI after you stop a scan.';
-        return;
+      function sessionDurationLabel(startedAt, stoppedAt) {
+        try {
+          var a = new Date(startedAt).getTime();
+          var b = new Date(stoppedAt || Date.now()).getTime();
+          var sec = Math.max(0, Math.round((b - a) / 1000));
+          if (sec < 60) return sec + 's';
+          var m = Math.floor(sec / 60);
+          var s = sec % 60;
+          return m + 'm ' + s + 's';
+        } catch (e) {
+          return '—';
+        }
       }
 
-      subhead.innerHTML = 'Session ID: <code>' + id + '</code>';
+      var sessionId = sessionIdFromPath();
+      var subhead = document.getElementById('subhead');
 
-      fetch('/api/cleanai/sessions/' + encodeURIComponent(id))
-        .then(function (r) {
-          return r.json().then(function (j) {
-            if (!r.ok) throw new Error(j.error || 'Could not load');
-            return j;
-          });
-        })
-        .then(function (data) {
-          var S = data.session;
-          document.getElementById('summary').style.display = 'block';
+      function renderBanner(S, summary) {
+        var grid = document.getElementById('statBanner');
+        grid.innerHTML = '';
 
-          document.getElementById('sumProvider').textContent = 'Vision: ' + (S.provider || 'auto');
-          document.getElementById('sumCaptures').textContent =
-            'Captures: ' + ((S.captures || []).length);
-          document.getElementById('sumIssues').textContent =
-            'Issues logged: ' + (data.summary && data.summary.issueOccurrences !== undefined
-              ? data.summary.issueOccurrences
-              : 0);
+        var tiles = [
+          { v: S.provider || 'auto', l: 'Vision' },
+          { v: String((S.captures || []).length), l: 'Captures' },
+          {
+            v: String(summary.issueOccurrences != null ? summary.issueOccurrences : 0),
+            l: 'Active issues'
+          },
+          {
+            v: String(Object.keys(summary.byType || {}).length),
+            l: 'Issue types'
+          },
+          { v: sessionDurationLabel(S.startedAt, S.stoppedAt), l: 'Duration' }
+        ];
 
-          var byType =
-            data.summary && data.summary.byType && typeof data.summary.byType === 'object'
-              ? data.summary.byType
-              : {};
-          var bw = document.getElementById('byTypeWrap');
-          bw.innerHTML = '<strong>By type:</strong><br>';
-          var keys = Object.keys(byType);
-          if (!keys.length) {
-            bw.appendChild(document.createTextNode('none'));
-          } else {
-            keys.sort();
-            keys.forEach(function (k) {
-              var span = document.createElement('span');
-              span.className = 'pill';
-              span.textContent = typePretty(k) + ' × ' + byType[k];
-              bw.appendChild(span);
-            });
-          }
+        tiles.forEach(function (t) {
+          var div = document.createElement('div');
+          div.className = 'ca-banner-tile';
+          var b = document.createElement('b');
+          b.textContent = t.v;
+          var s = document.createElement('span');
+          s.textContent = t.l;
+          div.appendChild(b);
+          div.appendChild(s);
+          grid.appendChild(div);
+        });
 
-          var tr = document.getElementById('timeRange');
-          tr.textContent =
-            'Recorded: ' + formatAt(S.startedAt || '') +
-            (S.stoppedAt ? ' → ' + formatAt(S.stoppedAt) : ' (still open/no end stamped)');
+        document.getElementById('timeRange').textContent =
+          'Recorded: ' +
+          formatAt(S.startedAt || '') +
+          (S.stoppedAt ? ' → ' + formatAt(S.stoppedAt) : ' (session still open)');
+      }
 
-          var tl = document.getElementById('timeline');
-          var frames = Array.isArray(S.captures) ? S.captures : [];
-          var fbEl = document.getElementById('fallback');
-
-          if (!frames.length) {
-            fbEl.style.display = 'block';
-            fbEl.textContent = 'No snapshots were logged for this session.';
-            return;
-          }
-
-          frames.forEach(function (f) {
-            var card = document.createElement('div');
-            card.className = 'card';
-            var capTitle = document.createElement('div');
-            capTitle.className = 'cap-title';
-            var n = Array.isArray(f.issues) ? f.issues.length : 0;
-            capTitle.textContent = 'Snapshot — ' + formatAt(f.at) + ' · ' + n + ' issue' + (n === 1 ? '' : 's');
-            card.appendChild(capTitle);
-
-            var list = document.createElement('ul');
-            list.className = 'issue-list';
-            var issues = Array.isArray(f.issues) ? f.issues : [];
-            if (!issues.length) {
-              var liEmpty = document.createElement('li');
-              liEmpty.textContent = '(no issues)';
-              list.appendChild(liEmpty);
-            } else {
-              issues.forEach(function (issue) {
-                var li = document.createElement('li');
-                var label = issue.label || 'Issue';
-                li.appendChild(document.createTextNode(label));
-                var hint = document.createElement('small');
-                hint.className = 'type-hint';
-                hint.textContent = '(' + typePretty(issue.type || 'other') + ')';
-                li.appendChild(hint);
-                list.appendChild(li);
+      function bindDismiss(btn, captureAt, issueIndex) {
+        btn.addEventListener('click', function () {
+          btn.disabled = true;
+          fetch('/api/cleanai/sessions/' + encodeURIComponent(sessionId) + '/dismiss-issue', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ captureAt: captureAt, issueIndex: issueIndex })
+          })
+            .then(function (r) {
+              return r.json().then(function (j) {
+                if (!r.ok) throw new Error(j.error || 'Dismiss failed');
+                return j;
               });
-            }
-            card.appendChild(list);
-            tl.appendChild(card);
+            })
+            .then(function () {
+              return loadSession();
+            })
+            .catch(function (err) {
+              btn.disabled = false;
+              alert(err.message || 'Could not dismiss');
+            });
+        });
+      }
+
+      function renderTimeline(S, summary) {
+        var tl = document.getElementById('timeline');
+        tl.innerHTML = '';
+        var frames = Array.isArray(S.captures) ? S.captures : [];
+        var fbEl = document.getElementById('fallback');
+
+        if (!frames.length) {
+          fbEl.style.display = 'block';
+          fbEl.textContent = 'No snapshots were logged for this session.';
+          return;
+        }
+
+        fbEl.style.display = 'none';
+
+        frames.forEach(function (f) {
+          var issues = Array.isArray(f.issues) ? f.issues : [];
+          var active = issues.filter(function (it) {
+            return !it.dismissed;
           });
-        })
-        .catch(function (err) {
+
+          var card = document.createElement('div');
+          card.className = 'snapshot-card';
+
+          var capTitle = document.createElement('div');
+          capTitle.className = 'cap-title';
+          capTitle.textContent =
+            'Snapshot — ' +
+            formatAt(f.at) +
+            ' · ' +
+            active.length +
+            ' active / ' +
+            issues.length +
+            ' total';
+          card.appendChild(capTitle);
+
+          if (!active.length) {
+            var p = document.createElement('p');
+            p.className = 'empty-snap';
+            p.textContent =
+              issues.length ? 'All findings dismissed for this frame.' : '(no issues this frame)';
+            card.appendChild(p);
+          } else {
+            var row = document.createElement('div');
+            row.className = 'ca-issue-row';
+
+            for (var idx = 0; idx < issues.length; idx++) {
+              var issue = issues[idx];
+              if (issue.dismissed) continue;
+
+              var tile = document.createElement('div');
+              tile.className = 'ca-issue-tile';
+
+              var btn = document.createElement('button');
+              btn.type = 'button';
+              btn.className = 'ca-dismiss';
+              btn.setAttribute('aria-label', 'Dismiss finding');
+              btn.innerHTML = TRASH_SVG;
+              bindDismiss(btn, f.at, idx);
+              tile.appendChild(btn);
+
+              var pLbl = document.createElement('p');
+              pLbl.className = 'lbl';
+              pLbl.textContent = issue.label || 'Issue';
+              tile.appendChild(pLbl);
+
+              var pTyp = document.createElement('div');
+              pTyp.className = 'typ';
+              pTyp.textContent = typePretty(issue.type || 'other');
+              tile.appendChild(pTyp);
+
+              row.appendChild(tile);
+            }
+
+            card.appendChild(row);
+          }
+
+          tl.appendChild(card);
+        });
+      }
+
+      function loadSession() {
+        return fetch('/api/cleanai/sessions/' + encodeURIComponent(sessionId))
+          .then(function (r) {
+            return r.json().then(function (j) {
+              if (!r.ok) throw new Error(j.error || 'Could not load');
+              return j;
+            });
+          })
+          .then(function (data) {
+            var S = data.session;
+            var summary = data.summary || {};
+
+            document.getElementById('bannerArea').style.display = 'block';
+            renderBanner(S, summary);
+            renderTimeline(S, summary);
+            subhead.innerHTML = 'Session <code>' + sessionId + '</code>';
+          });
+      }
+
+      if (!sessionId) {
+        subhead.textContent = 'Missing session.';
+        document.getElementById('fallback').style.display = 'block';
+        document.getElementById('fallback').textContent =
+          'Open this page from CLEANAI after you stop a scan.';
+      } else {
+        loadSession().catch(function (err) {
           document.getElementById('fallback').style.display = 'block';
           document.getElementById('fallback').textContent = err.message || 'Load failed.';
         });
+      }
     })();
   </script>
 </body>
