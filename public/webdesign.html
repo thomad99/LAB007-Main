@@ -15,165 +15,570 @@
     <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
     <style>
         :root {
-            --bg: #0b1020;
-            --card: #11182a;
-            --text: #e4e7ef;
+            --bg: #070b14;
+            --card: #0f1629;
+            --text: #e8eaf2;
             --muted: #94a3b8;
             --accent: #22d3ee;
             --accent2: #fbbf24;
-            --shadow: 0 14px 40px rgba(0,0,0,0.35);
+            --violet: #a78bfa;
+            --shadow: 0 20px 50px rgba(0,0,0,0.45);
+            --marquee-duration: 48s;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: "Inter","Segoe UI",system-ui,-apple-system,sans-serif;
-            background: radial-gradient(circle at 20% 20%, rgba(34,211,238,0.12), transparent 26%),
-                        radial-gradient(circle at 80% 0%, rgba(251,191,36,0.12), transparent 30%),
-                        var(--bg);
+            background:
+                radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34,211,238,0.15), transparent),
+                radial-gradient(ellipse 60% 40% at 100% 50%, rgba(167,139,250,0.08), transparent),
+                var(--bg);
             color: var(--text);
-            line-height: 1.6;
-            padding: 0 16px 48px;
+            line-height: 1.55;
+            padding: 0 0 56px;
+            overflow-x: hidden;
         }
-        .wrap { max-width: 1100px; margin: 0 auto; }
+        .wrap { max-width: 1180px; margin: 0 auto; padding: 0 18px; }
+
         header {
             display: flex;
             justify-content: space-between;
-            align-items: center;
-            padding: 22px 0;
+            align-items: flex-start;
+            gap: 16px;
+            padding: 22px 0 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
         }
-        header a {
+        .brand-text {
+            font-weight: 800;
+            letter-spacing: 0.04em;
+            font-size: clamp(1.1rem, 2.5vw, 1.35rem);
+        }
+        .brand-sub {
+            color: var(--muted);
+            font-size: 0.82rem;
+            margin-top: 4px;
+            max-width: 22rem;
+        }
+        header a.back {
             color: var(--accent);
             text-decoration: none;
             font-weight: 700;
+            white-space: nowrap;
+            padding-top: 4px;
         }
+        header a.back:hover { text-decoration: underline; }
+
         .hero {
-            background: linear-gradient(135deg, rgba(34,211,238,0.12), rgba(251,191,36,0.10));
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 18px;
-            padding: 32px;
+            margin-top: 28px;
+            padding: clamp(22px, 4vw, 36px);
+            border-radius: 20px;
+            background: linear-gradient(135deg, rgba(34,211,238,0.08), rgba(167,139,250,0.06));
+            border: 1px solid rgba(255,255,255,0.07);
             box-shadow: var(--shadow);
-            display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            gap: 24px;
+        }
+        .hero h1 {
+            font-size: clamp(1.55rem, 4vw, 2.15rem);
+            font-weight: 800;
+            line-height: 1.2;
+            margin-bottom: 12px;
+            max-width: 22ch;
+        }
+        .hero > p {
+            color: var(--muted);
+            max-width: 52ch;
+            margin-bottom: 18px;
+            font-size: clamp(0.95rem, 1.8vw, 1.05rem);
+        }
+        .badges {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 18px;
+        }
+        .badge {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.09);
+            padding: 6px 12px;
+            border-radius: 999px;
+            font-size: 12px;
+            color: var(--muted);
+        }
+        .hero-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
             align-items: center;
         }
-        .hero h1 { font-size: 34px; margin-bottom: 10px; }
-        .hero p { color: var(--muted); margin-bottom: 16px; }
         .cta {
             display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
             background: linear-gradient(135deg, #22d3ee, #0ea5e9);
-            color: #08111f;
-            padding: 12px 18px;
+            color: #041018;
+            padding: 12px 22px;
             border-radius: 12px;
             text-decoration: none;
             font-weight: 800;
-            letter-spacing: 0.3px;
-            box-shadow: 0 12px 30px rgba(14,165,233,0.35);
+            font-size: 0.95rem;
+            box-shadow: 0 14px 32px rgba(14,165,233,0.35);
         }
-        .badges { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
-        .badge {
-            background: rgba(255,255,255,0.06);
+        .cta:hover { filter: brightness(1.06); }
+        .price-tag {
+            color: var(--muted);
+            font-size: 0.92rem;
+        }
+        .price-tag strong { color: var(--accent2); font-size: 1.15em; }
+
+        /* —— Animated tile marquee —— */
+        .marquee-section {
+            margin: 36px -18px 0;
+            padding: 22px 0;
+            mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+            -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+        }
+        .marquee-label {
+            text-align: center;
+            font-size: 0.72rem;
+            letter-spacing: 0.22em;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 14px;
+            font-weight: 700;
+        }
+        .marquee {
+            overflow: hidden;
+            width: 100%;
+        }
+        .marquee-track {
+            display: flex;
+            width: max-content;
+            gap: 16px;
+            animation: marquee-x var(--marquee-duration) linear infinite;
+        }
+        .marquee:hover .marquee-track {
+            animation-play-state: paused;
+        }
+        @keyframes marquee-x {
+            0% { transform: translateX(0); }
+            100% { transform: translateX(-50%); }
+        }
+        .marquee-tile {
+            flex: 0 0 auto;
+            width: min(300px, 78vw);
+            min-height: 128px;
+            padding: 18px 20px;
+            border-radius: 16px;
+            background: var(--card);
             border: 1px solid rgba(255,255,255,0.08);
-            padding: 6px 10px;
-            border-radius: 10px;
+            box-shadow: var(--shadow);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .marquee-tile h3 {
+            font-size: 1.05rem;
+            margin-bottom: 8px;
+            font-weight: 800;
+            background: linear-gradient(90deg, var(--text), var(--accent));
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+        }
+        .marquee-tile p {
             font-size: 13px;
             color: var(--muted);
+            line-height: 1.45;
         }
-        .card-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 14px;
-            margin: 28px 0;
+
+        /* —— Design dashboard carousel —— */
+        .dash-section {
+            margin-top: 44px;
         }
-        .card {
-            background: var(--card);
-            border: 1px solid rgba(255,255,255,0.06);
-            border-radius: 14px;
-            padding: 18px;
+        .section-head {
+            margin-bottom: 18px;
+        }
+        .section-head h2 {
+            font-size: clamp(1.25rem, 3vw, 1.5rem);
+            font-weight: 800;
+            margin-bottom: 6px;
+        }
+        .section-head p {
+            color: var(--muted);
+            font-size: 0.95rem;
+            max-width: 56ch;
+        }
+
+        .design-dash {
+            position: relative;
+            border-radius: 20px;
+            background: linear-gradient(160deg, rgba(15,22,41,0.95), rgba(7,11,20,0.98));
+            border: 1px solid rgba(255,255,255,0.08);
+            padding: 18px 14px 22px;
             box-shadow: var(--shadow);
         }
-        .card h3 { margin-bottom: 6px; }
-        .card p { color: var(--muted); font-size: 14px; }
-        .price {
-            margin: 24px 0;
-            background: linear-gradient(135deg, rgba(34,211,238,0.12), rgba(34,197,94,0.12));
-            border: 1px solid rgba(255,255,255,0.08);
-            border-radius: 16px;
+        .dash-viewport {
+            overflow: hidden;
+            border-radius: 14px;
+            background: #050810;
+            border: 1px solid rgba(255,255,255,0.06);
+        }
+        .dash-slides {
+            display: flex;
+            transition: transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+        .dash-slide {
+            flex-shrink: 0;
+            box-sizing: border-box;
+            min-height: min(340px, 72vw);
+            padding: clamp(18px, 4vw, 28px);
+            display: grid;
+            grid-template-columns: 1fr 1.15fr;
+            gap: clamp(14px, 3vw, 28px);
+            align-items: center;
+        }
+        .dash-slide-meta h3 {
+            font-size: clamp(1.15rem, 2.8vw, 1.45rem);
+            font-weight: 800;
+            margin-bottom: 8px;
+        }
+        .dash-slide-meta p {
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1.5;
+            max-width: 38ch;
+        }
+        .dash-art {
+            border-radius: 14px;
+            min-height: 200px;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.07);
+        }
+
+        /* Slide-specific art (CSS illustrations) */
+        .art-font {
+            background: linear-gradient(145deg, #1e1b4b, #312e81);
             padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            justify-content: center;
+        }
+        .art-font .big-a {
+            font-family: Georgia, serif;
+            font-size: 3.2rem;
+            font-weight: 700;
+            color: #fde68a;
+            line-height: 1;
+        }
+        .art-font .weights {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            font-size: 11px;
+            color: #c7d2fe;
+        }
+        .art-font span.w300 { font-weight: 300; }
+        .art-font span.w600 { font-weight: 600; }
+        .art-font span.w900 { font-weight: 900; }
+
+        .art-color {
+            background: linear-gradient(135deg, #0c1222, #1a1033);
+            padding: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+        }
+        .swatch {
+            width: 52px;
+            height: 52px;
+            border-radius: 50%;
+            border: 3px solid rgba(255,255,255,0.15);
+            box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+        }
+        .swatch.c1 { background: #22d3ee; }
+        .swatch.c2 { background: #a78bfa; }
+        .swatch.c3 { background: #fbbf24; }
+        .swatch.c4 { background: #34d399; }
+        .swatch-bar {
+            width: 100%;
+            height: 36px;
+            border-radius: 10px;
+            background: linear-gradient(90deg, #22d3ee, #a78bfa 40%, #fbbf24 75%);
+            margin-top: 12px;
+            opacity: 0.9;
+        }
+
+        .art-image {
+            background: #0f172a;
+            padding: 16px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            align-items: center;
+        }
+        .polaroid {
+            background: #fff;
+            padding: 8px 8px 28px;
+            border-radius: 4px;
+            box-shadow: 0 12px 28px rgba(0,0,0,0.45);
+            transform: rotate(-3deg);
+        }
+        .polaroid .ph {
+            aspect-ratio: 4/3;
+            border-radius: 2px;
+            background: linear-gradient(135deg, #38bdf8, #818cf8 60%, #f472b6);
+        }
+        .polaroid:nth-child(2) {
+            transform: rotate(5deg);
+            justify-self: end;
+        }
+        .polaroid:nth-child(2) .ph {
+            background: linear-gradient(135deg, #34d399, #22d3ee);
+        }
+
+        .art-video {
+            background: linear-gradient(180deg, #111827, #030712);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+        .film-strip {
+            position: absolute;
+            inset: 0;
+            opacity: 0.15;
+            background: repeating-linear-gradient(
+                90deg,
+                transparent,
+                transparent 18px,
+                rgba(255,255,255,0.08) 18px,
+                rgba(255,255,255,0.08) 20px
+            );
+        }
+        .play-circle {
+            width: 76px;
+            height: 76px;
+            border-radius: 50%;
+            background: rgba(34,211,238,0.2);
+            border: 3px solid var(--accent);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1;
+            box-shadow: 0 0 40px rgba(34,211,238,0.35);
+        }
+        .play-tri {
+            width: 0;
+            height: 0;
+            border-style: solid;
+            border-width: 12px 0 12px 20px;
+            border-color: transparent transparent transparent var(--accent);
+            margin-left: 6px;
+        }
+
+        .art-chat {
+            background: #0c1526;
+            padding: 18px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            justify-content: center;
+        }
+        .bubble {
+            max-width: 88%;
+            padding: 10px 14px;
+            border-radius: 14px;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .bubble.user {
+            align-self: flex-end;
+            background: rgba(34,211,238,0.18);
+            border: 1px solid rgba(34,211,238,0.35);
+            color: #e0f2fe;
+        }
+        .bubble.bot {
+            align-self: flex-start;
+            background: rgba(167,139,250,0.15);
+            border: 1px solid rgba(167,139,250,0.35);
+            color: #ede9fe;
+        }
+
+        .art-forms {
+            background: #f8fafc;
+            padding: 18px;
+            color: #0f172a;
+        }
+        .fake-field {
+            height: 10px;
+            border-radius: 6px;
+            background: #e2e8f0;
+            margin-bottom: 10px;
+        }
+        .fake-field.short { width: 55%; }
+        .fake-btn {
+            margin-top: 8px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(90deg, #0ea5e9, #6366f1);
+            width: 120px;
+        }
+
+        .art-booking {
+            background: #fefce8;
+            padding: 16px;
+            color: #422006;
+        }
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            font-size: 10px;
+            text-align: center;
+            margin-top: 10px;
+        }
+        .cal-cell {
+            aspect-ratio: 1;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(251,191,36,0.15);
+        }
+        .cal-cell.hl {
+            background: #fbbf24;
+            color: #422006;
+            font-weight: 800;
+        }
+
+        .art-cart {
+            background: linear-gradient(145deg, #14532d, #052e16);
+            padding: 18px;
+            color: #ecfccb;
+        }
+        .cart-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+            font-size: 12px;
+        }
+        .cart-thumb {
+            width: 36px;
+            height: 36px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, #86efac, #22c55e);
+        }
+        .cart-total {
+            margin-top: 12px;
+            font-weight: 800;
+            text-align: right;
+            font-size: 14px;
+        }
+
+        .art-contact {
+            background: linear-gradient(160deg, #1e3a5f, #0f172a);
+            padding: 20px;
+            color: #e2e8f0;
+        }
+        .mail-icon {
+            width: 48px;
+            height: 36px;
+            border-radius: 8px;
+            border: 2px solid var(--accent);
+            margin-bottom: 14px;
+            position: relative;
+        }
+        .mail-icon::before {
+            content: '';
+            position: absolute;
+            left: 6px;
+            right: 6px;
+            top: 10px;
+            height: 2px;
+            background: var(--accent);
+            opacity: 0.5;
+        }
+
+        .dash-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .dash-btn {
+            width: 42px;
+            height: 42px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.15);
+            background: rgba(255,255,255,0.05);
+            color: var(--text);
+            cursor: pointer;
+            font-size: 18px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .dash-btn:hover {
+            background: rgba(34,211,238,0.12);
+            border-color: rgba(34,211,238,0.4);
+        }
+        .dash-dots {
+            display: flex;
+            gap: 8px;
+        }
+        .dash-dot {
+            width: 9px;
+            height: 9px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.15);
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .dash-dot[aria-current="true"] {
+            background: var(--accent);
+            transform: scale(1.25);
+        }
+
+        .price-block {
+            margin-top: 36px;
+            padding: 22px;
+            border-radius: 16px;
+            background: linear-gradient(135deg, rgba(34,211,238,0.1), rgba(52,211,153,0.08));
+            border: 1px solid rgba(255,255,255,0.08);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 12px;
-            box-shadow: var(--shadow);
+            gap: 16px;
+            flex-wrap: wrap;
         }
-        .price strong { font-size: 24px; color: var(--accent2); }
-        footer { margin-top: 32px; text-align: center; color: var(--muted); font-size: 14px; }
-        @media (max-width: 820px) {
-            .hero { grid-template-columns: 1fr; }
+        .price-block strong { font-size: 1.6rem; color: var(--accent2); }
+
+        .cta-card {
+            margin-top: 22px;
+            padding: 22px;
+            border-radius: 16px;
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.07);
         }
-        .mockups {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 14px;
-        }
-        .mock {
-            position: relative;
-            border-radius: 14px;
-            overflow: hidden;
-            min-height: 180px;
-            background: linear-gradient(135deg, rgba(34,211,238,0.25), rgba(17,94,89,0.25)),
-                        radial-gradient(circle at 20% 30%, rgba(251,191,36,0.25), transparent 40%),
-                        #0f172a;
-            border: 1px solid rgba(255,255,255,0.08);
-            box-shadow: var(--shadow);
-        }
-        .mock::after {
-            content: 'Mockup';
-            position: absolute;
-            top: 10px;
-            right: 12px;
-            background: rgba(0,0,0,0.4);
-            color: #e4e7ef;
-            padding: 4px 10px;
-            border-radius: 10px;
-            font-size: 12px;
-            letter-spacing: 0.4px;
-        }
-        .mock .nav {
-            height: 28px;
-            background: rgba(255,255,255,0.06);
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 0 10px;
-        }
-        .dot {
-            width: 10px; height: 10px; border-radius: 50%;
-            background: #ef4444;
-        }
-        .dot:nth-child(2){ background:#f59e0b; }
-        .dot:nth-child(3){ background:#22c55e; }
-        .mock .body {
-            padding: 12px;
-            display: grid;
-            grid-template-columns: 1.1fr 0.9fr;
-            gap: 10px;
-        }
-        .block {
-            background: rgba(255,255,255,0.06);
-            border-radius: 10px;
-            height: 54px;
-        }
-        .block.tall { height: 110px; }
-        @media (max-width: 640px) {
-            .mock .body { grid-template-columns: 1fr; }
+        .cta-card p { color: var(--muted); margin: 10px 0 16px; font-size: 0.95rem; }
+
+        .demo-section-wrap {
+            margin-top: 32px;
         }
         .demo-form {
             display: flex;
             flex-wrap: wrap;
             gap: 12px;
-            margin-top: 10px;
+            margin-top: 12px;
             align-items: flex-end;
         }
         .demo-form-group {
@@ -188,20 +593,20 @@
         }
         .demo-input {
             width: 100%;
-            padding: 8px 10px;
+            padding: 9px 11px;
             border-radius: 10px;
-            border: 1px solid rgba(148,163,184,0.6);
-            background: rgba(15,23,42,0.8);
+            border: 1px solid rgba(148,163,184,0.35);
+            background: rgba(15,23,42,0.85);
             color: var(--text);
             font-size: 14px;
         }
         .demo-input:focus {
             outline: none;
             border-color: var(--accent);
-            box-shadow: 0 0 0 1px rgba(34,211,238,0.7);
+            box-shadow: 0 0 0 1px rgba(34,211,238,0.5);
         }
         .demo-button {
-            padding: 9px 16px;
+            padding: 10px 18px;
             border-radius: 10px;
             border: none;
             cursor: pointer;
@@ -212,15 +617,12 @@
             box-shadow: 0 10px 24px rgba(14,165,233,0.35);
             white-space: nowrap;
         }
-        .demo-button:hover {
-            filter: brightness(1.05);
-        }
         .demo-preview {
-            margin-top: 16px;
+            margin-top: 18px;
             border-radius: 14px;
             background: radial-gradient(circle at 0 0, rgba(15,23,42,0.65), transparent 55%), #020617;
             padding: 16px;
-            border: 1px solid rgba(148,163,184,0.4);
+            border: 1px solid rgba(148,163,184,0.25);
         }
         .demo-preview-inner {
             max-width: 960px;
@@ -310,128 +712,203 @@
             margin-bottom: 3px;
             color: #111827;
         }
+
+        footer {
+            margin-top: 40px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
         @media (max-width: 780px) {
+            .dash-slide {
+                grid-template-columns: 1fr;
+                min-height: 0;
+            }
+            .dash-art { min-height: 180px; }
             .demo-page-body { grid-template-columns: 1fr; }
+        }
+        @media (prefers-reduced-motion: reduce) {
+            .marquee-track { animation: none; }
+            .marquee { overflow-x: auto; }
+            .dash-slides { transition: none; }
         }
     </style>
 </head>
 <body>
     <div class="wrap">
         <header>
-            <div style="display:flex;align-items:center;gap:10px;">
-                <img src="/images/lab007-trans.PNG" alt="LAB007" style="height:200px;width:auto;">
-                <div>
-                    <div style="font-weight:800;letter-spacing:0.5px;">LAB007 Website Design</div>
-                    <div style="color:var(--muted);font-size:13px;">Clean. Modern. Built for Sarasota.</div>
-                </div>
+            <div>
+                <div class="brand-text">Website Design</div>
+                <p class="brand-sub">LAB007 · Sarasota — strategy, UI, and builds that convert.</p>
             </div>
-            <a href="/" aria-label="Back to home">← Back to LAB007</a>
+            <a class="back" href="/" aria-label="Back to home">← Back to LAB007</a>
         </header>
 
         <section class="hero">
-            <div>
-                <h1>Modern websites with chatbots, commerce, and booking built in.</h1>
-                <p>Local to Sarasota, I design and build fast, clean sites with the options you need: AI chatbot, shopping cart, online booking, and lead capture—ready to launch.</p>
-                <div class="badges">
-                    <span class="badge">Sarasota local</span>
-                    <span class="badge">Chatbot ready</span>
-                    <span class="badge">E‑commerce capable</span>
-                    <span class="badge">Bookings & scheduling</span>
-                </div>
-                <div style="margin-top:16px; display:flex; gap:10px; flex-wrap:wrap;">
-                    <a class="cta" href="mailto:info@lab007.ai?subject=Website%20Design">Start a project</a>
-                    <div style="color:var(--muted);font-size:14px;">Prices from <strong style="color:#fff;">$500</strong></div>
-                </div>
+            <h1>Modern sites with commerce, booking, and AI—built for clarity.</h1>
+            <p>Fast, accessible layouts with the pieces your business needs: strong typography and color, rich media, chat, forms, scheduling, carts, and contact flows—delivered end to end.</p>
+            <div class="badges">
+                <span class="badge">Sarasota local</span>
+                <span class="badge">Mobile-first</span>
+                <span class="badge">From $500</span>
             </div>
-            <div class="card" style="text-align:left;">
-                <h3 style="margin-bottom:8px;">What you get</h3>
-                <p>• Clean, mobile-first layout<br>
-                   • AI chatbot option (FAQ, lead capture)<br>
-                   • Shopping cart + checkout integrations<br>
-                   • Booking/scheduling flows<br>
-                   • SEO-ready, fast hosting guidance<br>
-                   • Friendly Sarasota-based support</p>
+            <div class="hero-row">
+                <a class="cta" href="mailto:info@lab007.ai?subject=Website%20Design">Start a project</a>
+                <span class="price-tag">Launch packages from <strong>$500</strong></span>
             </div>
         </section>
 
-        <div class="card-grid">
-            <div class="card">
-                <h3>Clean & modern</h3>
-                <p>Polished UI, crisp typography, accessible color, and purposeful spacing—no clutter.</p>
+        <section class="marquee-section" aria-label="Capabilities">
+            <p class="marquee-label">What we design &amp; ship</p>
+            <div class="marquee">
+                <div class="marquee-track" id="marqueeTrack">
+                    <!-- duplicated in JS for seamless loop -->
+                </div>
             </div>
-            <div class="card">
-                <h3>Chatbot optional</h3>
-                <p>Add a chatbot to handle FAQs, qualify leads, or route visitors—no extra coding needed from you.</p>
-            </div>
-            <div class="card">
-                <h3>Commerce & bookings</h3>
-                <p>Shopping cart, payment, and scheduling flows to sell products or book services online.</p>
-            </div>
-            <div class="card">
-                <h3>Local & reachable</h3>
-                <p>Sarasota-based, quick to respond, and happy to jump on a call to make it right.</p>
-            </div>
-        </div>
+        </section>
 
-        <div class="price">
+        <section class="dash-section">
+            <div class="section-head">
+                <h2>Design dashboard</h2>
+                <p>Click dots or arrows—or wait—to browse how each layer of the experience is planned: type, color, imagery, motion, automation, and conversions.</p>
+            </div>
+
+            <div class="design-dash">
+                <div class="dash-viewport">
+                    <div class="dash-slides" id="dashSlides">
+                        <div class="dash-slide" data-index="0">
+                            <div class="dash-slide-meta">
+                                <h3>Typography &amp; fonts</h3>
+                                <p>Hierarchy, pairing, and readable scale across desktop and phone—so headlines, body, and buttons feel intentional.</p>
+                            </div>
+                            <div class="dash-art art-font">
+                                <div class="big-a">Aa</div>
+                                <div class="weights">
+                                    <span class="w300">Light · story tone</span>
+                                    <span class="w600">Semibold · UI</span>
+                                    <span class="w900">Black · hero impact</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dash-slide" data-index="1">
+                            <div class="dash-slide-meta">
+                                <h3>Color system</h3>
+                                <p>Accessible contrast, brand primaries, neutrals, and semantic colors for success, warning, and links.</p>
+                            </div>
+                            <div class="dash-art art-color">
+                                <div class="swatch c1"></div>
+                                <div class="swatch c2"></div>
+                                <div class="swatch c3"></div>
+                                <div class="swatch c4"></div>
+                                <div class="swatch-bar"></div>
+                            </div>
+                        </div>
+                        <div class="dash-slide" data-index="2">
+                            <div class="dash-slide-meta">
+                                <h3>Imagery &amp; photography</h3>
+                                <p>Hero photos, product shots, and galleries cropped and compressed for speed without losing quality.</p>
+                            </div>
+                            <div class="dash-art art-image">
+                                <div class="polaroid"><div class="ph"></div></div>
+                                <div class="polaroid"><div class="ph"></div></div>
+                            </div>
+                        </div>
+                        <div class="dash-slide" data-index="3">
+                            <div class="dash-slide-meta">
+                                <h3>Video</h3>
+                                <p>Background loops, explainers, and social-ready clips embedded with performance in mind.</p>
+                            </div>
+                            <div class="dash-art art-video">
+                                <div class="film-strip"></div>
+                                <div class="play-circle"><div class="play-tri"></div></div>
+                            </div>
+                        </div>
+                        <div class="dash-slide" data-index="4">
+                            <div class="dash-slide-meta">
+                                <h3>Chatbot</h3>
+                                <p>FAQ flows, lead capture, and handoff to email or SMS—without cluttering the main layout.</p>
+                            </div>
+                            <div class="dash-art art-chat">
+                                <div class="bubble user">Do you take same‑day bookings?</div>
+                                <div class="bubble bot">Yes — pick a slot here or call the desk. I can hold one for 15 minutes.</div>
+                            </div>
+                        </div>
+                        <div class="dash-slide" data-index="5">
+                            <div class="dash-slide-meta">
+                                <h3>Forms &amp; lead capture</h3>
+                                <p>Short, trustworthy forms with validation, spam protection, and thank-you states that match your brand.</p>
+                            </div>
+                            <div class="dash-art art-forms">
+                                <div class="fake-field"></div>
+                                <div class="fake-field short"></div>
+                                <div class="fake-field"></div>
+                                <div class="fake-btn"></div>
+                            </div>
+                        </div>
+                        <div class="dash-slide" data-index="6">
+                            <div class="dash-slide-meta">
+                                <h3>Booking systems</h3>
+                                <p>Calendars, time zones, reminders, and integrations with the tools you already use.</p>
+                            </div>
+                            <div class="dash-art art-booking">
+                                <strong style="font-size:13px;">March — pick a day</strong>
+                                <div class="cal-grid">
+                                    <span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span>
+                                    <span class="cal-cell"></span><span class="cal-cell"></span><span class="cal-cell">1</span><span class="cal-cell">2</span><span class="cal-cell">3</span><span class="cal-cell">4</span><span class="cal-cell">5</span>
+                                    <span class="cal-cell">6</span><span class="cal-cell">7</span><span class="cal-cell hl">8</span><span class="cal-cell">9</span><span class="cal-cell">10</span><span class="cal-cell">11</span><span class="cal-cell">12</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="dash-slide" data-index="7">
+                            <div class="dash-slide-meta">
+                                <h3>Shopping carts</h3>
+                                <p>Product grids, cart persistence, checkout UX, and payment hooks designed to reduce abandonment.</p>
+                            </div>
+                            <div class="dash-art art-cart">
+                                <div class="cart-row"><div class="cart-thumb"></div><span>Ocean mug × 1</span></div>
+                                <div class="cart-row"><div class="cart-thumb"></div><span>Studio tee × 2</span></div>
+                                <div class="cart-total">Subtotal · $48.00</div>
+                            </div>
+                        </div>
+                        <div class="dash-slide" data-index="8">
+                            <div class="dash-slide-meta">
+                                <h3>Contact &amp; enquiry</h3>
+                                <p>Clear paths to call, email, or message—footer contacts, sticky CTAs, and map embeds when you need them.</p>
+                            </div>
+                            <div class="dash-art art-contact">
+                                <div class="mail-icon"></div>
+                                <div class="fake-field" style="background:#334155;height:8px;margin-bottom:8px;"></div>
+                                <div class="fake-field" style="background:#334155;height:8px;width:70%;"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="dash-controls">
+                    <button type="button" class="dash-btn" id="dashPrev" aria-label="Previous slide">‹</button>
+                    <div class="dash-dots" id="dashDots"></div>
+                    <button type="button" class="dash-btn" id="dashNext" aria-label="Next slide">›</button>
+                </div>
+            </div>
+        </section>
+
+        <div class="price-block">
             <div>
-                <div style="font-weight:700;">Launch package</div>
-                <div style="color:var(--muted);font-size:14px;">Design, build, basic SEO, contact forms, optional chatbot, and guidance on hosting/domain.</div>
+                <div style="font-weight:700;font-size:1.05rem;">Launch package</div>
+                <div style="color:var(--muted);font-size:14px;margin-top:4px;">Design, build, basic SEO, forms, optional chatbot, hosting guidance.</div>
             </div>
             <strong>from $500</strong>
         </div>
 
-        <div class="card">
-            <h3>Let’s build your site</h3>
-            <p style="color:var(--muted);margin:8px 0 14px;">Tell me what you need—storefront, booking portal, portfolio, or a lead-gen landing page. I’ll map the pages, design the flow, and ship fast.</p>
+        <div class="cta-card">
+            <h3 style="font-size:1.1rem;">Tell me what you’re building</h3>
+            <p>Storefront, booking portal, portfolio, or a tight landing page—I’ll map pages, design the flow, and ship.</p>
             <a class="cta" href="mailto:info@lab007.ai?subject=Website%20Design">Email info@lab007.ai</a>
         </div>
 
-        <div style="margin-top:20px;">
-            <h3 style="margin-bottom:10px;">Sample layouts</h3>
-            <div class="mockups">
-                <div class="mock">
-                    <div class="nav"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-                    <div class="body">
-                        <div>
-                            <div class="block tall"></div>
-                            <div class="block" style="margin-top:8px;"></div>
-                            <div class="block" style="margin-top:8px;"></div>
-                        </div>
-                        <div>
-                            <div class="block" style="height:80px;"></div>
-                            <div class="block" style="margin-top:8px; height:52px;"></div>
-                            <div class="block" style="margin-top:8px; height:52px;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="mock">
-                    <div class="nav"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-                    <div class="body">
-                        <div class="block tall" style="height:140px;"></div>
-                        <div>
-                            <div class="block" style="height:52px;"></div>
-                            <div class="block" style="margin-top:8px; height:86px;"></div>
-                        </div>
-                    </div>
-                </div>
-                <div class="mock">
-                    <div class="nav"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
-                    <div class="body">
-                        <div>
-                            <div class="block" style="height:60px;"></div>
-                            <div class="block" style="margin-top:8px; height:60px;"></div>
-                            <div class="block" style="margin-top:8px; height:60px;"></div>
-                        </div>
-                        <div class="block tall" style="height:150px;"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="card" style="margin-top:22px;">
-            <h3>Create a quick demo page</h3>
-            <p style="color:var(--muted);margin:6px 0 10px;font-size:14px;">Sketch a clean, modern layout that could live on a laptop or phone—no code needed.</p>
+        <div class="demo-section-wrap cta-card">
+            <h3 style="font-size:1.1rem;">Quick layout preview</h3>
+            <p style="color:var(--muted);margin:8px 0 10px;font-size:14px;">Sketch a simple hero + services block—no code required.</p>
             <div class="demo-form">
                 <div class="demo-form-group">
                     <label for="demoName">Website name</label>
@@ -444,7 +921,7 @@
                 <button id="demoCreateBtn" type="button" class="demo-button">Create demo page</button>
             </div>
             <div id="demoPreview" class="demo-preview">
-                <div style="color:var(--muted);font-size:13px;">Enter a website name and business type, then click “Create demo page” to see a tailored layout.</div>
+                <div style="color:var(--muted);font-size:13px;">Enter details and click “Create demo page”.</div>
             </div>
         </div>
 
@@ -452,12 +929,106 @@
             © 2026 LAB007 — Website Design | Sarasota, FL
         </footer>
     </div>
+
     <script>
         (function() {
-            const nameInput = document.getElementById('demoName');
-            const typeInput = document.getElementById('demoType');
-            const btn = document.getElementById('demoCreateBtn');
-            const preview = document.getElementById('demoPreview');
+            var tiles = [
+                { h: 'Typography & fonts', p: 'Hierarchy and pairing tuned for readability on every screen size.' },
+                { h: 'Color & contrast', p: 'Brand palettes that meet accessibility without feeling flat.' },
+                { h: 'Imagery & galleries', p: 'Photos and graphics optimized for fast loads and sharp crops.' },
+                { h: 'Video', p: 'Loops and explainers embedded without killing Core Web Vitals.' },
+                { h: 'Chatbot', p: 'FAQ and lead capture that feels helpful, not noisy.' },
+                { h: 'Forms & validation', p: 'Lead forms with spam resistance and clear success states.' },
+                { h: 'Booking systems', p: 'Scheduling flows synced with the calendar tools you use.' },
+                { h: 'Shopping carts', p: 'Product UX, cart, and checkout tuned for conversion.' },
+                { h: 'Contact paths', p: 'Email, phone, maps—structured so visitors find you fast.' },
+                { h: 'Clean & modern UI', p: 'Purposeful spacing, crisp components, no clutter.' },
+                { h: 'Commerce & bookings', p: 'Sell products and time online in one cohesive site.' },
+                { h: 'Local support', p: 'Sarasota-based—quick replies and real conversations.' }
+            ];
+
+            var track = document.getElementById('marqueeTrack');
+            if (track) {
+                function tileHtml(t) {
+                    return '<article class="marquee-tile"><h3>' + t.h + '</h3><p>' + t.p + '</p></article>';
+                }
+                var half = tiles.map(tileHtml).join('');
+                track.innerHTML = half + half;
+            }
+
+            /* Carousel */
+            var slidesEl = document.getElementById('dashSlides');
+            var dotsEl = document.getElementById('dashDots');
+            var prevBtn = document.getElementById('dashPrev');
+            var nextBtn = document.getElementById('dashNext');
+            if (slidesEl && dotsEl) {
+                var viewport = slidesEl.parentElement;
+                var slideCount = slidesEl.querySelectorAll('.dash-slide').length;
+                var idx = 0;
+                var timer = null;
+                var prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+                function slideWidth() {
+                    return viewport ? viewport.clientWidth : slidesEl.parentElement.clientWidth;
+                }
+
+                function layoutSlides() {
+                    var w = slideWidth();
+                    var slides = slidesEl.querySelectorAll('.dash-slide');
+                    for (var i = 0; i < slides.length; i++) {
+                        slides[i].style.width = w + 'px';
+                        slides[i].style.flexBasis = w + 'px';
+                    }
+                }
+
+                function go(n) {
+                    idx = (n + slideCount) % slideCount;
+                    var w = slideWidth();
+                    slidesEl.style.transform = 'translateX(' + (-idx * w) + 'px)';
+                    var dots = dotsEl.querySelectorAll('.dash-dot');
+                    for (var i = 0; i < dots.length; i++) {
+                        dots[i].setAttribute('aria-current', i === idx ? 'true' : 'false');
+                    }
+                }
+
+                for (var d = 0; d < slideCount; d++) {
+                    (function(j) {
+                        var b = document.createElement('button');
+                        b.type = 'button';
+                        b.className = 'dash-dot';
+                        b.setAttribute('aria-label', 'Slide ' + (j + 1));
+                        b.addEventListener('click', function() {
+                            go(j);
+                            resetAuto();
+                        });
+                        dotsEl.appendChild(b);
+                    })(d);
+                }
+
+                function resetAuto() {
+                    if (prefersReduced) return;
+                    if (timer) clearInterval(timer);
+                    timer = setInterval(function() { go(idx + 1); }, 6000);
+                }
+
+                if (prevBtn) prevBtn.addEventListener('click', function() { go(idx - 1); resetAuto(); });
+                if (nextBtn) nextBtn.addEventListener('click', function() { go(idx + 1); resetAuto(); });
+
+                layoutSlides();
+                go(0);
+                window.addEventListener('resize', function() {
+                    layoutSlides();
+                    go(idx);
+                });
+
+                resetAuto();
+            }
+
+            /* Demo builder */
+            var nameInput = document.getElementById('demoName');
+            var typeInput = document.getElementById('demoType');
+            var btn = document.getElementById('demoCreateBtn');
+            var preview = document.getElementById('demoPreview');
 
             function capitalise(str) {
                 if (!str) return '';
@@ -465,74 +1036,41 @@
             }
 
             function buildDemo() {
-                const name = (nameInput.value || 'Coastal Studio').trim();
-                const type = (typeInput.value || 'creative studio in Sarasota').trim();
-                const safeName = name.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-                const safeType = type.replace(/</g,'&lt;').replace(/>/g,'&gt;');
-
-                const heroTitle = `${safeName} — ${capitalise(safeType)}`;
-
-                const heroSub = `Clean, modern website designed to showcase your ${safeType || 'business'} and turn visitors into enquiries.`;
-
-                const primaryCta = 'Book a free call';
-                const secondaryCta = 'View services';
-
-                const servicesTitle = 'What you get';
-                const servicesCopy = [
+                var name = (nameInput.value || 'Coastal Studio').trim();
+                var type = (typeInput.value || 'creative studio in Sarasota').trim();
+                var safeName = name.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                var safeType = type.replace(/</g,'&lt;').replace(/>/g,'&gt;');
+                var heroTitle = safeName + ' — ' + capitalise(safeType);
+                var heroSub = 'Clean, modern website designed to showcase your ' + (safeType || 'business') + ' and turn visitors into enquiries.';
+                var primaryCta = 'Book a free call';
+                var secondaryCta = 'View services';
+                var servicesTitle = 'What you get';
+                var servicesCopy = [
                     'Mobile‑first layout that looks great on phones and laptops.',
                     'Clear calls‑to‑action so visitors know how to contact or book.',
                     'Fast, SEO‑ready pages with simple copy that matches your brand.'
                 ];
+                var highlightTitle = 'Why this layout works';
+                var highlightCopy = 'Hero for first impressions, services to set expectations, and a clear call‑to‑action above the fold.';
+                var contactTitle = 'Ready to launch';
+                var contactCopy = 'Swap in logo, photos, and copy; connect forms or booking. Simple base you can grow.';
 
-                const highlightTitle = 'Why this layout works';
-                const highlightCopy = 'Hero section for first impressions, a simple services block to set expectations, and a clear call‑to‑action pinned above the fold.';
-
-                const contactTitle = 'Ready to launch';
-                const contactCopy = 'Swap in your logo, photos and copy, then connect a contact form or booking link. This layout is intentionally simple so you can grow it later.';
-
-                preview.innerHTML = `
-                    <div class="demo-preview-inner" aria-label="Generated demo website mockup">
-                        <div class="demo-page-bar">
-                            <span class="demo-page-dot"></span>
-                            <span class="demo-page-dot"></span>
-                            <span class="demo-page-dot"></span>
-                        </div>
-                        <div class="demo-page-body">
-                            <div>
-                                <div class="demo-hero">
-                                    <h1>${heroTitle}</h1>
-                                    <p>${heroSub}</p>
-                                    <div class="demo-hero-cta">${primaryCta}</div>
-                                </div>
-                                <div class="demo-section">
-                                    <h2>${servicesTitle}</h2>
-                                    <p>• ${servicesCopy[0]}<br>
-                                       • ${servicesCopy[1]}<br>
-                                       • ${servicesCopy[2]}</p>
-                                </div>
-                            </div>
-                            <div class="demo-side">
-                                <div class="demo-side-card">
-                                    <strong>${highlightTitle}</strong>
-                                    <span>${highlightCopy}</span>
-                                </div>
-                                <div class="demo-side-card">
-                                    <strong>${contactTitle}</strong>
-                                    <span>${contactCopy}</span>
-                                </div>
-                                <div class="demo-side-card">
-                                    <strong>CTA ideas</strong>
-                                    <span>“${primaryCta}” or “${secondaryCta}” in the header, plus a simple contact section further down the page.</span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                `;
+                preview.innerHTML = '<div class="demo-preview-inner" aria-label="Generated demo website mockup">' +
+                    '<div class="demo-page-bar">' +
+                    '<span class="demo-page-dot"></span><span class="demo-page-dot"></span><span class="demo-page-dot"></span>' +
+                    '</div><div class="demo-page-body">' +
+                    '<div><div class="demo-hero">' +
+                    '<h1>' + heroTitle + '</h1><p>' + heroSub + '</p>' +
+                    '<div class="demo-hero-cta">' + primaryCta + '</div></div>' +
+                    '<div class="demo-section"><h2>' + servicesTitle + '</h2><p>• ' + servicesCopy[0] + '<br>• ' + servicesCopy[1] + '<br>• ' + servicesCopy[2] + '</p></div></div>' +
+                    '<div class="demo-side">' +
+                    '<div class="demo-side-card"><strong>' + highlightTitle + '</strong><span>' + highlightCopy + '</span></div>' +
+                    '<div class="demo-side-card"><strong>' + contactTitle + '</strong><span>' + contactCopy + '</span></div>' +
+                    '<div class="demo-side-card"><strong>CTA ideas</strong><span>“' + primaryCta + '” or “' + secondaryCta + '” in the header, plus contact lower on the page.</span></div>' +
+                    '</div></div></div>';
             }
 
-            if (btn && preview) {
-                btn.addEventListener('click', buildDemo);
-            }
+            if (btn && preview) btn.addEventListener('click', buildDemo);
         })();
     </script>
 </body>
