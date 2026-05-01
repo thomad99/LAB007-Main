@@ -340,6 +340,47 @@
     const tool = $('#mm-task-tool');
     if (!tool) return;
 
+    if (task.kind === 'onboarding') {
+      const list = task.checklist || [];
+      const doneCount = list.filter((r) => r.done).length;
+      const pct = list.length ? Math.round((doneCount / list.length) * 100) : 0;
+      const pdfUrl = `/api/marketing-manager/customers/${encodeURIComponent(cust.id)}/tasks/${encodeURIComponent(
+        task.id
+      )}/onboarding.pdf`;
+      const rows = list
+        .map((row, idx) => {
+          const checked = row.done ? ' checked' : '';
+          return `<tr>
+          <td class="mm-onb-step"><input type="checkbox"${checked} data-onb-cid="${escapeHtml(cust.id)}" data-onb-tid="${escapeHtml(
+            task.id
+          )}" data-onb-rid="${escapeHtml(row.id)}" aria-label="Completed: ${escapeHtml(row.title)}" /></td>
+          <td class="mm-onb-title">${idx + 1}. ${escapeHtml(row.title)}</td>
+          <td class="mm-onb-detail">${textToHtml(row.instructions)}</td>
+        </tr>`;
+        })
+        .join('');
+      tool.innerHTML = `
+        <div class="mm-tool-head" style="flex-wrap:wrap;gap:10px;">
+          <span class="mm-pill">${doneCount} / ${list.length} complete · ${pct}%</span>
+          <a class="btn-mm" href="${pdfUrl}" target="_blank" rel="noopener noreferrer" style="text-decoration:none;display:inline-flex;align-items:center;">Download client PDF</a>
+        </div>
+        <p class="mm-muted" style="margin:12px 0 4px;">Below is your working checklist. Share the PDF so the client can follow the same steps.</p>
+        <div style="overflow-x:auto;">
+          <table class="mm-onb-table" aria-label="Onboarding checklist">
+            <thead><tr><th class="mm-onb-step">Done</th><th>Item</th><th>How your client completes this</th></tr></thead>
+            <tbody>${rows || '<tr><td colspan="3" class="mm-muted">No rows</td></tr>'}</tbody>
+          </table>
+        </div>`;
+      tool.querySelectorAll('input[type="checkbox"][data-onb-rid]').forEach((cb) => {
+        cb.addEventListener('change', async () => {
+          const rid = cb.getAttribute('data-onb-rid');
+          const ch = list.map((row) => (row.id === rid ? { ...row, done: cb.checked } : row));
+          await patchTask(cust.id, task.id, { checklist: ch });
+        });
+      });
+      return;
+    }
+
     if (task.kind === 'directory') {
       const pct = directoryProgress(task);
       const usa = (task.checklist || []).filter((r) => r.section === 'usa');
@@ -863,7 +904,9 @@
             <summary>Task templates</summary>
             <div class="mm-task-meta" style="margin-top:10px;">
               <button type="button" class="btn-mm" id="mm-add-directory">Directory listings</button>
-              <div class="mm-small" style="margin:10px 0 6px;">Campaign starter templates</div>
+              <button type="button" class="btn-mm-ghost" id="mm-add-onboarding" style="margin-left:8px;">Client onboarding</button>
+              <p class="mm-small" style="margin:10px 0 0;">Six access &amp; asset items with instructions and a shareable PDF.</p>
+              <div class="mm-small" style="margin:14px 0 6px;">Campaign starter templates</div>
               <div class="mm-campaign-grid" id="mm-task-templates-buttons"></div>
             </div>
           </details>
@@ -964,6 +1007,13 @@
       await api(`/api/marketing-manager/customers/${cust.id}/tasks`, {
         method: 'POST',
         body: JSON.stringify({ kind: 'directory' })
+      });
+      await refresh();
+    });
+    $('#mm-add-onboarding')?.addEventListener('click', async () => {
+      await api(`/api/marketing-manager/customers/${cust.id}/tasks`, {
+        method: 'POST',
+        body: JSON.stringify({ kind: 'onboarding' })
       });
       await refresh();
     });
@@ -1185,6 +1235,24 @@
         $('#mm-task-tool').innerHTML = '';
         return;
       }
+      const isOnboarding = task.kind === 'onboarding';
+      const editorBlock = isOnboarding
+        ? `<label class="mm-notes-label">Internal notes (not in client PDF)</label>
+          <textarea id="mm-task-onb-notes" class="mm-textarea" rows="5" placeholder="Agency-only reminders…">${escapeHtml(
+            task.notes || ''
+          )}</textarea>`
+        : `<label class="mm-notes-label">Task details (rich text)</label>
+          <div class="mm-edit-actions" style="margin:0 0 8px;">
+            <button type="button" class="btn-mm-tiny" data-ed-cmd="bold">Bold</button>
+            <button type="button" class="btn-mm-tiny" data-ed-cmd="italic">Italic</button>
+            <button type="button" class="btn-mm-tiny" data-ed-cmd="underline">Underline</button>
+            <button type="button" class="btn-mm-tiny" data-ed-cmd="insertUnorderedList">Bullet list</button>
+            <button type="button" class="btn-mm-tiny" data-ed-block="P">Body</button>
+            <button type="button" class="btn-mm-tiny" data-ed-block="H2">H2</button>
+            <button type="button" class="btn-mm-tiny" data-ed-block="H3">H3</button>
+          </div>
+          <div id="mm-task-description" class="mm-rich-editor mm-task-editor" contenteditable="true">${task.descriptionHtml || textToHtml(task.description || task.notes || '')}</div>`;
+
       meta.innerHTML = `
         <div class="mm-task-bar">
           <span class="mm-status-badge ${statusClass(task.status)}">${statusLabel(task.status)}</span>
@@ -1200,17 +1268,7 @@
         <div class="mm-task-meta">
           <label class="mm-notes-label">Task title</label>
           <input id="mm-task-title" class="mm-input" type="text" value="${escapeHtml(task.title || '')}" />
-          <label class="mm-notes-label">Task details (rich text)</label>
-          <div class="mm-edit-actions" style="margin:0 0 8px;">
-            <button type="button" class="btn-mm-tiny" data-ed-cmd="bold">Bold</button>
-            <button type="button" class="btn-mm-tiny" data-ed-cmd="italic">Italic</button>
-            <button type="button" class="btn-mm-tiny" data-ed-cmd="underline">Underline</button>
-            <button type="button" class="btn-mm-tiny" data-ed-cmd="insertUnorderedList">Bullet list</button>
-            <button type="button" class="btn-mm-tiny" data-ed-block="P">Body</button>
-            <button type="button" class="btn-mm-tiny" data-ed-block="H2">H2</button>
-            <button type="button" class="btn-mm-tiny" data-ed-block="H3">H3</button>
-          </div>
-          <div id="mm-task-description" class="mm-rich-editor mm-task-editor" contenteditable="true">${task.descriptionHtml || textToHtml(task.description || task.notes || '')}</div>
+          ${editorBlock}
           <div id="mm-task-save-status" class="mm-small" style="margin-top:8px;"></div>
         </div>
       `;
@@ -1218,25 +1276,28 @@
         const status = String($('#mm-task-status')?.value || 'not_started');
         await patchTask(cust.id, task.id, { status });
       });
-      meta.querySelectorAll('[data-ed-cmd]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const cmd = btn.getAttribute('data-ed-cmd');
-          if (!cmd) return;
-          document.execCommand(cmd, false);
-          document.getElementById('mm-task-description')?.focus();
+      if (!isOnboarding) {
+        meta.querySelectorAll('[data-ed-cmd]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const cmd = btn.getAttribute('data-ed-cmd');
+            if (!cmd) return;
+            document.execCommand(cmd, false);
+            document.getElementById('mm-task-description')?.focus();
+          });
         });
-      });
-      meta.querySelectorAll('[data-ed-block]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          const tag = btn.getAttribute('data-ed-block');
-          if (!tag) return;
-          document.execCommand('formatBlock', false, tag);
-          document.getElementById('mm-task-description')?.focus();
-          queueTaskTextSave();
+        meta.querySelectorAll('[data-ed-block]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const tag = btn.getAttribute('data-ed-block');
+            if (!tag) return;
+            document.execCommand('formatBlock', false, tag);
+            document.getElementById('mm-task-description')?.focus();
+            queueTaskTextSave();
+          });
         });
-      });
+      }
       const taskTitleEl = $('#mm-task-title');
       const taskDescEl = $('#mm-task-description');
+      const taskOnbNotesEl = $('#mm-task-onb-notes');
       const taskSaveStatusEl = $('#mm-task-save-status');
       let saveTimer = null;
       let saving = false;
@@ -1251,12 +1312,17 @@
           if (taskSaveStatusEl) taskSaveStatusEl.textContent = 'Task title is required.';
           return;
         }
-        const html = String($('#mm-task-description')?.innerHTML || '').trim();
-        const text = String($('#mm-task-description')?.innerText || '').trim();
         try {
           saving = true;
           if (taskSaveStatusEl) taskSaveStatusEl.textContent = 'Saving...';
-          await patchTask(cust.id, task.id, { title, descriptionHtml: html, description: text });
+          if (isOnboarding) {
+            const notes = String($('#mm-task-onb-notes')?.value || '');
+            await patchTask(cust.id, task.id, { title, notes });
+          } else {
+            const html = String($('#mm-task-description')?.innerHTML || '').trim();
+            const text = String($('#mm-task-description')?.innerText || '').trim();
+            await patchTask(cust.id, task.id, { title, descriptionHtml: html, description: text });
+          }
           if (taskSaveStatusEl) taskSaveStatusEl.textContent = 'Saved';
         } finally {
           saving = false;
@@ -1271,9 +1337,14 @@
         saveTimer = setTimeout(doSaveTaskText, 450);
       };
       taskTitleEl?.addEventListener('input', queueTaskTextSave);
-      taskDescEl?.addEventListener('input', queueTaskTextSave);
+      if (isOnboarding) {
+        taskOnbNotesEl?.addEventListener('input', queueTaskTextSave);
+        taskOnbNotesEl?.addEventListener('blur', doSaveTaskText);
+      } else {
+        taskDescEl?.addEventListener('input', queueTaskTextSave);
+        taskDescEl?.addEventListener('blur', doSaveTaskText);
+      }
       taskTitleEl?.addEventListener('blur', doSaveTaskText);
-      taskDescEl?.addEventListener('blur', doSaveTaskText);
       $('#mm-del-task')?.addEventListener('click', async () => {
         if (!confirm('Delete this task?')) return;
         await api(`/api/marketing-manager/customers/${cust.id}/tasks/${task.id}`, { method: 'DELETE' });

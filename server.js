@@ -4020,6 +4020,215 @@ function mmNewId(prefix) {
   return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 9)}`;
 }
 
+/** Client onboarding checklist — titles + instructional copy for CRM + PDF. */
+function mmOnboardingChecklistDefs() {
+  return [
+    {
+      id: 'onb_site',
+      title: 'Website logon',
+      instructions: [
+        'Goal: LAB007 can update your live site (or staging), fix issues, add pages, or connect tracking without waiting on passwords every time.',
+        'What to share:',
+        '- Admin URL for your CMS (e.g. WordPress /wp-admin, Squarespace Settings, Shopify admin, Webflow Designer, etc.).',
+        '- A dedicated user for LAB007 (recommended) OR your existing admin — with Administrator / Owner role where applicable.',
+        'How to create a user (typical CMS): Log in → Users / Team → Add user → enter the email address your LAB007 contact gives you → set role to Administrator → send invite or set a temporary password and share securely (password manager or one-time link — not plain email).',
+        'Security: Prefer not using your personal only account; revoke the LAB007 user when the project ends if you wish. Enable two-factor authentication on your own admin account.'
+      ].join('\n')
+    },
+    {
+      id: 'onb_domain',
+      title: 'Domain logon',
+      instructions: [
+        'Goal: LAB007 can point DNS, verify domain for email, analytics, SSL, or add subdomains.',
+        'What to share:',
+        '- Which registrar hosts the domain (GoDaddy, Namecheap, Google Domains/Squarespace Domains, Cloudflare, etc.).',
+        '- Access via invited user OR read-only collaborator if your registrar supports it.',
+        'How to delegate safely:',
+        '- Many registrars allow you to invite someone by email with “Technical” / “DNS only” permission — prefer that when available.',
+        '- If sharing the main account login is unavoidable, enable 2FA on your registrar and change credentials after onboarding.',
+        'What we may edit: Nameservers or DNS records only (e.g. A, CNAME, TXT for verification — we will confirm before publishing).'
+      ].join('\n')
+    },
+    {
+      id: 'onb_gbp',
+      title: 'Google Business Profile access',
+      instructions: [
+        'Goal: We can optimise your GBP, respond to edits, categories, attributes, posts, photos, and fix duplicate listings.',
+        'Steps for you:',
+        '1. Open Google Business Profile (business.google.com) while logged into the Google account that owns or manages the profile.',
+        '2. Go to Users / Managers (or Linked accounts, depending on the UI version).',
+        '3. Add the email address LAB007 provides as Manager (not Communication manager only unless we agree otherwise). Manager allows profile edits and moderation.',
+        '4. Confirm the invitation in email if Google sends one.',
+        'If the listing is duplicated or suspended: note that in onboarding — we’ll request access first, then escalate with screenshots if needed.'
+      ].join('\n')
+    },
+    {
+      id: 'onb_ads',
+      title: 'Ad account access',
+      instructions: [
+        'Goal: LAB007 can build or audit campaigns, install conversion tags (with your approval), link analytics, or export clean reporting.',
+        'Google Ads:',
+        '- Sign in to ads.google.com with the owning Google account → Tools → Access and security → Add user → paste LAB007 email → Role: Standard (or Administrative if setting up conversions/billing linkage from our side). Send invitation.',
+        'Meta (Facebook / Instagram) Business:',
+        '- business.facebook.com → Business settings → Users → People → Invite → LAB007 email. Assign Assets: assign your Ad Account and Page with appropriate roles (typically Advertiser minimum; Admin if we agree to rebuild structure).',
+        'Other platforms (LinkedIn Ads, TikTok Ads, Bing): Same pattern — invite LAB007 email with campaign management access.',
+        'Never share personal passwords; only use platform-invite workflows. Remove access when engagements end if you wish.'
+      ].join('\n')
+    },
+    {
+      id: 'onb_media',
+      title: 'Access to high-resolution images & videos',
+      instructions: [
+        'Goal: Your site and ads use sharp, licence-safe media — not blurry social re-posts.',
+        'Please provide ONE of:',
+        '- Google Drive / Dropbox / OneDrive folder link (view/edit as agreed) labelled by photo/video purpose (team, storefront, products, testimonials).',
+        '- Attach original camera or phone uploads (JPEG/PNG/raw), not screenshots from Instagram.',
+        '- File transfers (WeTransfer / similar) if large video masters.',
+        'Naming: Prefer descriptive filenames or a short spreadsheet mapping files to placements (hero / product lineup / homepage video).',
+        'Rights: Confirm you own the rights or supplier licence for imagery we publish. Logo: vector (SVG/EPS/PDF) or largest PNG available.'
+      ].join('\n')
+    },
+    {
+      id: 'onb_social',
+      title: 'Access to social accounts',
+      instructions: [
+        'Goal: Publishing, boosted posts coordination, bios/links, pinned posts, analytics reads — without sharing your login.',
+        'Meta (Facebook Page + Instagram):',
+        '- Meta Business Suite / business.facebook.com → assign LAB007 as a role on the Page (Content / Advertiser / Admin as agreed) and connect Instagram to the same Business if running both.',
+        'LinkedIn: Company page → Admin tools → Page admins → Invite admin or content admin.',
+        'YouTube: Studio → Settings → Permissions → Invite manager as needed.',
+        'TikTok: Business Center or direct account roles if available; otherwise schedule content via agreed tool.',
+        'Share the @handles and links to each profile in this Marketing Manager customer record so we match the right accounts.'
+      ].join('\n')
+    }
+  ];
+}
+
+function mmBuildOnboardingChecklist() {
+  return mmOnboardingChecklistDefs().map((def) => ({
+    id: def.id,
+    title: def.title,
+    instructions: def.instructions,
+    done: false
+  }));
+}
+
+function mmWrapPdfTextLine(text, maxLen) {
+  const limit = maxLen || 92;
+  const words = String(text || '').split(/\s+/).filter((w) => w.length);
+  const lines = [];
+  let cur = '';
+  words.forEach((w) => {
+    const next = cur ? `${cur} ${w}` : w;
+    if (next.length <= limit) cur = next;
+    else {
+      if (cur) lines.push(cur);
+      if (w.length > limit) {
+        for (let i = 0; i < w.length; i += limit) lines.push(w.slice(i, i + limit));
+        cur = '';
+      } else cur = w;
+    }
+  });
+  if (cur) lines.push(cur);
+  return lines.length ? lines : [''];
+}
+
+function mmBuildOnboardingPdfBuffer(customerName, checklist) {
+  const nameLine = String(customerName || 'Client').trim() || 'Client';
+  const dateStr = new Date().toISOString().slice(0, 10);
+  const lines = [];
+  lines.push('LAB007 — Client onboarding checklist');
+  lines.push(`Prepared for: ${nameLine}`);
+  lines.push(`Generated: ${dateStr}`);
+  lines.push('');
+  lines.push(
+    'Use this document as a shared checklist. Each section explains what to provide and how. Mark items complete in your Marketing Manager task, or print and sign off with your team.'
+  );
+  lines.push('');
+
+  const defs = mmOnboardingChecklistDefs();
+  const byId = new Map((checklist || []).map((row) => [row.id, row]));
+  defs.forEach((def, idx) => {
+    const row = byId.get(def.id) || {};
+    const done = Boolean(row.done);
+    lines.push('');
+    lines.push(`${idx + 1}. ${def.title}`);
+    lines.push(`${done ? '[X]' : '[ ]'} Completed`);
+    String(def.instructions || '')
+      .split('\n')
+      .forEach((para) => {
+        const t = String(para || '').trim();
+        if (!t) return;
+        mmWrapPdfTextLine(t, 90).forEach((l) => lines.push(`   ${l}`));
+      });
+  });
+  lines.push('');
+  lines.push('—');
+  lines.push('Questions? Reply to your LAB007 contact or info@lab007.ai');
+  lines.push('');
+
+  const flat = [];
+  lines.forEach((ln) => {
+    mmWrapPdfTextLine(ln, 94).forEach((l) => flat.push(l));
+  });
+
+  const linesPerPage = 46;
+  const pages = [];
+  for (let i = 0; i < flat.length; i += linesPerPage) {
+    pages.push(flat.slice(i, i + linesPerPage));
+  }
+  if (!pages.length) pages.push(['']);
+
+  const n = pages.length;
+  const fontId = 2 * n + 4;
+  const objects = [];
+  const addObj = (body) => objects.push(body);
+
+  addObj('1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n');
+  const kidRefs = [];
+  for (let p = 0; p < n; p += 1) {
+    kidRefs.push(`${4 + p * 2} 0 R`);
+  }
+  addObj(`2 0 obj\n<< /Type /Pages /Count ${n} /Kids [ ${kidRefs.join(' ')} ] >>\nendobj\n`);
+
+  for (let p = 0; p < n; p += 1) {
+    const pageId = 4 + p * 2;
+    const contentId = 5 + p * 2;
+    const pageLines = pages[p];
+    const contentRows = ['BT', '/F1 10 Tf', '48 762 Td', '11.5 TL'];
+    pageLines.forEach((line, idx) => {
+      const t = `(${mmPdfEscape(line)}) Tj`;
+      if (idx === 0) contentRows.push(t);
+      else contentRows.push(`T* ${t}`);
+    });
+    contentRows.push('ET');
+    const stream = contentRows.join('\n');
+    addObj(
+      `${pageId} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>\nendobj\n`
+    );
+    addObj(
+      `${contentId} 0 obj\n<< /Length ${Buffer.byteLength(stream, 'utf8')} >>\nstream\n${stream}\nendstream\nendobj\n`
+    );
+  }
+
+  addObj(`${fontId} 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj\n`);
+
+  let out = '%PDF-1.4\n';
+  const offsets = [0];
+  objects.forEach((o) => {
+    offsets.push(Buffer.byteLength(out, 'utf8'));
+    out += o;
+  });
+  const xrefPos = Buffer.byteLength(out, 'utf8');
+  out += `xref\n0 ${objects.length + 1}\n`;
+  out += '0000000000 65535 f \n';
+  for (let i = 1; i <= objects.length; i += 1) {
+    out += `${String(offsets[i]).padStart(10, '0')} 00000 n \n`;
+  }
+  out += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefPos}\n%%EOF`;
+  return Buffer.from(out, 'utf8');
+}
+
 function mmBuildDirectoryChecklist() {
   const items = [];
   MM_DIRECTORY_USA.forEach(([name, url], i) => {
@@ -4291,6 +4500,17 @@ app.post('/api/marketing-manager/customers/:customerId/tasks', (req, res) => {
         createdAt: now,
         updatedAt: now
       };
+    } else if (kind === 'onboarding') {
+      task = {
+        id: mmNewId('task'),
+        kind: 'onboarding',
+        title: 'Client onboarding — access & assets',
+        status: 'not_started',
+        notes: '',
+        checklist: mmBuildOnboardingChecklist(),
+        createdAt: now,
+        updatedAt: now
+      };
     } else if (kind === 'manual') {
       const title = String(req.body?.title || '').trim();
       const description = String(req.body?.description || '').trim();
@@ -4307,7 +4527,9 @@ app.post('/api/marketing-manager/customers/:customerId/tasks', (req, res) => {
         updatedAt: now
       };
     } else {
-      return res.status(400).json({ error: 'kind must be directory, keywords, campaign, or manual' });
+      return res
+        .status(400)
+        .json({ error: 'kind must be directory, onboarding, keywords, campaign, or manual' });
     }
 
     c.tasks.push(task);
@@ -4341,7 +4563,7 @@ app.patch('/api/marketing-manager/customers/:customerId/tasks/:taskId', (req, re
     }
     if (req.body.description !== undefined) task.description = String(req.body.description || '');
     if (req.body.descriptionHtml !== undefined) task.descriptionHtml = String(req.body.descriptionHtml || '');
-    if (task.kind === 'directory' && req.body.checklist !== undefined) {
+    if ((task.kind === 'directory' || task.kind === 'onboarding') && req.body.checklist !== undefined) {
       if (!Array.isArray(req.body.checklist)) return res.status(400).json({ error: 'checklist must be an array' });
       const byId = new Map(task.checklist.map((row) => [row.id, row]));
       req.body.checklist.forEach((patch) => {
@@ -4349,6 +4571,9 @@ app.patch('/api/marketing-manager/customers/:customerId/tasks/:taskId', (req, re
         const row = byId.get(patch.id);
         if (row && typeof patch.done === 'boolean') row.done = patch.done;
       });
+    }
+    if (task.kind === 'onboarding' && req.body.notes !== undefined) {
+      task.notes = String(req.body.notes || '');
     }
     if (task.kind === 'keywords') {
       if (req.body.likedKeywords !== undefined) {
@@ -4381,6 +4606,30 @@ app.delete('/api/marketing-manager/customers/:customerId/tasks/:taskId', (req, r
     c.tasks.splice(idx, 1);
     writeMarketingManagerState(state);
     return res.json({ success: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/marketing-manager/customers/:customerId/tasks/:taskId/onboarding.pdf', (req, res) => {
+  try {
+    const state = readMarketingManagerState();
+    const c = mmFindCustomer(state, req.params.customerId);
+    if (!c) return res.status(404).json({ error: 'Customer not found' });
+    const task = c.tasks.find((t) => t.id === req.params.taskId);
+    if (!task || task.kind !== 'onboarding') {
+      return res.status(404).json({ error: 'Onboarding task not found' });
+    }
+    const pdfBuffer = mmBuildOnboardingPdfBuffer(c.name, task.checklist || []);
+    const slug = String(c.name || 'client')
+      .trim()
+      .replace(/[^\w\s-]+/g, '')
+      .trim()
+      .replace(/\s+/g, '_')
+      .slice(0, 52);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="LAB007-onboarding-${slug}.pdf"`);
+    return res.send(pdfBuffer);
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
