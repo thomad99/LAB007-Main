@@ -41,22 +41,11 @@
 
         header {
             display: flex;
-            justify-content: space-between;
+            justify-content: flex-end;
             align-items: flex-start;
             gap: 16px;
             padding: 22px 0 8px;
             border-bottom: 1px solid rgba(255,255,255,0.06);
-        }
-        .brand-text {
-            font-weight: 800;
-            letter-spacing: 0.04em;
-            font-size: clamp(1.1rem, 2.5vw, 1.35rem);
-        }
-        .brand-sub {
-            color: var(--muted);
-            font-size: 0.82rem;
-            margin-top: 4px;
-            max-width: 22rem;
         }
         header a.back {
             color: var(--accent);
@@ -122,11 +111,6 @@
             box-shadow: 0 14px 32px rgba(14,165,233,0.35);
         }
         .cta:hover { filter: brightness(1.06); }
-        .price-tag {
-            color: var(--muted);
-            font-size: 0.92rem;
-        }
-        .price-tag strong { color: var(--accent2); font-size: 1.15em; }
 
         /* —— Animated tile marquee —— */
         .marquee-section {
@@ -193,20 +177,6 @@
         .dash-section {
             margin-top: 44px;
         }
-        .section-head {
-            margin-bottom: 18px;
-        }
-        .section-head h2 {
-            font-size: clamp(1.25rem, 3vw, 1.5rem);
-            font-weight: 800;
-            margin-bottom: 6px;
-        }
-        .section-head p {
-            color: var(--muted);
-            font-size: 0.95rem;
-            max-width: 56ch;
-        }
-
         .design-dash {
             position: relative;
             border-radius: 20px;
@@ -312,70 +282,39 @@
 
         .art-image {
             background: #0f172a;
-            padding: 16px;
+            padding: 12px;
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 10px;
-            align-items: center;
         }
-        .polaroid {
-            background: #fff;
-            padding: 8px 8px 28px;
-            border-radius: 4px;
-            box-shadow: 0 12px 28px rgba(0,0,0,0.45);
-            transform: rotate(-3deg);
+        .image-card {
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.14);
+            box-shadow: 0 10px 22px rgba(0,0,0,0.35);
+            background: #111827;
+            min-height: 155px;
         }
-        .polaroid .ph {
-            aspect-ratio: 4/3;
-            border-radius: 2px;
-            background: linear-gradient(135deg, #38bdf8, #818cf8 60%, #f472b6);
-        }
-        .polaroid:nth-child(2) {
-            transform: rotate(5deg);
-            justify-self: end;
-        }
-        .polaroid:nth-child(2) .ph {
-            background: linear-gradient(135deg, #34d399, #22d3ee);
+        .image-card img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
         }
 
         .art-video {
-            background: linear-gradient(180deg, #111827, #030712);
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            background: #030712;
             position: relative;
+            padding: 10px;
         }
-        .film-strip {
-            position: absolute;
-            inset: 0;
-            opacity: 0.15;
-            background: repeating-linear-gradient(
-                90deg,
-                transparent,
-                transparent 18px,
-                rgba(255,255,255,0.08) 18px,
-                rgba(255,255,255,0.08) 20px
-            );
-        }
-        .play-circle {
-            width: 76px;
-            height: 76px;
-            border-radius: 50%;
-            background: rgba(34,211,238,0.2);
-            border: 3px solid var(--accent);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1;
-            box-shadow: 0 0 40px rgba(34,211,238,0.35);
-        }
-        .play-tri {
-            width: 0;
-            height: 0;
-            border-style: solid;
-            border-width: 12px 0 12px 20px;
-            border-color: transparent transparent transparent var(--accent);
-            margin-left: 6px;
+        .art-video video {
+            width: 100%;
+            height: 100%;
+            min-height: 190px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid rgba(255,255,255,0.15);
+            display: block;
         }
 
         .art-chat {
@@ -410,6 +349,49 @@
             background: #f8fafc;
             padding: 18px;
             color: #0f172a;
+        }
+        .form-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #dbe3ef;
+            font-size: 12px;
+            color: #334155;
+            font-weight: 600;
+        }
+        .progress-pill {
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-size: 11px;
+            padding: 4px 9px;
+            border-radius: 999px;
+            font-weight: 700;
+        }
+        .form-label {
+            display: block;
+            font-size: 11px;
+            color: #475569;
+            margin-bottom: 4px;
+            font-weight: 700;
+            letter-spacing: .01em;
+        }
+        .form-input {
+            height: 30px;
+            border-radius: 8px;
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            padding: 6px 10px;
+            font-size: 12px;
+            color: #0f172a;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+        }
+        .form-input.empty {
+            color: #94a3b8;
+            font-style: italic;
         }
         .fake-field {
             height: 10px;
@@ -484,23 +466,28 @@
             padding: 20px;
             color: #e2e8f0;
         }
-        .mail-icon {
-            width: 48px;
-            height: 36px;
-            border-radius: 8px;
-            border: 2px solid var(--accent);
-            margin-bottom: 14px;
-            position: relative;
+        .contact-title {
+            font-size: 13px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            color: #bae6fd;
         }
-        .mail-icon::before {
-            content: '';
-            position: absolute;
-            left: 6px;
-            right: 6px;
-            top: 10px;
-            height: 2px;
-            background: var(--accent);
-            opacity: 0.5;
+        .contact-box {
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(15,23,42,0.55);
+            border-radius: 10px;
+            padding: 9px 10px;
+            margin-bottom: 8px;
+            font-size: 12px;
+            color: #e2e8f0;
+        }
+        .contact-box .k {
+            display: block;
+            color: #93c5fd;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 3px;
         }
 
         .dash-controls {
@@ -547,20 +534,6 @@
             background: var(--accent);
             transform: scale(1.25);
         }
-
-        .price-block {
-            margin-top: 36px;
-            padding: 22px;
-            border-radius: 16px;
-            background: linear-gradient(135deg, rgba(34,211,238,0.1), rgba(52,211,153,0.08));
-            border: 1px solid rgba(255,255,255,0.08);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 16px;
-            flex-wrap: wrap;
-        }
-        .price-block strong { font-size: 1.6rem; color: var(--accent2); }
 
         .cta-card {
             margin-top: 22px;
@@ -738,10 +711,6 @@
 <body>
     <div class="wrap">
         <header>
-            <div>
-                <div class="brand-text">Website Design</div>
-                <p class="brand-sub">LAB007 · Sarasota — strategy, UI, and builds that convert.</p>
-            </div>
             <a class="back" href="/" aria-label="Back to home">← Back to LAB007</a>
         </header>
 
@@ -751,11 +720,9 @@
             <div class="badges">
                 <span class="badge">Sarasota local</span>
                 <span class="badge">Mobile-first</span>
-                <span class="badge">From $500</span>
             </div>
             <div class="hero-row">
                 <a class="cta" href="mailto:info@lab007.ai?subject=Website%20Design">Start a project</a>
-                <span class="price-tag">Launch packages from <strong>$500</strong></span>
             </div>
         </section>
 
@@ -769,11 +736,6 @@
         </section>
 
         <section class="dash-section">
-            <div class="section-head">
-                <h2>Design dashboard</h2>
-                <p>Click dots or arrows—or wait—to browse how each layer of the experience is planned: type, color, imagery, motion, automation, and conversions.</p>
-            </div>
-
             <div class="design-dash">
                 <div class="dash-viewport">
                     <div class="dash-slides" id="dashSlides">
@@ -810,8 +772,12 @@
                                 <p>Hero photos, product shots, and galleries cropped and compressed for speed without losing quality.</p>
                             </div>
                             <div class="dash-art art-image">
-                                <div class="polaroid"><div class="ph"></div></div>
-                                <div class="polaroid"><div class="ph"></div></div>
+                                <div class="image-card">
+                                    <img src="/images/007LABS-Sports1.png" alt="High-resolution sports product shot">
+                                </div>
+                                <div class="image-card">
+                                    <img src="/images/007LABS-Sports2.png" alt="High-resolution lifestyle photography">
+                                </div>
                             </div>
                         </div>
                         <div class="dash-slide" data-index="3">
@@ -820,8 +786,9 @@
                                 <p>Background loops, explainers, and social-ready clips embedded with performance in mind.</p>
                             </div>
                             <div class="dash-art art-video">
-                                <div class="film-strip"></div>
-                                <div class="play-circle"><div class="play-tri"></div></div>
+                                <video autoplay muted loop playsinline controls preload="metadata">
+                                    <source src="/images/Videos/winghouse-go-kart-video-2.mp4" type="video/mp4">
+                                </video>
                             </div>
                         </div>
                         <div class="dash-slide" data-index="4">
@@ -840,9 +807,18 @@
                                 <p>Short, trustworthy forms with validation, spam protection, and thank-you states that match your brand.</p>
                             </div>
                             <div class="dash-art art-forms">
-                                <div class="fake-field"></div>
-                                <div class="fake-field short"></div>
-                                <div class="fake-field"></div>
+                                <div class="form-top">
+                                    <span>Lead capture form</span>
+                                    <span class="progress-pill">3 of 5 completed</span>
+                                </div>
+                                <label class="form-label">Full name</label>
+                                <div class="form-input">Olivia Smith</div>
+                                <label class="form-label">Company</label>
+                                <div class="form-input">Coastal Marine Group</div>
+                                <label class="form-label">Email</label>
+                                <div class="form-input">olivia@coastalmarine.com</div>
+                                <label class="form-label">Project scope</label>
+                                <div class="form-input empty">Select one...</div>
                                 <div class="fake-btn"></div>
                             </div>
                         </div>
@@ -877,9 +853,12 @@
                                 <p>Clear paths to call, email, or message—footer contacts, sticky CTAs, and map embeds when you need them.</p>
                             </div>
                             <div class="dash-art art-contact">
-                                <div class="mail-icon"></div>
-                                <div class="fake-field" style="background:#334155;height:8px;margin-bottom:8px;"></div>
-                                <div class="fake-field" style="background:#334155;height:8px;width:70%;"></div>
+                                <div class="contact-title">Head office contact</div>
+                                <div class="contact-box"><span class="k">Business</span>Harbor Clinical Studio</div>
+                                <div class="contact-box"><span class="k">Address</span>1452 Main Street, Sarasota, FL 34236</div>
+                                <div class="contact-box"><span class="k">Phone</span>(941) 555-0198</div>
+                                <div class="contact-box"><span class="k">Email</span>hello@harborclinical.com</div>
+                                <div class="contact-box"><span class="k">Hours</span>Mon-Fri 8:00 AM - 6:00 PM</div>
                             </div>
                         </div>
                     </div>
@@ -891,20 +870,6 @@
                 </div>
             </div>
         </section>
-
-        <div class="price-block">
-            <div>
-                <div style="font-weight:700;font-size:1.05rem;">Launch package</div>
-                <div style="color:var(--muted);font-size:14px;margin-top:4px;">Design, build, basic SEO, forms, optional chatbot, hosting guidance.</div>
-            </div>
-            <strong>from $500</strong>
-        </div>
-
-        <div class="cta-card">
-            <h3 style="font-size:1.1rem;">Tell me what you’re building</h3>
-            <p>Storefront, booking portal, portfolio, or a tight landing page—I’ll map pages, design the flow, and ship.</p>
-            <a class="cta" href="mailto:info@lab007.ai?subject=Website%20Design">Email info@lab007.ai</a>
-        </div>
 
         <div class="demo-section-wrap cta-card">
             <h3 style="font-size:1.1rem;">Quick layout preview</h3>
