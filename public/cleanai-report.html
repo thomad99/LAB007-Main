@@ -244,11 +244,11 @@
     <p class="muted" id="subhead">Loading…</p>
 
     <div class="toolbar">
-      <a href="/cleanai/dashboard">Dashboard</a>
+      <a href="/cleanai">Home</a>
     </div>
 
     <div class="ca-new-capture-bleed">
-      <a href="/cleanai" class="ca-btn-new-capture">New capture</a>
+      <a href="/cleanai/capture" class="ca-btn-new-capture">New capture</a>
     </div>
 
     <div id="bannerArea" style="display:none">
@@ -325,6 +325,10 @@
         grid.innerHTML = '';
 
         var tiles = [
+          {
+            v: S.source === 'video' ? 'Video upload' : 'Live capture',
+            l: 'Source'
+          },
           { v: S.provider || 'auto', l: 'Vision' },
           { v: String((S.captures || []).length), l: 'Captures' },
           {
@@ -405,7 +409,11 @@
 
           var capTitle = document.createElement('div');
           capTitle.className = 'cap-title';
+          var vs = f.videoSecond;
+          var timePrefix =
+            vs != null && Number.isFinite(Number(vs)) ? 'Video ~' + (Number(vs) + 1) + 's — ' : '';
           capTitle.textContent =
+            timePrefix +
             'Snapshot — ' +
             formatAt(f.at) +
             ' · ' +
@@ -483,7 +491,7 @@
         subhead.textContent = 'Missing session.';
         document.getElementById('fallback').style.display = 'block';
         document.getElementById('fallback').textContent =
-          'Open this page from CLEANAI after you stop a scan.';
+          'Open this page after you finish a capture, or choose a session from CLEANAI home.';
       } else {
         loadSession().catch(function (err) {
           document.getElementById('fallback').style.display = 'block';

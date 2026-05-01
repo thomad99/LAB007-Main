@@ -75,6 +75,10 @@ if (!fs.existsSync(cleanAiDataDir)) {
 if (!fs.existsSync(cleanAiSessionsDir)) {
   fs.mkdirSync(cleanAiSessionsDir, { recursive: true });
 }
+const cleanAiVideoTempDir = path.join(cleanAiDataDir, 'video-temp');
+if (!fs.existsSync(cleanAiVideoTempDir)) {
+  fs.mkdirSync(cleanAiVideoTempDir, { recursive: true });
+}
 console.log('CLEANAI data dir:', cleanAiDataDir);
 
 const gscDataDir = (() => {
@@ -148,6 +152,25 @@ const ggppiUpload = multer({
   limits: {
     fileSize: 1024 * 1024 * 25, // 25MB max per file
     files: 10
+  }
+});
+
+const CLEANAI_VIDEO_MAX_UPLOAD_MB = Math.min(500, Math.max(10, parseInt(process.env.CLEANAI_VIDEO_MAX_UPLOAD_MB || '80', 10)));
+const cleanAiVideoUpload = multer({
+  storage: multer.diskStorage({
+    destination: (req, file, cb) => cb(null, cleanAiVideoTempDir),
+    filename: (req, file, cb) => {
+      const ext = path.extname(file.originalname || '').toLowerCase();
+      const safe = `${Date.now()}-${crypto.randomBytes(8).toString('hex')}${ext || '.mp4'}`;
+      cb(null, safe);
+    }
+  }),
+  limits: { fileSize: CLEANAI_VIDEO_MAX_UPLOAD_MB * 1024 * 1024 },
+  fileFilter: (req, file, cb) => {
+    const mt = String(file.mimetype || '').toLowerCase();
+    const name = String(file.originalname || '').toLowerCase();
+    const ok = mt.startsWith('video/') || /\.(mp4|mov|webm|mkv|m4v|avi)$/i.test(name);
+    cb(ok ? null : new Error('Upload a video file (MP4, MOV, WebM, etc.).'), ok);
   }
 });
 
@@ -256,15 +279,19 @@ app.get('/cursorai', (req, res) => {
 });
 
 app.get('/cleanai', (req, res) => {
+  const p = path.join(__dirname, 'public', 'cleanai-dashboard.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
+});
+
+app.get('/cleanai/capture', (req, res) => {
   const p = path.join(__dirname, 'public', 'cleanai.html');
   if (fs.existsSync(p)) return res.sendFile(p);
   return res.status(404).send('Not found');
 });
 
 app.get('/cleanai/dashboard', (req, res) => {
-  const p = path.join(__dirname, 'public', 'cleanai-dashboard.html');
-  if (fs.existsSync(p)) return res.sendFile(p);
-  return res.status(404).send('Not found');
+  res.redirect(301, '/cleanai');
 });
 
 app.get('/cleanai/report/:sessionId', (req, res) => {
@@ -2503,6 +2530,51 @@ function cleanAiParseDataUrl(imageDataUrl) {
   return { mime, base64, dataUrl: raw.length > 512_000 ? `data:${mime};base64,${base64}` : raw };
 }
 
+function cleanAiResolveFfmpegBin() {
+  try {
+    const p = require('ffmpeg-static');
+    if (p && typeof p === 'string' && fs.existsSync(p)) return p;
+  } catch (_) {
+    /* optional package or wrong platform */
+  }
+  return 'ffmpeg';
+}
+
+function cleanAiExtractVideoFrames(videoPath, outDir) {
+  const ffmpegBin = cleanAiResolveFfmpegBin();
+  fs.mkdirSync(outDir, { recursive: true });
+  const maxSec = Math.min(600, Math.max(5, parseInt(process.env.CLEANAI_VIDEO_MAX_SECONDS || '120', 10)));
+  const maxFrames = Math.min(300, Math.max(10, parseInt(process.env.CLEANAI_VIDEO_MAX_FRAMES || '120', 10)));
+  const vf = 'fps=1,scale=960:-1';
+  const outPattern = path.join(outDir, 'frame-%04d.jpg');
+  const args = [
+    '-hide_banner',
+    '-loglevel',
+    'error',
+    '-y',
+    '-i',
+    videoPath,
+    '-t',
+    String(maxSec),
+    '-vf',
+    vf,
+    '-frames:v',
+    String(maxFrames),
+    outPattern
+  ];
+  const r = spawnSync(ffmpegBin, args, {
+    encoding: 'utf8',
+    maxBuffer: 20 * 1024 * 1024,
+    windowsHide: true
+  });
+  if (r.status !== 0) {
+    const errMsg = (r.stderr || r.stdout || '').trim().slice(-800) || `exit ${r.status}`;
+    throw new Error(
+      `Could not extract frames (${errMsg}). Install ffmpeg on the server or run \`npm install\` for ffmpeg-static.`
+    );
+  }
+}
+
 function cleanAiNormalizeIssues(rawIssues) {
   if (!Array.isArray(rawIssues)) return [];
   const out = [];
@@ -2659,7 +2731,7 @@ async function cleanAiAnalyzeImage(provider, parsed, systemPrompt) {
   }
 }
 
-function cleanAiAppendCapture(sessionId, issues, parsedProvider) {
+function cleanAiAppendCapture(sessionId, issues, parsedProvider, meta) {
   const sess = readCleanAiSession(sessionId);
   if (!sess) throw new Error('Session not found');
   if (sess.stoppedAt) throw new Error('Session already ended');
@@ -2668,12 +2740,16 @@ function cleanAiAppendCapture(sessionId, issues, parsedProvider) {
   const sanitized = Array.isArray(issues) ? issues.map((it) => ({ ...it })) : [];
 
   sess.captures = Array.isArray(sess.captures) ? sess.captures : [];
-  sess.captures.push({
+  const cap = {
     at,
     provider: parsedProvider || sess.provider || 'auto',
     issueCount: sanitized.length,
     issues: sanitized
-  });
+  };
+  if (meta && typeof meta === 'object' && meta.videoSecond != null && Number.isFinite(Number(meta.videoSecond))) {
+    cap.videoSecond = Math.max(0, Math.floor(Number(meta.videoSecond)));
+  }
+  sess.captures.push(cap);
   if (parsedProvider === 'openai' || parsedProvider === 'claude') {
     sess.provider = parsedProvider;
   }
@@ -2953,6 +3029,130 @@ app.post('/api/cleanai/analyze', async (req, res) => {
     return res.status(500).json({ error: error.message || 'Analysis failed' });
   }
 });
+
+app.post(
+  '/api/cleanai/analyze-video',
+  (req, res, next) => {
+    cleanAiVideoUpload.single('video')(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ error: `Video too large (max ${CLEANAI_VIDEO_MAX_UPLOAD_MB} MB).` });
+        }
+        return res.status(400).json({ error: err.message || 'Upload failed' });
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    const videoPath = req.file?.path;
+    if (!videoPath || !fs.existsSync(videoPath)) {
+      return res.status(400).json({ error: 'Missing video file (field name: video).' });
+    }
+
+    const providerRaw = String(req.body?.provider || 'auto').trim().toLowerCase();
+    const sessProvider =
+      providerRaw === 'openai' ? 'openai' : providerRaw === 'claude' ? 'claude' : 'auto';
+
+    const framesDir = path.join(cleanAiVideoTempDir, `frames-${Date.now()}-${crypto.randomBytes(6).toString('hex')}`);
+    let sessionId = null;
+
+    try {
+      cleanAiExtractVideoFrames(videoPath, framesDir);
+      const files = fs
+        .readdirSync(framesDir)
+        .filter((f) => /\.jpe?g$/i.test(f))
+        .sort();
+
+      if (!files.length) {
+        throw new Error('No frames extracted — unsupported or empty video.');
+      }
+
+      sessionId = crypto.randomUUID();
+      const startedAt = new Date().toISOString();
+      const session = {
+        id: sessionId,
+        startedAt,
+        stoppedAt: null,
+        provider: sessProvider,
+        source: 'video',
+        videoOriginalName: String(req.file.originalname || '').slice(0, 240) || null,
+        captures: [],
+        updatedAt: startedAt
+      };
+      writeCleanAiSession(session);
+
+      const cfg = readCleanAiConfig();
+      const systemPrompt = buildCleanAiSystemPrompt(cfg.lookFor);
+
+      let sec = 0;
+      for (const f of files) {
+        const fp = path.join(framesDir, f);
+        const buf = fs.readFileSync(fp);
+        const dataUrl = `data:image/jpeg;base64,${buf.toString('base64')}`;
+        const parsed = cleanAiParseDataUrl(dataUrl);
+        if (!parsed) {
+          sec += 1;
+          continue;
+        }
+        const issues = await cleanAiAnalyzeImage(sessProvider, parsed, systemPrompt);
+        cleanAiAppendCapture(sessionId, issues, sessProvider === 'auto' ? undefined : sessProvider, {
+          videoSecond: sec
+        });
+        sec += 1;
+      }
+
+      const sess = readCleanAiSession(sessionId);
+      if (sess) {
+        const at = new Date().toISOString();
+        sess.stoppedAt = at;
+        sess.updatedAt = at;
+        writeCleanAiSession(sess);
+      }
+
+      const done = readCleanAiSession(sessionId);
+      const agg = cleanAiCountIssuesInCaptures(done?.captures || [], true);
+
+      return res.json({
+        ok: true,
+        sessionId,
+        frameCount: files.length,
+        analyzedFrames: (done?.captures || []).length,
+        summary: {
+          issueOccurrences: agg.issueTouches,
+          byType: agg.byType
+        },
+        reportUrl: `/cleanai/report/${encodeURIComponent(sessionId)}`
+      });
+    } catch (error) {
+      if (sessionId) {
+        try {
+          const s = readCleanAiSession(sessionId);
+          if (s && !s.stoppedAt) {
+            const at = new Date().toISOString();
+            s.stoppedAt = at;
+            s.updatedAt = at;
+            writeCleanAiSession(s);
+          }
+        } catch (_) {
+          /* ignore */
+        }
+      }
+      console.error('/api/cleanai/analyze-video error:', error);
+      return res.status(500).json({ error: error.message || 'Video analysis failed' });
+    } finally {
+      try {
+        fs.rmSync(framesDir, { recursive: true, force: true });
+      } catch (_) {
+        /* ignore */
+      }
+      try {
+        fs.unlinkSync(videoPath);
+      } catch (_) {
+        /* ignore */
+      }
+    }
+  }
+);
 
 // ── Marketing Manager API (customers + tasks); file path: marketingManagerPath (see boot logs) ──
 
