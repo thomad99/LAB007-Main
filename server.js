@@ -2467,6 +2467,48 @@ app.get('/api/cursorai/projects', (req, res) => {
   }
 });
 
+app.get('/api/cursorai/projects/:folderName', (req, res) => {
+  try {
+    const seg = cursorAiValidateFolderSegment(req.params.folderName);
+    if (!seg) return res.status(400).json({ error: 'Invalid folder name' });
+    const rootResolved = path.resolve(cursorAiProjectsRoot);
+    const projectDir = path.resolve(path.join(cursorAiProjectsRoot, seg));
+    const relToRoot = path.relative(rootResolved, projectDir);
+    if (relToRoot.startsWith('..') || path.isAbsolute(relToRoot)) {
+      return res.status(400).json({ error: 'Invalid path' });
+    }
+    if (!fs.existsSync(projectDir)) return res.status(404).json({ error: 'Project not found' });
+    const st = fs.statSync(projectDir);
+    if (!st.isDirectory()) return res.status(400).json({ error: 'Not a project folder' });
+    const metaPath = path.join(projectDir, 'cursorai-meta.json');
+    let meta = {};
+    if (fs.existsSync(metaPath)) {
+      try {
+        meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+      } catch {
+        meta = {};
+      }
+    }
+    const entry = cursorAiResolvePreviewEntry(projectDir, meta);
+    const previewUrl = `/cursorai/projects/${encodeURIComponent(seg)}/${encodeURIComponent(entry)}`;
+    return res.json({
+      ok: true,
+      folderName: seg,
+      projectName: meta.projectName || seg,
+      prompt: typeof meta.prompt === 'string' ? meta.prompt : '',
+      provider: meta.provider || 'auto',
+      createdAt: meta.createdAt || null,
+      updatedAt: meta.updatedAt || null,
+      summary: typeof meta.summary === 'string' ? meta.summary : '',
+      files: Array.isArray(meta.files) ? meta.files : [],
+      previewUrl,
+      bytes: cursorAiDirBytes(projectDir)
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to load project' });
+  }
+});
+
 app.delete('/api/cursorai/projects/:folderName', (req, res) => {
   try {
     const seg = cursorAiValidateFolderSegment(req.params.folderName);
@@ -2538,6 +2580,90 @@ app.post('/api/cursorai/create-project', async (req, res) => {
   } catch (error) {
     console.error('/api/cursorai/create-project error:', error);
     return res.status(500).json({ error: error.message || 'Failed to create project' });
+  }
+});
+
+app.post('/api/cursorai/update-project', async (req, res) => {
+  try {
+    const folderName = String(req.body?.folderName || '').trim();
+    const projectNameIn = String(req.body?.projectName || '').trim();
+    const prompt = String(req.body?.prompt || '').trim();
+    const provider = String(req.body?.provider || 'auto').trim().toLowerCase();
+    const seg = cursorAiValidateFolderSegment(folderName);
+    if (!seg) return res.status(400).json({ error: 'folderName is required and must be safe' });
+    if (!prompt) return res.status(400).json({ error: 'prompt is required' });
+    const rootResolved = path.resolve(cursorAiProjectsRoot);
+    const projectDir = path.resolve(path.join(cursorAiProjectsRoot, seg));
+    const relToRoot = path.relative(rootResolved, projectDir);
+    if (relToRoot.startsWith('..') || path.isAbsolute(relToRoot)) {
+      return res.status(400).json({ error: 'Invalid path' });
+    }
+    if (!fs.existsSync(projectDir)) return res.status(404).json({ error: 'Project not found' });
+    const st = fs.statSync(projectDir);
+    if (!st.isDirectory()) return res.status(400).json({ error: 'Not a project folder' });
+
+    let oldMeta = {};
+    const metaPath = path.join(projectDir, 'cursorai-meta.json');
+    if (fs.existsSync(metaPath)) {
+      try {
+        oldMeta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+      } catch {
+        oldMeta = {};
+      }
+    }
+    const displayName = projectNameIn || oldMeta.projectName || seg;
+
+    const generated = await cursorAiGenerateFiles(provider, prompt, displayName);
+    const files = Array.isArray(generated.files) ? generated.files.slice(0, 20) : [];
+
+    try {
+      const entries = fs.readdirSync(projectDir, { withFileTypes: true });
+      for (const e of entries) {
+        if (e.name === 'cursorai-meta.json') continue;
+        fs.rmSync(path.join(projectDir, e.name), { recursive: true, force: true });
+      }
+    } catch {
+      return res.status(500).json({ error: 'Could not clear project directory' });
+    }
+
+    const written = [];
+    for (const f of files) {
+      const rel = cursorAiSafeRelPath(f?.path);
+      if (!rel) continue;
+      const outPath = path.join(projectDir, rel);
+      const outDir = path.dirname(outPath);
+      if (!outDir.startsWith(projectDir)) continue;
+      fs.mkdirSync(outDir, { recursive: true });
+      const content = String(f?.content || '');
+      fs.writeFileSync(outPath, content, 'utf8');
+      written.push(rel);
+    }
+    if (!written.length) {
+      fs.writeFileSync(
+        path.join(projectDir, 'index.html'),
+        '<!doctype html><html><body><h1>CursorAI</h1><p>No valid files were generated.</p></body></html>',
+        'utf8'
+      );
+      written.push('index.html');
+    }
+
+    const meta = {
+      projectName: displayName,
+      folderName: seg,
+      prompt,
+      provider,
+      summary: String(generated.summary || ''),
+      files: written,
+      createdAt: oldMeta.createdAt || new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf8');
+    const primary = written.includes('index.html') ? 'index.html' : written[0];
+    const previewUrl = `/cursorai/projects/${encodeURIComponent(seg)}/${primary}`;
+    return res.json({ ok: true, ...meta, previewUrl });
+  } catch (error) {
+    console.error('/api/cursorai/update-project error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to update project' });
   }
 });
 

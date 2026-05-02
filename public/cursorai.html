@@ -40,11 +40,18 @@
       padding: 16px;
       background: #fff;
     }
-    .grid {
-      display: grid;
-      grid-template-columns: 1fr 180px;
-      gap: 10px;
+    .project-row {
       margin-bottom: 10px;
+    }
+    .provider-row {
+      margin-bottom: 10px;
+    }
+    .provider-row label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: #444;
+      margin-bottom: 6px;
     }
     input, textarea, select, button {
       width: 100%;
@@ -64,6 +71,43 @@
       margin-top: 10px;
     }
     button[disabled] { opacity: 0.6; cursor: wait; }
+    .edit-banner {
+      margin-bottom: 12px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      background: #f0f7ff;
+      border: 1px solid #c6dcfb;
+      font-size: 0.92rem;
+      color: #1e3a5f;
+    }
+    .edit-banner strong { font-weight: 700; }
+    .prompt-wrap {
+      position: relative;
+      margin-bottom: 12px;
+    }
+    .prompt-wrap textarea { padding-right: 52px; min-height: 160px; }
+    .btn-mic {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      width: 40px;
+      height: 40px;
+      margin: 0;
+      padding: 0;
+      border-radius: 10px;
+      font-size: 1.15rem;
+      line-height: 1;
+      background: #fff;
+      color: #111;
+      border: 1px solid #ccc;
+    }
+    .btn-mic:hover:not(:disabled) { background: #f5f5f5; }
+    .btn-mic.active {
+      background: #fef2f2;
+      border-color: #f87171;
+      color: #b91c1c;
+    }
+    .btn-mic[disabled] { cursor: not-allowed; }
     .status {
       margin-top: 10px;
       min-height: 1.2rem;
@@ -79,19 +123,27 @@
     }
     .result a { color: #0a58ca; word-break: break-all; }
     .files { margin: 10px 0 0; padding-left: 18px; }
-    .nav-dash {
+    .nav-projects {
       text-align: center;
-      margin: 0 0 18px;
+      margin-top: 28px;
     }
-    .nav-dash a {
-      color: #0a58ca;
+    .btn-projects {
+      display: inline-block;
+      width: auto;
+      padding: 5px 14px;
+      margin: 0;
+      font-size: 0.78rem;
       font-weight: 600;
       text-decoration: none;
-      font-size: 0.95rem;
+      border-radius: 999px;
+      background: #fff;
+      color: #444;
+      border: 1px solid #ccc;
     }
-    .nav-dash a:hover { text-decoration: underline; }
-    @media (max-width: 700px) {
-      .grid { grid-template-columns: 1fr; }
+    .btn-projects:hover {
+      background: #f7f7f7;
+      border-color: #bbb;
+      color: #111;
     }
   </style>
 </head>
@@ -99,18 +151,27 @@
   <main class="wrap">
     <img class="logo" src="/images/LAB007-GOLD-TRANS.png" alt="LAB007 logo" />
     <h1>CursorAI</h1>
-    <p class="nav-dash"><a href="/cursorai/dashboard">View all projects →</a></p>
     <section class="panel">
-      <div class="grid">
+      <div id="editBanner" class="edit-banner" style="display: none">
+        Editing existing project <strong id="editFolderLabel"></strong>. Files will be regenerated on disk.
+      </div>
+      <input type="hidden" id="editFolderName" value="" />
+      <div class="project-row">
         <input id="projectName" placeholder="Project name (e.g. landing-page-v1)" />
-        <select id="provider" aria-label="AI provider">
+      </div>
+      <div class="prompt-wrap">
+        <textarea id="prompt" placeholder="Describe what to build..."></textarea>
+        <button type="button" class="btn-mic" id="micBtn" title="Speak into the prompt (browser speech recognition)" aria-label="Speech to text">🎤</button>
+      </div>
+      <div class="provider-row">
+        <label for="provider">Model</label>
+        <select id="provider" aria-label="AI model">
           <option value="auto">Auto (use available key)</option>
           <option value="openai">OpenAI</option>
           <option value="claude">Claude</option>
         </select>
       </div>
-      <textarea id="prompt" placeholder="Describe what to build..."></textarea>
-      <button id="createBtn">Create project on persistent disk</button>
+      <button id="createBtn">Create Project</button>
       <div class="status" id="statusText"></div>
 
       <div class="result" id="resultBox">
@@ -120,6 +181,9 @@
         <ul class="files" id="filesList"></ul>
       </div>
     </section>
+    <p class="nav-projects">
+      <a class="btn-projects" href="/cursorai/dashboard">Projects</a>
+    </p>
   </main>
 
   <script>
@@ -133,9 +197,104 @@
       const projectFolder = document.getElementById('projectFolder');
       const previewLink = document.getElementById('previewLink');
       const filesList = document.getElementById('filesList');
+      const editBanner = document.getElementById('editBanner');
+      const editFolderLabel = document.getElementById('editFolderLabel');
+      const editFolderNameEl = document.getElementById('editFolderName');
+      const micBtn = document.getElementById('micBtn');
 
       function setStatus(message) {
         statusText.textContent = message || '';
+      }
+
+      const SpeechRecognitionCtor = window.SpeechRecognition || window.webkitSpeechRecognition;
+      let recognition = null;
+      let micListening = false;
+
+      function appendTranscript(text) {
+        const t = (text || '').trim();
+        if (!t) return;
+        const cur = promptEl.value;
+        const spacer = cur && !/\s$/.test(cur) ? ' ' : '';
+        promptEl.value = cur + spacer + t;
+      }
+
+      if (SpeechRecognitionCtor) {
+        recognition = new SpeechRecognitionCtor();
+        recognition.lang = (navigator.language || 'en-US').slice(0, 5);
+        recognition.continuous = true;
+        recognition.interimResults = true;
+        recognition.onresult = function (ev) {
+          let interim = '';
+          let finalChunk = '';
+          for (let i = ev.resultIndex; i < ev.results.length; i++) {
+            const piece = ev.results[i][0].transcript;
+            if (ev.results[i].isFinal) finalChunk += piece;
+            else interim += piece;
+          }
+          if (finalChunk) appendTranscript(finalChunk);
+        };
+        recognition.onerror = function (ev) {
+          if (ev.error === 'aborted' || ev.error === 'no-speech') return;
+          setStatus('Speech: ' + (ev.error || 'error') + (ev.error === 'not-allowed' ? ' (allow microphone)' : ''));
+          micListening = false;
+          micBtn.classList.remove('active');
+        };
+        recognition.onend = function () {
+          micListening = false;
+          micBtn.classList.remove('active');
+        };
+      } else {
+        micBtn.disabled = true;
+        micBtn.title = 'Speech recognition not supported in this browser';
+      }
+
+      micBtn.addEventListener('click', function () {
+        if (!recognition) return;
+        if (micListening) {
+          try {
+            recognition.stop();
+          } catch (e) {
+            /* ignore */
+          }
+          micListening = false;
+          micBtn.classList.remove('active');
+          return;
+        }
+        try {
+          recognition.start();
+          micListening = true;
+          micBtn.classList.add('active');
+          setStatus('Listening… speak into the prompt. Click the mic again to stop.');
+        } catch (e) {
+          setStatus('Could not start speech recognition.');
+        }
+      });
+
+      async function loadEditFromQuery() {
+        const params = new URLSearchParams(window.location.search);
+        const folder = (params.get('edit') || '').trim();
+        if (!folder) return;
+        setStatus('Loading project…');
+        try {
+          const res = await fetch('/api/cursorai/projects/' + encodeURIComponent(folder));
+          const data = await res.json().catch(function () {
+            return {};
+          });
+          if (!res.ok) throw new Error(data.error || 'Could not load project');
+          editFolderNameEl.value = data.folderName || folder;
+          projectNameEl.value = data.projectName || data.folderName || folder;
+          promptEl.value = data.prompt || '';
+          if (data.provider && providerEl.querySelector('option[value="' + data.provider + '"]')) {
+            providerEl.value = data.provider;
+          }
+          editFolderLabel.textContent = data.folderName || folder;
+          editBanner.style.display = 'block';
+          createBtn.textContent = 'Update Project';
+          document.title = 'LAB007 CursorAI — Edit';
+          setStatus('Loaded. Change the prompt or name, then update.');
+        } catch (err) {
+          setStatus(err.message || 'Failed to load project for editing.');
+        }
       }
 
       createBtn.addEventListener('click', async () => {
@@ -159,13 +318,23 @@
         filesList.innerHTML = '';
 
         try {
-          const res = await fetch('/api/cursorai/create-project', {
+          const isUpdate = !!editFolderNameEl.value;
+          const url = isUpdate ? '/api/cursorai/update-project' : '/api/cursorai/create-project';
+          const body = isUpdate
+            ? {
+                folderName: editFolderNameEl.value,
+                projectName: projectName,
+                prompt: prompt,
+                provider: provider
+              }
+            : { projectName: projectName, prompt: prompt, provider: provider };
+          const res = await fetch(url, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ projectName, prompt, provider })
+            body: JSON.stringify(body)
           });
           const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.error || 'Failed to create project');
+          if (!res.ok) throw new Error(data.error || (isUpdate ? 'Failed to update project' : 'Failed to create project'));
           projectFolder.textContent = 'CursorAgent/' + data.folderName;
           previewLink.href = data.previewUrl;
           previewLink.textContent = data.previewUrl;
@@ -175,13 +344,15 @@
             filesList.appendChild(li);
           });
           resultBox.style.display = 'block';
-          setStatus('Project created successfully.');
+          setStatus(isUpdate ? 'Project updated successfully.' : 'Project created successfully.');
         } catch (error) {
-          setStatus(error.message || 'Failed to create project.');
+          setStatus(error.message || 'Request failed.');
         } finally {
           createBtn.disabled = false;
         }
       });
+
+      loadEditFromQuery();
     })();
   </script>
 </body>
