@@ -79,6 +79,17 @@
     }
     .result a { color: #0a58ca; word-break: break-all; }
     .files { margin: 10px 0 0; padding-left: 18px; }
+    .nav-dash {
+      text-align: center;
+      margin: 0 0 18px;
+    }
+    .nav-dash a {
+      color: #0a58ca;
+      font-weight: 600;
+      text-decoration: none;
+      font-size: 0.95rem;
+    }
+    .nav-dash a:hover { text-decoration: underline; }
     @media (max-width: 700px) {
       .grid { grid-template-columns: 1fr; }
     }
@@ -88,6 +99,7 @@
   <main class="wrap">
     <img class="logo" src="/images/LAB007-GOLD-TRANS.png" alt="LAB007 logo" />
     <h1>CursorAI</h1>
+    <p class="nav-dash"><a href="/cursorai/dashboard">View all projects →</a></p>
     <section class="panel">
       <div class="grid">
         <input id="projectName" placeholder="Project name (e.g. landing-page-v1)" />

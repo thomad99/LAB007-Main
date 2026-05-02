@@ -278,6 +278,12 @@ app.get('/cursorai', (req, res) => {
   return res.status(404).send('Not found');
 });
 
+app.get('/cursorai/dashboard', (req, res) => {
+  const p = path.join(__dirname, 'public', 'cursorai-dashboard.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
+});
+
 app.get('/cleanai', (req, res) => {
   const p = path.join(__dirname, 'public', 'cleanai-dashboard.html');
   if (fs.existsSync(p)) return res.sendFile(p);
@@ -2356,6 +2362,130 @@ Rules:
   }
   return parsed;
 }
+
+function cursorAiValidateFolderSegment(name) {
+  const s = String(name || '').trim();
+  if (!s || s.includes('..') || s.includes('/') || s.includes('\\')) return null;
+  return s;
+}
+
+function cursorAiDirBytes(dirPath) {
+  let total = 0;
+  function walk(p) {
+    let st;
+    try {
+      st = fs.statSync(p);
+    } catch {
+      return;
+    }
+    if (st.isFile()) {
+      total += st.size;
+      return;
+    }
+    if (!st.isDirectory()) return;
+    let names = [];
+    try {
+      names = fs.readdirSync(p);
+    } catch {
+      return;
+    }
+    for (const n of names) walk(path.join(p, n));
+  }
+  walk(dirPath);
+  return total;
+}
+
+function cursorAiResolvePreviewEntry(projectDir, meta) {
+  const written = Array.isArray(meta.files) ? meta.files : [];
+  const ordered = [];
+  if (written.includes('index.html')) ordered.push('index.html');
+  for (const f of written) {
+    if (f && !ordered.includes(f)) ordered.push(f);
+  }
+  if (!ordered.includes('index.html')) ordered.push('index.html');
+  for (const rel of ordered) {
+    if (!cursorAiSafeRelPath(rel)) continue;
+    if (fs.existsSync(path.join(projectDir, rel))) return rel;
+  }
+  try {
+    const files = fs.readdirSync(projectDir);
+    const htmlFirst = files.find((x) => /\.html?$/i.test(x));
+    if (htmlFirst) return htmlFirst;
+  } catch {
+    /* ignore */
+  }
+  return 'index.html';
+}
+
+function cursorAiListProjects() {
+  const root = cursorAiProjectsRoot;
+  if (!fs.existsSync(root)) return [];
+  let entries = [];
+  try {
+    entries = fs.readdirSync(root, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  const projects = [];
+  for (const ent of entries) {
+    if (!ent.isDirectory()) continue;
+    const folderName = ent.name;
+    if (!cursorAiValidateFolderSegment(folderName)) continue;
+    const dir = path.join(root, folderName);
+    const metaPath = path.join(dir, 'cursorai-meta.json');
+    let meta = {};
+    if (fs.existsSync(metaPath)) {
+      try {
+        meta = JSON.parse(fs.readFileSync(metaPath, 'utf8'));
+      } catch {
+        meta = {};
+      }
+    }
+    const entry = cursorAiResolvePreviewEntry(dir, meta);
+    const previewUrl = `/cursorai/projects/${encodeURIComponent(folderName)}/${encodeURIComponent(entry)}`;
+    projects.push({
+      folderName,
+      projectName: meta.projectName || folderName,
+      prompt: typeof meta.prompt === 'string' ? meta.prompt.slice(0, 280) : '',
+      createdAt: meta.createdAt || null,
+      provider: meta.provider || '',
+      summary: typeof meta.summary === 'string' ? meta.summary.slice(0, 200) : '',
+      files: Array.isArray(meta.files) ? meta.files : [],
+      bytes: cursorAiDirBytes(dir),
+      previewUrl
+    });
+  }
+  projects.sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  return projects;
+}
+
+app.get('/api/cursorai/projects', (req, res) => {
+  try {
+    return res.json({ ok: true, projects: cursorAiListProjects() });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Failed to list projects' });
+  }
+});
+
+app.delete('/api/cursorai/projects/:folderName', (req, res) => {
+  try {
+    const seg = cursorAiValidateFolderSegment(req.params.folderName);
+    if (!seg) return res.status(400).json({ error: 'Invalid folder name' });
+    const rootResolved = path.resolve(cursorAiProjectsRoot);
+    const target = path.resolve(path.join(cursorAiProjectsRoot, seg));
+    const rel = path.relative(rootResolved, target);
+    if (rel.startsWith('..') || path.isAbsolute(rel)) {
+      return res.status(400).json({ error: 'Invalid path' });
+    }
+    if (!fs.existsSync(target)) return res.status(404).json({ error: 'Project not found' });
+    const st = fs.statSync(target);
+    if (!st.isDirectory()) return res.status(400).json({ error: 'Not a project folder' });
+    fs.rmSync(target, { recursive: true, force: true });
+    return res.json({ ok: true });
+  } catch (error) {
+    return res.status(500).json({ error: error.message || 'Delete failed' });
+  }
+});
 
 app.post('/api/cursorai/create-project', async (req, res) => {
   try {
