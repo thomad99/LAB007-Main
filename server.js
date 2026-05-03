@@ -12,6 +12,7 @@ const multer = require('multer');
 const { parseStringPromise } = require('xml2js');
 const { router: aimailRouter } = require('./aimail');
 const { registerSpamblokRoutes } = require('./lib/spamblok');
+const { notifyCursorAiJobComplete } = require('./lib/notify');
 const fetchFn = global.fetch || ((...args) => import('node-fetch').then(({ default: f }) => f(...args)));
 
 const app = express();
@@ -2576,6 +2577,12 @@ app.post('/api/cursorai/create-project', async (req, res) => {
     fs.writeFileSync(path.join(projectDir, 'cursorai-meta.json'), JSON.stringify(meta, null, 2), 'utf8');
     const primary = written.includes('index.html') ? 'index.html' : written[0];
     const previewUrl = `/cursorai/projects/${encodeURIComponent(folderName)}/${primary}`;
+    void notifyCursorAiJobComplete({
+      kind: 'created',
+      projectName,
+      folderName,
+      previewUrl
+    }).catch((err) => console.error('[notify] CursorAI create:', err.message));
     return res.json({ ok: true, ...meta, previewUrl });
   } catch (error) {
     console.error('/api/cursorai/create-project error:', error);
@@ -2660,6 +2667,12 @@ app.post('/api/cursorai/update-project', async (req, res) => {
     fs.writeFileSync(metaPath, JSON.stringify(meta, null, 2), 'utf8');
     const primary = written.includes('index.html') ? 'index.html' : written[0];
     const previewUrl = `/cursorai/projects/${encodeURIComponent(seg)}/${primary}`;
+    void notifyCursorAiJobComplete({
+      kind: 'updated',
+      projectName: displayName,
+      folderName: seg,
+      previewUrl
+    }).catch((err) => console.error('[notify] CursorAI update:', err.message));
     return res.json({ ok: true, ...meta, previewUrl });
   } catch (error) {
     console.error('/api/cursorai/update-project error:', error);
