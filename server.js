@@ -12,7 +12,7 @@ const multer = require('multer');
 const { parseStringPromise } = require('xml2js');
 const { router: aimailRouter } = require('./aimail');
 const { registerSpamblokRoutes } = require('./lib/spamblok');
-const { notifyCursorAiJobComplete } = require('./lib/notify');
+const { notifyCursorAiJobComplete, sendTelegramTest } = require('./lib/notify');
 const fetchFn = global.fetch || ((...args) => import('node-fetch').then(({ default: f }) => f(...args)));
 
 const app = express();
@@ -2527,6 +2527,16 @@ app.delete('/api/cursorai/projects/:folderName', (req, res) => {
     return res.json({ ok: true });
   } catch (error) {
     return res.status(500).json({ error: error.message || 'Delete failed' });
+  }
+});
+
+app.post('/api/cursorai/test-telegram', async (req, res) => {
+  try {
+    const out = await sendTelegramTest();
+    return res.json(out);
+  } catch (error) {
+    console.error('/api/cursorai/test-telegram error:', error);
+    return res.status(500).json({ ok: false, error: error.message || 'Test failed' });
   }
 });
 
