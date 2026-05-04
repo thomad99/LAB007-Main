@@ -1,0 +1,422 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
+  <title>007Trade · Active trades — LAB007</title>
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #070708;
+      background-image:
+        radial-gradient(ellipse 120% 80% at 50% -30%, rgba(201, 162, 39, 0.08), transparent),
+        radial-gradient(ellipse 80% 50% at 100% 50%, rgba(59, 130, 246, 0.04), transparent);
+      color: #e8e8ea;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 18px 56px; }
+    .top {
+      display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px;
+      margin-bottom: 28px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand img { height: 44px; }
+    h1 { margin: 0; font-size: 1.45rem; font-weight: 700; letter-spacing: 0.02em; }
+    .sub { color: #8b8b93; font-size: 0.9rem; margin-top: 4px; max-width: 520px; line-height: 1.45; }
+    .nav a {
+      color: #c9a227; text-decoration: none; font-weight: 600; font-size: 0.9rem; margin-left: 14px;
+    }
+    .nav a:hover { text-decoration: underline; }
+    .toolbar {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 22px;
+    }
+    .toolbar .meta { color: #6b7280; font-size: 0.8rem; }
+    button, label.btn {
+      font: inherit; border-radius: 10px; border: 1px solid #3a3a44; background: #121214; color: #e8e8ea;
+      padding: 10px 16px; cursor: pointer; font-weight: 600;
+    }
+    button.primary {
+      background: #c9a227; color: #111; border-color: #c9a227;
+    }
+    button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px; margin-bottom: 22px;
+    }
+    .stat-card {
+      background: linear-gradient(165deg, #141416 0%, #0e0e10 100%);
+      border: 1px solid #2a2a32;
+      border-radius: 14px;
+      padding: 16px 18px;
+      position: relative;
+      overflow: hidden;
+    }
+    .stat-card::after {
+      content: "";
+      position: absolute; top: 0; left: 0; right: 0; height: 2px;
+      background: linear-gradient(90deg, transparent, rgba(201, 162, 39, 0.5), transparent);
+      opacity: 0.6;
+    }
+    .stat-card .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; margin-bottom: 6px; }
+    .stat-card .value { font-size: 1.35rem; font-weight: 700; color: #f0f0f2; letter-spacing: -0.02em; }
+    .stat-card .value.pos { color: #86efac; }
+    .stat-card .value.neg { color: #f87171; }
+    .stat-card .hint { font-size: 0.75rem; color: #5c5c66; margin-top: 6px; }
+    .panel {
+      border: 1px solid #2a2a2f; border-radius: 14px; padding: 18px; margin-bottom: 18px;
+      background: #121214;
+    }
+    .panel h2 {
+      margin: 0 0 14px; font-size: 0.95rem; color: #c9a227;
+      text-transform: uppercase; letter-spacing: 0.06em;
+      display: flex; align-items: center; gap: 10px;
+    }
+    .panel h2 .count {
+      font-size: 0.72rem; font-weight: 700; color: #8b8b93; background: #1a1a1f;
+      padding: 2px 8px; border-radius: 999px;
+    }
+    table { width: 100%; border-collapse: collapse; font-size: 0.86rem; }
+    th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #25252d; vertical-align: top; }
+    th { color: #6b7280; font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.05em; }
+    tr:last-child td { border-bottom: none; }
+    .num { font-variant-numeric: tabular-nums; }
+    .pos { color: #86efac; font-weight: 600; }
+    .neg { color: #f87171; font-weight: 600; }
+    .muted { color: #6b7280; font-size: 0.82rem; }
+    .leg-row td:first-child { padding-left: 28px; }
+    .leg-row .pipe { color: #5c522e; margin-right: 6px; }
+    .empty-state {
+      text-align: center; padding: 36px 16px; color: #6b7280; font-size: 0.9rem;
+    }
+    .error-banner {
+      background: #2a1515; border: 1px solid #5c2626; border-radius: 12px;
+      padding: 14px 16px; color: #fca5a5; margin-bottom: 20px; font-size: 0.9rem;
+    }
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 18px;
+    }
+    @media (min-width: 960px) {
+      .two-col { grid-template-columns: 1fr 1fr; }
+    }
+    input[type="checkbox"] { accent-color: #c9a227; width: 16px; height: 16px; }
+    code { font-size: 0.78rem; background: #1a1a1f; padding: 2px 6px; border-radius: 4px; color: #d4c4a8; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <img src="/images/LAB007-GOLD-TRANS.png" alt="LAB007" />
+        <div>
+          <h1>Active trades</h1>
+          <div class="sub">Live snapshot from Alpaca: open positions, working orders, and account balances. Data refreshes from the broker API — not stored in LAB007.</div>
+        </div>
+      </div>
+      <div class="nav">
+        <a href="/007trade">007Trade</a>
+        <a href="/007trade/settings">Account</a>
+        <a href="/">Home</a>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <button type="button" class="primary" id="refreshBtn">Refresh now</button>
+      <label class="btn" style="display:inline-flex;align-items:center;gap:8px;margin:0">
+        <input type="checkbox" id="autoRefresh" checked />
+        Auto-refresh every 20s
+      </label>
+      <span class="meta" id="statusLine"></span>
+    </div>
+
+    <div id="errorBox" class="error-banner" style="display:none"></div>
+
+    <div id="dashboardMain" style="display:none">
+      <div class="stat-grid" id="statGrid"></div>
+      <div class="two-col">
+        <div class="panel">
+          <h2>Open positions <span class="count" id="posCount">0</span></h2>
+          <div id="positionsWrap"></div>
+        </div>
+        <div class="panel">
+          <h2>Open orders <span class="count" id="ordCount">0</span></h2>
+          <div id="ordersWrap"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="noKeysState" class="panel" style="display:none">
+      <p style="margin:0;line-height:1.6">Alpaca API keys are not configured on this server. Add <code>ALPACA_API_KEY_ID</code> and <code>ALPACA_API_SECRET_KEY</code> (e.g. Render → Environment), then reload.</p>
+      <p style="margin:12px 0 0"><a href="/007trade/settings" style="color:#c9a227;font-weight:600">Open broker settings →</a></p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var autoTimer = null;
+
+      function el(id) { return document.getElementById(id); }
+
+      function fmtMoney(v) {
+        var n = parseFloat(v);
+        if (isNaN(n)) return '—';
+        return n.toLocaleString(undefined, { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+      }
+
+      function fmtNum(v, d) {
+        var n = parseFloat(v);
+        if (isNaN(n)) return '—';
+        return n.toLocaleString(undefined, { maximumFractionDigits: d != null ? d : 4 });
+      }
+
+      function fmtTime(iso) {
+        try {
+          return new Date(iso).toLocaleString();
+        } catch (e) {
+          return iso || '—';
+        }
+      }
+
+      function plClass(v) {
+        var n = parseFloat(v);
+        if (isNaN(n) || n === 0) return '';
+        return n > 0 ? 'pos' : 'neg';
+      }
+
+      function renderStats(d) {
+        var acct = d.account || {};
+        var sum = d.summary || {};
+        var broker = d.broker || {};
+        var grid = el('statGrid');
+        var unreal = sum.unrealizedPlTotal;
+        var cards = [
+          { label: 'Equity', value: fmtMoney(acct.equity), hint: broker.paper ? 'Paper account' : 'Live account' },
+          { label: 'Cash', value: fmtMoney(acct.cash), hint: '' },
+          { label: 'Buying power', value: fmtMoney(acct.buying_power), hint: '' },
+          { label: 'Portfolio value', value: fmtMoney(acct.portfolio_value), hint: '' },
+          {
+            label: 'Unrealized P/L',
+            value: fmtMoney(unreal),
+            valueClass: plClass(unreal),
+            hint: 'Sum across open positions'
+          },
+          { label: 'Open positions', value: String(sum.positionCount || 0), hint: '' },
+          { label: 'Working orders', value: String(sum.openOrderCount || 0), hint: 'Status = open at Alpaca' }
+        ];
+        grid.innerHTML = cards
+          .map(function (c) {
+            var vc = c.valueClass ? ' ' + c.valueClass : '';
+            return (
+              '<div class="stat-card">' +
+              '<div class="label">' +
+              escapeHtml(c.label) +
+              '</div>' +
+              '<div class="value' +
+              vc +
+              '">' +
+              escapeHtml(c.value) +
+              '</div>' +
+              (c.hint ? '<div class="hint">' + escapeHtml(c.hint) + '</div>' : '') +
+              '</div>'
+            );
+          })
+          .join('');
+      }
+
+      function escapeHtml(t) {
+        return String(t || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+
+      function renderPositions(rows) {
+        var w = el('positionsWrap');
+        el('posCount').textContent = String(rows.length);
+        if (!rows.length) {
+          w.innerHTML = '<div class="empty-state">No open positions.</div>';
+          return;
+        }
+        var html =
+          '<table><thead><tr>' +
+          '<th>Symbol</th><th>Qty</th><th>Avg entry</th><th>Mkt value</th><th>Unreal $</th><th>Unreal %</th>' +
+          '</tr></thead><tbody>';
+        rows.forEach(function (p) {
+          var sym = p.symbol || '—';
+          var pl = p.unrealized_pl;
+          var plp = p.unrealized_plpc;
+          html +=
+            '<tr>' +
+            '<td><strong>' +
+            escapeHtml(sym) +
+            '</strong></td>' +
+            '<td class="num">' +
+            escapeHtml(fmtNum(p.qty, 4)) +
+            '</td>' +
+            '<td class="num">' +
+            escapeHtml(fmtMoney(p.avg_entry_price)) +
+            '</td>' +
+            '<td class="num">' +
+            escapeHtml(fmtMoney(p.market_value)) +
+            '</td>' +
+            '<td class="num ' +
+            plClass(pl) +
+            '">' +
+            escapeHtml(fmtMoney(pl)) +
+            '</td>' +
+            '<td class="num ' +
+            plClass(plp) +
+            '">' +
+            escapeHtml(
+              plp != null && !isNaN(parseFloat(plp))
+                ? (parseFloat(plp) * 100).toFixed(2) + '%'
+                : '—'
+            ) +
+            '</td>' +
+            '</tr>';
+        });
+        html += '</tbody></table>';
+        w.innerHTML = html;
+      }
+
+      function orderRow(o, isLeg) {
+        var sym = o.symbol || '—';
+        var side = (o.side || '').toUpperCase();
+        var qty = o.qty != null ? String(o.qty) : '—';
+        var filled = o.filled_qty != null ? String(o.filled_qty) : '';
+        var typ = (o.type || '').toUpperCase();
+        var st = (o.status || '').toUpperCase();
+        var tif = (o.time_in_force || '').toUpperCase();
+        var lp = o.limit_price != null ? 'L:' + fmtNum(o.limit_price, 2) : '';
+        var sp = o.stop_price != null ? 'S:' + fmtNum(o.stop_price, 2) : '';
+        var extra = [lp, sp].filter(Boolean).join(' ');
+        var cid = o.client_order_id || '';
+        if (cid.length > 22) cid = cid.slice(0, 20) + '…';
+        return (
+          '<tr class="' +
+          (isLeg ? 'leg-row' : '') +
+          '">' +
+          '<td>' +
+          (isLeg ? '<span class="pipe">└</span>' : '') +
+          '<strong>' +
+          escapeHtml(sym) +
+          '</strong>' +
+          '<div class="muted">' +
+          escapeHtml(cid ? 'id ' + cid : '') +
+          '</div></td>' +
+          '<td>' +
+          escapeHtml(side) +
+          '</td>' +
+          '<td class="num">' +
+          escapeHtml(qty) +
+          (filled ? ' <span class="muted">(' + escapeHtml(filled) + ' filled)</span>' : '') +
+          '</td>' +
+          '<td>' +
+          escapeHtml(typ) +
+          '</td>' +
+          '<td>' +
+          escapeHtml(st) +
+          '</td>' +
+          '<td class="num muted">' +
+          escapeHtml(extra || '—') +
+          '</td>' +
+          '<td class="muted">' +
+          escapeHtml(fmtTime(o.created_at)) +
+          '</td>' +
+          '</tr>'
+        );
+      }
+
+      function renderOrders(rows) {
+        var w = el('ordersWrap');
+        el('ordCount').textContent = String(rows.length);
+        if (!rows.length) {
+          w.innerHTML = '<div class="empty-state">No open orders.</div>';
+          return;
+        }
+        var html =
+          '<table><thead><tr>' +
+          '<th>Symbol</th><th>Side</th><th>Qty</th><th>Type</th><th>Status</th><th>Prices</th><th>Created</th>' +
+          '</tr></thead><tbody>';
+        rows.forEach(function (o) {
+          html += orderRow(o, false);
+          var legs = o.legs;
+          if (Array.isArray(legs) && legs.length) {
+            legs.forEach(function (leg) {
+              html += orderRow(leg, true);
+            });
+          }
+        });
+        html += '</tbody></table>';
+        w.innerHTML = html;
+      }
+
+      function loadDash() {
+        el('refreshBtn').disabled = true;
+        el('statusLine').textContent = 'Loading…';
+        el('errorBox').style.display = 'none';
+        fetch('/api/007trade/alpaca-dashboard')
+          .then(function (r) {
+            return r.json().then(function (j) {
+              return { r: r, j: j };
+            });
+          })
+          .then(function (x) {
+            el('refreshBtn').disabled = false;
+            if (!x.j.configured) {
+              el('dashboardMain').style.display = 'none';
+              el('noKeysState').style.display = 'block';
+              el('statusLine').textContent = '';
+              return;
+            }
+            el('noKeysState').style.display = 'none';
+            if (!x.r.ok || !x.j.ok) {
+              el('dashboardMain').style.display = 'none';
+              el('errorBox').style.display = 'block';
+              el('errorBox').textContent = x.j.error || 'Could not load Alpaca data.';
+              el('statusLine').textContent = '';
+              return;
+            }
+            el('dashboardMain').style.display = 'block';
+            renderStats(x.j);
+            renderPositions(x.j.positions || []);
+            renderOrders(x.j.openOrders || []);
+            el('statusLine').textContent =
+              'Last updated ' +
+              fmtTime(x.j.fetchedAt) +
+              ' · ' +
+              (x.j.broker && x.j.broker.paper ? 'Paper' : 'Live') +
+              ' · ' +
+              (x.j.broker && x.j.broker.baseUrl ? x.j.broker.baseUrl : '');
+          })
+          .catch(function () {
+            el('refreshBtn').disabled = false;
+            el('statusLine').textContent = '';
+            el('errorBox').style.display = 'block';
+            el('errorBox').textContent = 'Network error loading dashboard.';
+          });
+      }
+
+      function setupAuto() {
+        if (autoTimer) clearInterval(autoTimer);
+        autoTimer = null;
+        if (el('autoRefresh').checked) {
+          autoTimer = setInterval(loadDash, 20000);
+        }
+      }
+
+      el('refreshBtn').addEventListener('click', loadDash);
+      el('autoRefresh').addEventListener('change', setupAuto);
+
+      loadDash();
+      setupAuto();
+    })();
+  </script>
+</body>
+</html>

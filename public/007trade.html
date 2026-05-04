@@ -98,6 +98,7 @@
       </div>
       <div class="nav">
         <a href="/">Home</a>
+        <a href="/007trade/dashboard">Active trades</a>
         <a href="/007trade/settings">Account &amp; broker</a>
       </div>
     </div>
@@ -117,7 +118,9 @@
 
     <div class="panel">
       <h2>Strategy library</h2>
-      <p class="sub" style="margin:0 0 12px">Select one playbook. These are templates you combine with your own stock picks.</p>
+      <p class="sub" style="margin:0 0 12px">
+        Turn on <strong>multiple playbooks</strong> at once (up to six). They are all included in the Claude brief; each order can be tagged with one strategy below.
+      </p>
       <div class="strategy-grid" id="strategyGrid"></div>
     </div>
 
@@ -142,7 +145,7 @@
 
     <div class="panel">
       <h2>Claude trading brief</h2>
-      <p class="sub" style="margin:0 0 10px">Uses your selected strategy + watchlist (Anthropic key on server).</p>
+      <p class="sub" style="margin:0 0 10px">Uses every <strong>active</strong> strategy in the library above + your watchlist (Anthropic key on server).</p>
       <div class="row" style="margin-bottom:10px">
         <button type="button" class="primary" id="claudeBtn">Generate brief</button>
       </div>
@@ -151,9 +154,42 @@
     </div>
 
     <div class="panel">
+      <h2>Risk &amp; position sizing</h2>
+      <p class="sub" style="margin:0 0 12px;line-height:1.5">
+        Saved to disk. When <strong>Bracket orders</strong> is on, each <strong>Submit</strong> sends a
+        <strong>market</strong> entry plus Alpaca <strong>stop</strong> and <strong>take-profit</strong> prices derived from
+        a live quote and your % below. <strong>Auto size</strong> sets share count from account equity and
+        “max account risk %” (roughly: how much of the account you are willing to lose if the stop hits).
+        This is not a 24/7 bot — you still press Submit; child orders are managed on Alpaca after the entry fills.
+      </p>
+      <div class="row" style="margin-bottom:8px;align-items:flex-end;flex-wrap:wrap">
+        <label class="sub" style="display:flex;flex-direction:column;gap:4px">Stop loss %
+          <input type="number" id="riskStop" min="0.05" max="50" step="0.05" value="1" style="width:100px" />
+        </label>
+        <label class="sub" style="display:flex;flex-direction:column;gap:4px">Take profit %
+          <input type="number" id="riskTp" min="0.05" max="100" step="0.05" value="2" style="width:100px" />
+        </label>
+        <label class="sub" style="display:flex;flex-direction:column;gap:4px">Max account risk % / trade
+          <input type="number" id="riskMaxAcct" min="0.01" max="25" step="0.01" value="1" style="width:120px" />
+        </label>
+      </div>
+      <div class="row" style="margin-bottom:10px;flex-wrap:wrap;gap:16px">
+        <label class="sub" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="riskBracket" checked /> Bracket (stop + take-profit on new entry)
+        </label>
+        <label class="sub" style="display:flex;align-items:center;gap:8px;cursor:pointer">
+          <input type="checkbox" id="riskAutoQty" /> Auto size shares from risk % (uses quote + account equity)
+        </label>
+      </div>
+      <button type="button" class="primary" id="saveRiskBtn">Save risk settings</button>
+      <span class="sub" id="riskSaved" style="display:none;margin-left:10px">Saved.</span>
+    </div>
+
+    <div class="panel">
       <h2>Trade plans</h2>
-      <p class="sub" style="margin:0 0 10px">Queue ideas tied to the selected strategy.</p>
+      <p class="sub" style="margin:0 0 10px">Queue ideas; pick which active strategy each row belongs to.</p>
       <div class="row" style="margin-bottom:10px">
+        <select id="planStrategy" style="min-width:180px" title="Strategy for this plan"></select>
         <input type="text" id="planSymbol" placeholder="Symbol" style="width:120px" />
         <input type="text" id="planNotes" placeholder="Notes (optional)" style="flex:1;min-width:160px" />
         <button type="button" class="primary" id="addPlanBtn">Add plan</button>
@@ -169,13 +205,35 @@
       <p class="sub" style="margin:0 0 10px" id="execHint">
         Market orders use your server’s Alpaca keys. Paper vs real money is controlled by <code>ALPACA_PAPER</code> in environment (not a separate “sim” button here).
       </p>
+      <p class="sub" style="margin:0 0 12px;line-height:1.5;border-left:3px solid #5c522e;padding-left:12px" id="execStrategyHint"></p>
+      <label class="sub" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer">
+        <input type="checkbox" id="execPlain" /> Plain market only (no bracket legs — e.g. closing or testing)
+      </label>
+      <div class="row" style="margin-bottom:10px;align-items:center">
+        <span class="sub">Tag order with strategy</span>
+        <select id="execStrategy" style="min-width:200px"></select>
+      </div>
       <div class="row">
         <input type="text" id="execSymbol" placeholder="Symbol" style="width:100px" />
-        <input type="number" id="execQty" value="1" min="1" style="width:70px" />
+        <input type="number" id="execQty" value="1" min="1" style="width:70px" title="Ignored when Auto size is on in Risk panel" />
         <select id="execSide"><option value="buy">Buy</option><option value="sell">Sell</option></select>
         <button type="button" class="primary" id="execAlpacaBtn">Submit paper order</button>
       </div>
       <p class="sub" id="execMsg" style="margin-top:10px"></p>
+    </div>
+
+    <div class="panel">
+      <h2>Strategy activity report</h2>
+      <p class="sub" style="margin:0 0 10px">
+        Orders you submit from this page are logged with their strategy tag (persisted in <code>state.json</code>). This is not full P&amp;L accounting — see Alpaca for realized results.
+      </p>
+      <button type="button" class="primary" id="refreshReportBtn">Refresh report</button>
+      <p class="sub" id="reportTotals" style="margin-top:12px"></p>
+      <table style="margin-top:10px">
+        <thead><tr><th>Strategy</th><th>Orders</th><th>Unique symbols</th><th>Last order</th></tr></thead>
+        <tbody id="reportBody"></tbody>
+      </table>
+      <p class="sub" id="reportDisclaimer" style="margin-top:12px;font-size:0.8rem;color:#8b8b93"></p>
     </div>
   </div>
 
@@ -185,30 +243,137 @@
       var selectedId = '';
       var state = {};
 
+      function getActiveIds() {
+        if (state.activeStrategyIds && state.activeStrategyIds.length) return state.activeStrategyIds.slice();
+        return selectedId ? [selectedId] : ['momentum-breakout'];
+      }
+
+      function refreshStrategySelects() {
+        var ids = getActiveIds();
+        ['execStrategy', 'planStrategy'].forEach(function (sid) {
+          var sel = el(sid);
+          if (!sel) return;
+          var cur = sel.value;
+          sel.innerHTML = '';
+          ids.forEach(function (id) {
+            var opt = document.createElement('option');
+            opt.value = id;
+            opt.textContent = strategyNameById(id);
+            sel.appendChild(opt);
+          });
+          if (ids.includes(cur)) sel.value = cur;
+          else sel.value = ids[0];
+        });
+        if (el('execStrategy')) {
+          var pref = state.selectedStrategyId || ids[0];
+          if (ids.includes(pref)) el('execStrategy').value = pref;
+        }
+      }
+
+      function renderReport() {
+        fetch('/api/007trade/report')
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            el('reportTotals').textContent =
+              d.totals
+                ? 'Total logged orders: ' +
+                  d.totals.ordersInJournal +
+                  ' · Strategies with tags: ' +
+                  d.totals.strategiesTagged
+                : '';
+            el('reportDisclaimer').textContent = d.disclaimer || '';
+            var tb = el('reportBody');
+            tb.innerHTML = '';
+            (d.byStrategy || []).forEach(function (row) {
+              var tr = document.createElement('tr');
+              tr.innerHTML =
+                '<td>' +
+                escapeHtml(row.strategyName || row.strategyId) +
+                '</td><td>' +
+                escapeHtml(String(row.ordersPlaced)) +
+                '</td><td>' +
+                escapeHtml(String(row.uniqueSymbols)) +
+                ' (' +
+                escapeHtml((row.symbols || []).join(', ')) +
+                ')</td><td>' +
+                escapeHtml(row.lastAt ? fmtTime(row.lastAt) : '—') +
+                '</td>';
+              tb.appendChild(tr);
+            });
+          })
+          .catch(function () {
+            el('reportTotals').textContent = 'Could not load report.';
+          });
+      }
+
       function el(id) { return document.getElementById(id); }
 
       function fmtTime(iso) {
         try { return new Date(iso).toLocaleString(); } catch (e) { return iso; }
       }
 
+      function strategyNameById(id) {
+        var s = strategies.find(function (x) { return x.id === id; });
+        return s ? s.name : id || '—';
+      }
+
+      function updateExecStrategyHint() {
+        var hint = el('execStrategyHint');
+        if (!hint) return;
+        var tagId = el('execStrategy') && el('execStrategy').value ? el('execStrategy').value : selectedId;
+        var name = strategyNameById(tagId);
+        var rp = state.riskProfile || {};
+        var br = rp.useBracketOrders !== false;
+        var aq = rp.useAutoQty === true;
+        hint.innerHTML =
+          '<strong>Strategy:</strong> ' +
+          escapeHtml(name) +
+          '. <strong>Risk profile:</strong> stop ' +
+          escapeHtml(String(rp.stopLossPct != null ? rp.stopLossPct : 1)) +
+          '%, take-profit +' +
+          escapeHtml(String(rp.takeProfitPct != null ? rp.takeProfitPct : 2)) +
+          '%, max account risk ' +
+          escapeHtml(String(rp.maxAccountRiskPct != null ? rp.maxAccountRiskPct : 1)) +
+          '%. ' +
+          (br
+            ? '<strong>Bracket on:</strong> Submit sends market + stop + target (from last quote), unless you check <em>Plain market only</em> below. '
+            : '<strong>Bracket off:</strong> Submit sends a simple market order. ') +
+          (aq
+            ? '<strong>Auto size on</strong> (qty field ignored). '
+            : 'Use the qty field (manual size). ') +
+          'Claude briefs stay separate — they do not drive orders automatically. Orders tagged <code>007-…</code> in Alpaca.';
+      }
+
       function renderStrategies() {
         var grid = el('strategyGrid');
+        var active = getActiveIds();
         grid.innerHTML = '';
         strategies.forEach(function (s) {
           var card = document.createElement('button');
           card.type = 'button';
-          card.className = 'strategy-card' + (s.id === selectedId ? ' selected' : '');
+          card.className = 'strategy-card' + (active.indexOf(s.id) >= 0 ? ' selected' : '');
           card.innerHTML =
             '<h3>' + escapeHtml(s.name) + '</h3>' +
             '<p>' + escapeHtml(s.summary) + '</p>' +
             '<div class="style">' + escapeHtml(s.style) + '</div>';
           card.addEventListener('click', function () {
-            selectedId = s.id;
-            renderStrategies();
-            saveState({ selectedStrategyId: selectedId });
+            var ids = getActiveIds().slice();
+            var ix = ids.indexOf(s.id);
+            if (ix >= 0) {
+              if (ids.length > 1) ids.splice(ix, 1);
+            } else if (ids.length < 6) {
+              ids.push(s.id);
+            }
+            var execVal = el('execStrategy') ? el('execStrategy').value : selectedId;
+            var nextSel = ids.indexOf(execVal) >= 0 ? execVal : ids[0];
+            saveState({ activeStrategyIds: ids, selectedStrategyId: nextSel });
           });
           grid.appendChild(card);
         });
+        refreshStrategySelects();
+        updateExecStrategyHint();
       }
 
       function escapeHtml(t) {
@@ -276,13 +441,26 @@
           .then(function (data) {
             state = data;
             selectedId = data.selectedStrategyId || '';
+            if (!state.activeStrategyIds || !state.activeStrategyIds.length) {
+              state.activeStrategyIds = selectedId ? [selectedId] : ['momentum-breakout'];
+            }
             el('watchlistInput').value = (data.watchlist || []).join(' ');
             el('paperContext').value = data.paperContext || '';
+            var rp = data.riskProfile || {};
+            el('riskStop').value = rp.stopLossPct != null ? rp.stopLossPct : 1;
+            el('riskTp').value = rp.takeProfitPct != null ? rp.takeProfitPct : 2;
+            el('riskMaxAcct').value = rp.maxAccountRiskPct != null ? rp.maxAccountRiskPct : 1;
+            el('riskBracket').checked = rp.useBracketOrders !== false;
+            el('riskAutoQty').checked = rp.useAutoQty === true;
             setModeUi();
+            refreshStrategySelects();
+            updateExecStrategyHint();
+            el('execQty').disabled = el('riskAutoQty').checked === true;
             el('brokerHint').textContent = data.alpacaEnvPresent
               ? 'Alpaca keys detected on server.'
               : 'No Alpaca keys on server — add them under Account & broker.';
             renderPlans();
+            renderReport();
           });
       }
 
@@ -302,6 +480,24 @@
         saveState({ watchlist: parts });
       });
 
+      el('saveRiskBtn').addEventListener('click', function () {
+        el('riskSaved').style.display = 'none';
+        saveState({
+          riskProfile: {
+            stopLossPct: parseFloat(el('riskStop').value) || 1,
+            takeProfitPct: parseFloat(el('riskTp').value) || 2,
+            maxAccountRiskPct: parseFloat(el('riskMaxAcct').value) || 1,
+            useBracketOrders: el('riskBracket').checked,
+            useAutoQty: el('riskAutoQty').checked
+          }
+        }).then(function () {
+          el('riskSaved').style.display = 'inline';
+          setTimeout(function () {
+            el('riskSaved').style.display = 'none';
+          }, 2000);
+        });
+      });
+
       el('saveContextBtn').addEventListener('click', function () {
         el('contextSaved').style.display = 'none';
         saveState({ paperContext: el('paperContext').value }).then(function () {
@@ -312,6 +508,14 @@
         });
       });
 
+      el('execStrategy').addEventListener('change', function () {
+        saveState({ selectedStrategyId: el('execStrategy').value });
+      });
+
+      el('refreshReportBtn').addEventListener('click', function () {
+        renderReport();
+      });
+
       el('addPlanBtn').addEventListener('click', function () {
         var sym = (el('planSymbol').value || '').trim().toUpperCase();
         if (!sym) return;
@@ -320,7 +524,7 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             symbol: sym,
-            strategyId: selectedId,
+            strategyId: el('planStrategy').value || getActiveIds()[0],
             notes: el('planNotes').value
           })
         }).then(function () {
@@ -337,7 +541,7 @@
         fetch('/api/007trade/claude-brief', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ strategyId: selectedId })
+          body: JSON.stringify({ strategyIds: getActiveIds() })
         })
           .then(function (r) { return r.json().then(function (j) { return { r: r, j: j }; }); })
           .then(function (x) {
@@ -360,15 +564,23 @@
           el('execMsg').textContent = 'Configure ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY on the server (see Account & broker).';
           return;
         }
+        var tagStrat = el('execStrategy').value || selectedId;
+        var stratName = strategyNameById(tagStrat);
+        var confirmMsg =
+          'Strategy tag for this order: ' +
+          stratName +
+          '.\n\nBracket/stop behavior follows your Risk panel unless Plain market only is checked.\n\nProceed?';
         if (state.alpacaIsPaper === false) {
-          if (!confirm('You are on LIVE Alpaca (real money). Submit this market order?')) return;
+          if (!confirm('LIVE Alpaca (real money).\n\n' + confirmMsg)) return;
         } else {
-          if (!confirm('Submit a paper-trading market order to Alpaca?')) return;
+          if (!confirm('Paper trading.\n\n' + confirmMsg)) return;
         }
         var orderBody = {
           symbol: el('execSymbol').value,
           qty: el('execQty').value,
-          side: el('execSide').value
+          side: el('execSide').value,
+          strategyId: el('execStrategy').value || selectedId,
+          plainOnly: el('execPlain').checked === true
         };
         console.log('[007Trade] submitting Alpaca order', orderBody);
         fetch('/api/007trade/alpaca-order', {
@@ -394,9 +606,41 @@
             if (x.j.broker) {
               console.log('[007Trade] order placed on', x.j.broker);
             }
+            if (x.j.strategyTag) {
+              console.log('[007Trade] strategy tag', x.j.strategyTag);
+            }
+            if (x.j.executionPlan) {
+              console.log('[007Trade] execution plan', x.j.executionPlan);
+            }
             var msg = 'Order id: ' + (x.j.order && x.j.order.id ? x.j.order.id : 'ok');
             if (x.j.broker) {
               msg += ' · ' + (x.j.broker.paper ? 'paper' : 'live') + ' @ ' + (x.j.broker.baseUrl || '');
+            }
+            if (x.j.strategyTag && x.j.strategyTag.client_order_id) {
+              msg +=
+                ' · Client id: ' +
+                x.j.strategyTag.client_order_id +
+                ' (“' +
+                (x.j.strategyTag.strategyName || x.j.strategyTag.strategyId) +
+                '”).';
+            }
+            var ep = x.j.executionPlan;
+            if (ep) {
+              if (ep.bracket) {
+                msg +=
+                  ' Bracket: est entry ~' +
+                  ep.entryEstimate +
+                  ', stop ' +
+                  ep.stopLossAt +
+                  ', target ' +
+                  ep.takeProfitAt +
+                  '.';
+              } else if (ep.plainOnly) {
+                msg += ' Plain market (no bracket).';
+              }
+              if (ep.autoSized) {
+                msg += ' Qty sized from account risk %.';
+              }
             }
             el('execMsg').textContent = msg;
           })
