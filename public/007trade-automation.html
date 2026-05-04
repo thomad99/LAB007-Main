@@ -1,0 +1,394 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
+  <title>007Trade — Automation</title>
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a0a0b;
+      color: #e8e8ea;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 28px 18px 48px; }
+    h1 { margin: 0 0 8px; font-size: 1.45rem; }
+    .sub { color: #8b8b93; font-size: 0.9rem; margin-bottom: 22px; line-height: 1.5; }
+    a { color: #c9a227; font-weight: 600; }
+    .panel {
+      border: 1px solid #2a2a2f; border-radius: 14px; padding: 18px; margin-bottom: 18px;
+      background: #121214;
+    }
+    .panel h2 { margin: 0 0 12px; font-size: 0.95rem; color: #c9a227; }
+    p, li { line-height: 1.55; font-size: 0.9rem; color: #c4c4cc; }
+    .warn {
+      background: #1a1510; border: 1px solid #4a3020; border-radius: 10px; padding: 12px 14px;
+      font-size: 0.86rem; color: #d4b896; margin-bottom: 16px; line-height: 1.5;
+    }
+    label { display: block; font-size: 0.85rem; color: #9a9aa3; margin-bottom: 4px; }
+    input, select, button, textarea {
+      font: inherit; border-radius: 10px; border: 1px solid #3a3a44; background: #0e0e10; color: #e8e8ea;
+      padding: 10px 12px; width: 100%;
+    }
+    input[type="checkbox"] { width: auto; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 640px) { .row2 { grid-template-columns: 1fr; } }
+    .field { margin-bottom: 14px; }
+    .inline { display: flex; align-items: center; gap: 10px; }
+    .inline label { margin: 0; cursor: pointer; color: #c4c4cc; }
+    button.primary {
+      background: #c9a227; color: #111; border-color: #c9a227; font-weight: 700; cursor: pointer;
+      width: auto; padding: 10px 22px;
+    }
+    button.ghost {
+      background: transparent; color: #c9a227; border-color: #5c522e; cursor: pointer; width: auto; padding: 8px 14px; font-size: 0.85rem;
+    }
+    .ok { color: #86efac; font-weight: 700; }
+    .bad { color: #f87171; }
+    .rule-card {
+      border: 1px solid #2f2f36; border-radius: 12px; padding: 14px; margin-bottom: 12px; background: #18181c;
+    }
+    .rule-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 12px; }
+    .rule-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 10px;
+    }
+    .log-box {
+      font-size: 0.8rem; font-family: ui-monospace, monospace; background: #0e0e10; border: 1px solid #2a2a2f;
+      border-radius: 10px; padding: 12px; max-height: 280px; overflow: auto; color: #b8b8c4; white-space: pre-wrap;
+    }
+    .muted { color: #6b6b75; font-size: 0.82rem; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p><a href="/007trade">← 007Trade dashboard</a> &nbsp;·&nbsp; <a href="/007trade/settings">Account &amp; broker</a> &nbsp;·&nbsp; <a href="/">Home</a></p>
+    <h1>007Trade · Automation</h1>
+    <p class="sub">
+      The server polls Alpaca on an interval when the master switch is on. Orders use the same path as manual <strong>Submit</strong> (bracket + auto-qty from your risk profile in Settings). Supported automation:
+      <strong>opening-range</strong> (long / short / both, optional exit outside the range, flatten before close),
+      <strong>momentum</strong> family (prior completed day high + optional min breakout %),
+      <strong>mean-reversion</strong> (buy when price has dropped from the session open by your fade %, after a minimum number of minutes).
+    </p>
+
+    <div class="warn">
+      <strong>Paper first.</strong> Live Alpaca accounts require checking &quot;Allow automation on live&quot; — otherwise the runner skips every tick. You are responsible for risk, fills, and regime fit.
+    </div>
+
+    <div class="panel">
+      <h2>Controls</h2>
+      <div class="field inline">
+        <input type="checkbox" id="masterEnabled" />
+        <label for="masterEnabled">Master: enable automated polling</label>
+      </div>
+      <div class="field inline">
+        <input type="checkbox" id="allowLiveAutomation" />
+        <label for="allowLiveAutomation">Allow automation when Alpaca is <strong>live</strong> (not paper)</label>
+      </div>
+      <div class="field">
+        <label for="pollIntervalSec">Poll interval (seconds, 30–300)</label>
+        <input type="number" id="pollIntervalSec" min="30" max="300" step="10" value="60" />
+      </div>
+      <div class="field inline">
+        <input type="checkbox" id="dryRun" />
+        <label for="dryRun">Dry run — log signals and risk checks only (no orders sent)</label>
+      </div>
+      <div class="row2">
+        <div class="field">
+          <label for="maxDailyLossUsd">Max daily loss (USD, 0 = off)</label>
+          <input type="number" id="maxDailyLossUsd" min="0" step="50" value="0" />
+        </div>
+        <div class="field">
+          <label for="maxConcurrentPositions">Max open positions (0 = unlimited)</label>
+          <input type="number" id="maxConcurrentPositions" min="0" max="100" step="1" value="0" />
+        </div>
+      </div>
+      <p class="muted" id="dailyStatus"></p>
+      <p class="muted" id="lastTick">Last tick: —</p>
+      <button type="button" class="primary" id="saveBtn">Save settings</button>
+      <span id="saveMsg" class="ok" style="display:none;margin-left:12px">Saved.</span>
+      <span id="errMsg" class="bad" style="display:none;margin-left:12px"></span>
+    </div>
+
+    <div class="panel">
+      <h2>Rules</h2>
+      <p class="muted" style="margin-top:0">
+        Each rule targets one <strong>strategy</strong> and a symbol list. Per-symbol entry limits and minimum time between entries apply to that rule. ORB-only options are ignored for other strategies.
+        Daily loss / position limits are global (above).
+      </p>
+      <div id="rulesRoot"></div>
+      <button type="button" class="ghost" id="addRuleBtn">+ Add rule</button>
+    </div>
+
+    <div class="panel">
+      <h2>Automation log</h2>
+      <p class="muted" style="margin-top:0">Recent server messages (newest first).</p>
+      <div class="log-box" id="logBox">Loading…</div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var strategies = [];
+      var automation = null;
+
+      function el(tag, attrs, children) {
+        var n = document.createElement(tag);
+        if (attrs) {
+          Object.keys(attrs).forEach(function (k) {
+            if (k === 'text') n.textContent = attrs[k];
+            else if (k === 'html') n.innerHTML = attrs[k];
+            else n.setAttribute(k, attrs[k]);
+          });
+        }
+        (children || []).forEach(function (c) {
+          if (c) n.appendChild(c);
+        });
+        return n;
+      }
+
+      function renderRules() {
+        var root = document.getElementById('rulesRoot');
+        root.innerHTML = '';
+        var rules = (automation && automation.rules) ? automation.rules : [];
+        rules.forEach(function (rule, idx) {
+          var card = el('div', { class: 'rule-card' });
+          var head = el('div', { class: 'rule-head' });
+          head.appendChild(el('span', { text: 'Rule ' + (idx + 1) + ' · ' + (rule.strategyId || '?') }));
+          var rm = el('button', { type: 'button', class: 'ghost', text: 'Remove' });
+          rm.dataset.index = String(idx);
+          rm.addEventListener('click', function () {
+            automation.rules.splice(parseInt(rm.dataset.index, 10), 1);
+            renderRules();
+          });
+          head.appendChild(rm);
+          card.appendChild(head);
+
+          var en = el('div', { class: 'field inline' });
+          var cb = el('input', { type: 'checkbox' });
+          cb.checked = rule.enabled !== false;
+          cb.addEventListener('change', function () { rule.enabled = cb.checked; });
+          en.appendChild(cb);
+          en.appendChild(el('label', { text: 'Enabled' }));
+          card.appendChild(en);
+
+          var stratWrap = el('div', { class: 'field' });
+          stratWrap.appendChild(el('label', { text: 'Strategy', for: 'strat-' + idx }));
+          var sel = el('select', { id: 'strat-' + idx });
+          strategies.forEach(function (s) {
+            var opt = el('option', { value: s.id, text: s.name + ' (' + s.id + ')' });
+            sel.appendChild(opt);
+          });
+          sel.value = rule.strategyId || 'opening-range';
+          sel.addEventListener('change', function () { rule.strategyId = sel.value; });
+          stratWrap.appendChild(sel);
+          card.appendChild(stratWrap);
+
+          var dirWrap = el('div', { class: 'field' });
+          dirWrap.appendChild(el('label', { text: 'ORB direction (opening-range only)', for: 'orbdir-' + idx }));
+          var dirSel = el('select', { id: 'orbdir-' + idx });
+          [['long', 'Long only'], ['short', 'Short only'], ['both', 'Long + short (when flat)']].forEach(function (o) {
+            dirSel.appendChild(el('option', { value: o[0], text: o[1] }));
+          });
+          dirSel.value = rule.orbDirection || 'long';
+          dirSel.addEventListener('change', function () { rule.orbDirection = dirSel.value; });
+          dirWrap.appendChild(dirSel);
+          card.appendChild(dirWrap);
+
+          var exWrap = el('div', { class: 'field inline' });
+          var exCb = el('input', { type: 'checkbox' });
+          exCb.checked = rule.exitOutsideOrb === true;
+          exCb.addEventListener('change', function () { rule.exitOutsideOrb = exCb.checked; });
+          exWrap.appendChild(exCb);
+          exWrap.appendChild(el('label', { text: 'Exit if price breaks back outside OR (longs below OR low, shorts above OR high) — opening-range' }));
+          card.appendChild(exWrap);
+
+          var symField = el('div', { class: 'field' });
+          symField.appendChild(el('label', { text: 'Symbols (comma-separated, max 12)', for: 'sym-' + idx }));
+          var symIn = el('input', { id: 'sym-' + idx, type: 'text', placeholder: 'SPY, QQQ' });
+          symIn.value = Array.isArray(rule.symbols) ? rule.symbols.join(', ') : '';
+          function parseSyms() {
+            rule.symbols = symIn.value.split(/[\s,]+/).map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean);
+          }
+          symIn.addEventListener('input', parseSyms);
+          symIn.addEventListener('change', parseSyms);
+          symField.appendChild(symIn);
+          card.appendChild(symField);
+
+          var grid = el('div', { class: 'rule-grid' });
+          function numField(label, key, min, max, def) {
+            var w = el('div', { class: 'field' });
+            w.appendChild(el('label', { text: label }));
+            var inp = el('input', { type: 'number', min: String(min), max: String(max) });
+            inp.value = rule[key] != null ? rule[key] : def;
+            function syncNum() {
+              rule[key] = parseInt(inp.value, 10) || def;
+            }
+            inp.addEventListener('input', syncNum);
+            inp.addEventListener('change', syncNum);
+            w.appendChild(inp);
+            return w;
+          }
+          grid.appendChild(numField('ORB window (min)', 'orbMinutes', 5, 120, 30));
+          grid.appendChild(numField('Flatten N min before close (0=off)', 'flattenBeforeCloseMin', 0, 180, 0));
+          grid.appendChild(numField('Max trades/symbol/day', 'maxTradesPerSymbolPerDay', 1, 20, 1));
+          grid.appendChild(numField('Min minutes between entries', 'minMinutesBetweenEntries', 1, 240, 5));
+          card.appendChild(grid);
+
+          var adv = el('p', { class: 'muted', text: 'Momentum: min extra % above prior day high. Mean reversion: fade from session open.' });
+          card.appendChild(adv);
+          var grid2 = el('div', { class: 'rule-grid' });
+          function floatField(label, key, min, max, def, step) {
+            var w = el('div', { class: 'field' });
+            w.appendChild(el('label', { text: label }));
+            var inp = el('input', { type: 'number', min: String(min), max: String(max), step: step || '0.05' });
+            inp.value = rule[key] != null ? rule[key] : def;
+            function syncF() {
+              var v = parseFloat(inp.value);
+              rule[key] = isNaN(v) ? def : v;
+            }
+            inp.addEventListener('input', syncF);
+            inp.addEventListener('change', syncF);
+            w.appendChild(inp);
+            return w;
+          }
+          grid2.appendChild(floatField('Min breakout % (momentum family)', 'minBreakoutPct', 0, 2, 0, '0.05'));
+          grid2.appendChild(floatField('Fade from open % (mean reversion)', 'fadeFromOpenPct', 0.05, 5, 0.5, '0.05'));
+          grid2.appendChild(numField('Min minutes after open (fade)', 'fadeMinMinutesAfterOpen', 0, 180, 15));
+          card.appendChild(grid2);
+
+          root.appendChild(card);
+        });
+      }
+
+      function refreshLog() {
+        var box = document.getElementById('logBox');
+        var lines = (automation && automation.log) ? automation.log : [];
+        if (!lines.length) {
+          box.textContent = '(No messages yet.)';
+          return;
+        }
+        box.textContent = lines
+          .map(function (x) {
+            return x.ts + ' [' + (x.level || '') + '] ' + (x.message || '') + (x.ruleId ? ' · ' + x.ruleId : '');
+          })
+          .join('\n');
+      }
+
+      function loadAll() {
+        return fetch('/api/007trade/strategies')
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            strategies = d.strategies || [];
+            if (!strategies.length) {
+              strategies = [{ id: 'opening-range', name: 'Opening range' }];
+            }
+            return fetch('/api/007trade/automation');
+          })
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            automation = d.automation || {};
+            if (!Array.isArray(automation.rules)) automation.rules = [];
+            document.getElementById('masterEnabled').checked = !!automation.masterEnabled;
+            document.getElementById('allowLiveAutomation').checked = !!automation.allowLiveAutomation;
+            document.getElementById('pollIntervalSec').value = automation.pollIntervalSec || 60;
+            document.getElementById('dryRun').checked = !!automation.dryRun;
+            document.getElementById('maxDailyLossUsd').value =
+              automation.maxDailyLossUsd != null ? automation.maxDailyLossUsd : 0;
+            document.getElementById('maxConcurrentPositions').value =
+              automation.maxConcurrentPositions != null ? automation.maxConcurrentPositions : 0;
+            var d = automation.daily || {};
+            var dailyLine = 'ET session tracking: ' + (d.etDate || '—');
+            if (d.halted) dailyLine += ' — entries paused (daily loss limit). Exits can still run.';
+            if (d.startEquity != null && !isNaN(Number(d.startEquity))) {
+              dailyLine += ' · Baseline equity (start of ET day) ~' + Number(d.startEquity).toFixed(2);
+            }
+            document.getElementById('dailyStatus').textContent = dailyLine;
+            document.getElementById('lastTick').textContent =
+              'Last tick: ' + (automation.lastTickAt || '—');
+            renderRules();
+            refreshLog();
+          })
+          .catch(function (e) {
+            document.getElementById('logBox').textContent = 'Error: ' + (e.message || String(e));
+          });
+      }
+
+      document.getElementById('addRuleBtn').addEventListener('click', function () {
+        if (!automation) automation = {};
+        if (!Array.isArray(automation.rules)) automation.rules = [];
+        automation.rules.push({
+          id: crypto.randomUUID(),
+          enabled: true,
+          strategyId: 'opening-range',
+          symbols: ['SPY'],
+          orbMinutes: 30,
+          orbDirection: 'long',
+          exitOutsideOrb: false,
+          flattenBeforeCloseMin: 0,
+          minBreakoutPct: 0,
+          fadeFromOpenPct: 0.5,
+          fadeMinMinutesAfterOpen: 15,
+          maxTradesPerSymbolPerDay: 1,
+          minMinutesBetweenEntries: 5,
+          counters: {},
+          lastEntryAt: {}
+        });
+        renderRules();
+      });
+
+      document.getElementById('saveBtn').addEventListener('click', function () {
+        var msg = document.getElementById('saveMsg');
+        var err = document.getElementById('errMsg');
+        msg.style.display = 'none';
+        err.style.display = 'none';
+
+        if (!automation) automation = { rules: [] };
+        if (!Array.isArray(automation.rules)) automation.rules = [];
+
+        automation.masterEnabled = document.getElementById('masterEnabled').checked;
+        automation.allowLiveAutomation = document.getElementById('allowLiveAutomation').checked;
+        automation.pollIntervalSec = Math.min(300, Math.max(30, parseInt(document.getElementById('pollIntervalSec').value, 10) || 60));
+        automation.dryRun = document.getElementById('dryRun').checked;
+        automation.maxDailyLossUsd = Math.max(0, parseFloat(document.getElementById('maxDailyLossUsd').value) || 0);
+        automation.maxConcurrentPositions = Math.min(
+          100,
+          Math.max(0, parseInt(document.getElementById('maxConcurrentPositions').value, 10) || 0)
+        );
+
+        fetch('/api/007trade/automation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            masterEnabled: automation.masterEnabled,
+            allowLiveAutomation: automation.allowLiveAutomation,
+            pollIntervalSec: automation.pollIntervalSec,
+            dryRun: automation.dryRun,
+            maxDailyLossUsd: automation.maxDailyLossUsd,
+            maxConcurrentPositions: automation.maxConcurrentPositions,
+            rules: automation.rules
+          })
+        })
+          .then(function (r) {
+            if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || 'Save failed'); });
+            return r.json();
+          })
+          .then(function () {
+            msg.style.display = 'inline';
+            setTimeout(function () { msg.style.display = 'none'; }, 2500);
+            return loadAll();
+          })
+          .catch(function (e) {
+            err.textContent = e.message || String(e);
+            err.style.display = 'inline';
+          });
+      });
+
+      loadAll();
+    })();
+  </script>
+</body>
+</html>

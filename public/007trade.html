@@ -99,6 +99,7 @@
       <div class="nav">
         <a href="/">Home</a>
         <a href="/007trade/dashboard">Active trades</a>
+        <a href="/007trade/automation">Automation</a>
         <a href="/007trade/settings">Account &amp; broker</a>
       </div>
     </div>
@@ -119,7 +120,12 @@
     <div class="panel">
       <h2>Strategy library</h2>
       <p class="sub" style="margin:0 0 12px">
-        Turn on <strong>multiple playbooks</strong> at once (up to six). They are all included in the Claude brief; each order can be tagged with one strategy below.
+        Turn on <strong>multiple playbooks</strong> at once (up to six). They feed the Claude brief and tag your journal.
+        Hands-off execution is separate: see <a href="/007trade/automation" style="color:#c9a227;font-weight:600">Automation</a> (opening-range rules today).
+      </p>
+      <p class="sub" style="margin:0 0 12px;line-height:1.55;border-left:3px solid #4a3f20;padding-left:12px;color:#b9a88c">
+        <strong>Manual submit:</strong> Choosing a strategy name does <strong>not</strong> change how <strong>Submit</strong> behaves — it sends to Alpaca <em>immediately</em> (market ± bracket).
+        For scheduled logic (e.g. opening-range breakout), use <a href="/007trade/automation" style="color:#c9a227;font-weight:700">Automation</a> and keep master off until your rules are set.
       </p>
       <div class="strategy-grid" id="strategyGrid"></div>
     </div>
@@ -204,6 +210,9 @@
       <h2>Execution (Alpaca)</h2>
       <p class="sub" style="margin:0 0 10px" id="execHint">
         Market orders use your server’s Alpaca keys. Paper vs real money is controlled by <code>ALPACA_PAPER</code> in environment (not a separate “sim” button here).
+      </p>
+      <p class="sub" style="margin:0 0 10px;color:#9a9aa3;font-size:0.84rem">
+        Execution is always <strong>on demand</strong> when you click Submit — not scheduled from the strategy name.
       </p>
       <p class="sub" style="margin:0 0 12px;line-height:1.5;border-left:3px solid #5c522e;padding-left:12px" id="execStrategyHint"></p>
       <label class="sub" style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer">
