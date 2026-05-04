@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
+  <title>007Trade — LAB007</title>
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a0a0b;
+      color: #e8e8ea;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 18px 48px; }
+    .top {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
+      margin-bottom: 24px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; }
+    .brand img { height: 44px; }
+    h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: 0.04em; }
+    .sub { color: #8b8b93; font-size: 0.9rem; margin-top: 4px; }
+    .nav a {
+      color: #c9a227; text-decoration: none; font-weight: 600; font-size: 0.9rem; margin-left: 14px;
+    }
+    .nav a:hover { text-decoration: underline; }
+    .disclaimer {
+      background: #1a1510; border: 1px solid #3d3424; border-radius: 10px; padding: 10px 12px;
+      font-size: 0.82rem; color: #b9a88c; margin-bottom: 20px; line-height: 1.45;
+    }
+    .panel {
+      border: 1px solid #2a2a2f; border-radius: 14px; padding: 18px; margin-bottom: 18px;
+      background: #121214;
+    }
+    .panel h2 { margin: 0 0 12px; font-size: 1rem; color: #c9a227; text-transform: uppercase; letter-spacing: 0.06em; }
+    .mode-row { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 8px; }
+    .mode-toggle {
+      display: inline-flex; border-radius: 10px; overflow: hidden; border: 1px solid #333;
+    }
+    .mode-toggle button {
+      padding: 10px 18px; border: none; font: inherit; font-weight: 700; cursor: pointer;
+      background: #1e1e22; color: #888;
+    }
+    .mode-toggle button.active { background: #c9a227; color: #111; }
+    .badge-live {
+      display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;
+      background: #3f1a1a; color: #f87171;
+    }
+    .badge-sim {
+      display: inline-block; padding: 4px 10px; border-radius: 6px; font-size: 0.72rem; font-weight: 700;
+      background: #1a2f3f; color: #60a5fa;
+    }
+    .strategy-grid {
+      display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 10px;
+    }
+    .strategy-card {
+      border: 1px solid #2f2f36; border-radius: 12px; padding: 12px; cursor: pointer;
+      background: #18181c; text-align: left; transition: border-color 0.15s, background 0.15s;
+    }
+    .strategy-card:hover { border-color: #5c522e; }
+    .strategy-card.selected { border-color: #c9a227; background: #1f1c14; }
+    .strategy-card h3 { margin: 0 0 6px; font-size: 0.95rem; color: #fff; }
+    .strategy-card p { margin: 0; font-size: 0.8rem; color: #9a9aa3; line-height: 1.4; }
+    .strategy-card .style { font-size: 0.72rem; color: #c9a227; margin-top: 8px; }
+    input, select, button, textarea {
+      font: inherit; border-radius: 10px; border: 1px solid #3a3a44; background: #0e0e10; color: #e8e8ea;
+      padding: 10px 12px;
+    }
+    button.primary {
+      background: #c9a227; color: #111; border-color: #c9a227; font-weight: 700; cursor: pointer;
+    }
+    button.primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    button.ghost { background: transparent; color: #c9a227; border-color: #5c522e; cursor: pointer; }
+    .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+    th, td { text-align: left; padding: 8px 6px; border-bottom: 1px solid #2a2a2f; }
+    th { color: #8b8b93; font-size: 0.72rem; text-transform: uppercase; }
+    .claude-out {
+      white-space: pre-wrap; font-size: 0.88rem; line-height: 1.5; color: #c4c4cc;
+      max-height: 320px; overflow: auto; background: #0e0e10; border-radius: 10px; padding: 12px; border: 1px solid #2a2a2f;
+    }
+    .stat { font-size: 1.1rem; font-weight: 700; color: #c9a227; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <img src="/images/LAB007-GOLD-TRANS.png" alt="LAB007" />
+        <div>
+          <h1>007Trade</h1>
+          <div class="sub">Strategy + watchlist → Claude brief → sim or live (Alpaca when configured)</div>
+        </div>
+      </div>
+      <div class="nav">
+        <a href="/">Home</a>
+        <a href="/007trade/settings">Account &amp; broker</a>
+      </div>
+    </div>
+
+    <p class="disclaimer">
+      <strong>Not financial advice.</strong> Sim mode is for learning. Live mode sends real orders only when you use valid broker keys and you explicitly place an order. Past performance does not guarantee future results.
+    </p>
+
+    <div class="panel">
+      <h2>Mode</h2>
+      <div class="mode-row">
+        <div class="mode-toggle" id="modeToggle">
+          <button type="button" data-mode="sim" class="active">Sim</button>
+          <button type="button" data-mode="live">Live</button>
+        </div>
+        <span id="modeBadge" class="badge-sim">SIMULATION</span>
+        <span class="sub" id="brokerHint"></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Strategy library</h2>
+      <p class="sub" style="margin:0 0 12px">Select one playbook. These are templates you combine with your own stock picks.</p>
+      <div class="strategy-grid" id="strategyGrid"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Watchlist</h2>
+      <p class="sub" style="margin:0 0 10px">Symbols to focus on (comma or space separated).</p>
+      <div class="row">
+        <input type="text" id="watchlistInput" style="flex:1; min-width:200px" placeholder="AAPL MSFT NVDA" />
+        <button type="button" class="primary" id="saveWatchBtn">Save watchlist</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Claude trading brief</h2>
+      <p class="sub" style="margin:0 0 10px">Uses your selected strategy + watchlist (Anthropic key on server).</p>
+      <div class="row" style="margin-bottom:10px">
+        <button type="button" class="primary" id="claudeBtn">Generate brief</button>
+      </div>
+      <div class="claude-out" id="claudeOut" style="display:none"></div>
+      <p class="sub" id="claudeErr" style="color:#f87171;display:none"></p>
+    </div>
+
+    <div class="panel">
+      <h2>Trade plans</h2>
+      <p class="sub" style="margin:0 0 10px">Queue ideas tied to the selected strategy.</p>
+      <div class="row" style="margin-bottom:10px">
+        <input type="text" id="planSymbol" placeholder="Symbol" style="width:120px" />
+        <input type="text" id="planNotes" placeholder="Notes (optional)" style="flex:1;min-width:160px" />
+        <button type="button" class="primary" id="addPlanBtn">Add plan</button>
+      </div>
+      <table>
+        <thead><tr><th>Symbol</th><th>Strategy</th><th>When</th><th></th></tr></thead>
+        <tbody id="plansBody"></tbody>
+      </table>
+    </div>
+
+    <div class="panel">
+      <h2>Execution</h2>
+      <p class="sub" style="margin:0 0 10px">
+        <strong>Sim:</strong> fills at a fake price (sandbox cash).
+        <strong>Live:</strong> market order via Alpaca when env keys exist.
+      </p>
+      <div class="row" style="margin-bottom:12px">
+        <span>Sim cash: <span class="stat" id="simCash">—</span></span>
+      </div>
+      <div class="row">
+        <input type="text" id="execSymbol" placeholder="Symbol" style="width:100px" />
+        <input type="number" id="execQty" value="1" min="1" style="width:70px" />
+        <select id="execSide"><option value="buy">Buy</option><option value="sell">Sell</option></select>
+        <button type="button" class="primary" id="simExecBtn">Sim fill</button>
+        <button type="button" class="ghost" id="liveExecBtn">Live market order</button>
+      </div>
+      <p class="sub" id="execMsg" style="margin-top:10px"></p>
+      <table style="margin-top:14px">
+        <thead><tr><th>Time</th><th>Mode</th><th>Side</th><th>Qty</th><th>Symbol</th><th>Price</th></tr></thead>
+        <tbody id="ordersBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var strategies = [];
+      var selectedId = '';
+      var state = {};
+
+      function el(id) { return document.getElementById(id); }
+
+      function fmtTime(iso) {
+        try { return new Date(iso).toLocaleString(); } catch (e) { return iso; }
+      }
+
+      function renderStrategies() {
+        var grid = el('strategyGrid');
+        grid.innerHTML = '';
+        strategies.forEach(function (s) {
+          var card = document.createElement('button');
+          card.type = 'button';
+          card.className = 'strategy-card' + (s.id === selectedId ? ' selected' : '');
+          card.innerHTML =
+            '<h3>' + escapeHtml(s.name) + '</h3>' +
+            '<p>' + escapeHtml(s.summary) + '</p>' +
+            '<div class="style">' + escapeHtml(s.style) + '</div>';
+          card.addEventListener('click', function () {
+            selectedId = s.id;
+            renderStrategies();
+            saveState({ selectedStrategyId: selectedId });
+          });
+          grid.appendChild(card);
+        });
+      }
+
+      function escapeHtml(t) {
+        return String(t || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      }
+
+      function renderPlans() {
+        var tb = el('plansBody');
+        tb.innerHTML = '';
+        (state.tradePlans || []).forEach(function (p) {
+          var strat = strategies.find(function (x) { return x.id === p.strategyId; });
+          var tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td>' + escapeHtml(p.symbol) + '</td>' +
+            '<td>' + escapeHtml(strat ? strat.name : p.strategyId) + '</td>' +
+            '<td>' + fmtTime(p.createdAt) + '</td>' +
+            '<td><button type="button" class="ghost" data-del="' + escapeHtml(p.id) + '">Remove</button></td>';
+          tb.appendChild(tr);
+        });
+        tb.querySelectorAll('[data-del]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            fetch('/api/007trade/plan/' + encodeURIComponent(btn.getAttribute('data-del')), { method: 'DELETE' })
+              .then(function () { return load(); });
+          });
+        });
+      }
+
+      function renderOrders() {
+        var tb = el('ordersBody');
+        tb.innerHTML = '';
+        (state.simOrders || []).slice(0, 25).forEach(function (o) {
+          var tr = document.createElement('tr');
+          tr.innerHTML =
+            '<td>' + fmtTime(o.ts) + '</td>' +
+            '<td>' + escapeHtml(o.mode || 'sim') + '</td>' +
+            '<td>' + escapeHtml(o.side) + '</td>' +
+            '<td>' + escapeHtml(String(o.qty)) + '</td>' +
+            '<td>' + escapeHtml(o.symbol) + '</td>' +
+            '<td>' + escapeHtml(String(o.price)) + '</td>';
+          tb.appendChild(tr);
+        });
+      }
+
+      function setModeUi() {
+        var sim = state.mode === 'sim';
+        el('modeToggle').querySelectorAll('button').forEach(function (b) {
+          b.classList.toggle('active', b.getAttribute('data-mode') === state.mode);
+        });
+        el('modeBadge').className = sim ? 'badge-sim' : 'badge-live';
+        el('modeBadge').textContent = sim ? 'SIMULATION' : 'LIVE';
+      }
+
+      function saveState(patch) {
+        return fetch('/api/007trade/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patch)
+        }).then(function () { return load(); });
+      }
+
+      function load() {
+        return fetch('/api/007trade/state')
+          .then(function (r) { return r.json(); })
+          .then(function (data) {
+            state = data;
+            selectedId = data.selectedStrategyId || '';
+            el('watchlistInput').value = (data.watchlist || []).join(' ');
+            el('simCash').textContent = data.simCash != null ? String(data.simCash) : '—';
+            setModeUi();
+            el('brokerHint').textContent = data.alpacaEnvPresent
+              ? 'Alpaca keys detected on server.'
+              : 'No Alpaca env keys — live orders disabled until configured.';
+            renderPlans();
+            renderOrders();
+          });
+      }
+
+      fetch('/api/007trade/strategies')
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          strategies = d.strategies || [];
+          return load();
+        })
+        .then(function () {
+          renderStrategies();
+        });
+
+      el('modeToggle').addEventListener('click', function (e) {
+        var m = e.target.getAttribute && e.target.getAttribute('data-mode');
+        if (!m) return;
+        if (m === 'live' && !confirm('Live mode can send real broker orders. Continue?')) return;
+        saveState({ mode: m });
+      });
+
+      el('saveWatchBtn').addEventListener('click', function () {
+        var raw = el('watchlistInput').value || '';
+        var parts = raw.split(/[\s,]+/).map(function (x) { return x.trim().toUpperCase(); }).filter(Boolean);
+        saveState({ watchlist: parts });
+      });
+
+      el('addPlanBtn').addEventListener('click', function () {
+        var sym = (el('planSymbol').value || '').trim().toUpperCase();
+        if (!sym) return;
+        fetch('/api/007trade/plan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol: sym,
+            strategyId: selectedId,
+            notes: el('planNotes').value
+          })
+        }).then(function () {
+          el('planSymbol').value = '';
+          el('planNotes').value = '';
+          return load();
+        });
+      });
+
+      el('claudeBtn').addEventListener('click', function () {
+        el('claudeErr').style.display = 'none';
+        el('claudeOut').style.display = 'none';
+        el('claudeBtn').disabled = true;
+        fetch('/api/007trade/claude-brief', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ strategyId: selectedId })
+        })
+          .then(function (r) { return r.json().then(function (j) { return { r: r, j: j }; }); })
+          .then(function (x) {
+            if (!x.r.ok) throw new Error(x.j.error || 'Failed');
+            el('claudeOut').style.display = 'block';
+            el('claudeOut').textContent = x.j.text || '';
+          })
+          .catch(function (e) {
+            el('claudeErr').style.display = 'block';
+            el('claudeErr').textContent = e.message || 'Error';
+          })
+          .finally(function () {
+            el('claudeBtn').disabled = false;
+          });
+      });
+
+      el('simExecBtn').addEventListener('click', function () {
+        el('execMsg').textContent = '';
+        fetch('/api/007trade/sim-fill', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol: el('execSymbol').value,
+            qty: el('execQty').value,
+            side: el('execSide').value
+          })
+        })
+          .then(function (r) { return r.json().then(function (j) { return { r: r, j: j }; }); })
+          .then(function (x) {
+            if (!x.r.ok) throw new Error(x.j.error || 'Failed');
+            el('execMsg').textContent = 'Sim fill @ ' + x.j.order.price;
+            return load();
+          })
+          .catch(function (e) {
+            el('execMsg').textContent = e.message || 'Error';
+          });
+      });
+
+      el('liveExecBtn').addEventListener('click', function () {
+        el('execMsg').textContent = '';
+        if (!confirm('Submit a LIVE market order to your broker (Alpaca)?')) return;
+        fetch('/api/007trade/alpaca-order', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            symbol: el('execSymbol').value,
+            qty: el('execQty').value,
+            side: el('execSide').value
+          })
+        })
+          .then(function (r) { return r.json().then(function (j) { return { r: r, j: j }; }); })
+          .then(function (x) {
+            if (!x.r.ok) throw new Error(x.j.error || 'Failed');
+            el('execMsg').textContent = 'Live order id: ' + (x.j.order.id || 'ok');
+          })
+          .catch(function (e) {
+            el('execMsg').textContent = e.message || 'Error';
+          });
+      });
+    })();
+  </script>
+</body>
+</html>

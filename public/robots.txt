@@ -1,0 +1,5 @@
+User-agent: *
+Disallow: /007trade
+Disallow: /007trade/
+Disallow: /api/007trade
+Disallow: /api/007trade/

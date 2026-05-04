@@ -17,6 +17,7 @@ const { registerTelegramInboundHandler, handleTelegramWebhookExpress } = require
 const { registerCursorAiTelegramHandlers } = require('./lib/telegramHandlersCursorAi');
 const { registerCronTelegramHandlers } = require('./lib/telegramHandlersCron');
 const { startScheduledJobsRunner } = require('./lib/scheduledJobsRunner');
+const { registerTrade007Routes } = require('./lib/trade007');
 registerCursorAiTelegramHandlers(registerTelegramInboundHandler);
 registerCronTelegramHandlers(registerTelegramInboundHandler);
 const fetchFn = global.fetch || ((...args) => import('node-fetch').then(({ default: f }) => f(...args)));
@@ -194,6 +195,7 @@ app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 registerSpamblokRoutes(app);
+registerTrade007Routes(app);
 
 // Add request logging middleware at the very top to catch ALL requests
 app.use((req, res, next) => {

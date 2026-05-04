@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
+  <title>007Trade — Account &amp; broker</title>
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0a0a0b;
+      color: #e8e8ea;
+      min-height: 100vh;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 28px 18px 48px; }
+    h1 { margin: 0 0 8px; font-size: 1.45rem; }
+    .sub { color: #8b8b93; font-size: 0.9rem; margin-bottom: 22px; }
+    a { color: #c9a227; font-weight: 600; }
+    .panel {
+      border: 1px solid #2a2a2f; border-radius: 14px; padding: 18px; margin-bottom: 18px;
+      background: #121214;
+    }
+    .panel h2 { margin: 0 0 10px; font-size: 0.95rem; color: #c9a227; }
+    p, li { line-height: 1.55; font-size: 0.9rem; color: #c4c4cc; }
+    code {
+      background: #1a1a1f; padding: 2px 8px; border-radius: 6px; font-size: 0.82rem;
+      color: #e5d69a;
+    }
+    .ok { color: #86efac; font-weight: 700; }
+    .bad { color: #f87171; font-weight: 700; }
+    button {
+      margin-top: 12px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: 1px solid #c9a227;
+      background: #c9a227;
+      color: #111;
+      font-weight: 700;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p><a href="/007trade">← 007Trade dashboard</a> &nbsp;·&nbsp; <a href="/">Home</a></p>
+    <h1>007Trade — Broker connection</h1>
+    <p class="sub">
+      API keys are never stored in the browser or in plain JSON state files. Configure them as <strong>environment variables</strong> on your host (e.g. Render → Environment).
+    </p>
+
+    <div class="panel">
+      <h2>Alpaca (supported)</h2>
+      <p>Use Alpaca for <strong>paper</strong> trading first (<code>ALPACA_PAPER=true</code>, default).</p>
+      <ul>
+        <li><code>ALPACA_API_KEY_ID</code> — API key ID</li>
+        <li><code>ALPACA_API_SECRET_KEY</code> — secret</li>
+        <li><code>ALPACA_PAPER</code> — <code>true</code> (paper-api) or <code>false</code> (live trading — extra caution)</li>
+      </ul>
+      <p>
+        Endpoints: paper <code>https://paper-api.alpaca.markets</code>, live <code>https://api.alpaca.markets</code>.
+      </p>
+    </div>
+
+    <div class="panel">
+      <h2>Claude (strategy briefs)</h2>
+      <p>Uses the same Anthropic key as other LAB007 features:</p>
+      <p><code>ANTHROPIC_API_KEY</code></p>
+      <p>Optional: <code>TRADE007_ANTHROPIC_MODEL</code> (defaults to Claude Sonnet).</p>
+    </div>
+
+    <div class="panel">
+      <h2>Server status</h2>
+      <p id="statusLine">Checking…</p>
+      <p id="pingLine" style="margin-top:10px"></p>
+      <button type="button" id="refreshBtn">Refresh status</button>
+      <button type="button" id="pingBtn" style="margin-left:10px">Test Alpaca connection</button>
+    </div>
+
+    <div class="panel">
+      <h2>Persistent dashboard state</h2>
+      <p>Watchlists, sim balance, and trade plans are stored on disk (see <code>LAB007_DATA_DIR</code> / <code>Trade007/state.json</code>).</p>
+    </div>
+  </div>
+
+  <script>
+    function refresh() {
+      document.getElementById('pingLine').textContent = '';
+      fetch('/api/007trade/broker-status')
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var el = document.getElementById('statusLine');
+          if (d.alpaca) {
+            el.innerHTML =
+              '<span class="ok">Alpaca env vars detected.</span> Base URL: <code>' +
+              (d.baseUrl || '') +
+              '</code>. ' +
+              (d.hint || '');
+          } else {
+            el.innerHTML =
+              '<span class="bad">Alpaca keys not found on server.</span> Add ALPACA_API_KEY_ID and ALPACA_API_SECRET_KEY.';
+          }
+        })
+        .catch(function () {
+          document.getElementById('statusLine').textContent = 'Could not reach API.';
+        });
+    }
+    function ping() {
+      var pl = document.getElementById('pingLine');
+      pl.textContent = 'Calling Alpaca /v2/account…';
+      fetch('/api/007trade/alpaca-ping')
+        .then(function (r) { return r.json().then(function (j) { return { r: r, j: j }; }); })
+        .then(function (x) {
+          if (!x.r.ok || !x.j.ok) {
+            pl.innerHTML =
+              '<span class="bad">Connection failed:</span> ' + (x.j.error || x.r.status);
+            return;
+          }
+          var a = x.j.account || {};
+          pl.innerHTML =
+            '<span class="ok">Alpaca OK.</span> Account <code>' +
+            (a.account_number || a.id || '') +
+            '</code> · status <code>' +
+            (a.status || '') +
+            '</code> · equity <code>' +
+            (a.equity || '') +
+            '</code> (' +
+            (a.currency || '') +
+            ')';
+        })
+        .catch(function () {
+          pl.textContent = 'Ping request failed.';
+        });
+    }
+    document.getElementById('refreshBtn').addEventListener('click', refresh);
+    document.getElementById('pingBtn').addEventListener('click', ping);
+    refresh();
+  </script>
+</body>
+</html>
