@@ -46,9 +46,9 @@
 <body>
   <div class="wrap">
     <p><a href="/007trade">← 007Trade dashboard</a> &nbsp;·&nbsp; <a href="/">Home</a></p>
-    <h1>007Trade — Broker connection</h1>
+    <h1>007Trade · Paper trader — Broker &amp; storage</h1>
     <p class="sub">
-      API keys are never stored in the browser or in plain JSON state files. Configure them as <strong>environment variables</strong> on your host (e.g. Render → Environment).
+      API keys stay in <strong>environment variables</strong> on the host (e.g. Render). Watchlists, trade plans, and your “context for briefs” text are stored in a JSON file on disk — see below.
     </p>
 
     <div class="panel">
@@ -80,8 +80,29 @@
     </div>
 
     <div class="panel">
+      <h2>Dashboard mode (paper vs live)</h2>
+      <p>
+        The main page is labeled <strong>Paper trader</strong> while this mode is paper. Use <strong>live</strong> only when your Alpaca keys are for a real-money account and <code>ALPACA_PAPER=false</code>.
+      </p>
+      <p id="modeLine" style="margin-top:8px"></p>
+      <label style="display:flex;align-items:center;gap:10px;margin-top:12px;cursor:pointer">
+        <input type="radio" name="dashMode" value="paper" checked /> Paper trader (practice / default)
+      </label>
+      <label style="display:flex;align-items:center;gap:10px;margin-top:8px;cursor:pointer">
+        <input type="radio" name="dashMode" value="live" /> Live trading labels (use only with live Alpaca + keys)
+      </label>
+      <button type="button" id="saveModeBtn" style="margin-top:14px">Save mode</button>
+      <p id="modeSaved" class="ok" style="display:none;margin-top:10px">Saved.</p>
+    </div>
+
+    <div class="panel">
       <h2>Persistent dashboard state</h2>
-      <p>Watchlists, sim balance, and trade plans are stored on disk (see <code>LAB007_DATA_DIR</code> / <code>Trade007/state.json</code>).</p>
+      <p>Watchlists, trade plans, strategy selection, and context notes are written to a single state file on the server so they survive restarts when the disk path is on a mounted volume.</p>
+      <p id="statePathLine" style="margin-top:10px;font-size:0.85rem;color:#9a9aa3"></p>
+      <ul style="margin-top:10px">
+        <li><code>LAB007_DATA_DIR</code> — set this to your Render persistent disk mount (e.g. <code>/var/data/lab007</code>) so state lives under <code>…/Trade007/state.json</code>.</li>
+        <li><code>TRADE007_DATA_PATH</code> — optional full path to <code>state.json</code> if you want an explicit file location.</li>
+      </ul>
     </div>
   </div>
 
@@ -136,7 +157,45 @@
     }
     document.getElementById('refreshBtn').addEventListener('click', refresh);
     document.getElementById('pingBtn').addEventListener('click', ping);
+
+    function loadStateMeta() {
+      fetch('/api/007trade/state')
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var path = d.trade007Path || '';
+          document.getElementById('statePathLine').textContent = path
+            ? 'Current state file: ' + path
+            : '';
+          var live = d.mode === 'live';
+          document.querySelector('input[name="dashMode"][value="live"]').checked = live;
+          document.querySelector('input[name="dashMode"][value="paper"]').checked = !live;
+          document.getElementById('modeLine').innerHTML =
+            'Current: <strong>' + (live ? 'live' : 'paper') + '</strong>.';
+        })
+        .catch(function () {});
+    }
+    document.getElementById('saveModeBtn').addEventListener('click', function () {
+      var live = document.querySelector('input[name="dashMode"][value="live"]').checked;
+      document.getElementById('modeSaved').style.display = 'none';
+      if (live && !confirm('Use live mode labels only when Alpaca is set to real money. Continue?')) return;
+      fetch('/api/007trade/state', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mode: live ? 'live' : 'paper' })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function () {
+          document.getElementById('modeSaved').style.display = 'block';
+          loadStateMeta();
+        })
+        .catch(function () {
+          document.getElementById('modeSaved').textContent = 'Save failed.';
+          document.getElementById('modeSaved').style.display = 'block';
+        });
+    });
+
     refresh();
+    loadStateMeta();
   </script>
 </body>
 </html>
