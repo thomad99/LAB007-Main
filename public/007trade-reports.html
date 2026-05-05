@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
+  <title>007Trade · Reports</title>
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0a0a0b; color: #e8e8ea; }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 18px 48px; }
+    .top { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:22px; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .brand img { height:44px; width:auto; }
+    .brand h1 { margin:0; font-size:1.45rem; font-weight:700; letter-spacing:0.02em; }
+    .tabs { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+    .tabs a {
+      color:#d4c07a; text-decoration:none; font-weight:700; font-size:0.82rem;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.2; letter-spacing: 0;
+      border:1px solid #4a4124; border-radius:999px; padding:8px 12px; background:#131316;
+    }
+    .tabs a.active { background:#c9a227; color:#111; border-color:#c9a227; }
+    .tabs a:hover { border-color:#c9a227; }
+    .page-title { margin: 0 0 8px; font-size: 1.2rem; }
+    .sub { color:#8b8b93; font-size:0.9rem; line-height:1.5; margin:0 0 12px; }
+    .panel { border:1px solid #2a2a2f; border-radius:14px; background:#121214; padding:18px; margin-bottom:16px; }
+    button.primary { background:#c9a227; color:#111; border:1px solid #c9a227; border-radius:10px; padding:10px 14px; font-weight:700; cursor:pointer; }
+    table { width:100%; border-collapse:collapse; font-size:0.86rem; margin-top:10px; }
+    th, td { text-align:left; padding:8px 6px; border-bottom:1px solid #25252d; vertical-align:top; }
+    th { color:#8b8b93; font-size:0.72rem; text-transform:uppercase; }
+    .pos { color:#86efac; font-weight:700; }
+    .neg { color:#f87171; font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <img src="/images/LAB007-GOLD-TRANS.png" alt="LAB007" />
+        <h1>007Trade Dashboard</h1>
+      </div>
+      <div class="tabs">
+        <a href="/007trade">Dashboard</a>
+        <a href="/007trade/simple-trade">SIMPLE TRADE</a>
+        <a href="/007trade/auto-trade">AUTO-TRADE</a>
+        <a href="/007trade/circuit-breaker">Circuit Breaker</a>
+        <a href="/007trade/market-conditions">Market Conditions</a>
+        <a href="/007trade/copytrader">CopyTrader</a>
+        <a href="/007trade/reports" class="active">Reports</a>
+        <a href="/007trade/logs">Logs</a>
+        <a href="/007trade/settings">Settings</a>
+        <a href="/">Home</a>
+      </div>
+    </div>
+
+    <h2 class="page-title">Reports</h2>
+    <p class="sub">Auto order state and completed-action P&amp;L from Alpaca fill activity.</p>
+
+    <div class="panel">
+      <button type="button" class="primary" id="refreshBtn">Refresh report</button>
+      <p class="sub" id="reportTotals" style="margin-top:12px"></p>
+      <p class="sub" id="autoOrderStatus" style="margin-top:4px"></p>
+      <table>
+        <thead><tr><th>Strategy</th><th>Orders</th><th>Unique symbols</th><th>Action P&amp;L ($)</th><th>Last order</th></tr></thead>
+        <tbody id="reportBody"></tbody>
+      </table>
+      <p class="sub" id="reportDisclaimer" style="margin-top:12px;font-size:0.8rem;color:#8b8b93"></p>
+    </div>
+  </div>
+  <script>
+    (function () {
+      function el(id) { return document.getElementById(id); }
+      function esc(t) { return String(t || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;'); }
+      function fmtTime(iso) { try { return new Date(iso).toLocaleString(); } catch (_) { return iso || '—'; } }
+      function fmtMoney(n) {
+        var x = Number(n);
+        if (!isFinite(x)) return '—';
+        return x.toLocaleString(undefined, { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+      function pnlClass(n) {
+        var x = Number(n);
+        if (!isFinite(x) || x === 0) return '';
+        return x > 0 ? 'pos' : 'neg';
+      }
+      function renderReport() {
+        fetch('/api/007trade/report')
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            el('reportTotals').textContent = d.totals
+              ? 'Total logged orders: ' + d.totals.ordersInJournal + ' · Strategies with tags: ' + d.totals.strategiesTagged
+              : '';
+            el('autoOrderStatus').textContent = d.autoOrders
+              ? 'Auto orders are ' + (d.autoOrders.state || 'Waiting') + ' · Completed: ' + (d.autoOrders.completedToday || 0)
+              : '';
+            el('reportDisclaimer').textContent = d.disclaimer || '';
+            var tb = el('reportBody');
+            tb.innerHTML = '';
+            (d.byStrategy || []).forEach(function (row) {
+              var tr = document.createElement('tr');
+              tr.innerHTML =
+                '<td>' + esc(row.strategyName || row.strategyId) + '</td>' +
+                '<td>' + esc(String(row.ordersPlaced)) + '</td>' +
+                '<td>' + esc(String(row.uniqueSymbols)) + ' (' + esc((row.symbols || []).join(', ')) + ')</td>' +
+                '<td class="' + pnlClass(row.actionPnlUsd) + '">' + esc(fmtMoney(row.actionPnlUsd)) + '</td>' +
+                '<td>' + esc(row.lastAt ? fmtTime(row.lastAt) : '—') + '</td>';
+              tb.appendChild(tr);
+            });
+          })
+          .catch(function () {
+            el('reportTotals').textContent = 'Could not load report.';
+          });
+      }
+      el('refreshBtn').addEventListener('click', renderReport);
+      renderReport();
+    })();
+  </script>
+</body>
+</html>

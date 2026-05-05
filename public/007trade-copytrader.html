@@ -9,9 +9,13 @@
   <style>
     * { box-sizing: border-box; }
     body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:#0a0a0b; color:#e8e8ea; }
-    .wrap { max-width: 920px; margin: 0 auto; padding: 24px 18px 48px; }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 18px 48px; }
+    .top { display:flex; flex-wrap:wrap; align-items:flex-start; justify-content:space-between; gap:16px; margin-bottom:22px; }
+    .brand { display:flex; align-items:center; gap:12px; }
+    .brand img { height:44px; width:auto; }
+    .brand h1 { margin:0; font-size:1.45rem; font-weight:700; letter-spacing:0.02em; }
     a { color: #c9a227; font-weight: 600; }
-    .tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+    .tabs { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
     .tabs a {
       color:#d4c07a; text-decoration:none; font-weight:700; font-size:0.82rem;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; line-height: 1.2; letter-spacing: 0;
@@ -20,7 +24,7 @@
     .tabs a.active { background:#c9a227; color:#111; border-color:#c9a227; }
     .tabs a:hover { border-color:#c9a227; }
     .panel { border:1px solid #2a2a2f; border-radius:14px; background:#121214; padding:18px; margin-bottom:16px; }
-    h1 { margin: 0 0 8px; font-size:1.45rem; }
+    .page-title { margin: 0 0 8px; font-size:1.2rem; }
     .sub { color:#8b8b93; font-size:0.9rem; line-height:1.5; margin:0 0 14px; }
     .row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
     @media (max-width:700px){ .row2 { grid-template-columns:1fr; } }
@@ -35,17 +39,25 @@
 </head>
 <body>
   <div class="wrap">
-    <div class="tabs">
-      <a href="/007trade">Dashboard</a>
-      <a href="/007trade/simple-trade">SIMPLE TRADE</a>
-      <a href="/007trade/auto-trade">AUTO-TRADE</a>
-      <a href="/007trade/circuit-breaker">Circuit Breaker</a>
-      <a href="/007trade/market-conditions">Market Conditions</a>
-      <a href="/007trade/copytrader" class="active">CopyTrader</a>
-      <a href="/007trade/settings">Settings</a>
-      <a href="/">Home</a>
+    <div class="top">
+      <div class="brand">
+        <img src="/images/LAB007-GOLD-TRANS.png" alt="LAB007" />
+        <h1>007Trade Dashboard</h1>
+      </div>
+      <div class="tabs">
+        <a href="/007trade">Dashboard</a>
+        <a href="/007trade/simple-trade">SIMPLE TRADE</a>
+        <a href="/007trade/auto-trade">AUTO-TRADE</a>
+        <a href="/007trade/circuit-breaker">Circuit Breaker</a>
+        <a href="/007trade/market-conditions">Market Conditions</a>
+        <a href="/007trade/copytrader" class="active">CopyTrader</a>
+        <a href="/007trade/reports">Reports</a>
+        <a href="/007trade/logs">Logs</a>
+        <a href="/007trade/settings">Settings</a>
+        <a href="/">Home</a>
+      </div>
     </div>
-    <h1>CopyTrader</h1>
+    <h2 class="page-title">CopyTrader</h2>
     <p class="sub">Define copy-trading guardrails first, then enable. Recommended setup is <strong>shadow mode</strong> (observe + journal) before any semi-automated mirroring.</p>
 
     <div class="panel">

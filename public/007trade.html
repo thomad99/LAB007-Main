@@ -15,9 +15,9 @@
       color: #e8e8ea;
       min-height: 100vh;
     }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 18px 48px; }
+    .wrap { max-width: 1280px; margin: 0 auto; padding: 24px 18px 48px; }
     .top {
-      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px;
+      display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 16px;
       margin-bottom: 24px;
     }
     .brand { display: flex; align-items: center; gap: 12px; }
@@ -107,14 +107,12 @@
         <a href="/007trade/circuit-breaker">Circuit Breaker</a>
         <a href="/007trade/market-conditions">Market Conditions</a>
         <a href="/007trade/copytrader">CopyTrader</a>
+        <a href="/007trade/reports">Reports</a>
+        <a href="/007trade/logs">Logs</a>
         <a href="/007trade/settings">Settings</a>
         <a href="/">Home</a>
       </div>
     </div>
-
-    <p class="disclaimer">
-      <strong>Not financial advice.</strong> This workspace is set up for <strong>Alpaca paper</strong> trading. A separate live account can be wired later (env + keys on the server). Past performance does not guarantee future results.
-    </p>
 
     <div class="panel">
       <h2>Status</h2>
@@ -239,19 +237,6 @@
       <p class="sub" id="execMsg" style="margin-top:10px"></p>
     </div>
 
-    <div class="panel">
-      <h2>Strategy activity report</h2>
-      <p class="sub" style="margin:0 0 10px">
-        Orders you submit from this page are logged with their strategy tag (persisted in <code>state.json</code>). This is not full P&amp;L accounting — see Alpaca for realized results.
-      </p>
-      <button type="button" class="primary" id="refreshReportBtn">Refresh report</button>
-      <p class="sub" id="reportTotals" style="margin-top:12px"></p>
-      <table style="margin-top:10px">
-        <thead><tr><th>Strategy</th><th>Orders</th><th>Unique symbols</th><th>Last order</th></tr></thead>
-        <tbody id="reportBody"></tbody>
-      </table>
-      <p class="sub" id="reportDisclaimer" style="margin-top:12px;font-size:0.8rem;color:#8b8b93"></p>
-    </div>
   </div>
 
   <script>
@@ -285,44 +270,6 @@
           var pref = state.selectedStrategyId || ids[0];
           if (ids.includes(pref)) el('execStrategy').value = pref;
         }
-      }
-
-      function renderReport() {
-        fetch('/api/007trade/report')
-          .then(function (r) {
-            return r.json();
-          })
-          .then(function (d) {
-            el('reportTotals').textContent =
-              d.totals
-                ? 'Total logged orders: ' +
-                  d.totals.ordersInJournal +
-                  ' · Strategies with tags: ' +
-                  d.totals.strategiesTagged
-                : '';
-            el('reportDisclaimer').textContent = d.disclaimer || '';
-            var tb = el('reportBody');
-            tb.innerHTML = '';
-            (d.byStrategy || []).forEach(function (row) {
-              var tr = document.createElement('tr');
-              tr.innerHTML =
-                '<td>' +
-                escapeHtml(row.strategyName || row.strategyId) +
-                '</td><td>' +
-                escapeHtml(String(row.ordersPlaced)) +
-                '</td><td>' +
-                escapeHtml(String(row.uniqueSymbols)) +
-                ' (' +
-                escapeHtml((row.symbols || []).join(', ')) +
-                ')</td><td>' +
-                escapeHtml(row.lastAt ? fmtTime(row.lastAt) : '—') +
-                '</td>';
-              tb.appendChild(tr);
-            });
-          })
-          .catch(function () {
-            el('reportTotals').textContent = 'Could not load report.';
-          });
       }
 
       function el(id) { return document.getElementById(id); }
@@ -477,7 +424,6 @@
               ? 'Alpaca keys detected on server.'
               : 'No Alpaca keys on server — add them under Account & broker.';
             renderPlans();
-            renderReport();
           });
       }
 
@@ -527,10 +473,6 @@
 
       el('execStrategy').addEventListener('change', function () {
         saveState({ selectedStrategyId: el('execStrategy').value });
-      });
-
-      el('refreshReportBtn').addEventListener('click', function () {
-        renderReport();
       });
 
       el('addPlanBtn').addEventListener('click', function () {
