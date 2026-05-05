@@ -203,6 +203,27 @@
     margin-right: 6px;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  .imap-row {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px;
+    margin-top: 12px; font-size: 13px; color: var(--muted);
+  }
+  .imap-row label { display: flex; align-items: center; gap: 8px; }
+  .imap-row input#mailboxInput {
+    max-width: 280px; flex: 1; min-width: 120px;
+  }
+  .debug-panel {
+    margin-top: 20px; padding: 16px; background: var(--panel);
+    border: 1px solid var(--border); border-radius: 12px; max-width: 1200px; margin-left: auto; margin-right: auto;
+  }
+  .debug-panel h2 {
+    margin: 0 0 10px; font-size: 14px; font-weight: 600; color: var(--muted);
+  }
+  .debug-panel pre {
+    margin: 0; font-size: 12px; line-height: 1.45; overflow: auto; max-height: 360px;
+    color: var(--text); font-family: "SF Mono", Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word;
+  }
+  .debug-hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -214,7 +235,13 @@
   </div>
   <div class="actions">
     <input type="number" id="limitInput" value="500" min="50" max="5000" title="How many recent messages to scan" />
+    <button id="testBtn" type="button" title="Connect to IMAP, list folders, and count messages">Test connection</button>
     <button id="scanBtn" class="primary">Scan inbox</button>
+  </div>
+  <div class="imap-row" style="width:100%;">
+    <label>Mailbox
+      <input type="text" id="mailboxInput" value="INBOX" placeholder="INBOX" autocomplete="off" spellcheck="false" title="IMAP folder to open (Gmail: try INBOX or [Gmail]/All Mail)" />
+    </label>
   </div>
 </header>
 
@@ -242,7 +269,13 @@
     </table>
   </div>
 
-  <div class="empty" id="emptyState">Click <strong>Scan inbox</strong> to begin.</div>
+  <div class="empty" id="emptyState">Click <strong>Scan inbox</strong> to begin. Use <strong>Test connection</strong> if you see no mailing lists — the scanner only finds messages with List-Unsubscribe headers.</div>
+
+  <section class="debug-panel" id="debugPanel" style="display:none;">
+    <h2>Connection debug</h2>
+    <pre id="debugPre"></pre>
+    <p class="debug-hint">Use folder names from <code>mailboxes</code> if INBOX is empty on your provider. Scan results are senders with usable unsubscribe links, not every email.</p>
+  </section>
 </main>
 
 <div class="toast-stack" id="toastStack"></div>
@@ -261,6 +294,18 @@
 let allItems = [];
 let filtered = [];
 
+function getMailbox() {
+  const v = document.getElementById('mailboxInput').value.trim();
+  return v || 'INBOX';
+}
+
+function showDebug(obj) {
+  const panel = document.getElementById('debugPanel');
+  const pre = document.getElementById('debugPre');
+  pre.textContent = JSON.stringify(obj, null, 2);
+  panel.style.display = 'block';
+}
+
 function toast(msg, kind = 'success') {
   const stack = document.getElementById('toastStack');
   const el = document.createElement('div');
@@ -270,10 +315,51 @@ function toast(msg, kind = 'success') {
   setTimeout(() => el.remove(), 4000);
 }
 
+async function testConnection() {
+  const btn = document.getElementById('testBtn');
+  const subtitle = document.getElementById('subtitle');
+  const mailbox = getMailbox();
+  btn.disabled = true;
+  const prev = btn.textContent;
+  btn.innerHTML = '<span class="spinner"></span>Testing...';
+  subtitle.textContent = 'Testing IMAP connection...';
+  try {
+    const res = await fetch('/spamblok/api/test-connection', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mailbox }),
+    });
+    const data = await res.json();
+    showDebug(data);
+    if (!res.ok) {
+      throw new Error(data.error || 'Test failed');
+    }
+    if (data && data.ok) {
+      const n = data.messageCount;
+      const sample = data.sample;
+      const lu = sample ? sample.withListUnsubscribeHeader : null;
+      let msg = `Connected — ${n} message(s) in ${data.mailboxOpened || mailbox}`;
+      if (lu != null) msg += ` · last ${sample.messagesChecked} checked: ${lu} with List-Unsubscribe`;
+      toast(msg, 'success');
+      subtitle.textContent = msg;
+    } else {
+      toast(data.error || 'Connection test failed', 'error');
+      subtitle.textContent = data.error || 'Test failed';
+    }
+  } catch (err) {
+    toast(err.message, 'error');
+    subtitle.textContent = 'Test failed: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prev;
+  }
+}
+
 async function scan() {
   const btn = document.getElementById('scanBtn');
   const subtitle = document.getElementById('subtitle');
   const limit = parseInt(document.getElementById('limitInput').value, 10) || 500;
+  const mailbox = getMailbox();
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Scanning...';
   subtitle.textContent = 'Connecting to mailbox and parsing headers...';
@@ -281,7 +367,7 @@ async function scan() {
     const res = await fetch('/spamblok/api/scan', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ limit })
+      body: JSON.stringify({ limit, mailbox })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Scan failed');
@@ -312,7 +398,8 @@ function render() {
 
   if (allItems.length === 0) {
     document.getElementById('emptyState').style.display = 'block';
-    document.getElementById('emptyState').textContent = 'No mailing lists found in scanned messages.';
+    document.getElementById('emptyState').innerHTML =
+      'No mailing lists found in this folder. SPAMBLOK only lists messages that include a <strong>List-Unsubscribe</strong> header with a link. Try <strong>Test connection</strong> to confirm the folder has mail and how many messages include that header.';
     document.getElementById('tableWrap').style.display = 'none';
     document.getElementById('filterBar').style.display = 'none';
     return;
@@ -428,6 +515,7 @@ function closeResults() {
 }
 
 // wire events
+document.getElementById('testBtn').addEventListener('click', testConnection);
 document.getElementById('scanBtn').addEventListener('click', scan);
 document.getElementById('goBtn').addEventListener('click', go);
 document.getElementById('searchInput').addEventListener('input', render);
