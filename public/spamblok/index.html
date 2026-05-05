@@ -233,13 +233,13 @@
   <div>
     <a href="/" style="color:var(--muted); font-size:12px; text-decoration:none; display:inline-block; margin-bottom:10px;">← LAB007 Home</a>
     <h1>SPAMBLOK</h1>
-    <div class="subtitle" id="subtitle">Scan your inbox for List-Unsubscribe headers and bulk-unsubscribe from mailing lists</div>
+    <div class="subtitle" id="subtitle">Scan mailbox for unsubscribe targets and run bulk unsubscribe actions</div>
   </div>
   <div class="actions">
     <input type="number" id="limitInput" value="25" min="1" max="5000" title="How many recent messages to scan" />
     <button id="testBtn" type="button" title="Connect to IMAP, list folders, and count messages">Test connection</button>
     <button id="recentBtn" type="button" title="Preview latest emails in mailbox">Load last emails</button>
-    <button id="scanBtn" class="primary">Scan inbox</button>
+    <button id="scanBtn" class="primary">Scan spam</button>
   </div>
   <div class="imap-row" style="width:100%;">
     <label>Mailbox
@@ -254,7 +254,7 @@
     <span class="stats" id="selCount">0 selected</span>
     <button id="selectAllBtn">Select all</button>
     <button id="selectNoneBtn">Clear</button>
-    <button id="goBtn" class="primary" disabled>Unsubscribe selected →</button>
+    <button id="goBtn" class="primary" disabled>UNSUB ACTION</button>
   </div>
 
   <div class="table-wrap" id="tableWrap" style="display:none;">
@@ -272,7 +272,7 @@
     </table>
   </div>
 
-  <div class="empty" id="emptyState">Click <strong>Scan inbox</strong> to begin. Use <strong>Test connection</strong> if you see no mailing lists — the scanner only finds messages with List-Unsubscribe headers.</div>
+  <div class="empty" id="emptyState">Click <strong>Scan spam</strong> to begin. Use <strong>Load last emails</strong> to verify sender and unsubscribe target detection.</div>
 
   <section class="debug-panel" id="debugPanel" style="display:none;">
     <h2>Connection debug</h2>
@@ -290,6 +290,7 @@
             <th>Sender</th>
             <th>Subject</th>
             <th style="width:90px;">Unsub?</th>
+            <th>Target found</th>
           </tr>
         </thead>
         <tbody id="recentTbody"></tbody>
@@ -384,7 +385,7 @@ async function scan() {
   const mailbox = getMailbox();
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Scanning...';
-  subtitle.textContent = 'Connecting to mailbox and parsing headers...';
+  subtitle.textContent = 'Connecting to mailbox and scanning for unsubscribe targets...';
   try {
     const res = await fetch('/spamblok/api/scan', {
       method: 'POST',
@@ -394,15 +395,15 @@ async function scan() {
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Scan failed');
     allItems = data.items;
-    subtitle.textContent = `Scanned ${data.mailbox} · found ${allItems.length} mailing lists · ${new Date(data.scannedAt).toLocaleString()}`;
+    subtitle.textContent = `Scanned ${data.mailbox} · found ${allItems.length} actionable unsubscribe item(s) · ${new Date(data.scannedAt).toLocaleString()}`;
     render();
-    toast(`Found ${allItems.length} mailing lists`);
+    toast(`Found ${allItems.length} actionable unsubscribe item(s)`);
   } catch (err) {
     toast(err.message, 'error');
     subtitle.textContent = 'Scan failed: ' + err.message;
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Scan inbox';
+    btn.textContent = 'Scan spam';
   }
 }
 
@@ -428,6 +429,7 @@ function renderRecent() {
       <td>
         <span class="${row.hasUnsubscribeClue ? 'yn-yes' : 'yn-no'}">${row.hasUnsubscribeClue ? 'YES' : 'NO'}</span>
       </td>
+      <td class="link-cell">${row.unsubTarget ? escapeHtml(row.unsubTarget) : '—'}</td>
     `;
     tbody.appendChild(tr);
   }
@@ -481,7 +483,7 @@ function render() {
   if (allItems.length === 0) {
     document.getElementById('emptyState').style.display = 'block';
     document.getElementById('emptyState').innerHTML =
-      'No mailing lists found in this folder. SPAMBLOK only lists messages that include a <strong>List-Unsubscribe</strong> header with a link. Try <strong>Test connection</strong> to confirm the folder has mail and how many messages include that header.';
+      'No actionable unsubscribe targets found in this folder/range. Try <strong>Load last emails</strong> to inspect sender/target detection and then run <strong>Scan spam</strong> again.';
     document.getElementById('tableWrap').style.display = 'none';
     document.getElementById('filterBar').style.display = 'none';
     return;
@@ -548,7 +550,7 @@ function updateSelectionUI() {
 async function go() {
   const uids = getSelectedUids();
   if (uids.length === 0) return;
-  if (!confirm(`Unsubscribe from ${uids.length} mailing list${uids.length > 1 ? 's' : ''}?`)) return;
+  if (!confirm(`Run UNSUB ACTION for ${uids.length} selected item${uids.length > 1 ? 's' : ''}?`)) return;
 
   const btn = document.getElementById('goBtn');
   btn.disabled = true;
@@ -567,7 +569,7 @@ async function go() {
     toast(err.message, 'error');
   } finally {
     btn.disabled = false;
-    btn.textContent = 'Unsubscribe selected →';
+    btn.textContent = 'UNSUB ACTION';
   }
 }
 
