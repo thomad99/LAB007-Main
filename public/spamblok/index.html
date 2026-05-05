@@ -226,6 +226,16 @@
   .debug-hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
   .yn-yes { color: var(--success); font-weight: 600; }
   .yn-no { color: var(--danger); font-weight: 600; }
+  .keep-wrap { margin-top: 10px; display: none; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .keep-domain-chip {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--panel-2); border: 1px solid var(--border); border-radius: 999px;
+    padding: 4px 10px; font-size: 12px;
+  }
+  .chip-x {
+    border: none; background: transparent; color: var(--muted); cursor: pointer; padding: 0; font-size: 12px;
+  }
+  .chip-x:hover { color: var(--danger); }
 </style>
 </head>
 <body>
@@ -252,9 +262,14 @@
   <div class="filter-bar" id="filterBar" style="display:none;">
     <input type="text" id="searchInput" placeholder="Filter by sender or domain..." />
     <span class="stats" id="selCount">0 selected</span>
+    <button id="keepBtn" title="Keep selected domains and hide in future scans">KEEP selected domains</button>
     <button id="selectAllBtn">Select all</button>
     <button id="selectNoneBtn">Clear</button>
     <button id="goBtn" class="primary" disabled>UNSUB ACTION</button>
+  </div>
+  <div class="keep-wrap" id="keepWrap">
+    <strong style="font-size:12px; color:var(--muted);">KEEP domains:</strong>
+    <div id="keepDomainsList"></div>
   </div>
 
   <div class="table-wrap" id="tableWrap" style="display:none;">
@@ -316,6 +331,7 @@
 let allItems = [];
 let filtered = [];
 let recentRows = [];
+let keepDomains = [];
 
 function getMailbox() {
   const v = document.getElementById('mailboxInput').value.trim();
@@ -336,6 +352,84 @@ function toast(msg, kind = 'success') {
   el.textContent = msg;
   stack.appendChild(el);
   setTimeout(() => el.remove(), 4000);
+}
+
+function normalizeDomain(d) {
+  return String(d || '').trim().toLowerCase().replace(/^@+/, '');
+}
+
+function selectedDomains() {
+  const uids = new Set(getSelectedUids());
+  return Array.from(
+    new Set(
+      allItems
+        .filter((i) => uids.has(i.uid))
+        .map((i) => normalizeDomain(i.domain))
+        .filter(Boolean)
+    )
+  );
+}
+
+async function loadKeepDomains() {
+  try {
+    const res = await fetch('/spamblok/api/keep-domains');
+    const data = await res.json();
+    keepDomains = Array.isArray(data.domains) ? data.domains : [];
+  } catch {
+    keepDomains = [];
+  }
+  renderKeepDomains();
+}
+
+function renderKeepDomains() {
+  const wrap = document.getElementById('keepWrap');
+  const list = document.getElementById('keepDomainsList');
+  list.innerHTML = '';
+  if (!keepDomains.length) {
+    wrap.style.display = 'none';
+    return;
+  }
+  wrap.style.display = 'flex';
+  for (const d of keepDomains) {
+    const chip = document.createElement('span');
+    chip.className = 'keep-domain-chip';
+    chip.innerHTML = `${escapeHtml(d)} <button class="chip-x" data-domain="${escapeHtml(d)}" title="Remove KEEP">✕</button>`;
+    list.appendChild(chip);
+  }
+  list.querySelectorAll('.chip-x').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const domain = btn.getAttribute('data-domain');
+      await removeKeepDomains([domain]);
+    });
+  });
+}
+
+async function addKeepDomains(domains) {
+  const clean = (domains || []).map(normalizeDomain).filter(Boolean);
+  if (!clean.length) return;
+  const res = await fetch('/spamblok/api/keep-domains', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ domains: clean })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to save KEEP domains');
+  keepDomains = Array.isArray(data.domains) ? data.domains : keepDomains;
+  renderKeepDomains();
+}
+
+async function removeKeepDomains(domains) {
+  const clean = (domains || []).map(normalizeDomain).filter(Boolean);
+  if (!clean.length) return;
+  const res = await fetch('/spamblok/api/keep-domains', {
+    method: 'DELETE',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify({ domains: clean })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Failed to remove KEEP domain');
+  keepDomains = Array.isArray(data.domains) ? data.domains : keepDomains;
+  renderKeepDomains();
 }
 
 async function testConnection() {
@@ -390,7 +484,7 @@ async function scan() {
     const res = await fetch('/spamblok/api/scan', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ limit, mailbox })
+      body: JSON.stringify({ limit, mailbox, dedupeByDomain: true })
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Scan failed');
@@ -470,20 +564,26 @@ async function loadRecentEmails() {
 
 function render() {
   const q = document.getElementById('searchInput').value.toLowerCase().trim();
+  const keepSet = new Set(keepDomains.map(normalizeDomain));
   filtered = allItems.filter(i =>
-    !q ||
-    i.senderAddress.toLowerCase().includes(q) ||
-    i.senderName.toLowerCase().includes(q) ||
-    i.domain.toLowerCase().includes(q)
+    !keepSet.has(normalizeDomain(i.domain)) &&
+    (
+      !q ||
+      i.senderAddress.toLowerCase().includes(q) ||
+      i.senderName.toLowerCase().includes(q) ||
+      i.domain.toLowerCase().includes(q)
+    )
   );
 
   const tbody = document.getElementById('tbody');
   tbody.innerHTML = '';
 
-  if (allItems.length === 0) {
+  if (filtered.length === 0) {
     document.getElementById('emptyState').style.display = 'block';
     document.getElementById('emptyState').innerHTML =
-      'No actionable unsubscribe targets found in this folder/range. Try <strong>Load last emails</strong> to inspect sender/target detection and then run <strong>Scan spam</strong> again.';
+      keepDomains.length
+        ? 'No rows to show after KEEP-domain filtering. Remove KEEP tags below to show hidden domains, or scan another folder.'
+        : 'No actionable unsubscribe targets found in this folder/range. Try <strong>Load last emails</strong> to inspect sender/target detection and then run <strong>Scan spam</strong> again.';
     document.getElementById('tableWrap').style.display = 'none';
     document.getElementById('filterBar').style.display = 'none';
     return;
@@ -573,6 +673,22 @@ async function go() {
   }
 }
 
+async function keepSelectedDomains() {
+  const domains = selectedDomains();
+  if (!domains.length) {
+    toast('Select at least one row first', 'error');
+    return;
+  }
+  try {
+    await addKeepDomains(domains);
+    toast(`Saved ${domains.length} KEEP domain(s)`);
+    render();
+    updateSelectionUI();
+  } catch (err) {
+    toast(err.message, 'error');
+  }
+}
+
 function showResults(results) {
   const ok = results.filter(r => r.ok).length;
   const fail = results.length - ok;
@@ -603,6 +719,7 @@ document.getElementById('testBtn').addEventListener('click', testConnection);
 document.getElementById('recentBtn').addEventListener('click', loadRecentEmails);
 document.getElementById('scanBtn').addEventListener('click', scan);
 document.getElementById('goBtn').addEventListener('click', go);
+document.getElementById('keepBtn').addEventListener('click', keepSelectedDomains);
 document.getElementById('searchInput').addEventListener('input', render);
 document.getElementById('selectAllBtn').addEventListener('click', () => {
   document.querySelectorAll('.row-check').forEach(cb => cb.checked = true);
@@ -616,6 +733,8 @@ document.getElementById('masterCheck').addEventListener('change', e => {
   document.querySelectorAll('.row-check').forEach(cb => cb.checked = e.target.checked);
   updateSelectionUI();
 });
+
+loadKeepDomains();
 </script>
 </body>
 </html>
