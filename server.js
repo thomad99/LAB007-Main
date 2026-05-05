@@ -3234,6 +3234,38 @@ const MM_CAMPAIGN_PRESETS = [
   }
 ];
 
+const MM_TASK_TEMPLATES = [
+  {
+    key: 'directory_rollout_usa',
+    title: 'Directory rollout (USA) — one task per site',
+    description:
+      'Creates one task per directory site with rollout guidance (spread submissions over months, every few days).'
+  }
+];
+
+function mmBuildDirectorySiteTask(siteName, siteUrl, nowIso) {
+  const cadence =
+    'Rollout plan: submit this listing gradually as part of a multi-month cadence (create/refresh a few listings each week, not all at once).';
+  const checklistGuide = [
+    '- Confirm business name/address/phone consistency',
+    '- Submit listing profile',
+    '- Save account/login details',
+    '- Add proof URL or screenshot note',
+    '- Mark task status to Completed when live'
+  ].join('\n');
+  return {
+    id: mmNewId('task'),
+    kind: 'campaign',
+    campaignKey: 'directory_site_rollout',
+    title: `Directory listing: ${siteName}`,
+    description: `${cadence}\n\nDirectory: ${siteName}\nURL: ${siteUrl}\n\nExecution checklist:\n${checklistGuide}\n\nComments:\n- Not started`,
+    status: 'not_started',
+    notes: '',
+    createdAt: nowIso,
+    updatedAt: nowIso
+  };
+}
+
 function readMarketingManagerState() {
   try {
     if (!fs.existsSync(marketingManagerPath)) return { customers: [] };
@@ -4291,7 +4323,8 @@ app.get('/api/marketing-manager/catalog', (req, res) => {
       usa: MM_DIRECTORY_USA.map(([name, url]) => ({ name, url })),
       paid: MM_DIRECTORY_PAID.map(([name, url]) => ({ name, url }))
     },
-    campaigns: MM_CAMPAIGN_PRESETS
+    campaigns: MM_CAMPAIGN_PRESETS,
+    taskTemplates: MM_TASK_TEMPLATES
   });
 });
 
@@ -4442,7 +4475,16 @@ app.post('/api/marketing-manager/customers/:customerId/tasks', (req, res) => {
     const now = new Date().toISOString();
     let task;
 
-    if (kind === 'directory') {
+    if (kind === 'template_batch') {
+      const templateKey = String(req.body?.templateKey || '').trim();
+      if (templateKey === 'directory_rollout_usa') {
+        const createdTasks = MM_DIRECTORY_USA.map(([name, url]) => mmBuildDirectorySiteTask(name, url, now));
+        c.tasks.push(...createdTasks);
+        writeMarketingManagerState(state);
+        return res.status(201).json({ tasks: createdTasks, createdCount: createdTasks.length });
+      }
+      return res.status(400).json({ error: 'Invalid templateKey' });
+    } else if (kind === 'directory') {
       task = {
         id: mmNewId('task'),
         kind: 'directory',
@@ -4507,7 +4549,7 @@ app.post('/api/marketing-manager/customers/:customerId/tasks', (req, res) => {
     } else {
       return res
         .status(400)
-        .json({ error: 'kind must be directory, onboarding, keywords, campaign, or manual' });
+        .json({ error: 'kind must be template_batch, directory, onboarding, keywords, campaign, or manual' });
     }
 
     c.tasks.push(task);

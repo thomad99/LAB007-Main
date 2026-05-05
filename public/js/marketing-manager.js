@@ -903,8 +903,15 @@
           <details class="mm-campaign-details" id="mm-task-templates-details" style="margin-top:10px;">
             <summary>Task templates</summary>
             <div class="mm-task-meta" style="margin-top:10px;">
-              <button type="button" class="btn-mm" id="mm-add-directory">Directory listings</button>
-              <button type="button" class="btn-mm-ghost" id="mm-add-onboarding" style="margin-left:8px;">Client onboarding</button>
+              <label class="mm-notes-label">Bulk template</label>
+              <select id="mm-template-select" class="mm-select" style="max-width:620px;">
+                <option value="">Select a template…</option>
+                ${((state.catalog.taskTemplates || []).map((tpl) => `<option value="${escapeHtml(tpl.key)}">${escapeHtml(tpl.title)}</option>`).join(''))}
+              </select>
+              <button type="button" class="btn-mm" id="mm-create-template-tasks" style="margin-top:8px;">Create tasks from template</button>
+              <p class="mm-small" style="margin-top:8px;">Directory rollout template creates one task per site so each listing can be tracked with status/comments.</p>
+              <button type="button" class="btn-mm" id="mm-add-directory" style="margin-top:10px;">Legacy single directory checklist</button>
+              <button type="button" class="btn-mm-ghost" id="mm-add-onboarding" style="margin-left:8px;margin-top:10px;">Client onboarding</button>
               <p class="mm-small" style="margin:10px 0 0;">Six access &amp; asset items with instructions and a shareable PDF.</p>
               <div class="mm-small" style="margin:14px 0 6px;">Campaign starter templates</div>
               <div class="mm-campaign-grid" id="mm-task-templates-buttons"></div>
@@ -1009,6 +1016,16 @@
         body: JSON.stringify({ kind: 'directory' })
       });
       await refresh();
+    });
+    $('#mm-create-template-tasks')?.addEventListener('click', async () => {
+      const templateKey = String($('#mm-template-select')?.value || '').trim();
+      if (!templateKey) return alert('Select a task template first.');
+      const resp = await api(`/api/marketing-manager/customers/${cust.id}/tasks`, {
+        method: 'POST',
+        body: JSON.stringify({ kind: 'template_batch', templateKey })
+      });
+      await refresh();
+      if (resp?.createdCount) alert(`Created ${resp.createdCount} tasks.`);
     });
     $('#mm-add-onboarding')?.addEventListener('click', async () => {
       await api(`/api/marketing-manager/customers/${cust.id}/tasks`, {
