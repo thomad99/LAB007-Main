@@ -224,6 +224,8 @@
     color: var(--text); font-family: "SF Mono", Menlo, Consolas, monospace; white-space: pre-wrap; word-break: break-word;
   }
   .debug-hint { font-size: 12px; color: var(--muted); margin-top: 10px; }
+  .yn-yes { color: var(--success); font-weight: 600; }
+  .yn-no { color: var(--danger); font-weight: 600; }
 </style>
 </head>
 <body>
@@ -234,8 +236,9 @@
     <div class="subtitle" id="subtitle">Scan your inbox for List-Unsubscribe headers and bulk-unsubscribe from mailing lists</div>
   </div>
   <div class="actions">
-    <input type="number" id="limitInput" value="500" min="50" max="5000" title="How many recent messages to scan" />
+    <input type="number" id="limitInput" value="25" min="1" max="5000" title="How many recent messages to scan" />
     <button id="testBtn" type="button" title="Connect to IMAP, list folders, and count messages">Test connection</button>
+    <button id="recentBtn" type="button" title="Preview latest emails in mailbox">Load last emails</button>
     <button id="scanBtn" class="primary">Scan inbox</button>
   </div>
   <div class="imap-row" style="width:100%;">
@@ -276,6 +279,24 @@
     <pre id="debugPre"></pre>
     <p class="debug-hint">Use folder names from <code>mailboxes</code> if INBOX is empty on your provider. Scan results are senders with usable unsubscribe links, not every email.</p>
   </section>
+
+  <section class="debug-panel" id="recentPanel" style="display:none;">
+    <h2>Last emails preview</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:90px;">UID</th>
+            <th>Sender</th>
+            <th>Subject</th>
+            <th style="width:90px;">Unsub?</th>
+          </tr>
+        </thead>
+        <tbody id="recentTbody"></tbody>
+      </table>
+    </div>
+    <p class="debug-hint">Unsub? = YES when we detect List-Unsubscribe header or body clues like "unsubscribe/opt-out" with a link or email.</p>
+  </section>
 </main>
 
 <div class="toast-stack" id="toastStack"></div>
@@ -293,6 +314,7 @@
 <script>
 let allItems = [];
 let filtered = [];
+let recentRows = [];
 
 function getMailbox() {
   const v = document.getElementById('mailboxInput').value.trim();
@@ -358,7 +380,7 @@ async function testConnection() {
 async function scan() {
   const btn = document.getElementById('scanBtn');
   const subtitle = document.getElementById('subtitle');
-  const limit = parseInt(document.getElementById('limitInput').value, 10) || 500;
+  const limit = parseInt(document.getElementById('limitInput').value, 10) || 25;
   const mailbox = getMailbox();
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Scanning...';
@@ -381,6 +403,66 @@ async function scan() {
   } finally {
     btn.disabled = false;
     btn.textContent = 'Scan inbox';
+  }
+}
+
+function renderRecent() {
+  const panel = document.getElementById('recentPanel');
+  const tbody = document.getElementById('recentTbody');
+  tbody.innerHTML = '';
+
+  if (!recentRows.length) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  for (const row of recentRows) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${row.uid}</td>
+      <td>
+        <div class="sender">${escapeHtml(row.senderName || '')}</div>
+        <div class="sender-addr">${escapeHtml(row.senderAddress || '')}</div>
+      </td>
+      <td>${escapeHtml(row.subject || '')}</td>
+      <td>
+        <span class="${row.hasUnsubscribeClue ? 'yn-yes' : 'yn-no'}">${row.hasUnsubscribeClue ? 'YES' : 'NO'}</span>
+      </td>
+    `;
+    tbody.appendChild(tr);
+  }
+
+  panel.style.display = 'block';
+}
+
+async function loadRecentEmails() {
+  const btn = document.getElementById('recentBtn');
+  const subtitle = document.getElementById('subtitle');
+  const mailbox = getMailbox();
+  const limit = parseInt(document.getElementById('limitInput').value, 10) || 25;
+  btn.disabled = true;
+  const prev = btn.textContent;
+  btn.innerHTML = '<span class="spinner"></span>Loading...';
+  subtitle.textContent = `Loading last ${limit} email(s) from ${mailbox}...`;
+  try {
+    const res = await fetch('/spamblok/api/recent', {
+      method: 'POST',
+      headers: {'Content-Type':'application/json'},
+      body: JSON.stringify({ mailbox, limit })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Failed to load recent emails');
+    recentRows = Array.isArray(data.rows) ? data.rows : [];
+    renderRecent();
+    const yesCount = recentRows.filter(r => r.hasUnsubscribeClue).length;
+    subtitle.textContent = `Loaded ${recentRows.length} recent email(s) from ${data.mailbox} · Unsub? YES on ${yesCount}`;
+    toast(`Loaded ${recentRows.length} recent emails (${yesCount} with unsubscribe clues)`);
+  } catch (err) {
+    toast(err.message, 'error');
+    subtitle.textContent = 'Recent email preview failed: ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.textContent = prev;
   }
 }
 
@@ -516,6 +598,7 @@ function closeResults() {
 
 // wire events
 document.getElementById('testBtn').addEventListener('click', testConnection);
+document.getElementById('recentBtn').addEventListener('click', loadRecentEmails);
 document.getElementById('scanBtn').addEventListener('click', scan);
 document.getElementById('goBtn').addEventListener('click', go);
 document.getElementById('searchInput').addEventListener('input', render);
