@@ -59,6 +59,20 @@
       padding: 16px 18px;
       position: relative;
       overflow: hidden;
+      cursor: grab;
+    }
+    .stat-card:active { cursor: grabbing; }
+    .stat-card.dragging { opacity: 0.45; }
+    .stat-card.size-s { grid-column: span 1; }
+    .stat-card.size-m { grid-column: span 2; }
+    .stat-card.size-l { grid-column: span 3; }
+    .size-btn {
+      position: absolute; right: 10px; top: 8px; border: 1px solid #3a3a44; background: #16161a;
+      color: #9ca3af; border-radius: 8px; padding: 2px 6px; font-size: 0.68rem; cursor: pointer;
+    }
+    .badge-auto {
+      display: inline-block; margin-left: 8px; padding: 2px 8px; border-radius: 999px;
+      font-size: 0.68rem; font-weight: 700; background: #153024; color: #86efac; border: 1px solid #2f5b46;
     }
     .stat-card::after {
       content: "";
@@ -124,8 +138,8 @@
       </div>
       <div class="tabs">
         <a href="/007trade" class="active">Dashboard</a>
-        <a href="/007trade/simple-trade">SIMPLE TRADE</a>
-        <a href="/007trade/auto-trade">AUTO-TRADE</a>
+        <a href="/007trade/simple-trade">Simple Trade</a>
+        <a href="/007trade/auto-trade">Auto-Trade</a>
         <a href="/007trade/circuit-breaker">Circuit Breaker</a>
         <a href="/007trade/market-conditions">Market Conditions</a>
         <a href="/007trade/copytrader">CopyTrader</a>
@@ -170,6 +184,8 @@
   <script>
     (function () {
       var autoTimer = null;
+      var tileLayout = loadTileLayout();
+      var draggingTileId = null;
 
       function el(id) { return document.getElementById(id); }
 
@@ -199,6 +215,36 @@
         return n > 0 ? 'pos' : 'neg';
       }
 
+      function loadTileLayout() {
+        try {
+          var raw = localStorage.getItem('trade007-dashboard-tiles-v1');
+          var parsed = raw ? JSON.parse(raw) : null;
+          if (parsed && Array.isArray(parsed.order) && parsed.sizes && typeof parsed.sizes === 'object') {
+            return parsed;
+          }
+        } catch (_) {}
+        return { order: [], sizes: {} };
+      }
+
+      function saveTileLayout() {
+        try { localStorage.setItem('trade007-dashboard-tiles-v1', JSON.stringify(tileLayout)); } catch (_) {}
+      }
+
+      function applyTileLayout(cards) {
+        var byId = {};
+        cards.forEach(function (c) { byId[c.id] = c; });
+        var out = [];
+        (tileLayout.order || []).forEach(function (id) {
+          if (byId[id]) {
+            out.push(byId[id]);
+            delete byId[id];
+          }
+        });
+        Object.keys(byId).forEach(function (k) { out.push(byId[k]); });
+        tileLayout.order = out.map(function (c) { return c.id; });
+        return out;
+      }
+
       function renderStats(d) {
         var acct = d.account || {};
         var sum = d.summary || {};
@@ -214,8 +260,9 @@
           ? 'ON' + (automation.dryRun ? ' (dry run)' : '') + ' · ' + enabledRules + ' active rule(s)'
           : 'OFF';
         var cards = [
-          { label: 'Equity', value: fmtMoney(acct.equity), hint: broker.paper ? 'Paper account' : 'Live account' },
+          { id: 'equity', label: 'Equity', value: fmtMoney(acct.equity), hint: broker.paper ? 'Paper account' : 'Live account' },
           {
+            id: 'day',
             label: 'Today up/down',
             value:
               (dayPl != null && !isNaN(parseFloat(dayPl))
@@ -225,24 +272,34 @@
             valueClass: plClass(dayPl),
             hint: 'From Alpaca equity vs previous close'
           },
-          { label: 'Automation in effect', value: autoHint, hint: automation.lastTickAt ? 'Last tick ' + fmtTime(automation.lastTickAt) : '' },
-          { label: 'Cash', value: fmtMoney(acct.cash), hint: '' },
-          { label: 'Buying power', value: fmtMoney(acct.buying_power), hint: '' },
-          { label: 'Portfolio value', value: fmtMoney(acct.portfolio_value), hint: '' },
           {
+            id: 'auto',
+            label: 'Automation in effect',
+            value: autoHint,
+            valueClass: automation.masterEnabled ? 'pos' : '',
+            hint: automation.lastTickAt ? 'Last tick ' + fmtTime(automation.lastTickAt) : ''
+          },
+          { id: 'cash', label: 'Cash', value: fmtMoney(acct.cash), hint: '' },
+          { id: 'bp', label: 'Buying power', value: fmtMoney(acct.buying_power), hint: '' },
+          { id: 'pv', label: 'Portfolio value', value: fmtMoney(acct.portfolio_value), hint: '' },
+          {
+            id: 'unreal',
             label: 'Unrealized P/L',
             value: fmtMoney(unreal),
             valueClass: plClass(unreal),
             hint: 'Sum across open positions'
           },
-          { label: 'Open positions', value: String(sum.positionCount || 0), hint: '' },
-          { label: 'Working orders', value: String(sum.openOrderCount || 0), hint: 'Status = open at Alpaca' }
+          { id: 'pos', label: 'Open positions', value: String(sum.positionCount || 0), hint: '' },
+          { id: 'ord', label: 'Working orders', value: String(sum.openOrderCount || 0), hint: 'Status = open at Alpaca' }
         ];
+        cards = applyTileLayout(cards);
         grid.innerHTML = cards
           .map(function (c) {
             var vc = c.valueClass ? ' ' + c.valueClass : '';
+            var size = tileLayout.sizes[c.id] || 'm';
             return (
-              '<div class="stat-card">' +
+              '<div class="stat-card size-' + size + '" draggable="true" data-tile-id="' + escapeHtml(c.id) + '">' +
+              '<button type="button" class="size-btn" data-size-id="' + escapeHtml(c.id) + '">' + escapeHtml(size.toUpperCase()) + '</button>' +
               '<div class="label">' +
               escapeHtml(c.label) +
               '</div>' +
@@ -256,6 +313,7 @@
             );
           })
           .join('');
+        attachTileInteractions();
       }
 
       function escapeHtml(t) {
@@ -263,6 +321,48 @@
           .replace(/&/g, '&amp;')
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;');
+      }
+
+      function attachTileInteractions() {
+        var grid = el('statGrid');
+        if (!grid) return;
+        grid.querySelectorAll('.stat-card').forEach(function (card) {
+          card.addEventListener('dragstart', function () {
+            draggingTileId = card.getAttribute('data-tile-id');
+            card.classList.add('dragging');
+          });
+          card.addEventListener('dragend', function () {
+            card.classList.remove('dragging');
+            draggingTileId = null;
+          });
+          card.addEventListener('dragover', function (ev) { ev.preventDefault(); });
+          card.addEventListener('drop', function (ev) {
+            ev.preventDefault();
+            var targetId = card.getAttribute('data-tile-id');
+            if (!draggingTileId || !targetId || draggingTileId === targetId) return;
+            var order = tileLayout.order.slice();
+            var from = order.indexOf(draggingTileId);
+            var to = order.indexOf(targetId);
+            if (from < 0 || to < 0) return;
+            order.splice(from, 1);
+            order.splice(to, 0, draggingTileId);
+            tileLayout.order = order;
+            saveTileLayout();
+            loadDash();
+          });
+        });
+        grid.querySelectorAll('.size-btn').forEach(function (btn) {
+          btn.addEventListener('click', function (ev) {
+            ev.preventDefault();
+            ev.stopPropagation();
+            var id = btn.getAttribute('data-size-id');
+            var cur = tileLayout.sizes[id] || 'm';
+            var next = cur === 's' ? 'm' : cur === 'm' ? 'l' : 's';
+            tileLayout.sizes[id] = next;
+            saveTileLayout();
+            loadDash();
+          });
+        });
       }
 
       function renderPositions(rows) {
@@ -327,6 +427,11 @@
         var extra = [lp, sp].filter(Boolean).join(' ');
         var cid = o.client_order_id || '';
         if (cid.length > 22) cid = cid.slice(0, 20) + '…';
+        var meta = o._meta || null;
+        var autoTag = meta && meta.source === 'automation'
+          ? '<span class="badge-auto">AUTO' + (meta.ruleId ? ' · ' + escapeHtml(meta.ruleId) : '') + '</span>'
+          : '';
+        var reason = meta && meta.reason ? '<div class="muted">' + escapeHtml(meta.reason) + '</div>' : '';
         return (
           '<tr class="' +
           (isLeg ? 'leg-row' : '') +
@@ -336,6 +441,8 @@
           '<strong>' +
           escapeHtml(sym) +
           '</strong>' +
+          autoTag +
+          reason +
           '<div class="muted">' +
           escapeHtml(cid ? 'id ' + cid : '') +
           '</div></td>' +
