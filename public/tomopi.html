@@ -522,6 +522,31 @@
     body.sim-body-fullscreen {
       overflow: hidden;
     }
+    body.tomodash-only {
+      margin: 0;
+      background: #000;
+    }
+    body.tomodash-only .wrap {
+      max-width: none;
+      margin: 0;
+      padding: 0;
+    }
+    body.tomodash-only .wrap > :not(#webviewPanel) {
+      display: none !important;
+    }
+    body.tomodash-only #webviewPanel {
+      margin: 0;
+      border: 0;
+      border-radius: 0;
+      padding: 0;
+      background: #000;
+    }
+    body.tomodash-only #webviewPanel > h2 {
+      display: none;
+    }
+    body.tomodash-only .sim-wrap {
+      padding: 0;
+    }
     @media (max-width: 768px) {
       .sim-wrap { padding: 10px; }
       .sim-toolbar { justify-content: stretch; }
@@ -1181,10 +1206,11 @@
       </details>
     </div>
 
-    <div class="panel">
+    <div class="panel" id="webviewPanel">
       <h2>WebView</h2>
       <div class="sim-wrap" id="simWrap">
         <div class="sim-toolbar">
+          <button type="button" class="sim-tool-btn" id="simAdminBtn">Admin</button>
           <button type="button" class="sim-tool-btn" id="simFullscreenBtn">Fullscreen</button>
         </div>
         <div class="sim-display" id="simDisplay">
@@ -1257,7 +1283,10 @@
     const simWrap = document.getElementById('simWrap');
     const simRefreshBtn = document.getElementById('simRefreshBtn');
     const simFullscreenBtn = document.getElementById('simFullscreenBtn');
+    const simAdminBtn = document.getElementById('simAdminBtn');
+    const isTomoDashPath = window.location.pathname.toLowerCase() === '/tomodash';
     let simForcedFullscreen = false;
+    if (isTomoDashPath) document.body.classList.add('tomodash-only');
     const piCardButtons = () => Array.from(document.querySelectorAll('.pi-card[data-control]'));
     const piEditOverlay = document.getElementById('piEditOverlay');
     const piEditTitle = document.getElementById('piEditTitle');
@@ -2119,6 +2148,13 @@
       window.addEventListener('resize', updateSimulator);
       window.addEventListener('orientationchange', () => setTimeout(updateSimulator, 150));
       setSimFullscreenButtonText();
+      if (isTomoDashPath) setSimForcedFullscreen(true);
+    }
+    if (simAdminBtn) {
+      simAdminBtn.textContent = isTomoDashPath ? 'Admin' : 'Open TomoDash';
+      simAdminBtn.addEventListener('click', () => {
+        window.location.href = isTomoDashPath ? '/tomopi' : '/tomodash';
+      });
     }
     if (simModeBadge) {
       simModeBadge.title = 'Back to menu';

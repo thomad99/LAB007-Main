@@ -5488,6 +5488,9 @@ app.get('/BIKE', (req, res) => {
 app.get('/tomopi', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'tomopi.html'));
 });
+app.get('/tomodash', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'tomopi.html'));
+});
 
 // TomoPI config API (Pi fetches this, admin saves via panel)
 // Backing file is tomopi-data/config.json so Pi can simply refer to "config.json"
@@ -5681,9 +5684,57 @@ async function fetchTomopiStockQuoteFromChart(symbol) {
   }
 }
 
+async function fetchTomopiFinnhubQuote(symbol) {
+  const apiKey = String(process.env.FINNHUB_API_KEY || '').trim();
+  if (!apiKey) return null;
+  try {
+    const safeSymbol = String(symbol || '').toUpperCase().trim();
+    if (!safeSymbol) return null;
+    const url = `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(safeSymbol)}&token=${encodeURIComponent(apiKey)}`;
+    const res = await fetchFn(url, {
+      headers: { 'User-Agent': 'LAB007-TomoPI-Simulator/1.0' },
+      signal: AbortSignal.timeout(10000)
+    });
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => ({}));
+    const price = Number.isFinite(Number(data?.c)) && Number(data.c) > 0 ? Number(data.c) : null;
+    const changePct = Number.isFinite(Number(data?.dp)) ? Number(data.dp) : null;
+    if (!Number.isFinite(price)) return null;
+    return { symbol: safeSymbol, price, changePct };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchTomopiCoinGeckoBtc() {
+  try {
+    const res = await fetchFn(
+      'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd',
+      {
+        headers: { 'User-Agent': 'LAB007-TomoPI-Simulator/1.0' },
+        signal: AbortSignal.timeout(10000)
+      }
+    );
+    if (!res.ok) return null;
+    const data = await res.json().catch(() => ({}));
+    const price = Number.isFinite(Number(data?.bitcoin?.usd)) ? Number(data.bitcoin.usd) : null;
+    if (!Number.isFinite(price)) return null;
+    return { symbol: 'BTC-USD', price, changePct: null };
+  } catch {
+    return null;
+  }
+}
+
 async function fetchTomopiStockQuotes(tickers) {
   const symbols = uniqueStrings(tickers).map((t) => t.toUpperCase()).slice(0, 20);
   if (!symbols.length) return [];
+
+  // Match Pi behavior for BTC via CoinGecko (works without Yahoo/Finnhub).
+  const wantsBtc = symbols.some((s) => s === 'BTC' || s === 'BTCUSD' || s === 'BTC-USD');
+  let btcQuote = null;
+  if (wantsBtc) {
+    btcQuote = await fetchTomopiCoinGeckoBtc();
+  }
   try {
     const url = `https://query1.finance.yahoo.com/v7/finance/quote?symbols=${encodeURIComponent(symbols.join(','))}`;
     const res = await fetchFn(url, {
@@ -5703,7 +5754,16 @@ async function fetchTomopiStockQuotes(tickers) {
       return !q || !Number.isFinite(Number(q.price));
     });
     if (missingSymbols.length) {
-      const fallbackQuotes = await Promise.all(missingSymbols.map((sym) => fetchTomopiStockQuoteFromChart(sym)));
+      const fallbackQuotes = await Promise.all(
+        missingSymbols.map(async (sym) => {
+          if ((sym === 'BTC' || sym === 'BTCUSD' || sym === 'BTC-USD') && btcQuote) {
+            return { ...btcQuote, symbol: sym };
+          }
+          const fh = await fetchTomopiFinnhubQuote(sym);
+          if (fh) return fh;
+          return fetchTomopiStockQuoteFromChart(sym);
+        })
+      );
       fallbackQuotes.filter(Boolean).forEach((q) => bySymbol.set(q.symbol, q));
     }
     const finalQuotes = symbols.map((sym) => bySymbol.get(sym)).filter(Boolean);
@@ -5715,7 +5775,16 @@ async function fetchTomopiStockQuotes(tickers) {
     cached.forEach((q) => merged.push(q));
     return merged;
   } catch {
-    const fallbackQuotes = await Promise.all(symbols.map((sym) => fetchTomopiStockQuoteFromChart(sym)));
+    const fallbackQuotes = await Promise.all(
+      symbols.map(async (sym) => {
+        if ((sym === 'BTC' || sym === 'BTCUSD' || sym === 'BTC-USD') && btcQuote) {
+          return { ...btcQuote, symbol: sym };
+        }
+        const fh = await fetchTomopiFinnhubQuote(sym);
+        if (fh) return fh;
+        return fetchTomopiStockQuoteFromChart(sym);
+      })
+    );
     const finalQuotes = fallbackQuotes.filter(Boolean);
     if (finalQuotes.length) cacheTomopiQuotes(finalQuotes);
     const stillMissing = symbols.filter((sym) => !finalQuotes.find((q) => q.symbol === sym));

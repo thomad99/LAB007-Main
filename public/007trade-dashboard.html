@@ -39,6 +39,24 @@
       display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 22px;
     }
     .toolbar .meta { color: #6b7280; font-size: 0.8rem; }
+    .toolbar #refreshBtn {
+      padding: 7px 12px;
+      font-size: 0.9rem;
+      border-radius: 8px;
+      line-height: 1.1;
+    }
+    .auto-refresh-toggle {
+      padding: 6px 10px;
+      font-size: 0.86rem;
+      border-radius: 8px;
+      line-height: 1.1;
+      gap: 6px !important;
+    }
+    .auto-refresh-toggle input[type="checkbox"] {
+      width: 14px;
+      height: 14px;
+      margin: 0;
+    }
     button, label.btn {
       font: inherit; border-radius: 10px; border: 1px solid #3a3a44; background: #121214; color: #e8e8ea;
       padding: 10px 16px; cursor: pointer; font-weight: 600;
@@ -152,7 +170,7 @@
 
     <div class="toolbar">
       <button type="button" class="primary" id="refreshBtn">Refresh now</button>
-      <label class="btn" style="display:inline-flex;align-items:center;gap:8px;margin:0">
+      <label class="btn auto-refresh-toggle" style="display:inline-flex;align-items:center;margin:0">
         <input type="checkbox" id="autoRefresh" checked />
         Auto-refresh every 20s
       </label>
