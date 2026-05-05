@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
-  <title>007Trade · Active trades — LAB007</title>
+  <title>007Trade · Dashboard — LAB007</title>
   <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
   <style>
     * { box-sizing: border-box; }
@@ -27,10 +27,13 @@
     .brand img { height: 44px; }
     h1 { margin: 0; font-size: 1.45rem; font-weight: 700; letter-spacing: 0.02em; }
     .sub { color: #8b8b93; font-size: 0.9rem; margin-top: 4px; max-width: 520px; line-height: 1.45; }
-    .nav a {
-      color: #c9a227; text-decoration: none; font-weight: 600; font-size: 0.9rem; margin-left: 14px;
+    .tabs { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+    .tabs a {
+      color:#d4c07a; text-decoration:none; font-weight:700; font-size:0.82rem;
+      border:1px solid #4a4124; border-radius:999px; padding:8px 12px; background:#131316;
     }
-    .nav a:hover { text-decoration: underline; }
+    .tabs a.active { background:#c9a227; color:#111; border-color:#c9a227; }
+    .tabs a:hover { border-color:#c9a227; }
     .toolbar {
       display: flex; flex-wrap: wrap; align-items: center; gap: 12px; margin-bottom: 22px;
     }
@@ -115,14 +118,18 @@
       <div class="brand">
         <img src="/images/LAB007-GOLD-TRANS.png" alt="LAB007" />
         <div>
-          <h1>Active trades</h1>
-          <div class="sub">Live snapshot from Alpaca: open positions, working orders, and account balances. Data refreshes from the broker API — not stored in LAB007.</div>
+          <h1>007Trade Dashboard</h1>
+          <div class="sub">At-a-glance status for positions, automation actions in effect, and day performance.</div>
         </div>
       </div>
-      <div class="nav">
-        <a href="/007trade">007Trade</a>
-        <a href="/007trade/automation">Automation</a>
-        <a href="/007trade/settings">Account</a>
+      <div class="tabs">
+        <a href="/007trade" class="active">Dashboard</a>
+        <a href="/007trade/simple-trade">SIMPLE TRADE</a>
+        <a href="/007trade/auto-trade">AUTO-TRADE</a>
+        <a href="/007trade/circuit-breaker">Circuit Breaker</a>
+        <a href="/007trade/market-conditions">Market Conditions</a>
+        <a href="/007trade/copytrader">CopyTrader</a>
+        <a href="/007trade/settings">Settings</a>
         <a href="/">Home</a>
       </div>
     </div>
@@ -196,8 +203,27 @@
         var broker = d.broker || {};
         var grid = el('statGrid');
         var unreal = sum.unrealizedPlTotal;
+        var dayPl = sum.dayPl;
+        var dayPct = sum.dayPlPct;
+        var automation = d.automation || {};
+        var rules = Array.isArray(automation.rules) ? automation.rules : [];
+        var enabledRules = rules.filter(function (r) { return r && r.enabled; }).length;
+        var autoHint = automation.masterEnabled
+          ? 'ON' + (automation.dryRun ? ' (dry run)' : '') + ' · ' + enabledRules + ' active rule(s)'
+          : 'OFF';
         var cards = [
           { label: 'Equity', value: fmtMoney(acct.equity), hint: broker.paper ? 'Paper account' : 'Live account' },
+          {
+            label: 'Today up/down',
+            value:
+              (dayPl != null && !isNaN(parseFloat(dayPl))
+                ? fmtMoney(dayPl) +
+                  (dayPct != null && !isNaN(parseFloat(dayPct)) ? ' (' + (parseFloat(dayPct) * 100).toFixed(2) + '%)' : '')
+                : '—'),
+            valueClass: plClass(dayPl),
+            hint: 'From Alpaca equity vs previous close'
+          },
+          { label: 'Automation in effect', value: autoHint, hint: automation.lastTickAt ? 'Last tick ' + fmtTime(automation.lastTickAt) : '' },
           { label: 'Cash', value: fmtMoney(acct.cash), hint: '' },
           { label: 'Buying power', value: fmtMoney(acct.buying_power), hint: '' },
           { label: 'Portfolio value', value: fmtMoney(acct.portfolio_value), hint: '' },
@@ -362,39 +388,48 @@
         el('refreshBtn').disabled = true;
         el('statusLine').textContent = 'Loading…';
         el('errorBox').style.display = 'none';
-        fetch('/api/007trade/alpaca-dashboard')
-          .then(function (r) {
+        Promise.all([
+          fetch('/api/007trade/alpaca-dashboard').then(function (r) {
             return r.json().then(function (j) {
               return { r: r, j: j };
             });
-          })
+          }),
+          fetch('/api/007trade/automation')
+            .then(function (r) { return r.json(); })
+            .catch(function () { return { ok: false, automation: null }; })
+        ])
           .then(function (x) {
+            var dash = x[0];
+            var autoResp = x[1];
             el('refreshBtn').disabled = false;
-            if (!x.j.configured) {
+            if (!dash.j.configured) {
               el('dashboardMain').style.display = 'none';
               el('noKeysState').style.display = 'block';
               el('statusLine').textContent = '';
               return;
             }
             el('noKeysState').style.display = 'none';
-            if (!x.r.ok || !x.j.ok) {
+            if (!dash.r.ok || !dash.j.ok) {
               el('dashboardMain').style.display = 'none';
               el('errorBox').style.display = 'block';
-              el('errorBox').textContent = x.j.error || 'Could not load Alpaca data.';
+              el('errorBox').textContent = dash.j.error || 'Could not load Alpaca data.';
               el('statusLine').textContent = '';
               return;
             }
+            if (autoResp && autoResp.ok && autoResp.automation) {
+              dash.j.automation = autoResp.automation;
+            }
             el('dashboardMain').style.display = 'block';
-            renderStats(x.j);
-            renderPositions(x.j.positions || []);
-            renderOrders(x.j.openOrders || []);
+            renderStats(dash.j);
+            renderPositions(dash.j.positions || []);
+            renderOrders(dash.j.openOrders || []);
             el('statusLine').textContent =
               'Last updated ' +
-              fmtTime(x.j.fetchedAt) +
+              fmtTime(dash.j.fetchedAt) +
               ' · ' +
-              (x.j.broker && x.j.broker.paper ? 'Paper' : 'Live') +
+              (dash.j.broker && dash.j.broker.paper ? 'Paper' : 'Live') +
               ' · ' +
-              (x.j.broker && x.j.broker.baseUrl ? x.j.broker.baseUrl : '');
+              (dash.j.broker && dash.j.broker.baseUrl ? dash.j.broker.baseUrl : '');
           })
           .catch(function () {
             el('refreshBtn').disabled = false;

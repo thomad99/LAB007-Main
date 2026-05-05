@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
+  <title>007Trade — CopyTrader</title>
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:#0a0a0b; color:#e8e8ea; }
+    .wrap { max-width: 920px; margin: 0 auto; padding: 24px 18px 48px; }
+    a { color: #c9a227; font-weight: 600; }
+    .panel { border:1px solid #2a2a2f; border-radius:14px; background:#121214; padding:18px; margin-bottom:16px; }
+    h1 { margin: 0 0 8px; font-size:1.45rem; }
+    .sub { color:#8b8b93; font-size:0.9rem; line-height:1.5; margin:0 0 14px; }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media (max-width:700px){ .row2 { grid-template-columns:1fr; } }
+    label { display:block; font-size:0.82rem; color:#9a9aa3; margin-bottom:4px; }
+    input, select, textarea, button { font:inherit; border-radius:10px; border:1px solid #3a3a44; background:#0e0e10; color:#e8e8ea; padding:10px 12px; width:100%; }
+    textarea { min-height:110px; resize:vertical; }
+    .inline { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .inline input[type="checkbox"] { width:auto; }
+    .btn { width:auto; background:#c9a227; color:#111; border-color:#c9a227; font-weight:700; cursor:pointer; }
+    .ok { color:#86efac; font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p><a href="/007trade">Dashboard</a> · <a href="/007trade/simple-trade">SIMPLE TRADE</a> · <a href="/007trade/auto-trade">AUTO-TRADE</a> · <a href="/007trade/circuit-breaker">Circuit Breaker</a> · <a href="/007trade/market-conditions">Market Conditions</a> · <a href="/007trade/copytrader"><strong>CopyTrader</strong></a> · <a href="/007trade/settings">Settings</a> · <a href="/">Home</a></p>
+    <h1>CopyTrader</h1>
+    <p class="sub">Define copy-trading guardrails first, then enable. Recommended setup is <strong>shadow mode</strong> (observe + journal) before any semi-automated mirroring.</p>
+
+    <div class="panel">
+      <div class="inline">
+        <input type="checkbox" id="enabled" />
+        <label for="enabled" style="margin:0;color:#e8e8ea;">Enable CopyTrader profile</label>
+      </div>
+      <div class="row2">
+        <div>
+          <label for="mode">Mode</label>
+          <select id="mode">
+            <option value="shadow">Shadow (track only)</option>
+            <option value="semi_auto">Semi-auto (you confirm before execution)</option>
+          </select>
+        </div>
+        <div>
+          <label for="maxAllocationPct">Max allocation % to copied trades</label>
+          <input type="number" id="maxAllocationPct" min="1" max="100" step="1" />
+        </div>
+        <div>
+          <label for="minTrackRecordMonths">Min track record (months)</label>
+          <input type="number" id="minTrackRecordMonths" min="3" max="60" step="1" />
+        </div>
+        <div>
+          <label for="maxDrawdownPct">Max accepted drawdown %</label>
+          <input type="number" id="maxDrawdownPct" min="2" max="60" step="0.5" />
+        </div>
+        <div>
+          <label for="minSharpe">Minimum Sharpe</label>
+          <input type="number" id="minSharpe" min="0.2" max="5" step="0.1" />
+        </div>
+      </div>
+      <div style="margin-top:12px;">
+        <label for="notes">Selection rules / notes</label>
+        <textarea id="notes" placeholder="Example: only copy traders with 12m+ history, max DD < 12%, consistent sizing, and low correlation to each other."></textarea>
+      </div>
+      <div style="margin-top:12px;">
+        <button type="button" id="saveBtn" class="btn">Save CopyTrader profile</button>
+        <span id="saved" class="ok" style="display:none;margin-left:10px;">Saved.</span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      function el(id) { return document.getElementById(id); }
+      function load() {
+        fetch('/api/007trade/state')
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            var c = d.copyTrader || {};
+            el('enabled').checked = c.enabled === true;
+            el('mode').value = c.mode === 'semi_auto' ? 'semi_auto' : 'shadow';
+            el('maxAllocationPct').value = c.maxAllocationPct != null ? c.maxAllocationPct : 20;
+            el('minTrackRecordMonths').value = c.minTrackRecordMonths != null ? c.minTrackRecordMonths : 12;
+            el('maxDrawdownPct').value = c.maxDrawdownPct != null ? c.maxDrawdownPct : 12;
+            el('minSharpe').value = c.minSharpe != null ? c.minSharpe : 1.2;
+            el('notes').value = c.notes || '';
+          });
+      }
+      el('saveBtn').addEventListener('click', function () {
+        el('saved').style.display = 'none';
+        fetch('/api/007trade/state', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            copyTrader: {
+              enabled: el('enabled').checked,
+              mode: el('mode').value,
+              maxAllocationPct: parseFloat(el('maxAllocationPct').value) || 20,
+              minTrackRecordMonths: parseInt(el('minTrackRecordMonths').value, 10) || 12,
+              maxDrawdownPct: parseFloat(el('maxDrawdownPct').value) || 12,
+              minSharpe: parseFloat(el('minSharpe').value) || 1.2,
+              notes: el('notes').value || ''
+            }
+          })
+        })
+          .then(function (r) { return r.json(); })
+          .then(function () {
+            el('saved').style.display = 'inline';
+            setTimeout(function () { el('saved').style.display = 'none'; }, 2200);
+          });
+      });
+      load();
+    })();
+  </script>
+</body>
+</html>

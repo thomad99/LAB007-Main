@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
-  <title>007Trade — LAB007</title>
+  <title>007Trade · AUTO-TRADE — LAB007</title>
   <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
   <style>
     * { box-sizing: border-box; }
@@ -24,10 +24,13 @@
     .brand img { height: 44px; }
     h1 { margin: 0; font-size: 1.5rem; font-weight: 700; letter-spacing: 0.04em; }
     .sub { color: #8b8b93; font-size: 0.9rem; margin-top: 4px; }
-    .nav a {
-      color: #c9a227; text-decoration: none; font-weight: 600; font-size: 0.9rem; margin-left: 14px;
+    .tabs { display:flex; flex-wrap:wrap; gap:8px; justify-content:flex-end; }
+    .tabs a {
+      color:#d4c07a; text-decoration:none; font-weight:700; font-size:0.82rem;
+      border:1px solid #4a4124; border-radius:999px; padding:8px 12px; background:#131316;
     }
-    .nav a:hover { text-decoration: underline; }
+    .tabs a.active { background:#c9a227; color:#111; border-color:#c9a227; }
+    .tabs a:hover { border-color:#c9a227; }
     .disclaimer {
       background: #1a1510; border: 1px solid #3d3424; border-radius: 10px; padding: 10px 12px;
       font-size: 0.82rem; color: #b9a88c; margin-bottom: 20px; line-height: 1.45;
@@ -92,15 +95,19 @@
       <div class="brand">
         <img src="/images/LAB007-GOLD-TRANS.png" alt="LAB007" />
         <div>
-          <h1>007Trade · Paper trader</h1>
+          <h1>007Trade</h1>
           <div class="sub">Strategy, watchlist, and saved notes persist on disk — Claude briefs use them. Alpaca paper trading via server keys.</div>
         </div>
       </div>
-      <div class="nav">
+      <div class="tabs">
+        <a href="/007trade">Dashboard</a>
+        <a href="/007trade/simple-trade">SIMPLE TRADE</a>
+        <a href="/007trade/auto-trade" class="active">AUTO-TRADE</a>
+        <a href="/007trade/circuit-breaker">Circuit Breaker</a>
+        <a href="/007trade/market-conditions">Market Conditions</a>
+        <a href="/007trade/copytrader">CopyTrader</a>
+        <a href="/007trade/settings">Settings</a>
         <a href="/">Home</a>
-        <a href="/007trade/dashboard">Active trades</a>
-        <a href="/007trade/automation">Automation</a>
-        <a href="/007trade/settings">Account &amp; broker</a>
       </div>
     </div>
 

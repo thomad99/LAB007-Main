@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
+  <title>007Trade · Circuit Breaker</title>
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0a0a0b; color: #e8e8ea; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 24px 18px 48px; }
+    a { color: #c9a227; font-weight: 600; }
+    .panel { border: 1px solid #2a2a2f; border-radius: 14px; background: #121214; padding: 18px; margin-bottom: 16px; }
+    h1 { margin: 0 0 8px; font-size: 1.45rem; }
+    .sub { color: #8b8b93; font-size: 0.9rem; line-height: 1.5; margin: 0 0 14px; }
+    .row2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+    @media (max-width:700px){ .row2 { grid-template-columns:1fr; } }
+    label { display:block; font-size:0.82rem; color:#9a9aa3; margin-bottom:4px; }
+    input, button { font:inherit; border-radius:10px; border:1px solid #3a3a44; background:#0e0e10; color:#e8e8ea; padding:10px 12px; width:100%; }
+    .inline { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+    .inline input[type="checkbox"] { width:auto; }
+    .btn { width:auto; background:#c9a227; color:#111; border-color:#c9a227; font-weight:700; cursor:pointer; }
+    .log-box { font-size: 0.8rem; font-family: ui-monospace, monospace; background: #0e0e10; border: 1px solid #2a2a2f; border-radius: 10px; padding: 12px; max-height: 240px; overflow: auto; color: #b8b8c4; white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p><a href="/007trade">Dashboard</a> · <a href="/007trade/simple-trade">SIMPLE TRADE</a> · <a href="/007trade/auto-trade">AUTO-TRADE</a> · <a href="/007trade/circuit-breaker"><strong>Circuit Breaker</strong></a> · <a href="/007trade/market-conditions">Market Conditions</a> · <a href="/007trade/copytrader">CopyTrader</a> · <a href="/007trade/settings">Settings</a> · <a href="/">Home</a></p>
+    <h1>Circuit Breaker</h1>
+    <p class="sub">Global guard rails that all auto-trading rules must follow before placing entries.</p>
+    <div class="panel">
+      <div class="inline"><input type="checkbox" id="masterEnabled" /><label for="masterEnabled" style="margin:0;color:#e8e8ea;">Master automation enabled</label></div>
+      <div class="inline"><input type="checkbox" id="allowLiveAutomation" /><label for="allowLiveAutomation" style="margin:0;color:#e8e8ea;">Allow automation in live mode</label></div>
+      <div class="inline"><input type="checkbox" id="dryRun" /><label for="dryRun" style="margin:0;color:#e8e8ea;">Dry run (no real orders)</label></div>
+      <div class="inline"><input type="checkbox" id="marketConditionSizingEnabled" /><label for="marketConditionSizingEnabled" style="margin:0;color:#e8e8ea;">Use market regime multiplier for sizing</label></div>
+      <div class="row2">
+        <div><label for="pollIntervalSec">Poll interval sec</label><input type="number" id="pollIntervalSec" min="30" max="300" step="10" /></div>
+        <div><label for="maxDailyLossUsd">Max daily loss USD (0=off)</label><input type="number" id="maxDailyLossUsd" min="0" step="50" /></div>
+        <div><label for="maxConcurrentPositions">Max open positions (0=off)</label><input type="number" id="maxConcurrentPositions" min="0" max="100" step="1" /></div>
+        <div><label for="maxAutoEntriesPerDay">Max auto entries/day (0=off)</label><input type="number" id="maxAutoEntriesPerDay" min="0" step="1" /></div>
+        <div><label for="maxTotalExposureUsd">Max total exposure USD (0=off)</label><input type="number" id="maxTotalExposureUsd" min="0" step="100" /></div>
+        <div><label for="maxPerSymbolExposureUsd">Max per-symbol exposure USD (0=off)</label><input type="number" id="maxPerSymbolExposureUsd" min="0" step="100" /></div>
+        <div><label for="marketConditionRiskFloor">Regime multiplier floor</label><input type="number" id="marketConditionRiskFloor" min="0.1" max="1.5" step="0.05" /></div>
+        <div><label for="marketConditionRiskCeiling">Regime multiplier ceiling</label><input type="number" id="marketConditionRiskCeiling" min="0.2" max="2" step="0.05" /></div>
+      </div>
+      <p class="sub" id="status"></p>
+      <button type="button" class="btn" id="saveBtn">Save circuit breaker rules</button>
+    </div>
+    <div class="panel">
+      <h2 style="margin:0 0 10px;color:#c9a227;font-size:0.95rem;">Automation log</h2>
+      <div class="log-box" id="logBox">Loading…</div>
+    </div>
+  </div>
+  <script>
+    (function () {
+      var automation = {};
+      function e(id) { return document.getElementById(id); }
+      function fill(a) {
+        automation = a || {};
+        e('masterEnabled').checked = !!automation.masterEnabled;
+        e('allowLiveAutomation').checked = !!automation.allowLiveAutomation;
+        e('dryRun').checked = !!automation.dryRun;
+        e('marketConditionSizingEnabled').checked = !!automation.marketConditionSizingEnabled;
+        e('pollIntervalSec').value = automation.pollIntervalSec || 60;
+        e('maxDailyLossUsd').value = automation.maxDailyLossUsd || 0;
+        e('maxConcurrentPositions').value = automation.maxConcurrentPositions || 0;
+        e('maxAutoEntriesPerDay').value = automation.maxAutoEntriesPerDay || 0;
+        e('maxTotalExposureUsd').value = automation.maxTotalExposureUsd || 0;
+        e('maxPerSymbolExposureUsd').value = automation.maxPerSymbolExposureUsd || 0;
+        e('marketConditionRiskFloor').value = automation.marketConditionRiskFloor != null ? automation.marketConditionRiskFloor : 0.35;
+        e('marketConditionRiskCeiling').value = automation.marketConditionRiskCeiling != null ? automation.marketConditionRiskCeiling : 1.1;
+        var d = automation.daily || {};
+        e('status').textContent =
+          'Today entries: ' + (d.autoEntriesCount || 0) + ' · Halted: ' + (d.halted ? 'YES' : 'NO') + ' · Last tick: ' + (automation.lastTickAt || '—');
+        var lines = Array.isArray(automation.log) ? automation.log : [];
+        e('logBox').textContent = lines.length
+          ? lines.map(function (x) { return x.ts + ' [' + (x.level || '') + '] ' + (x.message || ''); }).join('\n')
+          : '(No messages yet.)';
+      }
+      function load() {
+        return fetch('/api/007trade/automation').then(function (r) { return r.json(); }).then(function (d) { fill(d.automation || {}); });
+      }
+      e('saveBtn').addEventListener('click', function () {
+        var payload = {
+          masterEnabled: e('masterEnabled').checked,
+          allowLiveAutomation: e('allowLiveAutomation').checked,
+          dryRun: e('dryRun').checked,
+          marketConditionSizingEnabled: e('marketConditionSizingEnabled').checked,
+          pollIntervalSec: Math.min(300, Math.max(30, parseInt(e('pollIntervalSec').value, 10) || 60)),
+          maxDailyLossUsd: Math.max(0, parseFloat(e('maxDailyLossUsd').value) || 0),
+          maxConcurrentPositions: Math.min(100, Math.max(0, parseInt(e('maxConcurrentPositions').value, 10) || 0)),
+          maxAutoEntriesPerDay: Math.max(0, parseInt(e('maxAutoEntriesPerDay').value, 10) || 0),
+          maxTotalExposureUsd: Math.max(0, parseFloat(e('maxTotalExposureUsd').value) || 0),
+          maxPerSymbolExposureUsd: Math.max(0, parseFloat(e('maxPerSymbolExposureUsd').value) || 0),
+          marketConditionRiskFloor: Math.min(1.5, Math.max(0.1, parseFloat(e('marketConditionRiskFloor').value) || 0.35)),
+          marketConditionRiskCeiling: Math.min(2, Math.max(0.2, parseFloat(e('marketConditionRiskCeiling').value) || 1.1))
+        };
+        fetch('/api/007trade/automation', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        }).then(function (r) {
+          if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || 'Save failed'); });
+          return load();
+        }).catch(function (err) {
+          e('status').textContent = err.message || 'Save failed';
+        });
+      });
+      load();
+    })();
+  </script>
+</body>
+</html>

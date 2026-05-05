@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
+  <title>007Trade — Market Conditions</title>
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:#0a0a0b; color:#e8e8ea; }
+    .wrap { max-width: 980px; margin: 0 auto; padding: 24px 18px 48px; }
+    a { color:#c9a227; font-weight:600; }
+    .panel { border:1px solid #2a2a2f; border-radius:14px; background:#121214; padding:18px; margin-bottom:16px; }
+    h1 { margin:0 0 8px; font-size:1.45rem; }
+    .sub { color:#8b8b93; font-size:0.9rem; line-height:1.5; margin:0 0 14px; }
+    .pill { display:inline-block; padding:6px 12px; border-radius:999px; font-weight:700; letter-spacing:.04em; font-size:.78rem; border:1px solid #3a3a44; }
+    .pill.Bull { background:#153024; color:#86efac; border-color:#2f5b46; }
+    .pill.Bear { background:#341717; color:#fca5a5; border-color:#6b2b2b; }
+    .pill.Volatile { background:#2f1f14; color:#fdba74; border-color:#6b4526; }
+    .pill.Slow { background:#152735; color:#93c5fd; border-color:#2d4f70; }
+    .pill.Range { background:#26262a; color:#d4d4d8; border-color:#3f3f46; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(190px,1fr)); gap:10px; margin-top:12px; }
+    .card { border:1px solid #2f2f36; border-radius:10px; background:#18181c; padding:12px; }
+    .label { color:#8b8b93; font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; }
+    .value { margin-top:4px; font-size:1.1rem; font-weight:700; }
+    button { font:inherit; border-radius:10px; border:1px solid #c9a227; background:#c9a227; color:#111; padding:10px 14px; font-weight:700; cursor:pointer; }
+    table { width:100%; border-collapse:collapse; font-size:.88rem; margin-top:10px; }
+    th,td { text-align:left; padding:8px 6px; border-bottom:1px solid #25252d; }
+    th { color:#8b8b93; font-size:.72rem; text-transform:uppercase; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <p><a href="/007trade">Dashboard</a> · <a href="/007trade/simple-trade">SIMPLE TRADE</a> · <a href="/007trade/auto-trade">AUTO-TRADE</a> · <a href="/007trade/circuit-breaker">Circuit Breaker</a> · <a href="/007trade/market-conditions"><strong>Market Conditions</strong></a> · <a href="/007trade/copytrader">CopyTrader</a> · <a href="/007trade/settings">Settings</a> · <a href="/">Home</a></p>
+    <h1>Market Conditions</h1>
+    <p class="sub">API-driven regime model for trading context. Uses trend, momentum, drawdown, realized volatility, and index breadth metrics to classify market type.</p>
+
+    <div class="panel">
+      <button type="button" id="refreshBtn">Analyze market regime</button>
+      <p class="sub" id="meta" style="margin-top:10px;"></p>
+      <div id="result" style="display:none;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <span class="label">Current type</span>
+          <span id="typePill" class="pill">—</span>
+        </div>
+        <p id="reason" class="sub" style="margin-top:10px;"></p>
+        <p class="sub"><strong>Suggested risk multiplier:</strong> <span id="mult">—</span> (can be used to scale position sizing/automation exposure).</p>
+        <div class="grid" id="metricGrid"></div>
+        <h3 style="margin:14px 0 6px;font-size:.9rem;color:#c9a227;">Breadth snapshot</h3>
+        <table>
+          <thead><tr><th>Symbol</th><th>Close</th><th>50DMA</th><th>Above 50DMA</th></tr></thead>
+          <tbody id="breadthBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      function el(id) { return document.getElementById(id); }
+      function fmt(n, d) {
+        if (n == null || isNaN(Number(n))) return '—';
+        return Number(n).toFixed(d == null ? 2 : d);
+      }
+      function render(d) {
+        el('meta').textContent = 'Fetched: ' + new Date(d.fetchedAt).toLocaleString();
+        var pill = el('typePill');
+        pill.textContent = d.marketType || '—';
+        pill.className = 'pill ' + (d.marketType || '');
+        el('reason').textContent = d.reason || '';
+        el('mult').textContent = fmt(d.suggestedRiskMultiplier, 2) + 'x';
+        var m = d.metrics || {};
+        var rows = [
+          ['SPY close', fmt(m.spyClose, 2)],
+          ['SPY 50DMA', fmt(m.sma50, 2)],
+          ['SPY 200DMA', fmt(m.sma200, 2)],
+          ['20d return %', fmt(m.return20dPct, 2) + '%'],
+          ['60d return %', fmt(m.return60dPct, 2) + '%'],
+          ['20d realized vol %', fmt(m.realizedVol20dPct, 2) + '%'],
+          ['60d max drawdown %', fmt(m.maxDrawdown60dPct, 2) + '%'],
+          ['Breadth above 50DMA %', fmt(m.breadthAbove50dPct, 2) + '%']
+        ];
+        el('metricGrid').innerHTML = rows.map(function (r) {
+          return '<div class="card"><div class="label">' + r[0] + '</div><div class="value">' + r[1] + '</div></div>';
+        }).join('');
+        var bb = el('breadthBody');
+        bb.innerHTML = '';
+        (d.breadth || []).forEach(function (x) {
+          var tr = document.createElement('tr');
+          var above = Number(x.close) > Number(x.sma50);
+          tr.innerHTML = '<td>' + (x.symbol || '') + '</td><td>' + fmt(x.close, 2) + '</td><td>' + fmt(x.sma50, 2) + '</td><td>' + (above ? 'YES' : 'NO') + '</td>';
+          bb.appendChild(tr);
+        });
+        el('result').style.display = '';
+      }
+      function load() {
+        el('meta').textContent = 'Loading...';
+        fetch('/api/007trade/market-conditions')
+          .then(function (r) { return r.json().then(function (j) { return { r: r, j: j }; }); })
+          .then(function (x) {
+            if (!x.r.ok || !x.j.ok) throw new Error(x.j.error || 'Failed');
+            render(x.j);
+          })
+          .catch(function (e) {
+            el('meta').textContent = e.message || 'Failed to analyze.';
+            el('result').style.display = 'none';
+          });
+      }
+      el('refreshBtn').addEventListener('click', load);
+      load();
+    })();
+  </script>
+</body>
+</html>

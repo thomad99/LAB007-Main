@@ -65,7 +65,7 @@
 </head>
 <body>
   <div class="wrap">
-    <p><a href="/007trade">← 007Trade dashboard</a> &nbsp;·&nbsp; <a href="/007trade/settings">Account &amp; broker</a> &nbsp;·&nbsp; <a href="/">Home</a></p>
+    <p><a href="/007trade">Dashboard</a> · <a href="/007trade/trade">TRADE</a> · <a href="/007trade/automation"><strong>Automation</strong></a> · <a href="/007trade/market-conditions">Market Conditions</a> · <a href="/007trade/copytrader">CopyTrader</a> · <a href="/007trade/settings">Settings</a> · <a href="/">Home</a></p>
     <h1>007Trade · Automation</h1>
     <p class="sub">
       The server polls Alpaca on an interval when the master switch is on. Orders use the same path as manual <strong>Submit</strong> (bracket + auto-qty from your risk profile in Settings). Supported automation:
@@ -96,6 +96,10 @@
         <input type="checkbox" id="dryRun" />
         <label for="dryRun">Dry run — log signals and risk checks only (no orders sent)</label>
       </div>
+      <div class="field inline">
+        <input type="checkbox" id="marketConditionSizingEnabled" />
+        <label for="marketConditionSizingEnabled">Scale risk by Market Conditions regime multiplier</label>
+      </div>
       <div class="row2">
         <div class="field">
           <label for="maxDailyLossUsd">Max daily loss (USD, 0 = off)</label>
@@ -105,8 +109,17 @@
           <label for="maxConcurrentPositions">Max open positions (0 = unlimited)</label>
           <input type="number" id="maxConcurrentPositions" min="0" max="100" step="1" value="0" />
         </div>
+        <div class="field">
+          <label for="marketConditionRiskFloor">Risk multiplier floor</label>
+          <input type="number" id="marketConditionRiskFloor" min="0.1" max="1.5" step="0.05" value="0.35" />
+        </div>
+        <div class="field">
+          <label for="marketConditionRiskCeiling">Risk multiplier ceiling</label>
+          <input type="number" id="marketConditionRiskCeiling" min="0.2" max="2" step="0.05" value="1.1" />
+        </div>
       </div>
       <p class="muted" id="dailyStatus"></p>
+      <p class="muted" id="marketTypeStatus"></p>
       <p class="muted" id="lastTick">Last tick: —</p>
       <button type="button" class="primary" id="saveBtn">Save settings</button>
       <span id="saveMsg" class="ok" style="display:none;margin-left:12px">Saved.</span>
@@ -296,10 +309,15 @@
             document.getElementById('allowLiveAutomation').checked = !!automation.allowLiveAutomation;
             document.getElementById('pollIntervalSec').value = automation.pollIntervalSec || 60;
             document.getElementById('dryRun').checked = !!automation.dryRun;
+            document.getElementById('marketConditionSizingEnabled').checked = !!automation.marketConditionSizingEnabled;
             document.getElementById('maxDailyLossUsd').value =
               automation.maxDailyLossUsd != null ? automation.maxDailyLossUsd : 0;
             document.getElementById('maxConcurrentPositions').value =
               automation.maxConcurrentPositions != null ? automation.maxConcurrentPositions : 0;
+            document.getElementById('marketConditionRiskFloor').value =
+              automation.marketConditionRiskFloor != null ? automation.marketConditionRiskFloor : 0.35;
+            document.getElementById('marketConditionRiskCeiling').value =
+              automation.marketConditionRiskCeiling != null ? automation.marketConditionRiskCeiling : 1.1;
             var d = automation.daily || {};
             var dailyLine = 'ET session tracking: ' + (d.etDate || '—');
             if (d.halted) dailyLine += ' — entries paused (daily loss limit). Exits can still run.';
@@ -307,6 +325,14 @@
               dailyLine += ' · Baseline equity (start of ET day) ~' + Number(d.startEquity).toFixed(2);
             }
             document.getElementById('dailyStatus').textContent = dailyLine;
+            document.getElementById('marketTypeStatus').textContent =
+              automation.marketConditionSizingEnabled
+                ? 'Market regime sizing: ' +
+                  (automation.lastMarketType || '—') +
+                  ' · multiplier ' +
+                  (automation.lastMarketMultiplier != null ? Number(automation.lastMarketMultiplier).toFixed(2) : '1.00') +
+                  'x'
+                : 'Market regime sizing: disabled';
             document.getElementById('lastTick').textContent =
               'Last tick: ' + (automation.lastTickAt || '—');
             renderRules();
@@ -353,10 +379,19 @@
         automation.allowLiveAutomation = document.getElementById('allowLiveAutomation').checked;
         automation.pollIntervalSec = Math.min(300, Math.max(30, parseInt(document.getElementById('pollIntervalSec').value, 10) || 60));
         automation.dryRun = document.getElementById('dryRun').checked;
+        automation.marketConditionSizingEnabled = document.getElementById('marketConditionSizingEnabled').checked;
         automation.maxDailyLossUsd = Math.max(0, parseFloat(document.getElementById('maxDailyLossUsd').value) || 0);
         automation.maxConcurrentPositions = Math.min(
           100,
           Math.max(0, parseInt(document.getElementById('maxConcurrentPositions').value, 10) || 0)
+        );
+        automation.marketConditionRiskFloor = Math.min(
+          1.5,
+          Math.max(0.1, parseFloat(document.getElementById('marketConditionRiskFloor').value) || 0.35)
+        );
+        automation.marketConditionRiskCeiling = Math.min(
+          2,
+          Math.max(0.2, parseFloat(document.getElementById('marketConditionRiskCeiling').value) || 1.1)
         );
 
         fetch('/api/007trade/automation', {
@@ -369,6 +404,9 @@
             dryRun: automation.dryRun,
             maxDailyLossUsd: automation.maxDailyLossUsd,
             maxConcurrentPositions: automation.maxConcurrentPositions,
+            marketConditionSizingEnabled: automation.marketConditionSizingEnabled,
+            marketConditionRiskFloor: automation.marketConditionRiskFloor,
+            marketConditionRiskCeiling: automation.marketConditionRiskCeiling,
             rules: automation.rules
           })
         })
