@@ -155,6 +155,28 @@ $ImagesToClone = @(
 
     script += `)
 
+# Resolve source VM whether input is VM name or full inventory path
+function Resolve-SourceVM {
+    param([string]$VMRef)
+
+    if ([string]::IsNullOrWhiteSpace($VMRef)) { return $null }
+
+    try {
+        $byName = Get-VM -Name $VMRef -ErrorAction SilentlyContinue
+        if ($byName) { return $byName | Select-Object -First 1 }
+    } catch {}
+
+    $leafName = ($VMRef -split '/')[ -1 ]
+    if (-not [string]::IsNullOrWhiteSpace($leafName)) {
+        try {
+            $candidates = @(Get-VM -Name $leafName -ErrorAction SilentlyContinue)
+            if ($candidates.Count -ge 1) { return $candidates[0] }
+        } catch {}
+    }
+
+    return $null
+}
+
 # Configuration
 $NamingConvention = "${namingConvention}"
 
@@ -181,7 +203,8 @@ foreach ($image in $ImagesToClone) {
     } else {
         try {
             # Find the original VM
-            $sourceVM = Get-VM -Name $originalVMName -ErrorAction Stop
+            $sourceVM = Resolve-SourceVM -VMRef $originalVMName
+            if (-not $sourceVM) { throw "VM not found from reference: $originalVMName" }
 
             # Get cluster and datastore info
             $cluster = Get-Cluster -Name $clusterName -ErrorAction SilentlyContinue

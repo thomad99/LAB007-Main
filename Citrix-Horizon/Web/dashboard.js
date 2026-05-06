@@ -2372,6 +2372,36 @@ function generateCloneScript(selectedImages, destinationFolder, moveSourceAfterC
         '    }',
         '}',
         '',
+        '# Resolve source VM whether input is name or inventory path',
+        'function Resolve-SourceVM {',
+        '    param([string]$VMRef)',
+        '',
+        '    if ([string]::IsNullOrWhiteSpace($VMRef)) { return $null }',
+        '',
+        '    # Primary lookup: direct name match',
+        '    try {',
+        '        $byName = Get-VM -Name $VMRef -ErrorAction SilentlyContinue',
+        '        if ($byName) { return $byName | Select-Object -First 1 }',
+        '    } catch {}',
+        '',
+        '    # If a full inventory path was provided, try leaf name (last segment)',
+        '    $leafName = ($VMRef -split "/")[-1]',
+        '    if (-not [string]::IsNullOrWhiteSpace($leafName)) {',
+        '        try {',
+        '            $candidates = @(Get-VM -Name $leafName -ErrorAction SilentlyContinue)',
+        '            if ($candidates.Count -eq 1) { return $candidates[0] }',
+        '            if ($candidates.Count -gt 1) {',
+        '                # Prefer an exact folder path match when available',
+        '                $exact = $candidates | Where-Object { $_.Folder -and $VMRef -like ("*/" + $_.Folder.Name + "/*/" + $_.Name) } | Select-Object -First 1',
+        '                if ($exact) { return $exact }',
+        '                return $candidates[0]',
+        '            }',
+        '        } catch {}',
+        '    }',
+        '',
+        '    return $null',
+        '}',
+        '',
         '# Selected images to clone',
         '$ImagesToClone = @('
     ];
@@ -2422,7 +2452,8 @@ function generateCloneScript(selectedImages, destinationFolder, moveSourceAfterC
     scriptLines.push('    try {');
     scriptLines.push('        # Get the original VM');
     scriptLines.push('        Write-Host "  [DEBUG] Searching for VM: $originalVMName" -ForegroundColor DarkGray');
-    scriptLines.push('        $sourceVM = Get-VM -Name $originalVMName -ErrorAction Stop');
+    scriptLines.push('        $sourceVM = Resolve-SourceVM -VMRef $originalVMName');
+    scriptLines.push('        if (-not $sourceVM) { throw "VM not found from reference: $originalVMName" }');
     scriptLines.push('        ');
     scriptLines.push('        if (-not $sourceVM) {');
     scriptLines.push('            Write-Host "  [ERROR] VM not found: $originalVMName" -ForegroundColor Red');
