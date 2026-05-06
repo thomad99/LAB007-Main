@@ -119,8 +119,10 @@
       <div id="rulesRoot"></div>
       <button type="button" class="ghost" id="addRuleBtn">+ Add rule</button>
       <button type="button" class="primary" id="saveBtn">Save auto-trade rules</button>
+      <button type="button" class="ghost" id="runNowBtn">Run now</button>
       <span id="saveMsg" class="ok" style="display:none;margin-left:12px">Saved.</span>
       <span id="errMsg" class="bad" style="display:none;margin-left:12px"></span>
+      <p class="muted" id="runNowMsg" style="margin-top:10px;"></p>
       <p class="muted" id="dailyStatus"></p>
       <p class="muted" id="lastTick">Last tick: —</p>
     </div>
@@ -362,6 +364,31 @@
           .catch(function (e) {
             err.textContent = e.message || String(e);
             err.style.display = 'inline';
+          });
+      });
+
+      document.getElementById('runNowBtn').addEventListener('click', function () {
+        var msg = document.getElementById('runNowMsg');
+        msg.textContent = 'Running automation tick...';
+        fetch('/api/007trade/automation/run-now', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        })
+          .then(function (r) {
+            return r.json().then(function (j) {
+              if (!r.ok || !j.ok) throw new Error((j && j.error) || 'Run failed');
+              return j;
+            });
+          })
+          .then(function (j) {
+            msg.textContent =
+              'Run complete. Last tick: ' + (j.lastTickAt || '—') +
+              ' · enabled rules: ' + Number(j.enabledRules || 0) +
+              (j.dryRun ? ' · dry-run ON' : '');
+            return loadAll();
+          })
+          .catch(function (e) {
+            msg.textContent = 'Run failed: ' + (e.message || String(e));
           });
       });
 
