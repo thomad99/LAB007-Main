@@ -2123,7 +2123,8 @@ async function loadMsPatchCveSummary() {
     tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Loading…</td></tr>';
 
     try {
-        const response = await fetch('/api/mspatch/cves/monthly?months=24');
+        const apiPrefix = window.location.pathname.startsWith('/citrix') ? '/citrix' : '';
+        const response = await fetch(`${apiPrefix}/api/mspatch/cves/monthly?months=24`);
         const data = await response.json();
         if (!response.ok || !data.ok) {
             throw new Error((data && data.error) || 'Failed to fetch MSPatch summary.');
