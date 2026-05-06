@@ -89,6 +89,94 @@
     }
     .hint { font-size: 0.8rem; color: #7e8694; margin-top: 10px; line-height: 1.45; }
     .segments { margin-top: 12px; font-size: 0.8rem; color: #9aa0aa; max-height: 120px; overflow: auto; }
+    .vc-tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 16px;
+      padding: 6px;
+      background: #171a21;
+      border: 1px solid #2a3040;
+      border-radius: 12px;
+    }
+    .vc-tabs button {
+      flex: 1 1 auto;
+      min-width: 140px;
+      padding: 10px 14px;
+      border-radius: 10px;
+      border: 1px solid transparent;
+      background: transparent;
+      color: #b8c0cc;
+      font-weight: 700;
+    }
+    .vc-tabs button.active {
+      background: #252b36;
+      border-color: #f0b42944;
+      color: #f0b429;
+      box-shadow: inset 0 0 0 1px #f0b42933;
+    }
+    .vc-tab-panel[hidden] { display: none !important; }
+    .ideas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
+    @media (max-width: 900px) { .ideas-grid { grid-template-columns: 1fr; } }
+    .ideas-card {
+      background: #12151c;
+      border: 1px solid #2a3040;
+      border-radius: 12px;
+      overflow: hidden;
+      max-height: min(70vh, 620px);
+      display: flex;
+      flex-direction: column;
+    }
+    .ideas-card h3 {
+      margin: 0;
+      padding: 12px 14px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #f0b429;
+      border-bottom: 1px solid #2a3040;
+      background: #171a21;
+    }
+    .ideas-scroll { overflow: auto; flex: 1; padding: 10px 12px 14px; }
+    .ideas-row {
+      display: grid;
+      grid-template-columns: 112px 1fr;
+      gap: 12px;
+      align-items: start;
+      padding: 12px 0;
+      border-bottom: 1px solid #252b36;
+    }
+    .ideas-row:last-child { border-bottom: none; }
+    .ideas-thumb {
+      width: 112px;
+      aspect-ratio: 16 / 9;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #000;
+      border: 1px solid #2a3040;
+    }
+    .ideas-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .ideas-meta { min-width: 0; }
+    .ideas-meta a.idea-title {
+      font-weight: 650;
+      color: #e8eaed;
+      text-decoration: none;
+      display: inline-block;
+      margin-bottom: 6px;
+      font-size: 0.95rem;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+    .ideas-meta a.idea-title:hover { color: #f0b429; text-decoration: underline; }
+    .ideas-meta .sub { font-size: 0.78rem; color: #9aa0aa; line-height: 1.5; }
+    .ideas-meta .badge {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      border: 1px solid #3a4555;
+      font-size: 0.72rem;
+      color: #cdd5e1;
+    }
   </style>
 </head>
 <body>
@@ -101,6 +189,12 @@
       <a href="/">← Home</a>
     </div>
 
+    <div class="vc-tabs" role="tablist" aria-label="VideoCreator sections">
+      <button type="button" role="tab" id="vcTabMaker" aria-selected="true" aria-controls="vcMakerPanels" class="active" data-vc-tab="maker">Video maker</button>
+      <button type="button" role="tab" id="vcTabIdeas" aria-selected="false" aria-controls="vcIdeasPanel" data-vc-tab="ideas">Content ideas</button>
+    </div>
+
+    <div id="vcMakerPanels" class="vc-tab-panel" role="tabpanel" aria-labelledby="vcTabMaker">
     <div class="panel">
       <h2>1. Script</h2>
       <label for="script">Paste your video narration (plain text)</label>
@@ -242,6 +336,64 @@
       <p class="hint">
         Billing and access follow your OpenAI plan. Videos API has strict content policies (e.g. no real-person likeness, no copyrighted characters). Jobs are asynchronous — previews poll about every 12 seconds and can take many minutes for long or Pro renders.
       </p>
+    </div>
+    </div>
+
+    <div id="vcIdeasPanel" class="vc-tab-panel" role="tabpanel" aria-labelledby="vcTabIdeas" hidden>
+      <div class="panel">
+        <h2>YouTube — content ideas (public stats)</h2>
+        <p class="hint" id="ideasApiHint" style="margin-top:0"></p>
+        <p class="hint">Pick a category and how far back to look; results list the same pool sorted by <strong>views</strong> vs <strong>publish date</strong>. Use this for inspiration only — follow YouTube’s Terms of Service and don’t scrape at scale; this tool uses the official API and counts toward your daily quota.</p>
+
+        <div class="row2">
+          <div>
+            <label for="ideasCategory">Category</label>
+            <select id="ideasCategory">
+              <option value="any">Any category</option>
+              <option value="27">Education</option>
+              <option value="28">Science &amp; technology</option>
+              <option value="26">How-to &amp; style</option>
+              <option value="24">Entertainment</option>
+              <option value="23">Comedy</option>
+              <option value="22">People &amp; blogs</option>
+              <option value="25">News &amp; politics</option>
+              <option value="10">Music</option>
+              <option value="20">Gaming</option>
+              <option value="17">Sports</option>
+              <option value="15">Pets &amp; animals</option>
+              <option value="19">Travel &amp; events</option>
+              <option value="2">Autos &amp; vehicles</option>
+              <option value="29">Nonprofits &amp; activism</option>
+              <option value="1">Film &amp; animation</option>
+            </select>
+          </div>
+          <div>
+            <label for="ideasRange">Published within</label>
+            <select id="ideasRange">
+              <option value="1w">Past week</option>
+              <option value="1m" selected>Past month</option>
+              <option value="3m">Past 3 months</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="btn-row">
+          <button type="button" class="primary" id="ideasFetchBtn">Discover videos</button>
+          <span class="hint" id="ideasStatus" style="margin:0;flex:1;min-width:220px;"></span>
+        </div>
+        <p class="hint" id="ideasQuotaNote" style="margin-top:8px;"></p>
+
+        <div class="ideas-grid" style="margin-top:18px;">
+          <div class="ideas-card">
+            <h3>Top by views (in window)</h3>
+            <div class="ideas-scroll" id="ideasByViews"></div>
+          </div>
+          <div class="ideas-card">
+            <h3>Most recent (in window)</h3>
+            <div class="ideas-scroll" id="ideasByDate"></div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -680,9 +832,182 @@
         setStatus('Stopping…');
       });
 
+      var vcTabMaker = document.getElementById('vcTabMaker');
+      var vcTabIdeas = document.getElementById('vcTabIdeas');
+      var vcMakerPanels = document.getElementById('vcMakerPanels');
+      var vcIdeasPanel = document.getElementById('vcIdeasPanel');
+      var ideasCategory = document.getElementById('ideasCategory');
+      var ideasRange = document.getElementById('ideasRange');
+      var ideasFetchBtn = document.getElementById('ideasFetchBtn');
+      var ideasStatus = document.getElementById('ideasStatus');
+      var ideasApiHint = document.getElementById('ideasApiHint');
+      var ideasQuotaNote = document.getElementById('ideasQuotaNote');
+      var ideasByViews = document.getElementById('ideasByViews');
+      var ideasByDate = document.getElementById('ideasByDate');
+
+      function activateVcTab(which) {
+        var isMaker = which === 'maker';
+        vcMakerPanels.hidden = !isMaker;
+        vcIdeasPanel.hidden = isMaker;
+        vcTabMaker.classList.toggle('active', isMaker);
+        vcTabIdeas.classList.toggle('active', !isMaker);
+        vcTabMaker.setAttribute('aria-selected', isMaker ? 'true' : 'false');
+        vcTabIdeas.setAttribute('aria-selected', !isMaker ? 'true' : 'false');
+      }
+
+      vcTabMaker.addEventListener('click', function () {
+        activateVcTab('maker');
+      });
+      vcTabIdeas.addEventListener('click', function () {
+        activateVcTab('ideas');
+      });
+
+      function fmtViewsNum(n) {
+        var x = Number(n);
+        if (!isFinite(x)) return '—';
+        if (x >= 1e9) return (x / 1e9).toFixed(1).replace(/\.0$/, '') + 'B';
+        if (x >= 1e6) return (x / 1e6).toFixed(1).replace(/\.0$/, '') + 'M';
+        if (x >= 1e3) return (x / 1e3).toFixed(1).replace(/\.0$/, '') + 'K';
+        return String(x);
+      }
+
+      function fmtPubDate(iso) {
+        if (!iso) return '—';
+        try {
+          var d = new Date(iso);
+          if (isNaN(d.getTime())) return iso;
+          return d.toLocaleString();
+        } catch (e) {
+          return iso;
+        }
+      }
+
+      function ideaThumbSrc(v) {
+        var th = v.thumbnails && (v.thumbnails.medium || v.thumbnails.default || v.thumbnails.high);
+        return th && th.url ? th.url : '';
+      }
+
+      function renderIdeasList(container, list) {
+        container.innerHTML = '';
+        if (!list || !list.length) {
+          container.innerHTML =
+            '<p class="hint" style="margin:0">No videos in this list. Pick another range/category or tap Discover again.</p>';
+          return;
+        }
+        list.forEach(function (v) {
+          var row = document.createElement('div');
+          row.className = 'ideas-row';
+
+          var thWrap = document.createElement('div');
+          thWrap.className = 'ideas-thumb';
+          var img = document.createElement('img');
+          img.alt = '';
+          var src = ideaThumbSrc(v);
+          if (src) img.src = src;
+          else img.style.opacity = '0.2';
+          thWrap.appendChild(img);
+
+          var meta = document.createElement('div');
+          meta.className = 'ideas-meta';
+
+          var a = document.createElement('a');
+          a.className = 'idea-title';
+          a.href = v.url;
+          a.target = '_blank';
+          a.rel = 'noopener noreferrer';
+          a.textContent = v.title || v.videoId || 'Video';
+
+          var sub = document.createElement('div');
+          sub.className = 'sub';
+          var likes =
+            v.likeCount != null && isFinite(v.likeCount)
+              ? ' · ' + fmtViewsNum(v.likeCount) + ' likes'
+              : '';
+          sub.textContent =
+            (v.channelTitle || '—') +
+            ' · ' +
+            fmtPubDate(v.publishedAt) +
+            ' · ' +
+            fmtViewsNum(v.viewCount) +
+            ' views' +
+            likes;
+
+          var badge = document.createElement('span');
+          badge.className = 'badge';
+          badge.textContent = 'youtube.com';
+
+          meta.appendChild(a);
+          meta.appendChild(sub);
+          meta.appendChild(badge);
+          row.appendChild(thWrap);
+          row.appendChild(meta);
+          container.appendChild(row);
+        });
+      }
+
+      function loadIdeasApiHint() {
+        fetch('/api/videocreator/youtube-discovery-status')
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (d) {
+            ideasApiHint.textContent = d.configured
+              ? 'YouTube discovery: API key detected on server.'
+              : 'YouTube discovery: set YOUTUBE_DATA_API_KEY (or YOUTUBE_API_KEY) on the server.';
+          })
+          .catch(function () {
+            ideasApiHint.textContent = '';
+          });
+      }
+
+      ideasFetchBtn.addEventListener('click', async function () {
+        ideasFetchBtn.disabled = true;
+        ideasStatus.textContent = 'Calling YouTube Data API…';
+        ideasQuotaNote.textContent = '';
+        try {
+          var cat = ideasCategory.value || 'any';
+          var range = ideasRange.value || '1m';
+          var qs =
+            '?categoryId=' + encodeURIComponent(cat) + '&range=' + encodeURIComponent(range);
+          var res = await fetch('/api/videocreator/youtube-discovery' + qs);
+          var data = await res.json().catch(function () {
+            return {};
+          });
+          if (!res.ok || data.ok === false) {
+            throw new Error(data.error || 'Request failed');
+          }
+          renderIdeasList(ideasByViews, data.byViews);
+          renderIdeasList(ideasByDate, data.byDate);
+          var tail = '';
+          if (data.candidateCount != null) {
+            tail = ' · ' + data.candidateCount + ' videos in pool (from search)';
+          }
+          ideasStatus.textContent =
+            'Showing up to ' +
+            (data.byViews && data.byViews.length ? data.byViews.length : 0) +
+            ' each column. Window: published after ' +
+            (data.publishedAfter || '') +
+            '.' +
+            tail;
+          ideasQuotaNote.textContent = data.quotaNote || '';
+        } catch (e) {
+          ideasStatus.textContent = e.message || 'Discovery failed';
+          ideasByViews.innerHTML = '';
+          ideasByDate.innerHTML = '';
+        } finally {
+          ideasFetchBtn.disabled = false;
+        }
+      });
+
+      ideasByViews.innerHTML =
+        '<p class="hint" style="margin:0">Choose category and timeframe, then <strong>Discover videos</strong>.</p>';
+      ideasByDate.innerHTML =
+        '<p class="hint" style="margin:0">Right column uses the same pool, sorted by newest publish date.</p>';
+
       fillVoiceSelect();
       loadWhisperStatus();
       loadSoraHint();
+      loadIdeasApiHint();
       setStatus('Paste script, use YouTube or Whisper for text, build segments, fetch images, then play.');
     })();
   </script>
