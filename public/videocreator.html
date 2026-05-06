@@ -1,0 +1,677 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LAB007 — VideoCreator</title>
+  <meta name="robots" content="noindex,nofollow" />
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #0f1115;
+      color: #e8eaed;
+      line-height: 1.5;
+      min-height: 100vh;
+    }
+    a { color: #7cb3ff; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 24px 16px 48px; }
+    .top { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; margin-bottom: 20px; }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand img { height: 40px; width: auto; }
+    h1 { margin: 0; font-size: 1.35rem; font-weight: 700; }
+    .panel {
+      background: #171a21;
+      border: 1px solid #2a3040;
+      border-radius: 14px;
+      padding: 18px;
+      margin-bottom: 16px;
+    }
+    .panel h2 { margin: 0 0 12px; font-size: 1rem; color: #f0b429; font-weight: 700; }
+    label { display: block; font-size: 0.82rem; color: #9aa0aa; margin-bottom: 6px; }
+    input[type="text"], input[type="number"], select, textarea {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #3a4555;
+      background: #0f1115;
+      color: #e8eaed;
+      font: inherit;
+    }
+    textarea { min-height: 140px; resize: vertical; }
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    @media (max-width: 700px) { .row2 { grid-template-columns: 1fr; } }
+    .btn-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 12px; align-items: center; }
+    button {
+      font: inherit;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: 1px solid #3a4555;
+      background: #252b36;
+      color: #e8eaed;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.primary { background: #f0b429; color: #111; border-color: #f0b429; }
+    button:disabled { opacity: 0.5; cursor: not-allowed; }
+    .status { font-size: 0.88rem; color: #9aa0aa; margin-top: 8px; min-height: 1.2em; }
+    .status.err { color: #f87171; }
+    .status.ok { color: #86efac; }
+    .preview-shell {
+      position: relative;
+      aspect-ratio: 16 / 9;
+      max-height: 420px;
+      margin: 0 auto;
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #2a3040;
+    }
+    .preview-shell img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .preview-sub {
+      position: absolute;
+      left: 0; right: 0; bottom: 0;
+      padding: 14px 18px 18px;
+      background: linear-gradient(transparent, rgba(0,0,0,0.92));
+      font-size: clamp(0.95rem, 2.2vw, 1.15rem);
+      line-height: 1.45;
+      text-align: center;
+      text-shadow: 0 1px 4px #000;
+      max-height: 45%;
+      overflow: auto;
+    }
+    .hint { font-size: 0.8rem; color: #7e8694; margin-top: 10px; line-height: 1.45; }
+    .segments { margin-top: 12px; font-size: 0.8rem; color: #9aa0aa; max-height: 120px; overflow: auto; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="brand">
+        <img src="/images/LAB007-GOLD-TRANS.png" alt="LAB007" />
+        <h1>VideoCreator</h1>
+      </div>
+      <a href="/">← Home</a>
+    </div>
+
+    <div class="panel">
+      <h2>1. Script</h2>
+      <label for="script">Paste your video narration (plain text)</label>
+      <textarea id="script" placeholder="Your script will be split into beats. Each beat gets an image and spoken line."></textarea>
+
+      <div class="row2" style="margin-top: 14px;">
+        <div>
+          <label for="ytUrl">YouTube — paste link to load transcript into the box</label>
+          <input type="text" id="ytUrl" placeholder="https://www.youtube.com/watch?v=…" />
+        </div>
+        <div class="btn-row" style="margin-top: 22px;">
+          <button type="button" id="ytLoadBtn">Load transcript</button>
+        </div>
+      </div>
+
+      <div class="row2" style="margin-top: 16px;">
+        <div>
+          <label for="whisperFile">Whisper (OpenAI) — upload audio / video to transcribe into the script box</label>
+          <input type="file" id="whisperFile" accept="audio/*,video/mp4,video/webm,.mp3,.wav,.m4a,.flac,.ogg,.opus" />
+        </div>
+        <div>
+          <label for="whisperLang">Spoken language hint (optional)</label>
+          <select id="whisperLang">
+            <option value="">Auto-detect</option>
+            <option value="en">English</option>
+            <option value="es">Spanish</option>
+            <option value="fr">French</option>
+            <option value="de">German</option>
+            <option value="ja">Japanese</option>
+            <option value="zh">Chinese</option>
+            <option value="pt">Portuguese</option>
+            <option value="it">Italian</option>
+          </select>
+        </div>
+      </div>
+      <div class="btn-row">
+        <button type="button" id="whisperBtn">Transcribe with Whisper</button>
+        <span class="hint" id="whisperHint" style="margin:0;flex:1;min-width:200px;"></span>
+      </div>
+      <p class="hint">YouTube: only works when the video has captions. Whisper: uses OpenAI’s Speech-to-Text API (same <code style="color:#c9d1d9;">OPENAI_API_KEY</code> / <code style="color:#c9d1d9;">OPENAI_KEY</code> as other OpenAI features — billing applies; uploads are not stored on disk). Max file size ~25&nbsp;MB.</p>
+    </div>
+
+    <div class="panel">
+      <h2>2. Timing &amp; voice</h2>
+      <div class="row2">
+        <div>
+          <label for="slideSec">Seconds per image (slide)</label>
+          <input type="number" id="slideSec" min="3" max="30" value="5" step="1" />
+        </div>
+        <div>
+          <label for="genderPref">Voice gender filter</label>
+          <select id="genderPref">
+            <option value="any">Any (all English voices)</option>
+            <option value="female">Female</option>
+            <option value="male">Male</option>
+            <option value="neutral">Neutral / unspecified</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top: 12px;">
+        <label for="voiceSel">Voice</label>
+        <select id="voiceSel"></select>
+      </div>
+      <p class="hint">Uses your browser’s speech engine (Web Speech API). Chrome/Edge usually have the best English voices. Click “Refresh voice list” after changing the filter.</p>
+      <div class="btn-row">
+        <button type="button" id="refreshVoicesBtn">Refresh voice list</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>3. Build &amp; preview</h2>
+      <div class="btn-row">
+        <button type="button" class="primary" id="buildBtn">Build segments</button>
+        <button type="button" id="fetchImgBtn">Fetch images</button>
+        <button type="button" id="playBtn" disabled>Play preview</button>
+        <button type="button" id="stopBtn" disabled>Stop</button>
+      </div>
+      <div class="status" id="status"></div>
+      <div class="segments" id="segInfo"></div>
+
+      <div class="preview-shell" style="margin-top: 16px;">
+        <img id="stageImg" alt="" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='9'/%3E" />
+        <div class="preview-sub" id="subtitle">Subtitles appear here during playback.</div>
+      </div>
+      <p class="hint">Images: set <code style="color:#c9d1d9;">PEXELS_API_KEY</code> on the server for search-matched photos; otherwise a tag-based placeholder service is used. Optional: <code style="color:#c9d1d9;">VIDEOCREATOR_WHISPER_MODEL</code> (default <code style="color:#c9d1d9;">whisper-1</code>). For a downloadable video file, record this tab with OBS or the browser’s screen recorder during Play.</p>
+    </div>
+
+    <div class="panel">
+      <h2>4. Sora (OpenAI video) — optional</h2>
+      <p class="hint" id="soraHint" style="margin-top:0"></p>
+      <label for="soraPrompt">Video prompt (what Sora should generate — not your full script unless you want it in the prompt)</label>
+      <textarea id="soraPrompt" style="min-height:100px" placeholder="e.g. Wide cinematic shot of ocean waves at golden hour, slow drone move forward, calm hopeful mood"></textarea>
+      <div class="btn-row">
+        <button type="button" id="fillSoraFromScriptBtn">Fill from script (prefix + excerpt)</button>
+      </div>
+      <div class="row2" style="margin-top: 12px;">
+        <div>
+          <label for="soraModel">Model</label>
+          <select id="soraModel">
+            <option value="sora-2">Sora 2 (faster)</option>
+            <option value="sora-2-pro">Sora 2 Pro (higher quality / cost)</option>
+          </select>
+        </div>
+        <div>
+          <label for="soraSeconds">Clip length (seconds)</label>
+          <select id="soraSeconds">
+            <option value="4">4</option>
+            <option value="8" selected>8</option>
+            <option value="12">12</option>
+          </select>
+        </div>
+      </div>
+      <div class="row2" style="margin-top: 12px;">
+        <div>
+          <label for="soraSize">Size</label>
+          <select id="soraSize">
+            <option value="1280x720" selected>1280 × 720 (landscape)</option>
+            <option value="720x1280">720 × 1280 (vertical)</option>
+            <option value="1792x1024">1792 × 1024</option>
+            <option value="1024x1792">1024 × 1792</option>
+          </select>
+        </div>
+        <div>
+          <label for="soraJobId">Job id</label>
+          <input type="text" id="soraJobId" readonly placeholder="Returned after starting a job" />
+        </div>
+      </div>
+      <div class="btn-row">
+        <button type="button" class="primary" id="soraStartBtn">Start Sora job</button>
+      </div>
+      <div class="status" id="soraStatus"></div>
+      <div style="margin-top:14px;">
+        <label style="margin-bottom:6px;display:block;font-size:0.82rem;color:#9aa0aa">Generated clip</label>
+        <video id="soraVideo" controls playsinline style="width:100%;max-height:420px;background:#000;border-radius:10px;display:none;"></video>
+      </div>
+      <p class="hint">
+        Billing and access follow your OpenAI plan. Videos API has strict content policies (e.g. no real-person likeness, no copyrighted characters). Jobs are asynchronous — previews poll about every 12 seconds and can take many minutes for long or Pro renders.
+      </p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      const STOP = new Set([
+        'the','a','an','and','or','but','in','on','at','to','for','of','as','is','was','are','were','be','been','being',
+        'it','this','that','these','those','i','you','he','she','we','they','me','him','her','them','my','your','their',
+        'with','from','by','not','no','so','if','then','there','here','when','what','which','who','how','why','all','any',
+        'can','could','will','would','should','just','about','into','over','out','up','down','more','most','very','also',
+        'than','too','only','even','like','get','got','one','two','go','do','did','has','have','had','our','its'
+      ]);
+
+      const scriptEl = document.getElementById('script');
+      const ytUrlEl = document.getElementById('ytUrl');
+      const slideSecEl = document.getElementById('slideSec');
+      const genderPrefEl = document.getElementById('genderPref');
+      const voiceSel = document.getElementById('voiceSel');
+      const statusEl = document.getElementById('status');
+      const segInfoEl = document.getElementById('segInfo');
+      const stageImg = document.getElementById('stageImg');
+      const subtitleEl = document.getElementById('subtitle');
+      const whisperFileEl = document.getElementById('whisperFile');
+      const whisperLangEl = document.getElementById('whisperLang');
+      const whisperBtn = document.getElementById('whisperBtn');
+      const whisperHintEl = document.getElementById('whisperHint');
+      const soraHintEl = document.getElementById('soraHint');
+      const soraPromptEl = document.getElementById('soraPrompt');
+      const soraModelEl = document.getElementById('soraModel');
+      const soraSecondsEl = document.getElementById('soraSeconds');
+      const soraSizeEl = document.getElementById('soraSize');
+      const soraJobIdEl = document.getElementById('soraJobId');
+      const soraStartBtn = document.getElementById('soraStartBtn');
+      const soraStatusEl = document.getElementById('soraStatus');
+      const soraVideoEl = document.getElementById('soraVideo');
+
+      let segments = [];
+      let stopPlayback = false;
+      var soraPollTimer = null;
+
+      function setSoraStatus(msg, cls) {
+        soraStatusEl.textContent = msg || '';
+        soraStatusEl.className = 'status' + (cls ? ' ' + cls : '');
+      }
+
+      function stopSoraPoll() {
+        if (soraPollTimer) {
+          clearInterval(soraPollTimer);
+          soraPollTimer = null;
+        }
+      }
+
+      function loadSoraHint() {
+        fetch('/api/videocreator/sora-status')
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            soraHintEl.textContent = d.info || '';
+          })
+          .catch(function () {
+            soraHintEl.textContent = '';
+          });
+      }
+
+      function pollSoraOnce(id) {
+        return fetch('/api/videocreator/sora-job/' + encodeURIComponent(id))
+          .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j }; }); })
+          .then(function (pair) {
+            if (!pair.ok || !pair.j.ok) throw new Error((pair.j && pair.j.error) || 'Poll failed');
+            return pair.j.video;
+          });
+      }
+
+      function startSoraPolling(id) {
+        stopSoraPoll();
+        soraPollTimer = setInterval(function () {
+          pollSoraOnce(id)
+            .then(function (v) {
+              var line = String(v.status || '') + (v.progress != null ? ' · ' + v.progress + '%' : '');
+              setSoraStatus(line);
+              if (v.status === 'completed') {
+                stopSoraPoll();
+                setSoraStatus('Completed. Loading clip…', 'ok');
+                soraVideoEl.style.display = 'block';
+                soraVideoEl.src = '/api/videocreator/sora-content/' + encodeURIComponent(id) + '?t=' + Date.now();
+              }
+              if (v.status === 'failed') {
+                stopSoraPoll();
+                var em = v.error && (v.error.message || v.error.code);
+                setSoraStatus(em || 'Sora generation failed.', 'err');
+              }
+            })
+            .catch(function (e) {
+              stopSoraPoll();
+              setSoraStatus(e.message || 'Poll error', 'err');
+            });
+        }, 12000);
+      }
+
+      document.getElementById('fillSoraFromScriptBtn').addEventListener('click', function () {
+        var t = scriptEl.value.trim();
+        if (!t) {
+          setSoraStatus('Script is empty — paste narration first.', 'err');
+          return;
+        }
+        soraPromptEl.value =
+          'Professional cinematic visuals that match this narration mood and themes. Avoid readable on-screen text or subtitles in the footage; atmospheric B-roll only.\n\n' +
+          t.slice(0, 1200);
+        setSoraStatus('Copied an excerpt into the Sora prompt. Edit freely before starting.', 'ok');
+      });
+
+      soraStartBtn.addEventListener('click', async function () {
+        var prompt = (soraPromptEl.value || '').trim();
+        if (!prompt) {
+          setSoraStatus('Enter a Sora prompt (or “Fill from script”).', 'err');
+          return;
+        }
+        stopSoraPoll();
+        soraVideoEl.pause();
+        soraVideoEl.removeAttribute('src');
+        soraVideoEl.style.display = 'none';
+
+        soraStartBtn.disabled = true;
+        setSoraStatus('Starting Sora job…');
+
+        try {
+          var res = await fetch('/api/videocreator/sora-create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              prompt: prompt,
+              model: soraModelEl.value,
+              seconds: soraSecondsEl.value,
+              size: soraSizeEl.value
+            })
+          });
+          var data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data.ok) throw new Error(data.error || 'Create job failed');
+
+          var id = data.video && data.video.id;
+          if (!id) throw new Error('No video id returned');
+          soraJobIdEl.value = id;
+          setSoraStatus('Job queued · ' + String(data.video.status || 'queued'), 'ok');
+
+          pollSoraOnce(id)
+            .then(function (v) {
+              setSoraStatus(
+                String(v.status || '') + (v.progress != null ? ' · ' + v.progress + '%' : '') + ' · auto-refresh ~12s'
+              );
+              if (v.status === 'completed') {
+                soraVideoEl.style.display = 'block';
+                soraVideoEl.src = '/api/videocreator/sora-content/' + encodeURIComponent(id) + '?t=' + Date.now();
+              }
+              if (v.status === 'failed') {
+                setSoraStatus((v.error && v.error.message) || 'failed', 'err');
+              }
+            })
+            .catch(function () {});
+
+          startSoraPolling(id);
+        } catch (e) {
+          setSoraStatus(e.message || 'Sora failed', 'err');
+        } finally {
+          soraStartBtn.disabled = false;
+        }
+      });
+
+      function loadWhisperStatus() {
+        fetch('/api/videocreator/whisper-status')
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            whisperHintEl.textContent = d.configured
+              ? 'Whisper: ready (OpenAI key detected on server).'
+              : 'Whisper: set OPENAI_API_KEY on the server to enable uploads.';
+          })
+          .catch(function () {
+            whisperHintEl.textContent = '';
+          });
+      }
+
+      whisperBtn.addEventListener('click', async function () {
+        var file = whisperFileEl.files && whisperFileEl.files[0];
+        if (!file) {
+          setStatus('Choose an audio or video file for Whisper.', 'err');
+          return;
+        }
+        whisperBtn.disabled = true;
+        setStatus('Sending to OpenAI Whisper… (may take a minute)');
+        try {
+          var fd = new FormData();
+          fd.append('audio', file);
+          var lang = (whisperLangEl.value || '').trim();
+          if (lang) fd.append('language', lang);
+          var res = await fetch('/api/videocreator/whisper-transcribe', {
+            method: 'POST',
+            body: fd
+          });
+          var data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data.ok) {
+            throw new Error(data.error || 'Whisper transcription failed');
+          }
+          scriptEl.value = data.text || '';
+          setStatus('Whisper transcription complete.', 'ok');
+        } catch (e) {
+          setStatus(e.message || 'Whisper failed', 'err');
+        } finally {
+          whisperBtn.disabled = false;
+        }
+      });
+
+      function setStatus(msg, cls) {
+        statusEl.textContent = msg || '';
+        statusEl.className = 'status' + (cls ? ' ' + cls : '');
+      }
+
+      function wordsPerSlide() {
+        const sec = Math.min(30, Math.max(3, parseInt(slideSecEl.value, 10) || 5));
+        return Math.max(6, Math.round(sec * 2.5));
+      }
+
+      function splitIntoSegments(text) {
+        var wps = wordsPerSlide();
+        var raw = String(text || '').replace(/\r\n/g, '\n').trim();
+        if (!raw) return [];
+        var paras = raw.split(/\n\s*\n/).map(function (p) { return p.replace(/\s+/g, ' ').trim(); }).filter(Boolean);
+        var out = [];
+        var pushWords = function (words) {
+          for (var i = 0; i < words.length; i += wps) {
+            out.push(words.slice(i, i + wps).join(' '));
+          }
+        };
+        if (paras.length) {
+          paras.forEach(function (p) {
+            pushWords(p.split(/\s+/).filter(Boolean));
+          });
+        } else {
+          pushWords(raw.split(/\s+/).filter(Boolean));
+        }
+        return out;
+      }
+
+      function keywordForSegment(text) {
+        const words = String(text || '')
+          .toLowerCase()
+          .replace(/[^a-z0-9\s]/g, ' ')
+          .split(/\s+/)
+          .filter((w) => w.length > 2 && !STOP.has(w));
+        const pick = words.slice(0, 4);
+        return pick.length ? pick.join(' ') : 'nature landscape';
+      }
+
+      function classifyVoiceGender(name) {
+        var n = String(name || '').toLowerCase();
+        if (
+          /female|microsoft zira|google uk english female|samantha|karen|amy|emma|hayley|ruth|flo|julia|natalie|catherine|rachel|\bvera\b|\balice\b|\bivy\b|\bsusan\b|\bjoanna\b|\bzira\b|\bmichelle\b/.test(n)
+        ) {
+          return 'female';
+        }
+        if (
+          /male|google uk english male|microsoft david|microsoft mark|philip|rishi|david|john|fred|frederick|\bbrian\b|\bryan\b|\bgeorge\b|\bedward\b|\bthomas\b|\barthur\b|\bryan\b|\bjustin\b|\bguy\b|\bdaniel\b/.test(n)
+        ) {
+          return 'male';
+        }
+        return 'neutral';
+      }
+
+      function englishVoices() {
+        return speechSynthesis.getVoices().filter(function (v) {
+          return /en(-|_)?/i.test(v.lang || '');
+        });
+      }
+
+      function fillVoiceSelect() {
+        const pref = genderPrefEl.value;
+        const voices = englishVoices().filter(function (v) {
+          const g = classifyVoiceGender(v.name);
+          if (pref === 'any') return true;
+          if (pref === 'neutral') return g === 'neutral';
+          return g === pref;
+        });
+        const prev = voiceSel.value;
+        voiceSel.innerHTML = '';
+        voices.forEach(function (v) {
+          const o = document.createElement('option');
+          o.value = v.voiceURI || v.name;
+          o.textContent = v.name + ' (' + (v.lang || '') + ')';
+          o.dataset.name = v.name;
+          voiceSel.appendChild(o);
+        });
+        if (prev) {
+          var found = Array.prototype.some.call(voiceSel.options, function (opt) {
+            if (opt.value === prev) { voiceSel.value = prev; return true; }
+            return false;
+          });
+          if (!found && voiceSel.options.length) voiceSel.selectedIndex = 0;
+        } else if (voiceSel.options.length) voiceSel.selectedIndex = 0;
+        if (!voices.length) {
+          var o = document.createElement('option');
+          o.value = '';
+          o.textContent = '(No matching English voices — try “Any”)';
+          voiceSel.appendChild(o);
+        }
+      }
+
+      function pickVoiceForUtterance(u) {
+        const want = voiceSel.value;
+        const voices = speechSynthesis.getVoices();
+        var v = voices.find(function (x) { return x.voiceURI === want || x.name === want; });
+        if (v) u.voice = v;
+        u.lang = v && v.lang ? v.lang : 'en-US';
+        u.rate = 1;
+        u.pitch = 1;
+      }
+
+      speechSynthesis.onvoiceschanged = fillVoiceSelect;
+
+      document.getElementById('refreshVoicesBtn').addEventListener('click', fillVoiceSelect);
+      genderPrefEl.addEventListener('change', fillVoiceSelect);
+
+      document.getElementById('ytLoadBtn').addEventListener('click', async function () {
+        const url = (ytUrlEl.value || '').trim();
+        if (!url) {
+          setStatus('Paste a YouTube URL first.', 'err');
+          return;
+        }
+        setStatus('Loading transcript…');
+        try {
+          const res = await fetch('/api/videocreator/youtube-transcript?url=' + encodeURIComponent(url));
+          const data = await res.json().catch(function () { return {}; });
+          if (!res.ok || !data.ok) throw new Error(data.error || 'Could not load transcript');
+          scriptEl.value = data.text || '';
+          setStatus('Loaded ' + (data.lineCount || 0) + ' caption lines.', 'ok');
+        } catch (e) {
+          setStatus(e.message || 'Transcript failed', 'err');
+        }
+      });
+
+      document.getElementById('buildBtn').addEventListener('click', function () {
+        const text = scriptEl.value.trim();
+        if (!text) {
+          setStatus('Paste a script first.', 'err');
+          return;
+        }
+        const parts = splitIntoSegments(text);
+        segments = parts.map(function (t) {
+          return { text: t, imageUrl: null, keyword: keywordForSegment(t) };
+        });
+        segInfoEl.textContent =
+          segments.length + ' segments · ~' + wordsPerSlide() + ' words/slide · seconds/slide ' + slideSecEl.value;
+        document.getElementById('playBtn').disabled = false;
+        subtitleEl.textContent = 'Built ' + segments.length + ' segments. Fetch images, then Play.';
+        setStatus('Segments ready. Click Fetch images.', 'ok');
+      });
+
+      document.getElementById('fetchImgBtn').addEventListener('click', async function () {
+        if (!segments.length) {
+          setStatus('Build segments first.', 'err');
+          return;
+        }
+        document.getElementById('fetchImgBtn').disabled = true;
+        setStatus('Fetching images…');
+        try {
+          for (var i = 0; i < segments.length; i++) {
+            var q = segments[i].keyword;
+            var res = await fetch('/api/videocreator/image?q=' + encodeURIComponent(q));
+            var data = await res.json().catch(function () { return {}; });
+            if (!res.ok || !data.ok) throw new Error(data.error || 'Image request failed');
+            segments[i].imageUrl = data.url;
+            segInfoEl.textContent =
+              'Images: ' + (i + 1) + '/' + segments.length + (data.source ? ' (' + data.source + ')' : '');
+          }
+          if (segments[0] && segments[0].imageUrl) stageImg.src = segments[0].imageUrl;
+          setStatus('Images loaded.', 'ok');
+        } catch (e) {
+          setStatus(e.message || 'Image fetch failed', 'err');
+        } finally {
+          document.getElementById('fetchImgBtn').disabled = false;
+        }
+      });
+
+      function wait(ms) {
+        return new Promise(function (r) { setTimeout(r, ms); });
+      }
+
+      document.getElementById('playBtn').addEventListener('click', async function () {
+        if (!segments.length) return;
+        stopPlayback = false;
+        speechSynthesis.cancel();
+        document.getElementById('stopBtn').disabled = false;
+        document.getElementById('playBtn').disabled = true;
+        var slideMs = Math.min(30000, Math.max(3000, (parseInt(slideSecEl.value, 10) || 5) * 1000));
+
+        fillVoiceSelect();
+        try {
+          for (var i = 0; i < segments.length; i++) {
+            if (stopPlayback) break;
+            var seg = segments[i];
+            subtitleEl.textContent = seg.text;
+            if (seg.imageUrl) stageImg.src = seg.imageUrl;
+
+            await Promise.all([
+              new Promise(function (resolve) {
+                var u = new SpeechSynthesisUtterance(seg.text);
+                pickVoiceForUtterance(u);
+                u.onend = resolve;
+                u.onerror = resolve;
+                speechSynthesis.speak(u);
+              }),
+              wait(slideMs)
+            ]);
+
+            speechSynthesis.cancel();
+            await wait(60);
+          }
+        } finally {
+          document.getElementById('stopBtn').disabled = true;
+          document.getElementById('playBtn').disabled = false;
+          speechSynthesis.cancel();
+          if (!stopPlayback) setStatus('Playback finished.', 'ok');
+          else setStatus('Stopped.', '');
+        }
+      });
+
+      document.getElementById('stopBtn').addEventListener('click', function () {
+        stopPlayback = true;
+        speechSynthesis.cancel();
+        setStatus('Stopping…');
+      });
+
+      fillVoiceSelect();
+      loadWhisperStatus();
+      loadSoraHint();
+      setStatus('Paste script, use YouTube or Whisper for text, build segments, fetch images, then play.');
+    })();
+  </script>
+</body>
+</html>

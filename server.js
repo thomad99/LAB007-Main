@@ -12,6 +12,7 @@ const multer = require('multer');
 const { parseStringPromise } = require('xml2js');
 const { router: aimailRouter } = require('./aimail');
 const { registerSpamblokRoutes } = require('./lib/spamblok');
+const { registerVideoCreatorRoutes } = require('./lib/videoCreatorRoutes');
 const { sendTelegramTest } = require('./lib/notifySafe');
 const { registerTelegramInboundHandler, handleTelegramWebhookExpress } = require('./lib/telegramInbound');
 const { registerCursorAiTelegramHandlers } = require('./lib/telegramHandlersCursorAi');
@@ -337,6 +338,8 @@ app.get('/ggppi-tracker', (req, res) => {
   if (fs.existsSync(p)) return res.sendFile(p);
   return res.status(404).send('Not found');
 });
+
+registerVideoCreatorRoutes(app);
 
 // ========== Mount Project Apps FIRST ==========
 // Mount each project's Express app BEFORE main static middleware to ensure routes are matched correctly
