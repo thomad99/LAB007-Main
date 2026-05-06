@@ -233,6 +233,59 @@ function classifyOsFromProductName(productName) {
     return hit;
 }
 
+function collectProductNamesById(node, out = {}) {
+    if (!node || typeof node !== 'object') return out;
+
+    const addProduct = (entry) => {
+        if (!entry || typeof entry !== 'object') return;
+        const id = String(entry.ProductID || '').trim();
+        const value = String(entry.Value || '').trim();
+        if (id && value) out[id] = value;
+    };
+
+    if (Array.isArray(node)) {
+        node.forEach((child) => collectProductNamesById(child, out));
+        return out;
+    }
+
+    addProduct(node);
+
+    if (Array.isArray(node.FullProductName)) {
+        node.FullProductName.forEach(addProduct);
+    } else if (node.FullProductName && typeof node.FullProductName === 'object') {
+        addProduct(node.FullProductName);
+    }
+
+    if (Array.isArray(node.Branch)) {
+        node.Branch.forEach((child) => collectProductNamesById(child, out));
+    } else if (node.Branch && typeof node.Branch === 'object') {
+        collectProductNamesById(node.Branch, out);
+    }
+
+    if (node.ProductTree) {
+        collectProductNamesById(node.ProductTree, out);
+    }
+
+    return out;
+}
+
+function normalizeProductStatusRows(productStatuses) {
+    if (Array.isArray(productStatuses)) return productStatuses;
+    if (!productStatuses || typeof productStatuses !== 'object') return [];
+    if (Array.isArray(productStatuses.ProductStatus)) return productStatuses.ProductStatus;
+    if (productStatuses.ProductStatus && typeof productStatuses.ProductStatus === 'object') {
+        return [productStatuses.ProductStatus];
+    }
+    return [];
+}
+
+function normalizeProductIds(statusRow) {
+    if (!statusRow || typeof statusRow !== 'object') return [];
+    if (Array.isArray(statusRow.ProductID)) return statusRow.ProductID;
+    if (statusRow.ProductID != null) return [statusRow.ProductID];
+    return [];
+}
+
 async function buildMsPatchMonthlySummary(months = 24) {
     const monthRange = buildMonthRange(months);
     const monthSet = new Set(monthRange);
@@ -281,27 +334,19 @@ async function buildMsPatchMonthlySummary(months = 24) {
             continue;
         }
 
-        const productNamesById = {};
-        const productList = doc?.ProductTree?.FullProductName;
-        if (Array.isArray(productList)) {
-            for (const p of productList) {
-                if (p && p.ProductID) {
-                    productNamesById[String(p.ProductID)] = String(p.Value || '');
-                }
-            }
-        }
+        const productNamesById = collectProductNamesById(doc?.ProductTree, {});
 
         const vulnerabilities = Array.isArray(doc?.Vulnerability) ? doc.Vulnerability : [];
         for (const vuln of vulnerabilities) {
             const cve = String(vuln?.CVE || vuln?.ID || '').trim();
             if (!cve) continue;
 
-            const productStatus = vuln?.ProductStatuses;
-            if (!Array.isArray(productStatus)) continue;
+            const productStatusRows = normalizeProductStatusRows(vuln?.ProductStatuses);
+            if (!productStatusRows.length) continue;
 
             const osHits = new Set();
-            for (const statusRow of productStatus) {
-                const pids = Array.isArray(statusRow?.ProductID) ? statusRow.ProductID : [];
+            for (const statusRow of productStatusRows) {
+                const pids = normalizeProductIds(statusRow);
                 for (const pid of pids) {
                     const osList = classifyOsFromProductName(productNamesById[String(pid)] || '');
                     osList.forEach((os) => osHits.add(os));
@@ -314,7 +359,7 @@ async function buildMsPatchMonthlySummary(months = 24) {
         }
     }
 
-    const monthly = monthRange.map((m) => ({
+    const monthly = [...monthRange].reverse().map((m) => ({
         month: m,
         win10: countsByMonth[m].win10.size,
         win11: countsByMonth[m].win11.size,
