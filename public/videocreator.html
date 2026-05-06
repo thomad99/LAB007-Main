@@ -172,6 +172,9 @@
 
     <div class="panel">
       <h2>3. Build &amp; preview</h2>
+      <label for="imageContextPrompt" style="margin-top:4px;display:block">Extra prompt for slide images (optional)</label>
+      <textarea id="imageContextPrompt" style="min-height:72px;font-size:0.95rem" placeholder="Keeps searches on-topic across all beats. Examples: sustainable energy, corporate training, calming wellness, kids education cartoon style, dramatic sports broadcast…"></textarea>
+      <p class="hint" style="margin-top:6px;margin-bottom:10px;">This text is merged with each segment’s auto keywords before calling the image API (Pexels or fallback), so results stay aligned with your video’s theme.</p>
       <div class="btn-row">
         <button type="button" class="primary" id="buildBtn">Build segments</button>
         <button type="button" id="fetchImgBtn">Fetch images</button>
@@ -592,6 +595,15 @@
         setStatus('Segments ready. Click Fetch images.', 'ok');
       });
 
+      function buildImageSearchQuery(keyword) {
+        var ctx = String(document.getElementById('imageContextPrompt').value || '')
+          .replace(/\s+/g, ' ')
+          .trim();
+        var kw = String(keyword || '').trim();
+        if (ctx && kw) return (ctx + ' ' + kw).trim();
+        return ctx || kw || 'abstract background';
+      }
+
       document.getElementById('fetchImgBtn').addEventListener('click', async function () {
         if (!segments.length) {
           setStatus('Build segments first.', 'err');
@@ -601,7 +613,8 @@
         setStatus('Fetching images…');
         try {
           for (var i = 0; i < segments.length; i++) {
-            var q = segments[i].keyword;
+            var q = buildImageSearchQuery(segments[i].keyword);
+            segments[i].imageSearchQuery = q;
             var res = await fetch('/api/videocreator/image?q=' + encodeURIComponent(q));
             var data = await res.json().catch(function () { return {}; });
             if (!res.ok || !data.ok) throw new Error(data.error || 'Image request failed');
