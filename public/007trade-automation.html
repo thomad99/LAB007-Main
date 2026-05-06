@@ -104,6 +104,7 @@
       <strong>opening-range</strong> (long / short / both, optional exit outside the range, flatten before close),
       <strong>momentum</strong> family (prior completed day high + optional min breakout %),
       <strong>mean-reversion</strong> (buy when price has dropped from the session open by your fade %, after a minimum number of minutes).
+      Each rule now has explicit fields for strategy, stocks, and order amount.
     </p>
 
     <div class="warn">
@@ -222,6 +223,32 @@
           symField.appendChild(symIn);
           card.appendChild(symField);
 
+          var sizeGrid = el('div', { class: 'rule-grid' });
+          var modeWrap = el('div', { class: 'field' });
+          modeWrap.appendChild(el('label', { text: 'Order size mode', for: 'sizemode-' + idx }));
+          var sizeSel = el('select', { id: 'sizemode-' + idx });
+          sizeSel.appendChild(el('option', { value: 'auto', text: 'Auto size (risk profile)' }));
+          sizeSel.appendChild(el('option', { value: 'fixed', text: 'Fixed shares' }));
+          sizeSel.value = rule.sizeMode === 'fixed' ? 'fixed' : 'auto';
+          sizeSel.addEventListener('change', function () {
+            rule.sizeMode = sizeSel.value === 'fixed' ? 'fixed' : 'auto';
+          });
+          modeWrap.appendChild(sizeSel);
+          sizeGrid.appendChild(modeWrap);
+
+          var qtyWrap = el('div', { class: 'field' });
+          qtyWrap.appendChild(el('label', { text: 'Fixed shares (when mode = fixed)' }));
+          var qtyIn = el('input', { type: 'number', min: '1', max: '100000', step: '1' });
+          qtyIn.value = rule.fixedQty != null ? Number(rule.fixedQty) : 1;
+          function syncQty() {
+            rule.fixedQty = Math.max(1, Math.min(100000, parseInt(qtyIn.value, 10) || 1));
+          }
+          qtyIn.addEventListener('input', syncQty);
+          qtyIn.addEventListener('change', syncQty);
+          qtyWrap.appendChild(qtyIn);
+          sizeGrid.appendChild(qtyWrap);
+          card.appendChild(sizeGrid);
+
           var grid = el('div', { class: 'rule-grid' });
           function numField(label, key, min, max, def) {
             var w = el('div', { class: 'field' });
@@ -321,6 +348,8 @@
           enabled: true,
           strategyId: 'opening-range',
           symbols: ['SPY'],
+          sizeMode: 'auto',
+          fixedQty: 1,
           orbMinutes: 30,
           orbDirection: 'long',
           exitOutsideOrb: false,
