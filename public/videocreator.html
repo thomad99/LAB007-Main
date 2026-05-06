@@ -116,66 +116,115 @@
       box-shadow: inset 0 0 0 1px #f0b42933;
     }
     .vc-tab-panel[hidden] { display: none !important; }
-    .ideas-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; align-items: start; }
-    @media (max-width: 900px) { .ideas-grid { grid-template-columns: 1fr; } }
-    .ideas-card {
-      background: #12151c;
-      border: 1px solid #2a3040;
-      border-radius: 12px;
-      overflow: hidden;
-      max-height: min(70vh, 620px);
+    .ideas-chips {
       display: flex;
-      flex-direction: column;
-    }
-    .ideas-card h3 {
-      margin: 0;
-      padding: 12px 14px;
-      font-size: 0.95rem;
-      font-weight: 700;
-      color: #f0b429;
-      border-bottom: 1px solid #2a3040;
-      background: #171a21;
-    }
-    .ideas-scroll { overflow: auto; flex: 1; padding: 10px 12px 14px; }
-    .ideas-row {
-      display: grid;
-      grid-template-columns: 112px 1fr;
-      gap: 12px;
-      align-items: start;
-      padding: 12px 0;
-      border-bottom: 1px solid #252b36;
-    }
-    .ideas-row:last-child { border-bottom: none; }
-    .ideas-thumb {
-      width: 112px;
-      aspect-ratio: 16 / 9;
-      border-radius: 8px;
-      overflow: hidden;
-      background: #000;
-      border: 1px solid #2a3040;
-    }
-    .ideas-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .ideas-meta { min-width: 0; }
-    .ideas-meta a.idea-title {
-      font-weight: 650;
-      color: #e8eaed;
-      text-decoration: none;
-      display: inline-block;
-      margin-bottom: 6px;
-      font-size: 0.95rem;
-      line-height: 1.35;
-      word-break: break-word;
-    }
-    .ideas-meta a.idea-title:hover { color: #f0b429; text-decoration: underline; }
-    .ideas-meta .sub { font-size: 0.78rem; color: #9aa0aa; line-height: 1.5; }
-    .ideas-meta .badge {
-      display: inline-block;
+      flex-wrap: wrap;
+      gap: 10px;
       margin-top: 8px;
-      padding: 3px 10px;
+    }
+    .ideas-topic-chip {
+      font: inherit;
+      font-weight: 700;
+      font-size: 0.88rem;
+      padding: 9px 16px;
       border-radius: 999px;
       border: 1px solid #3a4555;
-      font-size: 0.72rem;
+      background: #1c212c;
+      color: #c8d0dc;
+      cursor: pointer;
+    }
+    .ideas-topic-chip:hover { border-color: #5c6b82; color: #eef1f6; }
+    .ideas-topic-chip.active {
+      border-color: #f0b429;
+      color: #fde68a;
+      background: linear-gradient(145deg, #2a2618 0%, #1a1d24 100%);
+      box-shadow: 0 0 0 1px #f0b42944 inset;
+    }
+    .ideas-sort-bar {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+    }
+    .ideas-sort-bar span { font-size: 0.8rem; color: #9aa0aa; font-weight: 600; }
+    .ideas-sort-bar .sort-btn {
+      font: inherit;
+      font-weight: 650;
+      font-size: 0.84rem;
+      padding: 8px 14px;
+      border-radius: 10px;
+      border: 1px solid #3a4555;
+      background: #1c212c;
+      color: #c8d0dc;
+      cursor: pointer;
+    }
+    .ideas-sort-bar .sort-btn.active {
+      border-color: #f0b429;
+      color: #fde68a;
+      background: #252b36;
+    }
+    .ideas-tiles {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+      gap: 16px;
+      margin-top: 18px;
+    }
+    .idea-tile {
+      background: #12151c;
+      border: 1px solid #2a3040;
+      border-radius: 14px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+    .idea-tile:hover {
+      border-color: #f0b42955;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+    }
+    .idea-tile a.idea-tile-thumb {
+      display: block;
+      aspect-ratio: 16 / 9;
+      background: #0a0b0f;
+      position: relative;
+    }
+    .idea-tile a.idea-tile-thumb img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .idea-tile .tile-body { padding: 12px 14px 14px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
+    .idea-tile a.tile-title {
+      font-weight: 650;
+      font-size: 0.92rem;
+      line-height: 1.38;
+      color: #e8eaed;
+      text-decoration: none;
+      word-break: break-word;
+    }
+    .idea-tile a.tile-title:hover { color: #f0b429; }
+    .idea-tile .tile-channel {
+      font-size: 0.78rem;
+      color: #9aa0aa;
+      line-height: 1.4;
+      word-break: break-word;
+    }
+    .idea-tile .tile-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 10px;
+      margin-top: auto;
+    }
+    .idea-tile .tile-pill {
+      font-size: 0.7rem;
+      padding: 3px 9px;
+      border-radius: 8px;
+      background: #1c212c;
+      border: 1px solid #354050;
       color: #cdd5e1;
+      font-variant-numeric: tabular-nums;
     }
   </style>
 </head>
@@ -343,13 +392,28 @@
       <div class="panel">
         <h2>YouTube — content ideas (public stats)</h2>
         <p class="hint" id="ideasApiHint" style="margin-top:0"></p>
-        <p class="hint">Pick a category and how far back to look; results list the same pool sorted by <strong>views</strong> vs <strong>publish date</strong>. Use this for inspiration only — follow YouTube’s Terms of Service and don’t scrape at scale; this tool uses the official API and counts toward your daily quota.</p>
+        <p class="hint">Choose a quick topic or type your own search, optional YouTube category to narrow, and a time window. You get up to <strong>10</strong> tiles (ranked by views or by date). Inspiration only — respect YouTube’s Terms; this uses the Data API and your quota.</p>
 
-        <div class="row2">
+        <div style="margin-top:10px;">
+          <label>Quick searches</label>
+          <div class="ideas-chips" id="ideasChips">
+            <button type="button" class="ideas-topic-chip active" data-q="cars">Cars</button>
+            <button type="button" class="ideas-topic-chip" data-q="artificial intelligence">AI</button>
+            <button type="button" class="ideas-topic-chip" data-q="bitcoin">Bitcoin</button>
+            <button type="button" class="ideas-topic-chip" data-q="travel">Travel</button>
+          </div>
+        </div>
+
+        <div style="margin-top:14px;">
+          <label for="ideasCustomQ">Your own search (optional — overrides a preset while this box has text)</label>
+          <input type="text" id="ideasCustomQ" maxlength="140" autocomplete="off" placeholder="Anything you want — e.g. EV road trip, local SEO, woodworking…" />
+        </div>
+
+        <div class="row2" style="margin-top:14px;">
           <div>
-            <label for="ideasCategory">Category</label>
+            <label for="ideasCategory">Narrow — YouTube category (optional)</label>
             <select id="ideasCategory">
-              <option value="any">Any category</option>
+              <option value="any" selected>Don’t narrow</option>
               <option value="27">Education</option>
               <option value="28">Science &amp; technology</option>
               <option value="26">How-to &amp; style</option>
@@ -377,22 +441,19 @@
           </div>
         </div>
 
+        <div class="ideas-sort-bar" role="toolbar" aria-label="Sort tiles">
+          <span>Tile order</span>
+          <button type="button" class="sort-btn active" id="ideasSortViewsBtn" aria-pressed="true" data-sort="views">Most views</button>
+          <button type="button" class="sort-btn" id="ideasSortDateBtn" aria-pressed="false" data-sort="date">Newest first</button>
+        </div>
+
         <div class="btn-row">
           <button type="button" class="primary" id="ideasFetchBtn">Discover videos</button>
           <span class="hint" id="ideasStatus" style="margin:0;flex:1;min-width:220px;"></span>
         </div>
         <p class="hint" id="ideasQuotaNote" style="margin-top:8px;"></p>
 
-        <div class="ideas-grid" style="margin-top:18px;">
-          <div class="ideas-card">
-            <h3>Top by views (in window)</h3>
-            <div class="ideas-scroll" id="ideasByViews"></div>
-          </div>
-          <div class="ideas-card">
-            <h3>Most recent (in window)</h3>
-            <div class="ideas-scroll" id="ideasByDate"></div>
-          </div>
-        </div>
+        <div id="ideasTiles"></div>
       </div>
     </div>
   </div>
@@ -837,13 +898,18 @@
       var vcMakerPanels = document.getElementById('vcMakerPanels');
       var vcIdeasPanel = document.getElementById('vcIdeasPanel');
       var ideasCategory = document.getElementById('ideasCategory');
+      var ideasCustomQ = document.getElementById('ideasCustomQ');
+      var ideasChipsWrap = document.getElementById('ideasChips');
       var ideasRange = document.getElementById('ideasRange');
       var ideasFetchBtn = document.getElementById('ideasFetchBtn');
       var ideasStatus = document.getElementById('ideasStatus');
       var ideasApiHint = document.getElementById('ideasApiHint');
       var ideasQuotaNote = document.getElementById('ideasQuotaNote');
-      var ideasByViews = document.getElementById('ideasByViews');
-      var ideasByDate = document.getElementById('ideasByDate');
+      var ideasTiles = document.getElementById('ideasTiles');
+      var ideasSortViewsBtn = document.getElementById('ideasSortViewsBtn');
+      var ideasSortDateBtn = document.getElementById('ideasSortDateBtn');
+      var ideasLastPayload = null;
+      var ideasTileSort = 'views';
 
       function activateVcTab(which) {
         var isMaker = which === 'maker';
@@ -876,72 +942,139 @@
         try {
           var d = new Date(iso);
           if (isNaN(d.getTime())) return iso;
-          return d.toLocaleString();
+          return d.toLocaleString(undefined, {
+            dateStyle: 'medium',
+            timeStyle: 'short'
+          });
         } catch (e) {
           return iso;
         }
       }
 
       function ideaThumbSrc(v) {
-        var th = v.thumbnails && (v.thumbnails.medium || v.thumbnails.default || v.thumbnails.high);
+        var th =
+          v.thumbnails &&
+          (v.thumbnails.high || v.thumbnails.medium || v.thumbnails.standard || v.thumbnails.default);
         return th && th.url ? th.url : '';
       }
 
-      function renderIdeasList(container, list) {
-        container.innerHTML = '';
+      function activateChipOnly(btn) {
+        var chips = ideasChipsWrap.querySelectorAll('.ideas-topic-chip');
+        chips.forEach(function (el) {
+          el.classList.remove('active');
+        });
+        if (btn) btn.classList.add('active');
+      }
+
+      ideasChipsWrap.querySelectorAll('.ideas-topic-chip').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          ideasCustomQ.value = '';
+          activateChipOnly(btn);
+        });
+      });
+
+      ideasCustomQ.addEventListener('input', function () {
+        if ((ideasCustomQ.value || '').trim()) {
+          activateChipOnly(null);
+        } else {
+          var def = ideasChipsWrap.querySelector('.ideas-topic-chip[data-q="cars"]');
+          activateChipOnly(def || ideasChipsWrap.querySelector('.ideas-topic-chip'));
+        }
+      });
+
+      function resolveIdeasSearchQ() {
+        var custom = String(ideasCustomQ.value || '').trim();
+        if (custom) return custom;
+        var active = ideasChipsWrap.querySelector('.ideas-topic-chip.active');
+        if (active && active.getAttribute('data-q')) return String(active.getAttribute('data-q')).trim();
+        var first = ideasChipsWrap.querySelector('.ideas-topic-chip[data-q]');
+        return first ? String(first.getAttribute('data-q')).trim() : 'cars';
+      }
+
+      function setIdeasTileSort(sort) {
+        ideasTileSort = sort === 'date' ? 'date' : 'views';
+        ideasSortViewsBtn.classList.toggle('active', ideasTileSort === 'views');
+        ideasSortDateBtn.classList.toggle('active', ideasTileSort === 'date');
+        ideasSortViewsBtn.setAttribute('aria-pressed', ideasTileSort === 'views' ? 'true' : 'false');
+        ideasSortDateBtn.setAttribute('aria-pressed', ideasTileSort === 'date' ? 'true' : 'false');
+        renderIdeasTiles();
+      }
+
+      ideasSortViewsBtn.addEventListener('click', function () {
+        setIdeasTileSort('views');
+      });
+      ideasSortDateBtn.addEventListener('click', function () {
+        setIdeasTileSort('date');
+      });
+
+      function renderIdeasTiles() {
+        ideasTiles.innerHTML = '';
+        if (!ideasLastPayload || !ideasLastPayload.ok) {
+          ideasTiles.innerHTML =
+            '<p class="hint" style="margin:0">Use quick searches or your own keywords, filters, then <strong>Discover videos</strong> for tiled results.</p>';
+          return;
+        }
+        var list =
+          ideasTileSort === 'date' ? ideasLastPayload.byDate : ideasLastPayload.byViews;
         if (!list || !list.length) {
-          container.innerHTML =
-            '<p class="hint" style="margin:0">No videos in this list. Pick another range/category or tap Discover again.</p>';
+          ideasTiles.innerHTML =
+            '<p class="hint" style="margin:0">No videos matched. Broaden your search or widen the timeframe.</p>';
           return;
         }
         list.forEach(function (v) {
-          var row = document.createElement('div');
-          row.className = 'ideas-row';
+          var tile = document.createElement('article');
+          tile.className = 'idea-tile';
 
-          var thWrap = document.createElement('div');
-          thWrap.className = 'ideas-thumb';
+          var thLink = document.createElement('a');
+          thLink.className = 'idea-tile-thumb';
+          thLink.href = v.url;
+          thLink.target = '_blank';
+          thLink.rel = 'noopener noreferrer';
           var img = document.createElement('img');
           img.alt = '';
           var src = ideaThumbSrc(v);
           if (src) img.src = src;
-          else img.style.opacity = '0.2';
-          thWrap.appendChild(img);
+          else img.style.opacity = '0.15';
+          thLink.appendChild(img);
 
-          var meta = document.createElement('div');
-          meta.className = 'ideas-meta';
+          var body = document.createElement('div');
+          body.className = 'tile-body';
 
-          var a = document.createElement('a');
-          a.className = 'idea-title';
-          a.href = v.url;
-          a.target = '_blank';
-          a.rel = 'noopener noreferrer';
-          a.textContent = v.title || v.videoId || 'Video';
+          var titleA = document.createElement('a');
+          titleA.className = 'tile-title';
+          titleA.href = v.url;
+          titleA.target = '_blank';
+          titleA.rel = 'noopener noreferrer';
+          titleA.textContent = v.title || v.videoId || 'Video';
 
-          var sub = document.createElement('div');
-          sub.className = 'sub';
-          var likes =
-            v.likeCount != null && isFinite(v.likeCount)
-              ? ' · ' + fmtViewsNum(v.likeCount) + ' likes'
-              : '';
-          sub.textContent =
-            (v.channelTitle || '—') +
-            ' · ' +
-            fmtPubDate(v.publishedAt) +
-            ' · ' +
-            fmtViewsNum(v.viewCount) +
-            ' views' +
-            likes;
+          var chan = document.createElement('div');
+          chan.className = 'tile-channel';
+          chan.textContent = v.channelTitle || '';
 
-          var badge = document.createElement('span');
-          badge.className = 'badge';
-          badge.textContent = 'youtube.com';
+          var stats = document.createElement('div');
+          stats.className = 'tile-stats';
+          var pillV = document.createElement('span');
+          pillV.className = 'tile-pill';
+          pillV.textContent = fmtViewsNum(v.viewCount) + ' views';
+          stats.appendChild(pillV);
+          var pillD = document.createElement('span');
+          pillD.className = 'tile-pill';
+          pillD.textContent = fmtPubDate(v.publishedAt);
+          stats.appendChild(pillD);
+          if (v.likeCount != null && isFinite(v.likeCount)) {
+            var pillL = document.createElement('span');
+            pillL.className = 'tile-pill';
+            pillL.textContent = fmtViewsNum(v.likeCount) + ' likes';
+            stats.appendChild(pillL);
+          }
 
-          meta.appendChild(a);
-          meta.appendChild(sub);
-          meta.appendChild(badge);
-          row.appendChild(thWrap);
-          row.appendChild(meta);
-          container.appendChild(row);
+          body.appendChild(titleA);
+          body.appendChild(chan);
+          body.appendChild(stats);
+
+          tile.appendChild(thLink);
+          tile.appendChild(body);
+          ideasTiles.appendChild(tile);
         });
       }
 
@@ -967,42 +1100,48 @@
         try {
           var cat = ideasCategory.value || 'any';
           var range = ideasRange.value || '1m';
+          var qStr = resolveIdeasSearchQ();
           var qs =
-            '?categoryId=' + encodeURIComponent(cat) + '&range=' + encodeURIComponent(range);
+            '?categoryId=' +
+            encodeURIComponent(cat) +
+            '&range=' +
+            encodeURIComponent(range) +
+            '&q=' +
+            encodeURIComponent(qStr) +
+            '&maxVideos=10';
           var res = await fetch('/api/videocreator/youtube-discovery' + qs);
           var data = await res.json().catch(function () {
             return {};
           });
           if (!res.ok || data.ok === false) {
+            ideasQuotaNote.textContent = data.hint || '';
             throw new Error(data.error || 'Request failed');
           }
-          renderIdeasList(ideasByViews, data.byViews);
-          renderIdeasList(ideasByDate, data.byDate);
+          ideasLastPayload = data;
           var tail = '';
           if (data.candidateCount != null) {
-            tail = ' · ' + data.candidateCount + ' videos in pool (from search)';
+            tail = ' · pool ' + data.candidateCount + ' from API search';
           }
           ideasStatus.textContent =
-            'Showing up to ' +
-            (data.byViews && data.byViews.length ? data.byViews.length : 0) +
-            ' each column. Window: published after ' +
+            'Showing ' +
+            (data.maxVideos || 10) +
+            ' tiles · query “' +
+            (data.searchQuery || qStr) +
+            '” · since ' +
             (data.publishedAfter || '') +
-            '.' +
             tail;
           ideasQuotaNote.textContent = data.quotaNote || '';
+          renderIdeasTiles();
         } catch (e) {
+          ideasLastPayload = null;
           ideasStatus.textContent = e.message || 'Discovery failed';
-          ideasByViews.innerHTML = '';
-          ideasByDate.innerHTML = '';
+          ideasTiles.innerHTML = '';
         } finally {
           ideasFetchBtn.disabled = false;
         }
       });
 
-      ideasByViews.innerHTML =
-        '<p class="hint" style="margin:0">Choose category and timeframe, then <strong>Discover videos</strong>.</p>';
-      ideasByDate.innerHTML =
-        '<p class="hint" style="margin:0">Right column uses the same pool, sorted by newest publish date.</p>';
+      renderIdeasTiles();
 
       fillVoiceSelect();
       loadWhisperStatus();
