@@ -803,6 +803,7 @@
                     <button class="task-tab active" onclick="showHorizonTask('masterImageSearch')">Master Image Search</button>
                     <button class="task-tab" onclick="showHorizonTask('cloneMasterImage')">Clone Master Image</button>
                     <button class="task-tab" onclick="showHorizonTask('addApplications')">Add Applications to HZ</button>
+                    <button class="task-tab" onclick="showHorizonTask('mspatch')">MSPatch</button>
                     <button class="task-tab" onclick="showHorizonTask('adminTasks')">Admin</button>
                     <button class="task-tab" onclick="showHorizonTask('vmMgmt')">VM Mgmt</button>
                     <!-- More tasks can be added here -->
@@ -968,6 +969,36 @@
                             <button class="btn btn-secondary" onclick="copyAppCommands()">Copy Commands</button>
                             <button class="btn btn-secondary" onclick="downloadAppCommands()">Download Script</button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- MSPatch Task -->
+                <div id="mspatchTask" class="horizon-task-panel">
+                    <h3>MSPatch Intelligence</h3>
+                    <p style="color:#666;">View monthly Microsoft CVE counts (last 24 months) for major OS families based on MSRC CVRF updates.</p>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 12px 0 16px;">
+                        <button class="btn btn-primary" onclick="loadMsPatchCveSummary()">Load CVE Summary</button>
+                        <span id="mspatchStatus" style="color:#666;">Ready.</span>
+                    </div>
+                    <div style="margin-bottom:10px; color:#666; font-size:12px;">
+                        OS tracked: Win10, Win11, Server 2016, Server 2022, Server 2026
+                    </div>
+                    <div id="mspatchTableWrap" class="table-container" style="max-height: 430px; overflow: auto; border:1px solid #ddd; border-radius: 6px;">
+                        <table class="data-table" id="mspatchTable">
+                            <thead>
+                                <tr>
+                                    <th>Month</th>
+                                    <th>Win10</th>
+                                    <th>Win11</th>
+                                    <th>Server 2016</th>
+                                    <th>Server 2022</th>
+                                    <th>Server 2026</th>
+                                </tr>
+                            </thead>
+                            <tbody id="mspatchTableBody">
+                                <tr><td colspan="6" class="empty-state">Click "Load CVE Summary" to fetch data.</td></tr>
+                            </tbody>
+                        </table>
                     </div>
                 </div>
 

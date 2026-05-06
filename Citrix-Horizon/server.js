@@ -7,9 +7,16 @@ const archiver = require('archiver');
 const fs = require('fs');
 const path = require('path');
 const cors = require('cors');
+const https = require('https');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const MSPATCH_CACHE_MS = 6 * 60 * 60 * 1000;
+let mspatchCache = {
+    at: 0,
+    key: '',
+    payload: null
+};
 
 // Boot diagnostics
 console.log('BOOT:', __filename);
@@ -171,6 +178,185 @@ app.get('/api/files', (req, res) => {
     } catch (error) {
         console.error('Error listing files:', error);
         res.status(500).json({ error: 'Failed to list files' });
+    }
+});
+
+function httpsGetJson(url, headers = {}) {
+    return new Promise((resolve, reject) => {
+        const req = https.get(url, { headers }, (response) => {
+            let body = '';
+            response.setEncoding('utf8');
+            response.on('data', (chunk) => { body += chunk; });
+            response.on('end', () => {
+                if (response.statusCode < 200 || response.statusCode >= 300) {
+                    return reject(new Error(`HTTP ${response.statusCode} from ${url}`));
+                }
+                try {
+                    resolve(JSON.parse(body || '{}'));
+                } catch (e) {
+                    reject(new Error(`Invalid JSON from ${url}: ${e.message}`));
+                }
+            });
+        });
+        req.on('error', reject);
+        req.end();
+    });
+}
+
+function monthKeyFromDate(dateObj) {
+    const y = dateObj.getUTCFullYear();
+    const m = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+}
+
+function buildMonthRange(months = 24) {
+    const n = Math.max(1, Math.min(36, parseInt(months, 10) || 24));
+    const now = new Date();
+    const out = [];
+    for (let i = n - 1; i >= 0; i--) {
+        const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+        out.push(monthKeyFromDate(d));
+    }
+    return out;
+}
+
+function classifyOsFromProductName(productName) {
+    const p = String(productName || '').toLowerCase();
+    if (!p) return [];
+    const hit = [];
+    if (p.includes('windows 10') && !p.includes('server')) hit.push('win10');
+    if (p.includes('windows 11') && !p.includes('server')) hit.push('win11');
+    if (p.includes('windows server 2016')) hit.push('server2016');
+    if (p.includes('windows server 2022')) hit.push('server2022');
+    // Microsoft currently labels latest LTSC as Server 2025 in many feeds; bucket under requested "2026".
+    if (p.includes('windows server 2026') || p.includes('windows server 2025')) hit.push('server2026');
+    return hit;
+}
+
+async function buildMsPatchMonthlySummary(months = 24) {
+    const monthRange = buildMonthRange(months);
+    const monthSet = new Set(monthRange);
+    const startMonth = monthRange[0];
+    const headers = { Accept: 'application/json' };
+    const apiKey = String(process.env.MSRC_API_KEY || '').trim();
+    if (apiKey) headers.apiKey = apiKey;
+
+    const updatesUrl = 'https://api.msrc.microsoft.com/cvrf/v2.0/updates';
+    const updatesJson = await httpsGetJson(updatesUrl, headers);
+    const updates = Array.isArray(updatesJson.value) ? updatesJson.value : [];
+
+    const filteredUpdates = updates.filter((u) => {
+        const dt = new Date(u.InitialReleaseDate || u.CurrentReleaseDate || 0);
+        if (isNaN(dt.getTime())) return false;
+        return monthKeyFromDate(dt) >= startMonth;
+    });
+
+    const countsByMonth = {};
+    monthRange.forEach((m) => {
+        countsByMonth[m] = {
+            win10: new Set(),
+            win11: new Set(),
+            server2016: new Set(),
+            server2022: new Set(),
+            server2026: new Set()
+        };
+    });
+
+    for (const update of filteredUpdates) {
+        const releaseDate = new Date(update.InitialReleaseDate || update.CurrentReleaseDate || 0);
+        if (isNaN(releaseDate.getTime())) continue;
+        const releaseMonth = monthKeyFromDate(releaseDate);
+        if (!monthSet.has(releaseMonth)) continue;
+
+        const docId = update.ID || update.CvrfUrl || update.Alias;
+        if (!docId) continue;
+        const docPath = String(docId).split('/').pop();
+        const documentUrl = `https://api.msrc.microsoft.com/cvrf/v2.0/document/${encodeURIComponent(docPath)}`;
+
+        let doc;
+        try {
+            doc = await httpsGetJson(documentUrl, headers);
+        } catch (err) {
+            console.warn('MSPatch document fetch failed:', docPath, err.message);
+            continue;
+        }
+
+        const productNamesById = {};
+        const productList = doc?.ProductTree?.FullProductName;
+        if (Array.isArray(productList)) {
+            for (const p of productList) {
+                if (p && p.ProductID) {
+                    productNamesById[String(p.ProductID)] = String(p.Value || '');
+                }
+            }
+        }
+
+        const vulnerabilities = Array.isArray(doc?.Vulnerability) ? doc.Vulnerability : [];
+        for (const vuln of vulnerabilities) {
+            const cve = String(vuln?.CVE || vuln?.ID || '').trim();
+            if (!cve) continue;
+
+            const productStatus = vuln?.ProductStatuses;
+            if (!Array.isArray(productStatus)) continue;
+
+            const osHits = new Set();
+            for (const statusRow of productStatus) {
+                const pids = Array.isArray(statusRow?.ProductID) ? statusRow.ProductID : [];
+                for (const pid of pids) {
+                    const osList = classifyOsFromProductName(productNamesById[String(pid)] || '');
+                    osList.forEach((os) => osHits.add(os));
+                }
+            }
+
+            osHits.forEach((os) => {
+                countsByMonth[releaseMonth][os].add(cve);
+            });
+        }
+    }
+
+    const monthly = monthRange.map((m) => ({
+        month: m,
+        win10: countsByMonth[m].win10.size,
+        win11: countsByMonth[m].win11.size,
+        server2016: countsByMonth[m].server2016.size,
+        server2022: countsByMonth[m].server2022.size,
+        server2026: countsByMonth[m].server2026.size
+    }));
+
+    return {
+        ok: true,
+        months: monthRange.length,
+        monthly,
+        fetchedAt: new Date().toISOString(),
+        source: 'MSRC CVRF v2.0'
+    };
+}
+
+app.get('/api/mspatch/cves/monthly', async (req, res) => {
+    try {
+        const months = Math.max(1, Math.min(36, parseInt(req.query.months, 10) || 24));
+        const cacheKey = `months:${months}`;
+        if (
+            mspatchCache.payload &&
+            mspatchCache.key === cacheKey &&
+            Date.now() - mspatchCache.at < MSPATCH_CACHE_MS
+        ) {
+            return res.json(mspatchCache.payload);
+        }
+
+        const payload = await buildMsPatchMonthlySummary(months);
+        mspatchCache = {
+            at: Date.now(),
+            key: cacheKey,
+            payload
+        };
+        return res.json(payload);
+    } catch (error) {
+        console.error('MSPatch API error:', error);
+        return res.status(500).json({
+            ok: false,
+            error: error.message || 'Failed to build MSPatch summary.'
+        });
     }
 });
 

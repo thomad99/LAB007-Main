@@ -2107,8 +2107,54 @@ function showHorizonTask(taskName) {
         populateMasterImagesCloneList();
     } else if (taskName === 'addApplications') {
         populateApplicationsHZList();
+    } else if (taskName === 'mspatch') {
+        loadMsPatchCveSummary();
     } else if (taskName === 'adminTasks') {
         // no-op for now
+    }
+}
+
+async function loadMsPatchCveSummary() {
+    const status = document.getElementById('mspatchStatus');
+    const tbody = document.getElementById('mspatchTableBody');
+    if (!status || !tbody) return;
+
+    status.textContent = 'Loading MSRC CVE data... this can take up to ~20 seconds.';
+    tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Loading…</td></tr>';
+
+    try {
+        const response = await fetch('/api/mspatch/cves/monthly?months=24');
+        const data = await response.json();
+        if (!response.ok || !data.ok) {
+            throw new Error((data && data.error) || 'Failed to fetch MSPatch summary.');
+        }
+
+        const rows = Array.isArray(data.monthly) ? data.monthly : [];
+        if (!rows.length) {
+            tbody.innerHTML = '<tr><td colspan="6" class="empty-state">No CVE data returned for selected period.</td></tr>';
+            status.textContent = 'No CVE rows returned.';
+            return;
+        }
+
+        tbody.innerHTML = rows
+            .map((r) => `
+                <tr>
+                    <td>${escapeHtml(r.month || '')}</td>
+                    <td>${Number(r.win10 || 0)}</td>
+                    <td>${Number(r.win11 || 0)}</td>
+                    <td>${Number(r.server2016 || 0)}</td>
+                    <td>${Number(r.server2022 || 0)}</td>
+                    <td>${Number(r.server2026 || 0)}</td>
+                </tr>
+            `)
+            .join('');
+
+        const fetchedAt = data.fetchedAt ? new Date(data.fetchedAt).toLocaleString() : 'now';
+        status.textContent = `Loaded ${rows.length} months. Source: MSRC CVRF. Updated: ${fetchedAt}.`;
+    } catch (error) {
+        console.error('MSPatch load error:', error);
+        status.textContent = `Error: ${error.message || 'Failed to load MSPatch data.'}`;
+        tbody.innerHTML = '<tr><td colspan="6" class="empty-state">Failed to load MSPatch data.</td></tr>';
     }
 }
 

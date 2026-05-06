@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet" />
+  <title>007Trade · Strategy</title>
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0a0a0b; color: #e8e8ea; }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 28px 18px 48px; }
+    h1 { margin: 0 0 8px; font-size: 1.45rem; }
+    .sub { color: #8b8b93; font-size: 0.9rem; margin-bottom: 20px; line-height: 1.5; }
+    a { color: #c9a227; font-weight: 600; }
+    .tabs { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:14px; }
+    .tabs a { color:#d4c07a; text-decoration:none; font-weight:700; font-size:0.82rem; border:1px solid #4a4124; border-radius:999px; padding:8px 12px; background:#131316; }
+    .tabs a.active { background:#c9a227; color:#111; border-color:#c9a227; }
+    .subtabs { display:flex; gap:8px; margin: 0 0 16px; }
+    .subtabs a { color:#d4c07a; text-decoration:none; font-weight:700; font-size:0.82rem; border:1px solid #4a4124; border-radius:10px; padding:8px 12px; background:#131316; }
+    .subtabs a.active { background:#c9a227; color:#111; border-color:#c9a227; }
+    .panel { border:1px solid #2a2a2f; border-radius:14px; padding:18px; margin-bottom:16px; background:#121214; }
+    .panel h2 { margin:0 0 12px; font-size:0.95rem; color:#c9a227; }
+    .grid { display:grid; grid-template-columns: repeat(auto-fit, minmax(260px,1fr)); gap: 12px; }
+    .card { border:1px solid #2f2f36; border-radius:12px; background:#18181c; padding:14px; }
+    .card h3 { margin:0 0 8px; font-size:0.95rem; color:#f3f3f5; }
+    .muted { color:#8b8b93; font-size:0.82rem; }
+    p { margin: 0; line-height: 1.5; color:#c4c4cc; font-size:0.9rem; }
+    label { display:block; font-size:0.85rem; color:#9a9aa3; margin-bottom:4px; }
+    input, textarea, select, button { width:100%; border-radius:10px; border:1px solid #3a3a44; background:#0e0e10; color:#e8e8ea; padding:10px 12px; font:inherit; }
+    textarea { min-height: 120px; resize: vertical; }
+    .row { display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+    @media (max-width: 700px) { .row { grid-template-columns: 1fr; } }
+    .primary { background:#c9a227; color:#111; border-color:#c9a227; font-weight:700; cursor:pointer; width:auto; padding:10px 22px; }
+    .ok { color:#86efac; font-size:0.85rem; }
+    .bad { color:#f87171; font-size:0.85rem; }
+    .entry { border-top:1px solid #2a2a2f; padding-top:12px; margin-top:12px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="tabs">
+      <a href="/007trade">Dashboard</a>
+      <a href="/007trade/simple-trade">Simple Trade</a>
+      <a href="/007trade/strategy" class="active">Strategy</a>
+      <a href="/007trade/auto-trade">Auto-Trade</a>
+      <a href="/007trade/circuit-breaker">Circuit Breaker</a>
+      <a href="/007trade/market-conditions">Market Conditions</a>
+      <a href="/007trade/copytrader">CopyTrader</a>
+      <a href="/007trade/reports">Reports</a>
+      <a href="/007trade/logs">Logs</a>
+      <a href="/007trade/settings">Settings</a>
+      <a href="/">Home</a>
+    </div>
+
+    <h1>007Trade · Strategy</h1>
+    <div class="subtabs">
+      <a href="/007trade/strategy" class="active">Strategy</a>
+      <a href="/007trade/auto-trade">Auto-Trade</a>
+    </div>
+    <p class="sub">
+      This page is your strategy knowledge hub. Known strategies are preloaded. Add new strategy intelligence as direct text or import from a web URL.
+      Risk, size, and position controls are centrally managed on <a href="/007trade/circuit-breaker">Circuit Breaker</a>.
+    </p>
+
+    <div class="panel">
+      <h2>Known strategies (preloaded)</h2>
+      <div id="builtinGrid" class="grid"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Add strategy intelligence</h2>
+      <div class="row">
+        <div>
+          <label for="sourceType">Input type</label>
+          <select id="sourceType">
+            <option value="text">Text</option>
+            <option value="url">Web URL</option>
+          </select>
+        </div>
+        <div>
+          <label for="title">Title</label>
+          <input id="title" type="text" maxlength="120" placeholder="Example: ORB variation for low-float names" />
+        </div>
+      </div>
+      <div id="textWrap" style="margin-top:12px;">
+        <label for="content">Strategy details</label>
+        <textarea id="content" placeholder="Paste setup logic, entries, exits, invalidation, and filters."></textarea>
+      </div>
+      <div id="urlWrap" style="display:none;margin-top:12px;">
+        <label for="url">Strategy URL</label>
+        <input id="url" type="url" placeholder="https://..." />
+      </div>
+      <div style="margin-top:12px; display:flex; align-items:center; gap:10px;">
+        <button type="button" class="primary" id="addBtn">Save strategy note</button>
+        <span id="okMsg" class="ok" style="display:none;">Saved.</span>
+        <span id="errMsg" class="bad" style="display:none;"></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <h2>Saved strategy knowledge</h2>
+      <div id="entriesRoot" class="muted">Loading…</div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var entries = [];
+
+      function e(id) { return document.getElementById(id); }
+      function h(s) { return String(s || '').replace(/[&<>"']/g, function (c) { return ({ '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;' })[c]; }); }
+
+      function renderBuiltins(list) {
+        var root = e('builtinGrid');
+        root.innerHTML = '';
+        (list || []).forEach(function (s) {
+          var div = document.createElement('div');
+          div.className = 'card';
+          div.innerHTML =
+            '<h3>' + h(s.name) + '</h3>' +
+            '<p class="muted" style="margin-bottom:8px;">' + h(s.id) + ' · ' + h(s.style || '') + '</p>' +
+            '<p>' + h(s.summary || '') + '</p>';
+          root.appendChild(div);
+        });
+      }
+
+      function renderEntries() {
+        var root = e('entriesRoot');
+        if (!entries.length) {
+          root.textContent = 'No custom strategy notes yet.';
+          return;
+        }
+        root.innerHTML = entries.map(function (x) {
+          var src = x.sourceType === 'url' && x.url ? ('<a href="' + h(x.url) + '" target="_blank" rel="noopener">source link</a>') : 'text note';
+          return (
+            '<div class="entry">' +
+              '<div style="display:flex;justify-content:space-between;gap:10px;align-items:center;">' +
+                '<strong>' + h(x.title || 'Strategy note') + '</strong>' +
+                '<span class="muted">' + h((x.createdAt || '').replace('T', ' ').slice(0, 19)) + '</span>' +
+              '</div>' +
+              '<div class="muted" style="margin:6px 0 8px;">' + src + '</div>' +
+              '<p>' + h(x.content || '') + '</p>' +
+            '</div>'
+          );
+        }).join('');
+      }
+
+      function load() {
+        return fetch('/api/007trade/strategy-knowledge')
+          .then(function (r) { return r.json(); })
+          .then(function (d) {
+            renderBuiltins(d.builtins || []);
+            entries = Array.isArray(d.entries) ? d.entries : [];
+            renderEntries();
+          })
+          .catch(function (err) {
+            e('entriesRoot').textContent = err.message || 'Failed to load strategy knowledge.';
+          });
+      }
+
+      e('sourceType').addEventListener('change', function () {
+        var isUrl = e('sourceType').value === 'url';
+        e('textWrap').style.display = isUrl ? 'none' : 'block';
+        e('urlWrap').style.display = isUrl ? 'block' : 'none';
+      });
+
+      e('addBtn').addEventListener('click', function () {
+        e('okMsg').style.display = 'none';
+        e('errMsg').style.display = 'none';
+        var sourceType = e('sourceType').value;
+        var payload = {
+          sourceType: sourceType,
+          title: e('title').value.trim(),
+          content: e('content').value.trim(),
+          url: e('url').value.trim()
+        };
+        fetch('/api/007trade/strategy-knowledge', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        })
+          .then(function (r) {
+            if (!r.ok) return r.json().then(function (j) { throw new Error(j.error || 'Save failed'); });
+            return r.json();
+          })
+          .then(function () {
+            e('okMsg').style.display = 'inline';
+            e('content').value = '';
+            e('url').value = '';
+            e('title').value = '';
+            return load();
+          })
+          .catch(function (err) {
+            e('errMsg').textContent = err.message || 'Save failed';
+            e('errMsg').style.display = 'inline';
+          });
+      });
+
+      load();
+    })();
+  </script>
+</body>
+</html>

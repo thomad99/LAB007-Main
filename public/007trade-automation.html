@@ -27,6 +27,12 @@
     }
     .tabs a.active { background:#c9a227; color:#111; border-color:#c9a227; }
     .tabs a:hover { border-color:#c9a227; }
+    .subtabs { display:flex; gap:8px; margin: 0 0 16px; }
+    .subtabs a {
+      color:#d4c07a; text-decoration:none; font-weight:700; font-size:0.82rem;
+      border:1px solid #4a4124; border-radius:10px; padding:8px 12px; background:#131316;
+    }
+    .subtabs a.active { background:#c9a227; color:#111; border-color:#c9a227; }
     .panel {
       border: 1px solid #2a2a2f; border-radius: 14px; padding: 18px; margin-bottom: 18px;
       background: #121214;
@@ -76,6 +82,7 @@
     <div class="tabs">
       <a href="/007trade">Dashboard</a>
       <a href="/007trade/simple-trade">Simple Trade</a>
+      <a href="/007trade/strategy">Strategy</a>
       <a href="/007trade/auto-trade" class="active">Auto-Trade</a>
       <a href="/007trade/circuit-breaker">Circuit Breaker</a>
       <a href="/007trade/market-conditions">Market Conditions</a>
@@ -86,8 +93,14 @@
       <a href="/">Home</a>
     </div>
     <h1>007Trade · Automation</h1>
+    <div class="subtabs">
+      <a href="/007trade/strategy">Strategy</a>
+      <a href="/007trade/auto-trade" class="active">Auto-Trade</a>
+    </div>
     <p class="sub">
-      The server polls Alpaca on an interval when the master switch is on. Orders use the same path as manual <strong>Submit</strong> (bracket + auto-qty from your risk profile in Settings). Supported automation:
+      Configure and execute strategy rules here. Global risk, sizing, and position controls now live on the
+      <a href="/007trade/circuit-breaker">Circuit Breaker</a> page as the single source of truth.
+      Supported automation:
       <strong>opening-range</strong> (long / short / both, optional exit outside the range, flatten before close),
       <strong>momentum</strong> family (prior completed day high + optional min breakout %),
       <strong>mean-reversion</strong> (buy when price has dropped from the session open by your fade %, after a minimum number of minutes).
@@ -98,54 +111,6 @@
     </div>
 
     <div class="panel">
-      <h2>Controls</h2>
-      <div class="field inline">
-        <input type="checkbox" id="masterEnabled" />
-        <label for="masterEnabled">Master: enable automated polling</label>
-      </div>
-      <div class="field inline">
-        <input type="checkbox" id="allowLiveAutomation" />
-        <label for="allowLiveAutomation">Allow automation when Alpaca is <strong>live</strong> (not paper)</label>
-      </div>
-      <div class="field">
-        <label for="pollIntervalSec">Poll interval (seconds, 30–300)</label>
-        <input type="number" id="pollIntervalSec" min="30" max="300" step="10" value="60" />
-      </div>
-      <div class="field inline">
-        <input type="checkbox" id="dryRun" />
-        <label for="dryRun">Dry run — log signals and risk checks only (no orders sent)</label>
-      </div>
-      <div class="field inline">
-        <input type="checkbox" id="marketConditionSizingEnabled" />
-        <label for="marketConditionSizingEnabled">Scale risk by Market Conditions regime multiplier</label>
-      </div>
-      <div class="row2">
-        <div class="field">
-          <label for="maxDailyLossUsd">Max daily loss (USD, 0 = off)</label>
-          <input type="number" id="maxDailyLossUsd" min="0" step="50" value="0" />
-        </div>
-        <div class="field">
-          <label for="maxConcurrentPositions">Max open positions (0 = unlimited)</label>
-          <input type="number" id="maxConcurrentPositions" min="0" max="100" step="1" value="0" />
-        </div>
-        <div class="field">
-          <label for="marketConditionRiskFloor">Risk multiplier floor</label>
-          <input type="number" id="marketConditionRiskFloor" min="0.1" max="1.5" step="0.05" value="0.35" />
-        </div>
-        <div class="field">
-          <label for="marketConditionRiskCeiling">Risk multiplier ceiling</label>
-          <input type="number" id="marketConditionRiskCeiling" min="0.2" max="2" step="0.05" value="1.1" />
-        </div>
-      </div>
-      <p class="muted" id="dailyStatus"></p>
-      <p class="muted" id="marketTypeStatus"></p>
-      <p class="muted" id="lastTick">Last tick: —</p>
-      <button type="button" class="primary" id="saveBtn">Save settings</button>
-      <span id="saveMsg" class="ok" style="display:none;margin-left:12px">Saved.</span>
-      <span id="errMsg" class="bad" style="display:none;margin-left:12px"></span>
-    </div>
-
-    <div class="panel">
       <h2>Rules</h2>
       <p class="muted" style="margin-top:0">
         Each rule targets one <strong>strategy</strong> and a symbol list. Per-symbol entry limits and minimum time between entries apply to that rule. ORB-only options are ignored for other strategies.
@@ -153,6 +118,11 @@
       </p>
       <div id="rulesRoot"></div>
       <button type="button" class="ghost" id="addRuleBtn">+ Add rule</button>
+      <button type="button" class="primary" id="saveBtn">Save auto-trade rules</button>
+      <span id="saveMsg" class="ok" style="display:none;margin-left:12px">Saved.</span>
+      <span id="errMsg" class="bad" style="display:none;margin-left:12px"></span>
+      <p class="muted" id="dailyStatus"></p>
+      <p class="muted" id="lastTick">Last tick: —</p>
     </div>
 
     <div class="panel">
@@ -324,19 +294,6 @@
           .then(function (d) {
             automation = d.automation || {};
             if (!Array.isArray(automation.rules)) automation.rules = [];
-            document.getElementById('masterEnabled').checked = !!automation.masterEnabled;
-            document.getElementById('allowLiveAutomation').checked = !!automation.allowLiveAutomation;
-            document.getElementById('pollIntervalSec').value = automation.pollIntervalSec || 60;
-            document.getElementById('dryRun').checked = !!automation.dryRun;
-            document.getElementById('marketConditionSizingEnabled').checked = !!automation.marketConditionSizingEnabled;
-            document.getElementById('maxDailyLossUsd').value =
-              automation.maxDailyLossUsd != null ? automation.maxDailyLossUsd : 0;
-            document.getElementById('maxConcurrentPositions').value =
-              automation.maxConcurrentPositions != null ? automation.maxConcurrentPositions : 0;
-            document.getElementById('marketConditionRiskFloor').value =
-              automation.marketConditionRiskFloor != null ? automation.marketConditionRiskFloor : 0.35;
-            document.getElementById('marketConditionRiskCeiling').value =
-              automation.marketConditionRiskCeiling != null ? automation.marketConditionRiskCeiling : 1.1;
             var d = automation.daily || {};
             var dailyLine = 'ET session tracking: ' + (d.etDate || '—');
             if (d.halted) dailyLine += ' — entries paused (daily loss limit). Exits can still run.';
@@ -344,14 +301,6 @@
               dailyLine += ' · Baseline equity (start of ET day) ~' + Number(d.startEquity).toFixed(2);
             }
             document.getElementById('dailyStatus').textContent = dailyLine;
-            document.getElementById('marketTypeStatus').textContent =
-              automation.marketConditionSizingEnabled
-                ? 'Market regime sizing: ' +
-                  (automation.lastMarketType || '—') +
-                  ' · multiplier ' +
-                  (automation.lastMarketMultiplier != null ? Number(automation.lastMarketMultiplier).toFixed(2) : '1.00') +
-                  'x'
-                : 'Market regime sizing: disabled';
             document.getElementById('lastTick').textContent =
               'Last tick: ' + (automation.lastTickAt || '—');
             renderRules();
@@ -394,38 +343,10 @@
         if (!automation) automation = { rules: [] };
         if (!Array.isArray(automation.rules)) automation.rules = [];
 
-        automation.masterEnabled = document.getElementById('masterEnabled').checked;
-        automation.allowLiveAutomation = document.getElementById('allowLiveAutomation').checked;
-        automation.pollIntervalSec = Math.min(300, Math.max(30, parseInt(document.getElementById('pollIntervalSec').value, 10) || 60));
-        automation.dryRun = document.getElementById('dryRun').checked;
-        automation.marketConditionSizingEnabled = document.getElementById('marketConditionSizingEnabled').checked;
-        automation.maxDailyLossUsd = Math.max(0, parseFloat(document.getElementById('maxDailyLossUsd').value) || 0);
-        automation.maxConcurrentPositions = Math.min(
-          100,
-          Math.max(0, parseInt(document.getElementById('maxConcurrentPositions').value, 10) || 0)
-        );
-        automation.marketConditionRiskFloor = Math.min(
-          1.5,
-          Math.max(0.1, parseFloat(document.getElementById('marketConditionRiskFloor').value) || 0.35)
-        );
-        automation.marketConditionRiskCeiling = Math.min(
-          2,
-          Math.max(0.2, parseFloat(document.getElementById('marketConditionRiskCeiling').value) || 1.1)
-        );
-
         fetch('/api/007trade/automation', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            masterEnabled: automation.masterEnabled,
-            allowLiveAutomation: automation.allowLiveAutomation,
-            pollIntervalSec: automation.pollIntervalSec,
-            dryRun: automation.dryRun,
-            maxDailyLossUsd: automation.maxDailyLossUsd,
-            maxConcurrentPositions: automation.maxConcurrentPositions,
-            marketConditionSizingEnabled: automation.marketConditionSizingEnabled,
-            marketConditionRiskFloor: automation.marketConditionRiskFloor,
-            marketConditionRiskCeiling: automation.marketConditionRiskCeiling,
             rules: automation.rules
           })
         })
