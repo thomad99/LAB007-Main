@@ -164,68 +164,82 @@
       color: #fde68a;
       background: #252b36;
     }
-    .ideas-tiles {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-      gap: 16px;
+    .ideas-table-wrap {
       margin-top: 18px;
-    }
-    .idea-tile {
-      background: #12151c;
+      width: 100%;
+      overflow-x: auto;
       border: 1px solid #2a3040;
-      border-radius: 14px;
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+      border-radius: 12px;
+      background: #12151c;
     }
-    .idea-tile:hover {
-      border-color: #f0b42955;
-      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.42);
+    .ideas-results-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
     }
-    .idea-tile a.idea-tile-thumb {
+    .ideas-results-table col.ideas-col-clip { width: 50%; }
+    .ideas-results-table col.ideas-col-meta { width: 50%; }
+    .ideas-results-table tbody tr {
+      border-bottom: 1px solid #2a3040;
+    }
+    .ideas-results-table tbody tr:last-child { border-bottom: none; }
+    .ideas-results-table tbody tr:hover td {
+      background: rgba(240, 180, 41, 0.06);
+    }
+    .ideas-cell-clip {
+      vertical-align: top;
+      padding: 14px 16px;
+      box-sizing: border-box;
+    }
+    .ideas-cell-meta {
+      vertical-align: top;
+      padding: 14px 16px;
+      box-sizing: border-box;
+    }
+    .ideas-cell-clip a.ideas-thumb-link {
       display: block;
+      width: 100%;
+      max-width: 100%;
       aspect-ratio: 16 / 9;
       background: #0a0b0f;
-      position: relative;
+      border-radius: 10px;
+      overflow: hidden;
+      border: 1px solid #2a3040;
     }
-    .idea-tile a.idea-tile-thumb img {
+    .ideas-cell-clip a.ideas-thumb-link img {
       width: 100%;
       height: 100%;
       object-fit: cover;
       display: block;
+      vertical-align: middle;
     }
-    .idea-tile .tile-body { padding: 12px 14px 14px; flex: 1; display: flex; flex-direction: column; gap: 8px; }
-    .idea-tile a.tile-title {
+    .ideas-cell-meta .ideas-title {
       font-weight: 650;
-      font-size: 0.92rem;
-      line-height: 1.38;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      margin: 0 0 8px;
+    }
+    .ideas-cell-meta .ideas-title a {
       color: #e8eaed;
       text-decoration: none;
       word-break: break-word;
     }
-    .idea-tile a.tile-title:hover { color: #f0b429; }
-    .idea-tile .tile-channel {
-      font-size: 0.78rem;
+    .ideas-cell-meta .ideas-title a:hover { color: #f0b429; }
+    .ideas-cell-meta .ideas-channel {
+      font-size: 0.8rem;
       color: #9aa0aa;
-      line-height: 1.4;
+      line-height: 1.45;
+      margin: 0 0 10px;
       word-break: break-word;
     }
-    .idea-tile .tile-stats {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 6px 10px;
-      margin-top: auto;
-    }
-    .idea-tile .tile-pill {
-      font-size: 0.7rem;
-      padding: 3px 9px;
-      border-radius: 8px;
-      background: #1c212c;
-      border: 1px solid #354050;
-      color: #cdd5e1;
+    .ideas-cell-meta .ideas-stats {
+      font-size: 0.78rem;
+      color: #b8c0cc;
+      line-height: 1.55;
+      margin: 0;
       font-variant-numeric: tabular-nums;
     }
+    .ideas-cell-meta .ideas-stats span { margin-right: 12px; white-space: nowrap; }
   </style>
 </head>
 <body>
@@ -392,7 +406,7 @@
       <div class="panel">
         <h2>YouTube — content ideas (public stats)</h2>
         <p class="hint" id="ideasApiHint" style="margin-top:0"></p>
-        <p class="hint">Choose a quick topic or type your own search, optional YouTube category to narrow, and a time window. You get up to <strong>10</strong> tiles (ranked by views or by date). Inspiration only — respect YouTube’s Terms; this uses the Data API and your quota.</p>
+        <p class="hint">Choose a quick topic or type your own search, optional YouTube category to narrow, and a time window. You get up to <strong>10</strong> rows in a table (clip thumbnail ~50% width, details ~50%). Inspiration only — respect YouTube’s Terms; this uses the Data API and your quota.</p>
 
         <div style="margin-top:10px;">
           <label>Quick searches</label>
@@ -441,10 +455,10 @@
           </div>
         </div>
 
-        <div class="ideas-sort-bar" role="toolbar" aria-label="Sort tiles">
+        <div class="ideas-sort-bar" role="toolbar" aria-label="Sort table rows">
           <span>Tile order</span>
-          <button type="button" class="sort-btn active" id="ideasSortViewsBtn" aria-pressed="true" data-sort="views">Most views</button>
-          <button type="button" class="sort-btn" id="ideasSortDateBtn" aria-pressed="false" data-sort="date">Newest first</button>
+          <button type="button" class="sort-btn active" id="ideasSortViewsBtn" aria-pressed="true" data-sort="views">Sort: most views</button>
+          <button type="button" class="sort-btn" id="ideasSortDateBtn" aria-pressed="false" data-sort="date">Sort: newest</button>
         </div>
 
         <div class="btn-row">
@@ -453,7 +467,7 @@
         </div>
         <p class="hint" id="ideasQuotaNote" style="margin-top:8px;"></p>
 
-        <div id="ideasTiles"></div>
+        <div id="ideasTiles" class="ideas-table-wrap"></div>
       </div>
     </div>
   </div>
@@ -1011,22 +1025,39 @@
         ideasTiles.innerHTML = '';
         if (!ideasLastPayload || !ideasLastPayload.ok) {
           ideasTiles.innerHTML =
-            '<p class="hint" style="margin:0">Use quick searches or your own keywords, filters, then <strong>Discover videos</strong> for tiled results.</p>';
+            '<p class="hint" style="margin:14px 16px">Use quick searches or your own keywords, filters, then <strong>Discover videos</strong> for a compact table.</p>';
           return;
         }
         var list =
           ideasTileSort === 'date' ? ideasLastPayload.byDate : ideasLastPayload.byViews;
         if (!list || !list.length) {
           ideasTiles.innerHTML =
-            '<p class="hint" style="margin:0">No videos matched. Broaden your search or widen the timeframe.</p>';
+            '<p class="hint" style="margin:14px 16px">No videos matched. Broaden your search or widen the timeframe.</p>';
           return;
         }
-        list.forEach(function (v) {
-          var tile = document.createElement('article');
-          tile.className = 'idea-tile';
 
+        var table = document.createElement('table');
+        table.className = 'ideas-results-table';
+        table.setAttribute('role', 'grid');
+
+        var cg = document.createElement('colgroup');
+        var col1 = document.createElement('col');
+        col1.className = 'ideas-col-clip';
+        var col2 = document.createElement('col');
+        col2.className = 'ideas-col-meta';
+        cg.appendChild(col1);
+        cg.appendChild(col2);
+        table.appendChild(cg);
+
+        var tbody = document.createElement('tbody');
+
+        list.forEach(function (v) {
+          var tr = document.createElement('tr');
+
+          var tdClip = document.createElement('td');
+          tdClip.className = 'ideas-cell-clip';
           var thLink = document.createElement('a');
-          thLink.className = 'idea-tile-thumb';
+          thLink.className = 'ideas-thumb-link';
           thLink.href = v.url;
           thLink.target = '_blank';
           thLink.rel = 'noopener noreferrer';
@@ -1036,46 +1067,49 @@
           if (src) img.src = src;
           else img.style.opacity = '0.15';
           thLink.appendChild(img);
+          tdClip.appendChild(thLink);
 
-          var body = document.createElement('div');
-          body.className = 'tile-body';
+          var tdMeta = document.createElement('td');
+          tdMeta.className = 'ideas-cell-meta';
 
+          var titleP = document.createElement('p');
+          titleP.className = 'ideas-title';
           var titleA = document.createElement('a');
-          titleA.className = 'tile-title';
           titleA.href = v.url;
           titleA.target = '_blank';
           titleA.rel = 'noopener noreferrer';
           titleA.textContent = v.title || v.videoId || 'Video';
+          titleP.appendChild(titleA);
 
-          var chan = document.createElement('div');
-          chan.className = 'tile-channel';
-          chan.textContent = v.channelTitle || '';
+          var chanP = document.createElement('p');
+          chanP.className = 'ideas-channel';
+          chanP.textContent = v.channelTitle || '—';
 
-          var stats = document.createElement('div');
-          stats.className = 'tile-stats';
-          var pillV = document.createElement('span');
-          pillV.className = 'tile-pill';
-          pillV.textContent = fmtViewsNum(v.viewCount) + ' views';
-          stats.appendChild(pillV);
-          var pillD = document.createElement('span');
-          pillD.className = 'tile-pill';
-          pillD.textContent = fmtPubDate(v.publishedAt);
-          stats.appendChild(pillD);
+          var statsP = document.createElement('p');
+          statsP.className = 'ideas-stats';
+          var sViews = document.createElement('span');
+          sViews.textContent = fmtViewsNum(v.viewCount) + ' views';
+          statsP.appendChild(sViews);
+          var sDate = document.createElement('span');
+          sDate.textContent = fmtPubDate(v.publishedAt);
+          statsP.appendChild(sDate);
           if (v.likeCount != null && isFinite(v.likeCount)) {
-            var pillL = document.createElement('span');
-            pillL.className = 'tile-pill';
-            pillL.textContent = fmtViewsNum(v.likeCount) + ' likes';
-            stats.appendChild(pillL);
+            var sLikes = document.createElement('span');
+            sLikes.textContent = fmtViewsNum(v.likeCount) + ' likes';
+            statsP.appendChild(sLikes);
           }
 
-          body.appendChild(titleA);
-          body.appendChild(chan);
-          body.appendChild(stats);
+          tdMeta.appendChild(titleP);
+          tdMeta.appendChild(chanP);
+          tdMeta.appendChild(statsP);
 
-          tile.appendChild(thLink);
-          tile.appendChild(body);
-          ideasTiles.appendChild(tile);
+          tr.appendChild(tdClip);
+          tr.appendChild(tdMeta);
+          tbody.appendChild(tr);
         });
+
+        table.appendChild(tbody);
+        ideasTiles.appendChild(table);
       }
 
       function loadIdeasApiHint() {
@@ -1125,7 +1159,7 @@
           ideasStatus.textContent =
             'Showing ' +
             (data.maxVideos || 10) +
-            ' tiles · query “' +
+            ' rows · query “' +
             (data.searchQuery || qStr) +
             '” · since ' +
             (data.publishedAfter || '') +
