@@ -3386,8 +3386,17 @@ function mmContractView(c, customerName) {
     documentPath: c.filePath ? `/api/marketing-manager/contracts/${c.id}/document` : '',
     signedDocumentPath: signedDocPath,
     includeAgentSignature: Boolean(c.includeAgentSignature),
-    agentSignatureDate: c.agentSignatureDate || ''
+    agentSignatureDate: c.agentSignatureDate || '',
+    agentName: c.agentName || ''
   };
+}
+
+function mmSanitizeAgentName(value) {
+  return String(value || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 200);
 }
 
 function readMarketingAgentSignature() {
@@ -3400,6 +3409,7 @@ function readMarketingAgentSignature() {
     if (!signatureDataUrl || !mmValidSignatureDataUrl(signatureDataUrl)) return null;
     return {
       signatureDataUrl,
+      agentName: mmSanitizeAgentName(data.agentName),
       updatedAt: data.updatedAt || null
     };
   } catch {
@@ -3407,11 +3417,12 @@ function readMarketingAgentSignature() {
   }
 }
 
-function writeMarketingAgentSignature(signatureDataUrl) {
+function writeMarketingAgentSignature(signatureDataUrl, agentName) {
   const dir = path.dirname(marketingManagerAgentSignaturePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   const payload = {
     signatureDataUrl: String(signatureDataUrl || '').trim(),
+    agentName: mmSanitizeAgentName(agentName),
     updatedAt: new Date().toISOString()
   };
   fs.writeFileSync(marketingManagerAgentSignaturePath, JSON.stringify(payload, null, 2), 'utf8');
@@ -3419,15 +3430,21 @@ function writeMarketingAgentSignature(signatureDataUrl) {
 }
 
 /** Appends Agency block after client section; dateStr is YYYY-MM-DD (document generation date). */
-function mmAppendAgentSignatureBlocks(bodyText, bodyHtml, signatureDataUrl, dateStr) {
+function mmAppendAgentSignatureBlocks(bodyText, bodyHtml, signatureDataUrl, dateStr, agentName) {
   const safeDate = String(dateStr || '').trim();
-  const textAppend = `\n\n---\nAgency representative (LAB007)\nDate: ${safeDate}\nAgent Signature:\n`;
+  const safeName = mmSanitizeAgentName(agentName);
+  const namedTextLine = safeName ? `\nName: ${safeName}` : '';
+  const textAppend = `\n\n---\nAgency representative (LAB007)\nDate: ${safeDate}\nAgent Signature:\n${namedTextLine ? `${namedTextLine}\n` : ''}`;
   const escSrc = String(signatureDataUrl || '').replace(/"/g, '&quot;');
+  const namedHtmlLine = safeName
+    ? `<p style="margin-top:4px;"><strong>Name:</strong> ${mmEscapeHtml(safeName)}</p>`
+    : '';
   const htmlAppend = `<hr />
 <p><strong>Agency representative (LAB007)</strong></p>
 <p><strong>Date:</strong> ${mmEscapeHtml(safeDate)}</p>
 <p><strong>Agent Signature:</strong></p>
-<p><img alt="Agent signature" src="${escSrc}" style="max-height:96px;max-width:320px;border:1px solid rgba(0,0,0,0.12);border-radius:6px;background:#fff;" /></p>`;
+<p><img alt="Agent signature" src="${escSrc}" style="max-height:96px;max-width:320px;border:1px solid rgba(0,0,0,0.12);border-radius:6px;background:#fff;" /></p>
+${namedHtmlLine}`;
   return {
     body: String(bodyText || '') + textAppend,
     bodyHtml: String(bodyHtml || '') + htmlAppend
@@ -3440,9 +3457,10 @@ function mmCreateOriginalContractPdf(contract) {
   const title = String(contract.title || 'Contract');
   const text = `${title}\n\n${body}`;
   const agentSig = String(contract._agentSigForPdf || '').trim();
+  const agentName = String(contract._agentNameForPdf || contract.agentName || '').trim();
   try {
     // Node-native fallback so created-doc workflow always has an original PDF.
-    fs.writeFileSync(outputPath, mmBuildSignedContractPdfFromText(text, agentSig));
+    fs.writeFileSync(outputPath, mmBuildSignedContractPdfFromText(text, agentSig, agentName));
     if (!fs.existsSync(outputPath)) return null;
     return outputPath;
   } catch (err) {
@@ -3725,7 +3743,7 @@ function mmGetJpegDimensions(buf) {
   return null;
 }
 
-function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
+function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl, agentName) {
   const rawLines = String(textBody || '').split('\n');
   const lines = [];
   rawLines.forEach((line) => {
@@ -3754,6 +3772,11 @@ function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
   const jpegSig = parsedSig && parsedSig.mime === 'image/jpeg' ? parsedSig : null;
   const jpegDims = jpegSig ? mmGetJpegDimensions(jpegSig.buffer) : null;
   const drawSignature = Boolean(jpegSig && jpegDims);
+  const safeAgentName = String(agentName || '')
+    .replace(/[\r\n\t]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 200);
 
   const contentRows = ['BT', '/F1 11 Tf', '50 760 Td', '14 TL'];
   finalLines.forEach((line, idx) => {
@@ -3774,6 +3797,14 @@ function mmBuildSignedContractPdfFromText(textBody, signatureDataUrl) {
     contentRows.push(`${sigW} 0 0 ${sigH} ${sigX} ${sigY} cm`);
     contentRows.push('/Im1 Do');
     contentRows.push('Q');
+    if (safeAgentName) {
+      const nameY = Math.max(40, sigY - 14);
+      contentRows.push('BT');
+      contentRows.push('/F1 10 Tf');
+      contentRows.push(`${sigX} ${nameY} Td`);
+      contentRows.push(`(${mmPdfEscape(`Name: ${safeAgentName}`)}) Tj`);
+      contentRows.push('ET');
+    }
   }
   const stream = contentRows.join('\n');
   const objects = [];
@@ -3872,25 +3903,30 @@ function mmEffectivePythonForMarketingPdf() {
 }
 
 /** Appends a new page with Agency (LAB007) signature at end of PDF; leaves existing pages unchanged. */
-function mmStampAgentPageOnPdf(inputPath, outputPath, agentImagePath, dateStr) {
+function mmStampAgentPageOnPdf(inputPath, outputPath, agentImagePath, dateStr, agentName) {
   try {
     const stampScript = path.join(__dirname, 'lib', 'pdf_stamp_agent.py');
     const effectivePy = mmEffectivePythonForMarketingPdf();
-    const py = spawnSync(
-      effectivePy,
-      [
-        stampScript,
-        '--input',
-        inputPath,
-        '--output',
-        outputPath,
-        '--signature',
-        agentImagePath,
-        '--date',
-        String(dateStr || '')
-      ],
-      { encoding: 'utf8' }
-    );
+    const args = [
+      stampScript,
+      '--input',
+      inputPath,
+      '--output',
+      outputPath,
+      '--signature',
+      agentImagePath,
+      '--date',
+      String(dateStr || '')
+    ];
+    const safeName = String(agentName || '')
+      .replace(/[\r\n\t]+/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, 200);
+    if (safeName) {
+      args.push('--name', safeName);
+    }
+    const py = spawnSync(effectivePy, args, { encoding: 'utf8' });
     if (py.status !== 0 || !fs.existsSync(outputPath)) {
       console.warn('[Marketing Manager] Agent PDF stamp failed:', py.stderr || py.stdout || py.status);
       return false;
@@ -4335,12 +4371,13 @@ app.get('/api/marketing-manager/agent-signature', (req, res) => {
   try {
     const agent = readMarketingAgentSignature();
     if (!agent) {
-      return res.json({ hasSignature: false, updatedAt: null, signatureDataUrl: '' });
+      return res.json({ hasSignature: false, updatedAt: null, signatureDataUrl: '', agentName: '' });
     }
     return res.json({
       hasSignature: true,
       updatedAt: agent.updatedAt || null,
-      signatureDataUrl: agent.signatureDataUrl
+      signatureDataUrl: agent.signatureDataUrl,
+      agentName: agent.agentName || ''
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -4349,12 +4386,28 @@ app.get('/api/marketing-manager/agent-signature', (req, res) => {
 
 app.post('/api/marketing-manager/agent-signature', (req, res) => {
   try {
-    const signatureDataUrl = String(req.body?.signatureDataUrl || '').trim();
-    if (!signatureDataUrl || !mmValidSignatureDataUrl(signatureDataUrl)) {
+    const incomingSig = String(req.body?.signatureDataUrl || '').trim();
+    const incomingName = mmSanitizeAgentName(req.body?.agentName);
+    const existing = readMarketingAgentSignature();
+
+    let effectiveSig = '';
+    if (incomingSig) {
+      if (!mmValidSignatureDataUrl(incomingSig)) {
+        return res.status(400).json({ error: 'Valid signature image (PNG or JPEG data URL) is required' });
+      }
+      effectiveSig = incomingSig;
+    } else if (existing?.signatureDataUrl) {
+      effectiveSig = existing.signatureDataUrl;
+    } else {
       return res.status(400).json({ error: 'Valid signature image (PNG or JPEG data URL) is required' });
     }
-    const saved = writeMarketingAgentSignature(signatureDataUrl);
-    return res.json({ success: true, updatedAt: saved.updatedAt });
+
+    const saved = writeMarketingAgentSignature(effectiveSig, incomingName);
+    return res.json({
+      success: true,
+      updatedAt: saved.updatedAt,
+      agentName: saved.agentName || ''
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -4713,6 +4766,7 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
     const createdAt = new Date().toISOString();
     const genDate = createdAt.slice(0, 10);
     let agentSigForPdf = '';
+    let agentNameSnapshot = '';
     if (includeAgentSignature) {
       const agent = readMarketingAgentSignature();
       if (!agent?.signatureDataUrl) {
@@ -4720,7 +4774,8 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
           error: 'Save your Agent signature first (Electronic contracts → Agent signature), or uncheck “Include Agent signature”.'
         });
       }
-      const appended = mmAppendAgentSignatureBlocks(body, bodyHtml, agent.signatureDataUrl, genDate);
+      agentNameSnapshot = agent.agentName || '';
+      const appended = mmAppendAgentSignatureBlocks(body, bodyHtml, agent.signatureDataUrl, genDate, agentNameSnapshot);
       body = appended.body;
       bodyHtml = appended.bodyHtml;
       agentSigForPdf = agent.signatureDataUrl;
@@ -4742,9 +4797,14 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
       signatureDataUrl: '',
       sourceType: 'created',
       includeAgentSignature,
-      agentSignatureDate: includeAgentSignature ? genDate : ''
+      agentSignatureDate: includeAgentSignature ? genDate : '',
+      agentName: includeAgentSignature ? agentNameSnapshot : ''
     };
-    const originalPdfPath = mmCreateOriginalContractPdf({ ...contract, _agentSigForPdf: agentSigForPdf });
+    const originalPdfPath = mmCreateOriginalContractPdf({
+      ...contract,
+      _agentSigForPdf: agentSigForPdf,
+      _agentNameForPdf: agentNameSnapshot
+    });
     if (originalPdfPath) {
       contract.filePath = originalPdfPath;
       contract.originalName = `${title}.pdf`;
@@ -4806,6 +4866,7 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
       }
 
       let agentTmpPath = '';
+      let agentNameSnapshot = '';
       if (includeAgentSignature && uploadExt === '.pdf') {
         const agent = readMarketingAgentSignature();
         if (!agent?.signatureDataUrl) {
@@ -4817,6 +4878,7 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
               'Save your Agent signature first (Electronic contracts → Agent signature), or do not include it on upload.'
           });
         }
+        agentNameSnapshot = agent.agentName || '';
         const parsedAgent = mmParseSignatureDataUrl(agent.signatureDataUrl);
         if (!parsedAgent?.buffer?.length) {
           try {
@@ -4848,12 +4910,13 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
         mimeType: req.file.mimetype || 'application/octet-stream',
         fileSize: req.file.size || 0,
         includeAgentSignature: Boolean(includeAgentSignature && uploadExt === '.pdf'),
-        agentSignatureDate: includeAgentSignature && uploadExt === '.pdf' ? genDate : ''
+        agentSignatureDate: includeAgentSignature && uploadExt === '.pdf' ? genDate : '',
+        agentName: includeAgentSignature && uploadExt === '.pdf' ? agentNameSnapshot : ''
       };
 
       if (includeAgentSignature && uploadExt === '.pdf' && agentTmpPath) {
         const outPdf = path.join(marketingManagerContractDocsDir, `${contract.id}-with-agent.pdf`);
-        const ok = mmStampAgentPageOnPdf(req.file.path, outPdf, agentTmpPath, genDate);
+        const ok = mmStampAgentPageOnPdf(req.file.path, outPdf, agentTmpPath, genDate, agentNameSnapshot);
         try {
           if (fs.existsSync(agentTmpPath)) fs.unlinkSync(agentTmpPath);
         } catch {}

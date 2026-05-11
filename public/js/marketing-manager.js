@@ -7,7 +7,7 @@
     catalog: { directory: { usa: [], paid: [] }, campaigns: [] },
     contractStats: { total: 0, pending: 0, signed: 0 },
     contracts: [],
-    agentSig: { hasSignature: false, updatedAt: null, signatureDataUrl: '' }
+    agentSig: { hasSignature: false, updatedAt: null, signatureDataUrl: '', agentName: '' }
   };
   let selectedId = null;
   const contractBrowser = {
@@ -108,7 +108,8 @@
     state.agentSig = {
       hasSignature: Boolean(agentResp?.hasSignature && agentResp?.signatureDataUrl),
       updatedAt: agentResp?.updatedAt || null,
-      signatureDataUrl: agentResp?.signatureDataUrl || ''
+      signatureDataUrl: agentResp?.signatureDataUrl || '',
+      agentName: agentResp?.agentName || ''
     };
     if (selectedId && !state.data.customers.find((c) => c.id === selectedId)) selectedId = null;
     if (!selectedId && state.data.customers.length) selectedId = state.data.customers[0].id;
@@ -768,9 +769,10 @@
       const minSavingMs = 600;
       try {
         const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
-        await api('/api/marketing-manager/agent-signature', {
+        const agentName = String(document.getElementById('mm-agent-sig-name')?.value || '').trim();
+        const saved = await api('/api/marketing-manager/agent-signature', {
           method: 'POST',
-          body: JSON.stringify({ signatureDataUrl: dataUrl })
+          body: JSON.stringify({ signatureDataUrl: dataUrl, agentName })
         });
         const elapsed = Date.now() - t0;
         if (elapsed < minSavingMs) await new Promise((r) => setTimeout(r, minSavingMs - elapsed));
@@ -779,7 +781,8 @@
         state.agentSig = {
           hasSignature: true,
           signatureDataUrl: dataUrl,
-          updatedAt: new Date().toISOString()
+          agentName: saved?.agentName || agentName,
+          updatedAt: saved?.updatedAt || new Date().toISOString()
         };
         if (statusEl) statusEl.textContent = 'Saved on server.';
         window.setTimeout(() => frame?.classList.remove('mm-sig-saved'), 3200);
@@ -793,9 +796,11 @@
       if (!confirm('Remove the saved Agent signature from the server?')) return;
       try {
         await api('/api/marketing-manager/agent-signature', { method: 'DELETE' });
-        state.agentSig = { hasSignature: false, signatureDataUrl: '', updatedAt: null };
+        state.agentSig = { hasSignature: false, signatureDataUrl: '', updatedAt: null, agentName: '' };
         fillWhite();
         hasInk = false;
+        const nameEl = document.getElementById('mm-agent-sig-name');
+        if (nameEl) nameEl.value = '';
         if (statusEl) statusEl.textContent = 'Removed.';
       } catch (e) {
         alert(e.message);
@@ -936,6 +941,10 @@
               <div class="mm-sig-frame-inner">
                 <canvas id="mm-agent-sig-canvas" width="520" height="140" class="mm-agent-sig-canvas"></canvas>
               </div>
+            </div>
+            <div class="mm-task-meta" style="margin-top:10px;">
+              <label class="mm-muted" for="mm-agent-sig-name" style="font-size:11px;display:block;margin-bottom:4px;">Printed name (added in plain text below the signature on documents)</label>
+              <input type="text" id="mm-agent-sig-name" class="mm-input" maxlength="200" placeholder="e.g. Jane Doe" value="${escapeHtml(state.agentSig?.agentName || '')}" />
             </div>
             <div class="mm-task-meta" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
               <button type="button" class="btn-mm-ghost" id="mm-agent-sig-clear">Clear</button>

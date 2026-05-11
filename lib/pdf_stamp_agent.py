@@ -47,6 +47,7 @@ def main():
     parser.add_argument("--output", required=True)
     parser.add_argument("--signature", required=True)
     parser.add_argument("--date", required=True)
+    parser.add_argument("--name", required=False, default="")
     args = parser.parse_args()
 
     if not os.path.exists(args.input):
@@ -102,6 +103,19 @@ def main():
     h = max(40, min(90, max_w * ratio))
     sig_box = fitz.Rect(margin_x, y, margin_x + max_w, y + h)
     page.insert_image(sig_box, filename=args.signature, keep_proportion=True)
+    y += h + 14
+
+    agent_name = (args.name or "").replace("\r", " ").replace("\n", " ").strip()
+    if agent_name:
+        if len(agent_name) > 200:
+            agent_name = agent_name[:200]
+        page.insert_text(
+            fitz.Point(margin_x, y),
+            f"Name: {agent_name}",
+            fontsize=10,
+            fontname="helv",
+            color=(0, 0, 0),
+        )
 
     if os.path.exists(args.output):
         os.remove(args.output)
