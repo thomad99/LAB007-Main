@@ -195,6 +195,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         appReportBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
     }
 
+    const serverLoadBaseInput = document.getElementById('serverLoadHorizonBase');
+    if (serverLoadBaseInput && !serverLoadBaseInput.value) {
+        serverLoadBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
+    }
+
     // GoldenSun VMware toggle
     const goldenSunVmwareToggle = document.getElementById('goldenSunVmwareToggle');
     if (goldenSunVmwareToggle) {
@@ -2121,6 +2126,11 @@ function showHorizonTask(taskName) {
         const appReportBaseInput = document.getElementById('appReportHorizonBase');
         if (appReportBaseInput && !appReportBaseInput.value) {
             appReportBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
+        }
+    } else if (taskName === 'serverLoad') {
+        const serverLoadBaseInput = document.getElementById('serverLoadHorizonBase');
+        if (serverLoadBaseInput && !serverLoadBaseInput.value) {
+            serverLoadBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
         }
     }
 }
@@ -5501,6 +5511,331 @@ function downloadAppReportScript() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'Horizon-App-Report.ps1';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// SERVER LOAD TAB (HZ Tasks → Server Load)
+// RDS farms: server counts + connected sessions / users + density per server.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateServerLoadScript() {
+    const baseInput = document.getElementById('serverLoadHorizonBase');
+    let baseUrl = baseInput ? (baseInput.value || '').trim() : '';
+    if (!baseUrl) baseUrl = HZ_ADMIN_DEFAULT_BASE;
+    if (!/^https?:\/\//i.test(baseUrl)) {
+        baseUrl = 'https://' + baseUrl;
+    }
+    const protoMatch = baseUrl.match(/^(https?:\/\/)(.*)$/i);
+    if (protoMatch) {
+        const proto = protoMatch[1];
+        const rest = protoMatch[2].replace(/^\/+/, '');
+        baseUrl = proto + rest;
+    }
+    if (!baseUrl.toLowerCase().includes('/rest')) {
+        baseUrl = baseUrl.replace(/\/+$/, '') + '/rest';
+    }
+    baseUrl = baseUrl.replace(/\/+$/, '');
+
+    const lines = [];
+    lines.push('# Horizon Server Load / RDS farm density (PowerShell, REST) — Horizon Server API 2506');
+    lines.push('# Lists farms, counts RDS servers per farm (monitor RDS list + inventory farm detail),');
+    lines.push('# aggregates CONNECTED/ACTIVE inventory sessions by farm when possible, optional per-farm monitor hint.');
+    lines.push('# Outputs: Reports\\horizon-server-load.json and .html');
+    lines.push('');
+    lines.push('$ErrorActionPreference = "Stop"');
+    lines.push('$cwd = Get-Location');
+    lines.push('$ReportsDir = Join-Path $cwd.Path "Reports"');
+    lines.push('if (-not (Test-Path $ReportsDir)) { New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null }');
+    lines.push(`$BaseUrl = "${baseUrl}"`);
+    lines.push('$OutJson = Join-Path $ReportsDir "horizon-server-load.json"');
+    lines.push('$OutHtml = Join-Path $ReportsDir "horizon-server-load.html"');
+    lines.push('');
+    lines.push('# --- TLS + self-signed cert handling (PS 5.1) ---');
+    lines.push('try {');
+    lines.push('    if (-not ("TrustAllCertsPolicy" -as [type])) {');
+    lines.push('        Add-Type @"');
+    lines.push('using System.Net;');
+    lines.push('using System.Security.Cryptography.X509Certificates;');
+    lines.push('public class TrustAllCertsPolicy : ICertificatePolicy {');
+    lines.push('    public bool CheckValidationResult(ServicePoint sp, X509Certificate cert, WebRequest req, int problem) { return true; }');
+    lines.push('}');
+    lines.push('"@');
+    lines.push('    }');
+    lines.push('    [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy');
+    lines.push('    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12');
+    lines.push('} catch {}');
+    lines.push('');
+    lines.push('$Domain = Read-Host "Domain (optional, leave blank if not needed)"');
+    lines.push('$cred   = Get-Credential -Message "Enter Horizon credentials (REST)"');
+    lines.push('$loginUser = $cred.UserName');
+    lines.push('$loginPass = $cred.GetNetworkCredential().Password');
+    lines.push('$loginBody = @{ username = $loginUser; password = $loginPass }');
+    lines.push('if ($Domain) { $loginBody.domain = $Domain }');
+    lines.push('$tokenResp = Invoke-RestMethod -Method Post -Uri "$BaseUrl/login" -ContentType "application/json" -Body ($loginBody | ConvertTo-Json)');
+    lines.push('$token = $tokenResp.access_token');
+    lines.push('if (-not $token) { throw "Login did not return access_token" }');
+    lines.push('$headers = @{ Authorization = "Bearer $token"; Accept = "application/json" }');
+    lines.push('');
+    lines.push('function Unpack-Items($r) {');
+    lines.push('    if ($null -eq $r) { return @() }');
+    lines.push('    if ($r -is [System.Array]) { return $r }');
+    lines.push('    if ($r -is [hashtable]) {');
+    lines.push('        foreach ($k in "items","value","data") {');
+    lines.push('            if ($r.ContainsKey($k)) {');
+    lines.push('                $v = $r[$k]; if ($null -eq $v) { continue }');
+    lines.push('                if ($v -is [System.Array]) { return $v }');
+    lines.push('                return @($v)');
+    lines.push('            }');
+    lines.push('        }');
+    lines.push('        return @()');
+    lines.push('    }');
+    lines.push('    $names = $r.PSObject.Properties.Name');
+    lines.push('    foreach ($k in "items","value","data") {');
+    lines.push('        if ($names -contains $k) {');
+    lines.push('            $v = $r.$k; if ($null -eq $v) { continue }');
+    lines.push('            if ($v -is [System.Array]) { return $v }');
+    lines.push('            return @($v)');
+    lines.push('        }');
+    lines.push('    }');
+    lines.push('    return @($r)');
+    lines.push('}');
+    lines.push('');
+    lines.push('function Farm-Id($f) {');
+    lines.push('    $id = $f.id; if (-not $id) { $id = $f.farmId }; if (-not $id) { $id = $f.farm_id }');
+    lines.push('    return [string]$id');
+    lines.push('}');
+    lines.push('function Farm-Name($f) {');
+    lines.push('    $n = $f.name; if (-not $n) { $n = $f.display_name }; if (-not $n) { $n = (Farm-Id $f) }');
+    lines.push('    return [string]$n');
+    lines.push('}');
+    lines.push('');
+    lines.push('Write-Host "Fetching farm list (paged)..." -ForegroundColor Cyan');
+    lines.push('$farms = @(); $farmSource = $null');
+    lines.push('foreach ($rel in @("/inventory/v8/farms","/inventory/v7/farms","/inventory/v4/farms","/monitor/v1/farms","/monitor/farms")) {');
+    lines.push('    $acc = @(); $page = 1');
+    lines.push('    while ($page -le 200) {');
+    lines.push('        if ($rel.Contains([char]63)) { $uri = "$BaseUrl$rel" + [char]38 + "page=$page" + [char]38 + "size=250" } else { $uri = "$BaseUrl$rel" + [char]63 + "page=$page" + [char]38 + "size=250" }');
+    lines.push('        try {');
+    lines.push('            $r = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers');
+    lines.push('        } catch { break }');
+    lines.push('        $items = Unpack-Items $r');
+    lines.push('        if (-not $items -or $items.Count -eq 0) { break }');
+    lines.push('        $acc += $items');
+    lines.push('        if ($items.Count -lt 250) { break }');
+    lines.push('        $page++');
+    lines.push('    }');
+    lines.push('    if ($acc.Count -gt 0) { $farms = $acc; $farmSource = $rel; break }');
+    lines.push('}');
+    lines.push('if ($farms.Count -eq 0) { throw "No farms returned from inventory or monitor endpoints. Check REST URL and permissions." }');
+    lines.push('Write-Host ("  Farms: {0} from {1}" -f $farms.Count, $farmSource) -ForegroundColor Green');
+    lines.push('');
+    lines.push('$farmRows = @()');
+    lines.push('foreach ($f in $farms) {');
+    lines.push('    $id = Farm-Id $f');
+    lines.push('    if ([string]::IsNullOrWhiteSpace($id)) { continue }');
+    lines.push('    $farmRows += [pscustomobject]@{ Id = $id; Name = (Farm-Name $f) }');
+    lines.push('}');
+    lines.push('if ($farmRows.Count -eq 0) { throw "Farm list had no usable farm ids." }');
+    lines.push('');
+    lines.push('Write-Host "Counting RDS servers per farm (monitor RDS list)..." -ForegroundColor Cyan');
+    lines.push('$rdsByFarm = @{}');
+    lines.push('$rdsEndpoint = $null');
+    lines.push('foreach ($rel in @("/monitor/v1/rds-servers","/monitor/rds-servers")) {');
+    lines.push('    $page = 1; $seen = 0');
+    lines.push('    while ($page -le 400) {');
+    lines.push('        if ($rel.Contains([char]63)) { $uri = "$BaseUrl$rel" + [char]38 + "page=$page" + [char]38 + "size=250" } else { $uri = "$BaseUrl$rel" + [char]63 + "page=$page" + [char]38 + "size=250" }');
+    lines.push('        try { $r = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers } catch { break }');
+    lines.push('        $items = Unpack-Items $r');
+    lines.push('        if (-not $items -or $items.Count -eq 0) { break }');
+    lines.push('        foreach ($srv in $items) {');
+    lines.push('            $fid = $null');
+    lines.push('            foreach ($k in @("farm_id","farmId","farm_id_guid")) { if ($srv.PSObject.Properties.Name -contains $k -and $srv.$k) { $fid = [string]$srv.$k; break } }');
+    lines.push('            if (-not $fid -and $srv.farm -and $srv.farm.id) { $fid = [string]$srv.farm.id }');
+    lines.push('            if ($fid) {');
+    lines.push('                if (-not $rdsByFarm.ContainsKey($fid)) { $rdsByFarm[$fid] = 0 }');
+    lines.push('                $rdsByFarm[$fid]++; $seen++');
+    lines.push('            }');
+    lines.push('        }');
+    lines.push('        if ($items.Count -lt 250) { break }');
+    lines.push('        $page++');
+    lines.push('    }');
+    lines.push('    if ($seen -gt 0) { $rdsEndpoint = $rel; break }');
+    lines.push('}');
+    lines.push('if ($rdsEndpoint) { Write-Host ("  RDS servers mapped to farms: {0} (via {1})" -f $seen, $rdsEndpoint) -ForegroundColor Green }');
+    lines.push('else { Write-Warning "No RDS servers from /monitor/.../rds-servers — will rely on inventory farm detail for server counts." }');
+    lines.push('');
+    lines.push('Write-Host "Inventory farm detail (RDS server count fallback)..." -ForegroundColor Cyan');
+    lines.push('$invSrv = @{}');
+    lines.push('foreach ($row in $farmRows) {');
+    lines.push('    $fid = $row.Id');
+    lines.push('    foreach ($detailRel in @("/inventory/v7/farms/$fid","/inventory/v4/farms/$fid")) {');
+    lines.push('        try {');
+    lines.push('            $d = Invoke-RestMethod -Method Get -Uri "$BaseUrl$detailRel" -Headers $headers');
+    lines.push('            $c = 0');
+    lines.push('            if ($d.rds_server_ids) { $c = @($d.rds_server_ids).Count }');
+    lines.push('            elseif ($d.automated_farm_settings -and $d.automated_farm_settings.number_of_rds_servers) { $c = [int]$d.automated_farm_settings.number_of_rds_servers }');
+    lines.push('            elseif ($d.number_of_rds_servers) { $c = [int]$d.number_of_rds_servers }');
+    lines.push('            if ($c -gt 0) { $invSrv[$fid] = $c; break }');
+    lines.push('        } catch {}');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('');
+    lines.push('function Test-SessConnected($s) {');
+    lines.push('    $v = $null');
+    lines.push('    foreach ($k in @("session_state","sessionState","state","connection_state")) {');
+    lines.push('        if ($s.PSObject.Properties.Name -contains $k) { $v = $s.$k; break }');
+    lines.push('    }');
+    lines.push('    if ($null -eq $v) { return $false }');
+    lines.push('    $t = [string]$v');
+    lines.push('    if ($t.ToUpperInvariant() -like "*DISCONNECT*") { return $false }');
+    lines.push('    $u = $t.ToUpperInvariant()');
+    lines.push('    return ($u -eq "CONNECTED" -or $u -eq "ACTIVE")');
+    lines.push('}');
+    lines.push('function Sess-FarmId($s) {');
+    lines.push('    foreach ($k in @("farm_id","farmId","rds_farm_id")) {');
+    lines.push('        if ($s.PSObject.Properties.Name -contains $k -and $s.$k) { return [string]$s.$k }');
+    lines.push('    }');
+    lines.push('    if ($s.resource_settings -and $s.resource_settings.farm_id) { return [string]$s.resource_settings.farm_id }');
+    lines.push('    if ($s.farm -and $s.farm.id) { return [string]$s.farm.id }');
+    lines.push('    return $null');
+    lines.push('}');
+    lines.push('function Sess-User($s) {');
+    lines.push('    foreach ($k in @("user_name","username","user_id","name","user")) {');
+    lines.push('        if ($s.PSObject.Properties.Name -contains $k -and $s.$k) { return [string]$s.$k }');
+    lines.push('    }');
+    lines.push('    return ""');
+    lines.push('}');
+    lines.push('');
+    lines.push('Write-Host "Inventory sessions (CONNECTED/ACTIVE only, grouped by farm)..." -ForegroundColor Cyan');
+    lines.push('$sessAgg = @{}');
+    lines.push('function Ensure-SessAgg($fid) {');
+    lines.push('    if (-not $sessAgg.ContainsKey($fid)) {');
+    lines.push('        $sessAgg[$fid] = @{ Sessions = [int64]0; Users = (New-Object "System.Collections.Generic.HashSet[string]") }');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('$sessEpUsed = $null; $sessMatched = 0');
+    lines.push('foreach ($rel in @("/inventory/v1/sessions","/inventory/v2/sessions","/inventory/v3/sessions")) {');
+    lines.push('    $page = 1; $local = 0');
+    lines.push('    while ($page -le 400) {');
+    lines.push('        if ($rel.Contains([char]63)) { $uri = "$BaseUrl$rel" + [char]38 + "page=$page" + [char]38 + "size=250" } else { $uri = "$BaseUrl$rel" + [char]63 + "page=$page" + [char]38 + "size=250" }');
+    lines.push('        try { $r = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers } catch { break }');
+    lines.push('        $items = Unpack-Items $r');
+    lines.push('        if (-not $items -or $items.Count -eq 0) { break }');
+    lines.push('        foreach ($s in $items) {');
+    lines.push('            if (-not (Test-SessConnected $s)) { continue }');
+    lines.push('            $fid = Sess-FarmId $s');
+    lines.push('            if (-not $fid) { continue }');
+    lines.push('            Ensure-SessAgg $fid');
+    lines.push('            $sessAgg[$fid].Sessions++');
+    lines.push('            $u = Sess-User $s');
+    lines.push('            if ($u) { [void]$sessAgg[$fid].Users.Add($u) }');
+    lines.push('            $local++');
+    lines.push('        }');
+    lines.push('        if ($items.Count -lt 250) { break }');
+    lines.push('        $page++');
+    lines.push('    }');
+    lines.push('    if ($local -gt 0) { $sessEpUsed = $rel; $sessMatched = $local; break }');
+    lines.push('}');
+    lines.push('if ($sessEpUsed) { Write-Host ("  Session rows used: {0} from {1}" -f $sessMatched, $sessEpUsed) -ForegroundColor Green }');
+    lines.push('else { Write-Warning "Could not aggregate sessions from /inventory/v.../sessions — session counts may rely on monitor farm hints only." }');
+    lines.push('');
+    lines.push('Write-Host "Per-farm monitor detail (optional session hint)..." -ForegroundColor Cyan');
+    lines.push('$monSess = @{}');
+    lines.push('foreach ($row in $farmRows) {');
+    lines.push('    $fid = $row.Id');
+    lines.push('    foreach ($mr in @("/monitor/v1/farms/$fid","/monitor/farms/$fid")) {');
+    lines.push('        try {');
+    lines.push('            $m = Invoke-RestMethod -Method Get -Uri "$BaseUrl$mr" -Headers $headers');
+    lines.push('            $hint = $null');
+    lines.push('            foreach ($p in $m.PSObject.Properties) {');
+    lines.push('                $nm = $p.Name; $val = $p.Value');
+    lines.push('                if ($null -eq $val) { continue }');
+    lines.push('                if ($val -is [string]) { continue }');
+    lines.push('                if ($val -is [int] -or $val -is [long] -or $val -is [double]) {');
+    lines.push('                    if ($nm -match "(?i)connected|active.*session|session.*count|^sessions$") { $hint = [int64]$val }');
+    lines.push('                }');
+    lines.push('            }');
+    lines.push('            if ($null -ne $hint -and $hint -ge 0) { $monSess[$fid] = $hint; break }');
+    lines.push('        } catch {}');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('');
+    lines.push('$outRows = @()');
+    lines.push('foreach ($row in $farmRows) {');
+    lines.push('    $fid = $row.Id');
+    lines.push('    $srv = 0');
+    lines.push('    if ($rdsByFarm.ContainsKey($fid)) { $srv = [int]$rdsByFarm[$fid] }');
+    lines.push('    if ($srv -eq 0 -and $invSrv.ContainsKey($fid)) { $srv = [int]$invSrv[$fid] }');
+    lines.push('    $conn = 0; $uu = 0');
+    lines.push('    if ($sessAgg.ContainsKey($fid)) {');
+    lines.push('        $conn = [int]$sessAgg[$fid].Sessions');
+    lines.push('        $uu = [int]$sessAgg[$fid].Users.Count');
+    lines.push('    }');
+    lines.push('    if ($conn -eq 0 -and $monSess.ContainsKey($fid)) { $conn = [int]$monSess[$fid] }');
+    lines.push('    $dS = $null; $dU = $null');
+    lines.push('    if ($srv -gt 0) {');
+    lines.push('        $dS = [math]::Round($conn / [double]$srv, 3)');
+    lines.push('        $dU = [math]::Round($uu / [double]$srv, 3)');
+    lines.push('    }');
+    lines.push('    $outRows += [pscustomobject]@{');
+    lines.push('        FarmName = $row.Name');
+    lines.push('        FarmId = $fid');
+    lines.push('        Servers = $srv');
+    lines.push('        ConnectedSessions = $conn');
+    lines.push('        UniqueUsers = $uu');
+    lines.push('        SessionsPerServer = $dS');
+    lines.push('        UsersPerServer = $dU');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('');
+    lines.push('$summary = [pscustomobject]@{');
+    lines.push('    generatedAt = (Get-Date).ToString("o")');
+    lines.push('    horizonApi = "2506"');
+    lines.push('    farmListSource = $farmSource');
+    lines.push('    rdsMonitorEndpoint = $rdsEndpoint');
+    lines.push('    sessionsEndpoint = $sessEpUsed');
+    lines.push('    rows = $outRows');
+    lines.push('}');
+    lines.push('$summary | ConvertTo-Json -Depth 8 | Set-Content -Path $OutJson -Encoding UTF8');
+    lines.push('Write-Host "Saved JSON: $OutJson" -ForegroundColor Green');
+    lines.push('');
+    lines.push('$style = "body{font-family:Segoe UI,Arial,sans-serif;margin:24px;color:#222}table{border-collapse:collapse;max-width:1200px}th,td{border:1px solid #ccc;padding:8px 10px}th{background:#f4f4f4;text-align:left}.num{text-align:right;font-variant-numeric:tabular-nums}"');
+    lines.push('$frag = ($outRows | Sort-Object -Property SessionsPerServer -Descending) | ConvertTo-Html -Fragment');
+    lines.push('$html = "<!DOCTYPE html><html><head><meta charset=`"utf-8`"/><title>Horizon Server Load</title><style>$style</style></head><body><h1>Horizon Farm Server Load</h1><p class=`"meta`">Farms from <code>$farmSource</code>. Density = connected sessions / RDS servers (and unique users / servers).</p>$frag<p style=`"margin-top:16px;color:#666`">Open JSON for full metadata.</p></body></html>"');
+    lines.push('$html | Out-File -FilePath $OutHtml -Encoding UTF8');
+    lines.push('Write-Host "Saved HTML: $OutHtml" -ForegroundColor Green');
+    lines.push('try { Start-Process $OutHtml } catch { Write-Warning "Could not open HTML automatically: $($_.Exception.Message)" }');
+    lines.push('');
+    lines.push('Write-Host ""');
+    lines.push('$outRows | Sort-Object -Property SessionsPerServer -Descending | Format-Table -AutoSize');
+    lines.push('Write-Host "Done." -ForegroundColor Cyan');
+
+    const out = document.getElementById('serverLoadScriptContent');
+    if (out) out.value = lines.join('\n');
+}
+
+function copyServerLoadScript() {
+    const area = document.getElementById('serverLoadScriptContent');
+    if (!area) return;
+    area.select();
+    document.execCommand('copy');
+}
+
+function downloadServerLoadScript() {
+    const scriptContent = document.getElementById('serverLoadScriptContent')?.value || '';
+    if (!scriptContent) {
+        alert('Generate the script first.');
+        return;
+    }
+    const blob = new Blob([scriptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Horizon-Server-Load-Report.ps1';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
