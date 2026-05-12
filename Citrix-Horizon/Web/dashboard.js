@@ -5173,6 +5173,24 @@ function generateAppReportScript() {
     if (/[",\\r\\n]/.test(s)) { s = '"' + s.replace(/"/g, '""') + '"'; }
     return s;
 }
+function _hzCellText(tr, idx) {
+    var c = tr.cells[idx];
+    return (c && c.textContent) ? c.textContent.trim().toLowerCase() : "";
+}
+function _hzCellNum(tr, idx) {
+    var c = tr.cells[idx];
+    if (!c) return 0;
+    return parseFloat((c.textContent || "").replace(/,/g, "")) || 0;
+}
+function _hzCols(tableId) {
+    if (tableId === "tbl-inventory") return { app: 0, display: 1, launches: 3, users: 4 };
+    if (tableId === "tbl-unused") return { app: 0, display: 1, launches: -1, users: -1 };
+    return { app: 0, display: -1, launches: 1, users: 2 };
+}
+function _hzClearThSort(t) {
+    var ths = t.tHead ? t.tHead.querySelectorAll("th") : [];
+    for (var i = 0; i < ths.length; i++) { ths[i].classList.remove("sort-asc", "sort-desc"); }
+}
 function hzDownloadCsv(tableId, filename) {
     var t = document.getElementById(tableId);
     if (!t) return;
@@ -5196,6 +5214,8 @@ function hzDownloadCsv(tableId, filename) {
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 100);
 }
 function hzFilterTable(inputId, tableId) {
+    var modeEl = document.getElementById(inputId + "-mode");
+    if (modeEl) { hzFilterTableAdv(inputId, tableId, inputId + "-mode"); return; }
     var q = (document.getElementById(inputId).value || "").toLowerCase();
     var t = document.getElementById(tableId);
     if (!t) return;
@@ -5205,9 +5225,71 @@ function hzFilterTable(inputId, tableId) {
         rows[i].style.display = (q === "" || txt.indexOf(q) !== -1) ? "" : "none";
     }
 }
+function hzFilterTableAdv(inputId, tableId, modeSelectId) {
+    var inp = document.getElementById(inputId);
+    var modeEl = document.getElementById(modeSelectId);
+    var t = document.getElementById(tableId);
+    if (!inp || !t) return;
+    var q = (inp.value || "").trim();
+    var ql = q.toLowerCase();
+    var mode = modeEl ? modeEl.value : "any";
+    var rows = t.querySelectorAll("tbody tr");
+    var col = _hzCols(tableId);
+    var minNum = parseFloat(q.replace(/,/g, ""));
+    for (var i = 0; i < rows.length; i++) {
+        var show = true;
+        if (q === "") { show = true; }
+        else if (mode === "any") {
+            show = (rows[i].textContent || "").toLowerCase().indexOf(ql) !== -1;
+        } else if (mode === "app") {
+            show = _hzCellText(rows[i], col.app).indexOf(ql) !== -1;
+        } else if (mode === "display" && col.display >= 0) {
+            show = _hzCellText(rows[i], col.display).indexOf(ql) !== -1;
+        } else if (mode === "launches_min" && col.launches >= 0) {
+            show = isNaN(minNum) ? true : (_hzCellNum(rows[i], col.launches) >= minNum);
+        } else if (mode === "users_min" && col.users >= 0) {
+            show = isNaN(minNum) ? true : (_hzCellNum(rows[i], col.users) >= minNum);
+        } else {
+            show = (rows[i].textContent || "").toLowerCase().indexOf(ql) !== -1;
+        }
+        rows[i].style.display = show ? "" : "none";
+    }
+}
+function hzSortTableBy(tableId, mode) {
+    var t = document.getElementById(tableId);
+    if (!t || !t.tBodies[0]) return;
+    _hzClearThSort(t);
+    var tbody = t.tBodies[0];
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+    var c = _hzCols(tableId);
+    function cmpStr(a, b, idx, desc) {
+        var av = _hzCellText(a, idx), bv = _hzCellText(b, idx);
+        var r = av.localeCompare(bv);
+        return desc ? -r : r;
+    }
+    function cmpNum(a, b, idx, desc) {
+        var av = _hzCellNum(a, idx), bv = _hzCellNum(b, idx);
+        return desc ? (bv - av) : (av - bv);
+    }
+    rows.sort(function (a, b) {
+        if (mode === "app_asc") return cmpStr(a, b, c.app, false);
+        if (mode === "app_desc") return cmpStr(a, b, c.app, true);
+        if (mode === "display_asc" && c.display >= 0) return cmpStr(a, b, c.display, false);
+        if (mode === "display_desc" && c.display >= 0) return cmpStr(a, b, c.display, true);
+        if (mode === "launch_asc" && c.launches >= 0) return cmpNum(a, b, c.launches, false);
+        if (mode === "launch_desc" && c.launches >= 0) return cmpNum(a, b, c.launches, true);
+        if (mode === "user_asc" && c.users >= 0) return cmpNum(a, b, c.users, false);
+        if (mode === "user_desc" && c.users >= 0) return cmpNum(a, b, c.users, true);
+        if (c.launches >= 0) return cmpNum(a, b, c.launches, true);
+        return cmpStr(a, b, c.app, false);
+    });
+    for (var k = 0; k < rows.length; k++) { tbody.appendChild(rows[k]); }
+}
 function hzSortTable(tableId, colIdx, asNumber) {
     var t = document.getElementById(tableId);
     if (!t) return;
+    var sel = document.getElementById(tableId + "-sort");
+    if (sel) sel.selectedIndex = 0;
     var tbody = t.tBodies[0];
     var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
     var headers = t.tHead ? t.tHead.querySelectorAll("th") : [];
@@ -5258,7 +5340,7 @@ document.addEventListener("DOMContentLoaded", function () {
     lines.push('        "<tr><td>$n</td><td>$d</td><td>$en</td></tr>"');
     lines.push('    }) -join "`n"');
     lines.push('    if (-not $unusedTableRows) { $unusedTableRows = "<tr><td colspan=`"3`">No unused application pools - every configured app had at least one launch.</td></tr>" }');
-    lines.push('    $unusedToolbar = "<div class=`"toolbar`"><input id=`"flt-unused`" class=`"filter`" placeholder=`"Filter unused apps...`" oninput=`"hzFilterTable(\'flt-unused\',\'tbl-unused\')`"><button class=`"btn`" onclick=`"hzDownloadCsv(\'tbl-unused\',\'horizon-unused-apps.csv\')`">Download CSV</button></div>"');
+    lines.push('    $unusedToolbar = "<div class=`"toolbar`"><input id=`"flt-unused`" class=`"filter`" placeholder=`"Search or number for min filters...`" oninput=`"hzFilterTableAdv(\'flt-unused\',\'tbl-unused\',\'flt-unused-mode\')`"><select id=`"flt-unused-mode`" class=`"filter`" style=`"min-width:200px`" onchange=`"hzFilterTableAdv(\'flt-unused\',\'tbl-unused\',\'flt-unused-mode\')`"><option value=`"any`">Filter: any column</option><option value=`"app`">Filter: application name</option><option value=`"display`">Filter: display name</option></select><span class=`"meta`" style=`"white-space:nowrap`">Sort:</span><select id=`"tbl-unused-sort`" class=`"filter`" style=`"min-width:180px`" onchange=`"hzSortTableBy(\'tbl-unused\', this.value)`"><option value=`"app_asc`">Application A → Z</option><option value=`"app_desc`">Application Z → A</option><option value=`"display_asc`">Display name A → Z</option><option value=`"display_desc`">Display name Z → A</option></select><button class=`"btn`" onclick=`"hzDownloadCsv(\'tbl-unused\',\'horizon-unused-apps.csv\')`">Download CSV</button></div>"');
     lines.push('    $unusedHtml = "<details class=`"section`"><summary>Unused Applications <span class=`"count`">($($unusedRows.Count) with 0 launches)</span></summary><div class=`"inner`"><p class=`"meta`">Candidates to decommission. Source: <code>$invEndpointUsed</code></p>$unusedToolbar<table id=`"tbl-unused`" class=`"sortable`"><thead><tr><th>Application</th><th>Display Name</th><th>Enabled</th></tr></thead><tbody>$unusedTableRows</tbody></table></div></details>"');
     lines.push('');
     lines.push('    $invTableRows = ($inventoryRows | ForEach-Object {');
@@ -5268,7 +5350,7 @@ document.addEventListener("DOMContentLoaded", function () {
     lines.push('        $usageClass = if ($_.UsageStatus -eq "UNUSED") { "unused" } else { "used" }');
     lines.push('        "<tr class=`"$usageClass`"><td>$n</td><td>$d</td><td>$en</td><td class=`"num`">$($_.TotalLaunches)</td><td class=`"num`">$($_.UniqueUsers)</td><td>$($_.UsageStatus)</td></tr>"');
     lines.push('    }) -join "`n"');
-    lines.push('    $invToolbar = "<div class=`"toolbar`"><input id=`"flt-inventory`" class=`"filter`" placeholder=`"Filter inventory...`" oninput=`"hzFilterTable(\'flt-inventory\',\'tbl-inventory\')`"><button class=`"btn`" onclick=`"hzDownloadCsv(\'tbl-inventory\',\'horizon-inventory.csv\')`">Download CSV</button></div>"');
+    lines.push('    $invToolbar = "<div class=`"toolbar`"><input id=`"flt-inventory`" class=`"filter`" placeholder=`"Search or number for min filters...`" oninput=`"hzFilterTableAdv(\'flt-inventory\',\'tbl-inventory\',\'flt-inventory-mode\')`"><select id=`"flt-inventory-mode`" class=`"filter`" style=`"min-width:200px`" onchange=`"hzFilterTableAdv(\'flt-inventory\',\'tbl-inventory\',\'flt-inventory-mode\')`"><option value=`"any`">Filter: any column</option><option value=`"app`">Filter: application name</option><option value=`"display`">Filter: display name</option><option value=`"launches_min`">Filter: min launches ≥</option><option value=`"users_min`">Filter: min unique users ≥</option></select><span class=`"meta`" style=`"white-space:nowrap`">Sort:</span><select id=`"tbl-inventory-sort`" class=`"filter`" style=`"min-width:210px`" onchange=`"hzSortTableBy(\'tbl-inventory\', this.value)`"><option value=`"launch_desc`">Launches (high → low)</option><option value=`"launch_asc`">Launches (low → high)</option><option value=`"user_desc`">Unique users (high → low)</option><option value=`"user_asc`">Unique users (low → high)</option><option value=`"app_asc`">Application A → Z</option><option value=`"app_desc`">Application Z → A</option><option value=`"display_asc`">Display name A → Z</option><option value=`"display_desc`">Display name Z → A</option></select><button class=`"btn`" onclick=`"hzDownloadCsv(\'tbl-inventory\',\'horizon-inventory.csv\')`">Download CSV</button></div>"');
     lines.push('    $inventoryHtml = "<details class=`"section`"><summary>Full Inventory <span class=`"count`">($($inventoryRows.Count) configured)</span></summary><div class=`"inner`">$invToolbar<table id=`"tbl-inventory`" class=`"sortable`"><thead><tr><th>Application</th><th>Display Name</th><th>Enabled</th><th class=`"num`">Total Launches</th><th class=`"num`">Unique Users</th><th>Status</th></tr></thead><tbody>$invTableRows</tbody></table></div></details>"');
     lines.push('}');
     lines.push('');
@@ -5290,7 +5372,22 @@ document.addEventListener("DOMContentLoaded", function () {
     lines.push('<summary>Launched Applications <span class="count">($($rows.Count) apps with launches)</span></summary>');
     lines.push('<div class="inner">');
     lines.push('<div class="toolbar">');
-    lines.push('  <input id="flt-launched" class="filter" placeholder="Filter launched apps..." oninput="hzFilterTable(\'flt-launched\',\'tbl-launched\')">');
+    lines.push('  <input id="flt-launched" class="filter" placeholder="Search or number for min filters..." oninput="hzFilterTableAdv(\'flt-launched\',\'tbl-launched\',\'flt-launched-mode\')">');
+    lines.push('  <select id="flt-launched-mode" class="filter" style="min-width:200px" onchange="hzFilterTableAdv(\'flt-launched\',\'tbl-launched\',\'flt-launched-mode\')">');
+    lines.push('    <option value="any">Filter: match any column</option>');
+    lines.push('    <option value="app">Filter: application name contains</option>');
+    lines.push('    <option value="launches_min">Filter: min total launches ≥</option>');
+    lines.push('    <option value="users_min">Filter: min unique users ≥</option>');
+    lines.push('  </select>');
+    lines.push('  <span class="meta" style="white-space:nowrap">Sort:</span>');
+    lines.push('  <select id="tbl-launched-sort" class="filter" style="min-width:210px" onchange="hzSortTableBy(\'tbl-launched\', this.value)">');
+    lines.push('    <option value="launch_desc">Launches (high → low)</option>');
+    lines.push('    <option value="launch_asc">Launches (low → high)</option>');
+    lines.push('    <option value="user_desc">Unique users (high → low)</option>');
+    lines.push('    <option value="user_asc">Unique users (low → high)</option>');
+    lines.push('    <option value="app_asc">Application A → Z</option>');
+    lines.push('    <option value="app_desc">Application Z → A</option>');
+    lines.push('  </select>');
     lines.push('  <button class="btn" onclick="hzDownloadCsv(\'tbl-launched\',\'horizon-launched.csv\')">Download CSV</button>');
     lines.push('</div>');
     lines.push('<table id="tbl-launched" class="sortable">');
