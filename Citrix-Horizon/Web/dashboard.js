@@ -5158,6 +5158,12 @@ function generateAppReportScript() {
     lines.push('.btn { padding: 6px 12px; border:1px solid #888; background:#fafafa; cursor:pointer; border-radius:4px; font: inherit; }');
     lines.push('.btn:hover { background:#e8eef7; border-color:#406ebf; }');
     lines.push('.filter { padding: 5px 8px; border:1px solid #ccc; border-radius:4px; min-width: 220px; }');
+    lines.push('details.section { border:1px solid #ddd; border-radius:6px; margin: 12px 0; background:#fff; }');
+    lines.push('details.section > summary { padding: 10px 14px; cursor:pointer; font-size: 16px; font-weight:600; background:#f4f6fa; border-radius:6px; user-select:none; }');
+    lines.push('details.section[open] > summary { border-bottom:1px solid #ddd; border-radius:6px 6px 0 0; background:#eaf0fb; }');
+    lines.push('details.section > summary .count { color:#406ebf; font-weight:500; margin-left:8px; }');
+    lines.push('details.section > .inner { padding: 12px 14px; }');
+    lines.push('details.section > .inner table { max-width: 100%; }');
     lines.push('"@');
     lines.push('');
     lines.push("# Plain literal here-string - no PS interpolation, JS is embedded verbatim.");
@@ -5217,6 +5223,10 @@ function hzSortTable(tableId, colIdx, asNumber) {
     });
     for (var k = 0; k < rows.length; k++) { tbody.appendChild(rows[k]); }
 }
+function hzToggleAll(open) {
+    var ds = document.querySelectorAll("details.section");
+    for (var i = 0; i < ds.length; i++) { ds[i].open = !!open; }
+}
 document.addEventListener("DOMContentLoaded", function () {
     var tables = document.querySelectorAll("table.sortable");
     tables.forEach(function (tbl) {
@@ -5249,7 +5259,7 @@ document.addEventListener("DOMContentLoaded", function () {
     lines.push('    }) -join "`n"');
     lines.push('    if (-not $unusedTableRows) { $unusedTableRows = "<tr><td colspan=`"3`">No unused application pools - every configured app had at least one launch.</td></tr>" }');
     lines.push('    $unusedToolbar = "<div class=`"toolbar`"><input id=`"flt-unused`" class=`"filter`" placeholder=`"Filter unused apps...`" oninput=`"hzFilterTable(\'flt-unused\',\'tbl-unused\')`"><button class=`"btn`" onclick=`"hzDownloadCsv(\'tbl-unused\',\'horizon-unused-apps.csv\')`">Download CSV</button></div>"');
-    lines.push('    $unusedHtml = "<h2>Unused Applications (0 launches in window)</h2><p class=`"meta`">Candidates to decommission. Source: <code>$invEndpointUsed</code></p>$unusedToolbar<table id=`"tbl-unused`" class=`"sortable`"><thead><tr><th>Application</th><th>Display Name</th><th>Enabled</th></tr></thead><tbody>$unusedTableRows</tbody></table>"');
+    lines.push('    $unusedHtml = "<details class=`"section`"><summary>Unused Applications <span class=`"count`">($($unusedRows.Count) with 0 launches)</span></summary><div class=`"inner`"><p class=`"meta`">Candidates to decommission. Source: <code>$invEndpointUsed</code></p>$unusedToolbar<table id=`"tbl-unused`" class=`"sortable`"><thead><tr><th>Application</th><th>Display Name</th><th>Enabled</th></tr></thead><tbody>$unusedTableRows</tbody></table></div></details>"');
     lines.push('');
     lines.push('    $invTableRows = ($inventoryRows | ForEach-Object {');
     lines.push('        $n = [System.Web.HttpUtility]::HtmlEncode($_.Application)');
@@ -5259,7 +5269,7 @@ document.addEventListener("DOMContentLoaded", function () {
     lines.push('        "<tr class=`"$usageClass`"><td>$n</td><td>$d</td><td>$en</td><td class=`"num`">$($_.TotalLaunches)</td><td class=`"num`">$($_.UniqueUsers)</td><td>$($_.UsageStatus)</td></tr>"');
     lines.push('    }) -join "`n"');
     lines.push('    $invToolbar = "<div class=`"toolbar`"><input id=`"flt-inventory`" class=`"filter`" placeholder=`"Filter inventory...`" oninput=`"hzFilterTable(\'flt-inventory\',\'tbl-inventory\')`"><button class=`"btn`" onclick=`"hzDownloadCsv(\'tbl-inventory\',\'horizon-inventory.csv\')`">Download CSV</button></div>"');
-    lines.push('    $inventoryHtml = "<h2>Full Inventory ($($inventoryRows.Count) configured)</h2>$invToolbar<table id=`"tbl-inventory`" class=`"sortable`"><thead><tr><th>Application</th><th>Display Name</th><th>Enabled</th><th class=`"num`">Total Launches</th><th class=`"num`">Unique Users</th><th>Status</th></tr></thead><tbody>$invTableRows</tbody></table>"');
+    lines.push('    $inventoryHtml = "<details class=`"section`"><summary>Full Inventory <span class=`"count`">($($inventoryRows.Count) configured)</span></summary><div class=`"inner`">$invToolbar<table id=`"tbl-inventory`" class=`"sortable`"><thead><tr><th>Application</th><th>Display Name</th><th>Enabled</th><th class=`"num`">Total Launches</th><th class=`"num`">Unique Users</th><th>Status</th></tr></thead><tbody>$invTableRows</tbody></table></div></details>"');
     lines.push('}');
     lines.push('');
     lines.push('$htmlOut = @"');
@@ -5275,7 +5285,10 @@ document.addEventListener("DOMContentLoaded", function () {
     lines.push('Window: <strong>$WindowLabel</strong> &nbsp;|&nbsp; Generated: $(Get-Date) &nbsp;|&nbsp; Horizon API: 2506 &nbsp;|&nbsp; Events scanned: $($events.Count) &nbsp;|&nbsp; Events skipped (no app field): $skipped<br/>');
     lines.push('Horizon: <code>$BaseUrl</code>');
     lines.push('</div>');
-    lines.push('<h2>Launched Applications</h2>');
+    lines.push('<p class="meta"><a href="#" onclick="hzToggleAll(true);return false;">Expand all</a> &nbsp;|&nbsp; <a href="#" onclick="hzToggleAll(false);return false;">Collapse all</a></p>');
+    lines.push('<details class="section">');
+    lines.push('<summary>Launched Applications <span class="count">($($rows.Count) apps with launches)</span></summary>');
+    lines.push('<div class="inner">');
     lines.push('<div class="toolbar">');
     lines.push('  <input id="flt-launched" class="filter" placeholder="Filter launched apps..." oninput="hzFilterTable(\'flt-launched\',\'tbl-launched\')">');
     lines.push('  <button class="btn" onclick="hzDownloadCsv(\'tbl-launched\',\'horizon-launched.csv\')">Download CSV</button>');
@@ -5286,6 +5299,8 @@ document.addEventListener("DOMContentLoaded", function () {
     lines.push('$tableRows');
     lines.push('</tbody>');
     lines.push('</table>');
+    lines.push('</div>');
+    lines.push('</details>');
     lines.push('$unusedHtml');
     lines.push('$inventoryHtml');
     lines.push('<script>');
