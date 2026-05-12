@@ -189,6 +189,12 @@ document.addEventListener('DOMContentLoaded', async function() {
         adminBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
     }
 
+    // Prefill App Report Horizon base if empty (shares HZ_ADMIN_DEFAULT_BASE)
+    const appReportBaseInput = document.getElementById('appReportHorizonBase');
+    if (appReportBaseInput && !appReportBaseInput.value) {
+        appReportBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
+    }
+
     // GoldenSun VMware toggle
     const goldenSunVmwareToggle = document.getElementById('goldenSunVmwareToggle');
     if (goldenSunVmwareToggle) {
@@ -2111,6 +2117,11 @@ function showHorizonTask(taskName) {
         loadMsPatchCveSummary();
     } else if (taskName === 'adminTasks') {
         // no-op for now
+    } else if (taskName === 'appReport') {
+        const appReportBaseInput = document.getElementById('appReportHorizonBase');
+        if (appReportBaseInput && !appReportBaseInput.value) {
+            appReportBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
+        }
     }
 }
 
@@ -4413,6 +4424,338 @@ function downloadAdminScript() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'Horizon-Admin.ps1';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// APP REPORT TAB (HZ Tasks → App Report)
+// Generates a PowerShell script that queries Horizon REST audit events for
+// application launches in the chosen window (1d / 7d / 30d / 90d) and writes
+// a per-app report (TotalLaunches + UniqueUsers) to Reports/horizon-app-report.{json,html}.
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateAppReportScript() {
+    const baseInput = document.getElementById('appReportHorizonBase');
+    let baseUrl = baseInput ? (baseInput.value || '').trim() : '';
+    if (!baseUrl) baseUrl = HZ_ADMIN_DEFAULT_BASE;
+    if (!/^https?:\/\//i.test(baseUrl)) {
+        baseUrl = 'https://' + baseUrl;
+    }
+    const protoMatch = baseUrl.match(/^(https?:\/\/)(.*)$/i);
+    if (protoMatch) {
+        const proto = protoMatch[1];
+        const rest = protoMatch[2].replace(/^\/+/, '');
+        baseUrl = proto + rest;
+    }
+    if (!baseUrl.toLowerCase().includes('/rest')) {
+        baseUrl = baseUrl.replace(/\/+$/, '') + '/rest';
+    }
+    baseUrl = baseUrl.replace(/\/+$/, '');
+
+    const selected = document.querySelector('input[name="appReportRange"]:checked');
+    const range = selected ? selected.value : '7d';
+    const rangeMap = { '1d': { days: 1, label: '1 day' }, '7d': { days: 7, label: '1 week' }, '30d': { days: 30, label: '1 month' }, '90d': { days: 90, label: '3 months' } };
+    const cfg = rangeMap[range] || rangeMap['7d'];
+
+    const lines = [];
+    lines.push(`# Horizon App Report (PowerShell, REST) - Horizon Server API 2506`);
+    lines.push(`# Window: ${cfg.label} ending now`);
+    lines.push(`# Aggregates per-application TotalLaunches and UniqueUsers from Horizon audit events.`);
+    lines.push(`# Uses /external/v1/audit-events with a server-side 'filter' on time + event type (2506-compatible).`);
+    lines.push('');
+    lines.push('$ErrorActionPreference = "Stop"');
+    lines.push('$cwd = Get-Location');
+    lines.push('$ReportsDir = Join-Path $cwd.Path "Reports"');
+    lines.push('if (-not (Test-Path $ReportsDir)) { New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null }');
+    lines.push(`$BaseUrl = "${baseUrl}"`);
+    lines.push(`$WindowDays = ${cfg.days}`);
+    lines.push(`$WindowLabel = "${cfg.label}"`);
+    lines.push('$OutJson = Join-Path $ReportsDir "horizon-app-report.json"');
+    lines.push('$OutHtml = Join-Path $ReportsDir "horizon-app-report.html"');
+    lines.push('');
+    lines.push('# --- TLS + self-signed cert handling (PS 5.1) ---');
+    lines.push('try {');
+    lines.push('    if (-not ("TrustAllCertsPolicy" -as [type])) {');
+    lines.push('        Add-Type @"');
+    lines.push('using System.Net;');
+    lines.push('using System.Security.Cryptography.X509Certificates;');
+    lines.push('public class TrustAllCertsPolicy : ICertificatePolicy {');
+    lines.push('    public bool CheckValidationResult(ServicePoint sp, X509Certificate cert, WebRequest req, int problem) { return true; }');
+    lines.push('}');
+    lines.push('"@');
+    lines.push('    }');
+    lines.push('    [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy');
+    lines.push('    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12');
+    lines.push('} catch {}');
+    lines.push('');
+    lines.push('$Domain = Read-Host "Domain (optional, leave blank if not needed)"');
+    lines.push('$cred   = Get-Credential -Message "Enter Horizon credentials (REST)"');
+    lines.push('$loginUser = $cred.UserName');
+    lines.push('$loginPass = $cred.GetNetworkCredential().Password');
+    lines.push('');
+    lines.push('# --- Login to get bearer token (Horizon REST /login) ---');
+    lines.push('$loginBody = @{ username = $loginUser; password = $loginPass }');
+    lines.push('if ($Domain) { $loginBody.domain = $Domain }');
+    lines.push('$tokenResp = Invoke-RestMethod -Method Post -Uri "$BaseUrl/login" -ContentType "application/json" -Body ($loginBody | ConvertTo-Json)');
+    lines.push('$token = $tokenResp.access_token');
+    lines.push('if (-not $token) { throw "Login did not return access_token" }');
+    lines.push('$headers = @{ Authorization = "Bearer $token"; Accept = "application/json" }');
+    lines.push('');
+    lines.push('# --- Time window (epoch ms, UTC) ---');
+    lines.push('$nowMs   = [int64]([DateTime]::UtcNow - (Get-Date "1970-01-01")).TotalMilliseconds');
+    lines.push('$startMs = $nowMs - ($WindowDays * 24L * 60L * 60L * 1000L)');
+    lines.push('Write-Host ("App Report window: {0}  ({1} -> {2})" -f $WindowLabel, ([DateTimeOffset]::FromUnixTimeMilliseconds($startMs).LocalDateTime), ([DateTimeOffset]::FromUnixTimeMilliseconds($nowMs).LocalDateTime)) -ForegroundColor Cyan');
+    lines.push('');
+    lines.push('# --- Event types treated as "application launches" (Horizon 2506) ---');
+    lines.push('# In 2506 the AuditEventInfo field is "type"; we filter on these names.');
+    lines.push('$launchEventTypes = @(');
+    lines.push('    "BROKER_DAEMON_LAUNCH_APPLICATION_SUCCESS",');
+    lines.push('    "BROKER_USER_LAUNCH_APPLICATION_SUCCESS",');
+    lines.push('    "BROKER_USER_LAUNCHED_APPLICATION",');
+    lines.push('    "AGENT_APP_SESSION_STARTED"');
+    lines.push(')');
+    lines.push('');
+    lines.push('# --- Build the Horizon 2506 server-side filter (And: time>=start AND type IN [...]) ---');
+    lines.push('$filterObj = @{');
+    lines.push('    type    = "And"');
+    lines.push('    filters = @(');
+    lines.push('        @{ type = "GreaterThanOrEqualTo"; name = "time"; value = $startMs },');
+    lines.push('        @{ type = "LessThanOrEqualTo";    name = "time"; value = $nowMs   },');
+    lines.push('        @{ type = "In";                    name = "type"; value = $launchEventTypes }');
+    lines.push('    )');
+    lines.push('}');
+    lines.push('$filterJson = ($filterObj | ConvertTo-Json -Depth 6 -Compress)');
+    lines.push('$filterEnc  = [System.Uri]::EscapeDataString($filterJson)');
+    lines.push('');
+    lines.push('# --- Helper: page through audit-events with the 2506 filter ---');
+    lines.push('function Get-HzAuditEvents($base, $hdrs, $epPath, $filterEnc) {');
+    lines.push('    $all = New-Object System.Collections.ArrayList');
+    lines.push('    $page = 1');
+    lines.push('    $size = 1000');
+    lines.push('    while ($true) {');
+    lines.push('        $qs  = "?filter=$filterEnc&page=$page&size=$size"');
+    lines.push('        $uri = "$base$epPath$qs"');
+    lines.push('        try {');
+    lines.push('            $r = Invoke-RestMethod -Method Get -Uri $uri -Headers $hdrs');
+    lines.push('        } catch {');
+    lines.push('            Write-Warning "  $uri -> $($_.Exception.Message)"');
+    lines.push('            break');
+    lines.push('        }');
+    lines.push('        $items = $null');
+    lines.push('        if ($r -is [array]) { $items = $r }');
+    lines.push('        elseif ($r -is [pscustomobject] -and $r.PSObject.Properties.Name -contains "items") { $items = $r.items }');
+    lines.push('        elseif ($r -is [hashtable] -and $r.ContainsKey("items")) { $items = $r.items }');
+    lines.push('        if (-not $items -or $items.Count -eq 0) { break }');
+    lines.push('        foreach ($it in $items) { [void]$all.Add($it) }');
+    lines.push('        if ($items.Count -lt $size) { break }');
+    lines.push('        $page++');
+    lines.push('        if ($page -gt 500) { Write-Warning "  Page guard hit (500) on $epPath"; break }');
+    lines.push('    }');
+    lines.push('    return ,$all');
+    lines.push('}');
+    lines.push('');
+    lines.push('# --- Helper: same as above, but without filter (fallback for older endpoints) ---');
+    lines.push('function Get-HzAuditEventsUnfiltered($base, $hdrs, $epPath) {');
+    lines.push('    $all = New-Object System.Collections.ArrayList');
+    lines.push('    $page = 1');
+    lines.push('    $size = 1000');
+    lines.push('    while ($true) {');
+    lines.push('        $qs  = "?page=$page&size=$size"');
+    lines.push('        $uri = "$base$epPath$qs"');
+    lines.push('        try { $r = Invoke-RestMethod -Method Get -Uri $uri -Headers $hdrs } catch { break }');
+    lines.push('        $items = $null');
+    lines.push('        if ($r -is [array]) { $items = $r }');
+    lines.push('        elseif ($r -is [pscustomobject] -and $r.PSObject.Properties.Name -contains "items") { $items = $r.items }');
+    lines.push('        elseif ($r -is [hashtable] -and $r.ContainsKey("items")) { $items = $r.items }');
+    lines.push('        if (-not $items -or $items.Count -eq 0) { break }');
+    lines.push('        foreach ($it in $items) { [void]$all.Add($it) }');
+    lines.push('        if ($items.Count -lt $size) { break }');
+    lines.push('        $page++');
+    lines.push('        if ($page -gt 500) { break }');
+    lines.push('    }');
+    lines.push('    return ,$all');
+    lines.push('}');
+    lines.push('');
+    lines.push('# --- Pull events: 2506 prefers /external/v1/audit-events; we also try v2 if present. ---');
+    lines.push('$candidatePaths = @("/external/v1/audit-events","/external/v2/audit-events")');
+    lines.push('$events = $null');
+    lines.push('foreach ($p in $candidatePaths) {');
+    lines.push('    Write-Host "Fetching events (server-side filter) from $BaseUrl$p ..." -ForegroundColor Cyan');
+    lines.push('    $events = Get-HzAuditEvents -base $BaseUrl -hdrs $headers -epPath $p -filterEnc $filterEnc');
+    lines.push('    if ($events -and $events.Count -gt 0) { Write-Host "  Got $($events.Count) event(s) from $p (filtered)" -ForegroundColor Green; break }');
+    lines.push('}');
+    lines.push('if (-not $events -or $events.Count -eq 0) {');
+    lines.push('    Write-Warning "Server-side filter returned 0 events. Falling back to unfiltered pull + client-side filter."');
+    lines.push('    foreach ($p in $candidatePaths) {');
+    lines.push('        Write-Host "Fetching events (unfiltered) from $BaseUrl$p ..." -ForegroundColor Cyan');
+    lines.push('        $events = Get-HzAuditEventsUnfiltered -base $BaseUrl -hdrs $headers -epPath $p');
+    lines.push('        if ($events -and $events.Count -gt 0) { Write-Host "  Got $($events.Count) raw event(s) from $p" -ForegroundColor Green; break }');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('if (-not $events) { $events = @() }');
+    lines.push('');
+    lines.push('# --- Helper: try multiple property names ---');
+    lines.push('function Get-EventProp($obj, [string[]]$names) {');
+    lines.push('    if ($null -eq $obj) { return $null }');
+    lines.push('    foreach ($n in $names) {');
+    lines.push('        if ($obj.PSObject.Properties.Name -contains $n) {');
+    lines.push('            $v = $obj.$n');
+    lines.push('            if ($null -ne $v -and "$v" -ne "") { return [string]$v }');
+    lines.push('        }');
+    lines.push('    }');
+    lines.push('    return $null');
+    lines.push('}');
+    lines.push('');
+    lines.push('# --- Helper: parse application + user from an audit-event message ---');
+    lines.push('# Horizon 2506 typically writes messages like:');
+    lines.push('#   "User DOMAIN\\sam requested application SomeApp from pool ..."');
+    lines.push('#   "User DOMAIN\\sam has launched application \\"SomeApp\\" with session ..."');
+    lines.push('#   "Application SomeApp launched for user DOMAIN\\sam"');
+    lines.push('function Parse-MessageAppUser([string]$msg) {');
+    lines.push('    $out = @{ app = $null; user = $null }');
+    lines.push('    if (-not $msg) { return $out }');
+    lines.push('    # Use PS single-quoted strings so regex backslashes and quote chars are literal.');
+    lines.push('    $appPatterns = @(');
+    lines.push("        'application\\s+\"([^\"]+)\"',");
+    lines.push("        \"application\\s+'([^']+)'\",");
+    lines.push("        'application\\s+([A-Za-z0-9 _\\-\\.]+?)\\s+(?:for|from|with|to|on)\\b',");
+    lines.push("        'Application\\s+([A-Za-z0-9 _\\-\\.]+?)\\s+(?:launched|started)\\b'");
+    lines.push('    )');
+    lines.push('    foreach ($p in $appPatterns) {');
+    lines.push('        $m = [regex]::Match($msg, $p, "IgnoreCase")');
+    lines.push('        if ($m.Success) { $out.app = $m.Groups[1].Value.Trim(); break }');
+    lines.push('    }');
+    lines.push('    $userPatterns = @(');
+    lines.push("        'for\\s+user\\s+([^\\s,;]+)',");
+    lines.push("        'user\\s+([A-Za-z0-9_\\.\\-]+\\\\[A-Za-z0-9_\\.\\-]+)',");
+    lines.push("        'user\\s+([A-Za-z0-9_\\.\\-]+@[A-Za-z0-9_\\.\\-]+)'");
+    lines.push('    )');
+    lines.push('    foreach ($p in $userPatterns) {');
+    lines.push('        $m = [regex]::Match($msg, $p, "IgnoreCase")');
+    lines.push('        if ($m.Success) { $out.user = $m.Groups[1].Value.Trim(); break }');
+    lines.push('    }');
+    lines.push('    return $out');
+    lines.push('}');
+    lines.push('');
+    lines.push('# --- Aggregate per application ---');
+    lines.push('$byApp = @{}');
+    lines.push('$skipped = 0');
+    lines.push('foreach ($e in $events) {');
+    lines.push('    # 2506: AuditEventInfo.type ; older: event_type/eventType/name');
+    lines.push('    $type = Get-EventProp $e @("type","event_type","eventType","name")');
+    lines.push('    if ($type -and ($launchEventTypes -notcontains $type)) { continue }');
+    lines.push('');
+    lines.push('    # 1) Try structured fields the API *might* expose');
+    lines.push('    $app = Get-EventProp $e @("application_name","appName","ApplicationName","application","resource_name","ResourceName")');
+    lines.push('    # 2506 AuditEventInfo carries user_id; older versions: userName / userPrincipalName / user_name');
+    lines.push('    $user = Get-EventProp $e @("user_id","user_name","userName","userPrincipalName","user","User")');
+    lines.push('');
+    lines.push('    # 2) Fall back to message parsing for app/user (most common path in 2506)');
+    lines.push('    if (-not $app -or -not $user) {');
+    lines.push('        $msg = Get-EventProp $e @("message","Message","i18n_message")');
+    lines.push('        $parsed = Parse-MessageAppUser $msg');
+    lines.push('        if (-not $app -and $parsed.app)  { $app  = $parsed.app  }');
+    lines.push('        if (-not $user -and $parsed.user){ $user = $parsed.user }');
+    lines.push('    }');
+    lines.push('');
+    lines.push('    if (-not $app) { $skipped++; continue }');
+    lines.push('    if (-not $byApp.ContainsKey($app)) {');
+    lines.push('        $byApp[$app] = @{ launches = 0; users = (New-Object System.Collections.Generic.HashSet[string]) }');
+    lines.push('    }');
+    lines.push('    $byApp[$app].launches = $byApp[$app].launches + 1');
+    lines.push('    if ($user) { [void]$byApp[$app].users.Add($user) }');
+    lines.push('}');
+    lines.push('');
+    lines.push('$rows = @()');
+    lines.push('foreach ($k in ($byApp.Keys | Sort-Object)) {');
+    lines.push('    $rows += [pscustomobject]@{');
+    lines.push('        Application   = $k');
+    lines.push('        TotalLaunches = [int]$byApp[$k].launches');
+    lines.push('        UniqueUsers   = [int]$byApp[$k].users.Count');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('$rows = $rows | Sort-Object -Property TotalLaunches -Descending');
+    lines.push('');
+    lines.push('$summary = [pscustomobject]@{');
+    lines.push('    generatedAt   = (Get-Date).ToString("o")');
+    lines.push('    horizonApi    = "2506"');
+    lines.push('    windowLabel   = $WindowLabel');
+    lines.push('    windowDays    = $WindowDays');
+    lines.push('    startUnixMs   = $startMs');
+    lines.push('    endUnixMs     = $nowMs');
+    lines.push('    eventCount    = $events.Count');
+    lines.push('    eventsSkipped = $skipped');
+    lines.push('    horizonBase   = $BaseUrl');
+    lines.push('    rows          = $rows');
+    lines.push('}');
+    lines.push('$summary | ConvertTo-Json -Depth 6 | Set-Content -Path $OutJson -Encoding UTF8');
+    lines.push('Write-Host "Saved JSON to $OutJson" -ForegroundColor Green');
+    lines.push('');
+    lines.push('# --- HTML rendering ---');
+    lines.push('Add-Type -AssemblyName System.Web');
+    lines.push('$style = @"');
+    lines.push('body { font-family: Segoe UI, Arial, sans-serif; margin: 24px; color: #222; }');
+    lines.push('h1 { margin: 0 0 6px; }');
+    lines.push('.meta { color:#666; margin-bottom:14px; font-size: 13px; }');
+    lines.push('table { border-collapse: collapse; width: 100%; max-width: 1100px; }');
+    lines.push('th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }');
+    lines.push('th { background:#f4f4f4; cursor: pointer; }');
+    lines.push('tbody tr:nth-child(even) { background:#fafafa; }');
+    lines.push('.num { text-align: right; font-variant-numeric: tabular-nums; }');
+    lines.push('"@');
+    lines.push('$tableRows = ($rows | ForEach-Object {');
+    lines.push('    $appHtml = [System.Web.HttpUtility]::HtmlEncode($_.Application)');
+    lines.push('    "<tr><td>$appHtml</td><td class=`"num`">$($_.TotalLaunches)</td><td class=`"num`">$($_.UniqueUsers)</td></tr>"');
+    lines.push('}) -join "`n"');
+    lines.push('if (-not $tableRows) { $tableRows = "<tr><td colspan=`"3`">No application launch events were returned for this window.</td></tr>" }');
+    lines.push('$htmlOut = @"');
+    lines.push('<!doctype html>');
+    lines.push('<html><head><meta charset="utf-8"><title>Horizon App Report ($WindowLabel)</title><style>$style</style></head>');
+    lines.push('<body>');
+    lines.push('<h1>Horizon App Report</h1>');
+    lines.push('<div class="meta">');
+    lines.push('Window: <strong>$WindowLabel</strong> &nbsp;|&nbsp; Generated: $(Get-Date) &nbsp;|&nbsp; Horizon API: 2506 &nbsp;|&nbsp; Events scanned: $($events.Count) &nbsp;|&nbsp; Events skipped (no app field): $skipped<br/>');
+    lines.push('Horizon: <code>$BaseUrl</code>');
+    lines.push('</div>');
+    lines.push('<table>');
+    lines.push('<thead><tr><th>Application</th><th class="num">Total Launches</th><th class="num">Unique Users</th></tr></thead>');
+    lines.push('<tbody>');
+    lines.push('$tableRows');
+    lines.push('</tbody>');
+    lines.push('</table>');
+    lines.push('</body></html>');
+    lines.push('"@');
+    lines.push('$htmlOut | Out-File -FilePath $OutHtml -Encoding UTF8');
+    lines.push('Write-Host "Saved HTML to $OutHtml" -ForegroundColor Green');
+    lines.push('');
+    lines.push('try { Start-Process $OutHtml } catch { Write-Warning "Could not open HTML automatically: $($_.Exception.Message)" }');
+    lines.push('Write-Host ("Done. Apps found: {0}  Total launches: {1}" -f $rows.Count, ((($rows | Measure-Object -Property TotalLaunches -Sum).Sum))) -ForegroundColor Cyan');
+
+    const out = document.getElementById('appReportScriptContent');
+    if (out) out.value = lines.join('\n');
+}
+
+function copyAppReportScript() {
+    const area = document.getElementById('appReportScriptContent');
+    if (!area) return;
+    area.select();
+    document.execCommand('copy');
+}
+
+function downloadAppReportScript() {
+    const scriptContent = document.getElementById('appReportScriptContent')?.value || '';
+    if (!scriptContent) {
+        alert('Generate the script first.');
+        return;
+    }
+    const blob = new Blob([scriptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Horizon-App-Report.ps1';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
