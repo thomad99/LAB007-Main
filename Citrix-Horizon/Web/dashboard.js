@@ -4478,10 +4478,10 @@ function generateAppReportScript() {
     lines.push('');
     lines.push('# --- Unfiltered fallback safety cap ---');
     lines.push('# Only used if EVERY server-side filter variant is rejected by the controller.');
-    lines.push('# 400 pages x 250 = up to 100,000 events. The unfiltered pull auto-stops once it');
+    lines.push('# 2000 pages x 250 = up to 500,000 events. The unfiltered pull auto-stops once it');
     lines.push('# sees an event OLDER than the window start, so for a small window it returns fast.');
-    lines.push('# Raise/lower as needed (e.g. 100 = 25k cap, 1000 = 250k cap).');
-    lines.push('$UnfilteredMaxPages = 400');
+    lines.push('# This cap really only matters for huge windows on very busy brokers.');
+    lines.push('$UnfilteredMaxPages = 2000');
     lines.push('');
     lines.push('# --- TLS + self-signed cert handling (PS 5.1) ---');
     lines.push('try {');
@@ -5060,7 +5060,7 @@ function generateAppReportScript() {
     lines.push('        foreach ($it in $items) { [void]$bag.Add($it) }');
     lines.push('        if ($items.Count -lt $invSize) { break }');
     lines.push('        $invPage++');
-    lines.push('        if ($invPage -gt 200) { break }');
+    lines.push('        if ($invPage -gt 1000) { Write-Warning "  Inventory page cap (1000) hit - raise it if you have >250k app pools."; break }');
     lines.push('    }');
     lines.push('    if ($invOk -and $bag.Count -gt 0) {');
     lines.push('        $configuredApps = $bag');
@@ -5149,10 +5149,88 @@ function generateAppReportScript() {
     lines.push('.meta { color:#666; margin-bottom:14px; font-size: 13px; }');
     lines.push('table { border-collapse: collapse; width: 100%; max-width: 1100px; }');
     lines.push('th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }');
-    lines.push('th { background:#f4f4f4; cursor: pointer; }');
+    lines.push('th { background:#f4f4f4; cursor: pointer; user-select: none; }');
+    lines.push('th.sort-asc::after  { content: " \u25B2"; color:#888; font-size:11px; }');
+    lines.push('th.sort-desc::after { content: " \u25BC"; color:#888; font-size:11px; }');
     lines.push('tbody tr:nth-child(even) { background:#fafafa; }');
     lines.push('.num { text-align: right; font-variant-numeric: tabular-nums; }');
+    lines.push('.toolbar { margin: 8px 0 14px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }');
+    lines.push('.btn { padding: 6px 12px; border:1px solid #888; background:#fafafa; cursor:pointer; border-radius:4px; font: inherit; }');
+    lines.push('.btn:hover { background:#e8eef7; border-color:#406ebf; }');
+    lines.push('.filter { padding: 5px 8px; border:1px solid #ccc; border-radius:4px; min-width: 220px; }');
     lines.push('"@');
+    lines.push('');
+    lines.push("# Plain literal here-string - no PS interpolation, JS is embedded verbatim.");
+    lines.push("$csvJs = @'");
+    const csvJs = `function _hzEscapeCsv(v) {
+    var s = (v == null) ? "" : String(v);
+    if (/[",\\r\\n]/.test(s)) { s = '"' + s.replace(/"/g, '""') + '"'; }
+    return s;
+}
+function hzDownloadCsv(tableId, filename) {
+    var t = document.getElementById(tableId);
+    if (!t) return;
+    var rows = t.querySelectorAll("tr");
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+        if (rows[i].style.display === "none") continue;
+        var cells = rows[i].querySelectorAll("th,td");
+        var arr = [];
+        for (var j = 0; j < cells.length; j++) {
+            arr.push(_hzEscapeCsv((cells[j].textContent || "").trim()));
+        }
+        out.push(arr.join(","));
+    }
+    var blob = new Blob(["\\uFEFF" + out.join("\\r\\n")], { type: "text/csv;charset=utf-8;" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+}
+function hzFilterTable(inputId, tableId) {
+    var q = (document.getElementById(inputId).value || "").toLowerCase();
+    var t = document.getElementById(tableId);
+    if (!t) return;
+    var rows = t.querySelectorAll("tbody tr");
+    for (var i = 0; i < rows.length; i++) {
+        var txt = (rows[i].textContent || "").toLowerCase();
+        rows[i].style.display = (q === "" || txt.indexOf(q) !== -1) ? "" : "none";
+    }
+}
+function hzSortTable(tableId, colIdx, asNumber) {
+    var t = document.getElementById(tableId);
+    if (!t) return;
+    var tbody = t.tBodies[0];
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+    var headers = t.tHead ? t.tHead.querySelectorAll("th") : [];
+    var th = headers[colIdx];
+    var asc = !(th && th.classList.contains("sort-asc"));
+    for (var h = 0; h < headers.length; h++) { headers[h].classList.remove("sort-asc","sort-desc"); }
+    if (th) th.classList.add(asc ? "sort-asc" : "sort-desc");
+    rows.sort(function (a, b) {
+        var av = a.cells[colIdx] ? a.cells[colIdx].textContent.trim() : "";
+        var bv = b.cells[colIdx] ? b.cells[colIdx].textContent.trim() : "";
+        if (asNumber) { av = parseFloat(av.replace(/,/g, "")) || 0; bv = parseFloat(bv.replace(/,/g, "")) || 0; return asc ? av - bv : bv - av; }
+        return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+    for (var k = 0; k < rows.length; k++) { tbody.appendChild(rows[k]); }
+}
+document.addEventListener("DOMContentLoaded", function () {
+    var tables = document.querySelectorAll("table.sortable");
+    tables.forEach(function (tbl) {
+        var ths = tbl.tHead ? tbl.tHead.querySelectorAll("th") : [];
+        ths.forEach(function (th, idx) {
+            th.addEventListener("click", function () {
+                var isNum = th.classList.contains("num");
+                hzSortTable(tbl.id, idx, isNum);
+            });
+        });
+    });
+});`;
+    csvJs.split('\n').forEach(l => lines.push(l));
+    lines.push("'@");
     lines.push('$tableRows = ($rows | ForEach-Object {');
     lines.push('    $appHtml = [System.Web.HttpUtility]::HtmlEncode($_.Application)');
     lines.push('    "<tr><td>$appHtml</td><td class=`"num`">$($_.TotalLaunches)</td><td class=`"num`">$($_.UniqueUsers)</td></tr>"');
@@ -5170,7 +5248,8 @@ function generateAppReportScript() {
     lines.push('        "<tr><td>$n</td><td>$d</td><td>$en</td></tr>"');
     lines.push('    }) -join "`n"');
     lines.push('    if (-not $unusedTableRows) { $unusedTableRows = "<tr><td colspan=`"3`">No unused application pools - every configured app had at least one launch.</td></tr>" }');
-    lines.push('    $unusedHtml = "<h2>Unused Applications (0 launches in window)</h2><p class=`"meta`">Candidates to decommission. Source: <code>$invEndpointUsed</code></p><table><thead><tr><th>Application</th><th>Display Name</th><th>Enabled</th></tr></thead><tbody>$unusedTableRows</tbody></table>"');
+    lines.push('    $unusedToolbar = "<div class=`"toolbar`"><input id=`"flt-unused`" class=`"filter`" placeholder=`"Filter unused apps...`" oninput=`"hzFilterTable(\'flt-unused\',\'tbl-unused\')`"><button class=`"btn`" onclick=`"hzDownloadCsv(\'tbl-unused\',\'horizon-unused-apps.csv\')`">Download CSV</button></div>"');
+    lines.push('    $unusedHtml = "<h2>Unused Applications (0 launches in window)</h2><p class=`"meta`">Candidates to decommission. Source: <code>$invEndpointUsed</code></p>$unusedToolbar<table id=`"tbl-unused`" class=`"sortable`"><thead><tr><th>Application</th><th>Display Name</th><th>Enabled</th></tr></thead><tbody>$unusedTableRows</tbody></table>"');
     lines.push('');
     lines.push('    $invTableRows = ($inventoryRows | ForEach-Object {');
     lines.push('        $n = [System.Web.HttpUtility]::HtmlEncode($_.Application)');
@@ -5179,7 +5258,8 @@ function generateAppReportScript() {
     lines.push('        $usageClass = if ($_.UsageStatus -eq "UNUSED") { "unused" } else { "used" }');
     lines.push('        "<tr class=`"$usageClass`"><td>$n</td><td>$d</td><td>$en</td><td class=`"num`">$($_.TotalLaunches)</td><td class=`"num`">$($_.UniqueUsers)</td><td>$($_.UsageStatus)</td></tr>"');
     lines.push('    }) -join "`n"');
-    lines.push('    $inventoryHtml = "<h2>Full Inventory ($($inventoryRows.Count) configured)</h2><table><thead><tr><th>Application</th><th>Display Name</th><th>Enabled</th><th class=`"num`">Total Launches</th><th class=`"num`">Unique Users</th><th>Status</th></tr></thead><tbody>$invTableRows</tbody></table>"');
+    lines.push('    $invToolbar = "<div class=`"toolbar`"><input id=`"flt-inventory`" class=`"filter`" placeholder=`"Filter inventory...`" oninput=`"hzFilterTable(\'flt-inventory\',\'tbl-inventory\')`"><button class=`"btn`" onclick=`"hzDownloadCsv(\'tbl-inventory\',\'horizon-inventory.csv\')`">Download CSV</button></div>"');
+    lines.push('    $inventoryHtml = "<h2>Full Inventory ($($inventoryRows.Count) configured)</h2>$invToolbar<table id=`"tbl-inventory`" class=`"sortable`"><thead><tr><th>Application</th><th>Display Name</th><th>Enabled</th><th class=`"num`">Total Launches</th><th class=`"num`">Unique Users</th><th>Status</th></tr></thead><tbody>$invTableRows</tbody></table>"');
     lines.push('}');
     lines.push('');
     lines.push('$htmlOut = @"');
@@ -5196,7 +5276,11 @@ function generateAppReportScript() {
     lines.push('Horizon: <code>$BaseUrl</code>');
     lines.push('</div>');
     lines.push('<h2>Launched Applications</h2>');
-    lines.push('<table>');
+    lines.push('<div class="toolbar">');
+    lines.push('  <input id="flt-launched" class="filter" placeholder="Filter launched apps..." oninput="hzFilterTable(\'flt-launched\',\'tbl-launched\')">');
+    lines.push('  <button class="btn" onclick="hzDownloadCsv(\'tbl-launched\',\'horizon-launched.csv\')">Download CSV</button>');
+    lines.push('</div>');
+    lines.push('<table id="tbl-launched" class="sortable">');
     lines.push('<thead><tr><th>Application</th><th class="num">Total Launches</th><th class="num">Unique Users</th></tr></thead>');
     lines.push('<tbody>');
     lines.push('$tableRows');
@@ -5204,6 +5288,9 @@ function generateAppReportScript() {
     lines.push('</table>');
     lines.push('$unusedHtml');
     lines.push('$inventoryHtml');
+    lines.push('<script>');
+    lines.push('$csvJs');
+    lines.push('</script>');
     lines.push('</body></html>');
     lines.push('"@');
     lines.push('$htmlOut | Out-File -FilePath $OutHtml -Encoding UTF8');
@@ -5220,7 +5307,7 @@ function generateAppReportScript() {
     lines.push('if ($totalRows -eq 0) {');
     lines.push('    Write-Host "  (no applications matched - see Parse complete counters above)" -ForegroundColor Yellow');
     lines.push('} else {');
-    lines.push('    $showCount = [Math]::Min(50, $totalRows)');
+    lines.push('    $showCount = [Math]::Min(100, $totalRows)');
     lines.push('    $topRows = $rows | Sort-Object -Property TotalLaunches -Descending | Select-Object -First $showCount');
     lines.push('    $appColWidth = ($topRows | ForEach-Object { $_.Application.Length } | Measure-Object -Maximum).Maximum');
     lines.push('    if (-not $appColWidth -or $appColWidth -lt 12) { $appColWidth = 12 }');
@@ -5249,7 +5336,7 @@ function generateAppReportScript() {
     lines.push('    if ($unusedRows.Count -eq 0) {');
     lines.push('        Write-Host "  Every configured application was launched at least once - nothing to demise yet." -ForegroundColor Green');
     lines.push('    } else {');
-    lines.push('        $uShow = [Math]::Min(50, $unusedRows.Count)');
+    lines.push('        $uShow = [Math]::Min(100, $unusedRows.Count)');
     lines.push('        $uTop  = $unusedRows | Select-Object -First $uShow');
     lines.push('        $uColW = ($uTop | ForEach-Object { $_.Application.Length } | Measure-Object -Maximum).Maximum');
     lines.push('        if (-not $uColW -or $uColW -lt 12) { $uColW = 12 }');
