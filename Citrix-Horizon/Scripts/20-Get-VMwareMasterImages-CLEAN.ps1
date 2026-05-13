@@ -62,7 +62,8 @@ try {
     # Search for VMs matching the specified prefix pattern
     Write-Host "Searching for VMs matching pattern ${MasterImagePrefix}*..." -ForegroundColor Yellow
 
-    $vms = Get-VM -Name "${MasterImagePrefix}*" -ErrorAction SilentlyContinue
+    $vms = @(Get-VM -Name "${MasterImagePrefix}*" -ErrorAction SilentlyContinue) |
+        Sort-Object -Property Id -Unique
 
     if (-not $vms -or $vms.Count -eq 0) {
         Write-Warning 'No VMs found matching pattern SHC-M-*'
@@ -71,6 +72,7 @@ try {
         Write-Host "Found $($vms.Count) master image(s)" -ForegroundColor Green
 
         $masterImages = @()
+        $seenNames = @{}
 
         foreach ($vm in $vms) {
             Write-Host "Processing: $($vm.Name)..." -ForegroundColor Cyan
@@ -82,8 +84,15 @@ try {
             $datastore = Get-Datastore -VM $vm -ErrorAction SilentlyContinue | Select-Object -First 1
 
             # Parse VM name to extract components
-            # Expected format: SHC-M-{ImageName}V{Version} or SHC-M-{ImageName}
-            $vmName = $vm.Name
+            # Use the leaf form only so path-style display names like "folder/SHC-M-MAINV2" collapse to "SHC-M-MAINV2"
+            $vmName = ($vm.Name -split '/')[-1]
+            if ([string]::IsNullOrWhiteSpace($vmName)) { $vmName = $vm.Name }
+            $nameKey = $vmName.ToLowerInvariant()
+            if ($seenNames.ContainsKey($nameKey)) {
+                Write-Host "  Skipping duplicate entry for $vmName (already captured)" -ForegroundColor DarkYellow
+                continue
+            }
+            $seenNames[$nameKey] = $true
             $shortName = $vmName
             $clusterName = if ($cluster) { $cluster.Name } else { 'Unknown' }
             $version = 'V1'

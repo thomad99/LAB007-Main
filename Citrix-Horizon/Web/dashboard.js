@@ -2111,11 +2111,14 @@ function showHorizonTask(taskName) {
     
     // Task-specific initialization
     if (taskName === 'cloneMasterImage') {
+        // Single source of truth: load from goldensun-master-images.json (the file the
+        // discovery script writes). Do NOT also call populateMasterImagesCloneList() — it
+        // pulls from auditData.UniqueMasterImages (path-form names) and would clobber the
+        // short-name list rendered by loadCloneMasterImages(), producing the duplicate
+        // "short name + long path-like name" rows we just fixed.
         loadCloneMasterImages();
     } else if (taskName === 'masterImageSearch') {
         // no-op
-    } else if (taskName === 'cloneMasterImage') {
-        populateMasterImagesCloneList();
     } else if (taskName === 'addApplications') {
         populateApplicationsHZList();
     } else if (taskName === 'mspatch') {

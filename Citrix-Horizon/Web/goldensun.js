@@ -113,9 +113,10 @@ function generateCloneScript() {
         return;
     }
 
-    // Get selected image details
-    const selectedImageDetails = loadedMasterImages.MasterImages.filter(img =>
-        selectedImages.has(img.Name)
+    // Get selected image details, then dedupe by leaf-form of the VM name so
+    // a stray "folder/VMName" duplicate from PowerCLI does not yield 2 clones.
+    const selectedImageDetails = dedupeImagesByLeafName(
+        loadedMasterImages.MasterImages.filter(img => selectedImages.has(img.Name))
     );
 
     // Generate PowerShell script
@@ -420,14 +421,35 @@ function deselectAllImages() {
     updateSelectedCount();
 }
 
+// Dedupe master-image entries by the leaf form of img.Name so duplicates
+// like "SHC-M-MAINV2" + "folder/SHC-M-MAINV2" only emit one clone command.
+function dedupeImagesByLeafName(images) {
+    if (!Array.isArray(images)) return [];
+    const seen = new Set();
+    const out = [];
+    for (const img of images) {
+        const raw = String(img && img.Name != null ? img.Name : '').trim();
+        if (!raw) continue;
+        const leaf = raw.split('/').pop().trim().toLowerCase();
+        if (!leaf || seen.has(leaf)) continue;
+        seen.add(leaf);
+        // Normalize the Name field on the emitted record so downstream code sees the leaf form.
+        const cleanLeaf = raw.split('/').pop().trim();
+        out.push(Object.assign({}, img, { Name: cleanLeaf }));
+    }
+    return out;
+}
+
 // Create clone script
 function createCloneScript() {
     if (selectedImages.size === 0) {
         alert('Please select at least one master image to clone.');
         return;
     }
-    
-    const selectedImageObjects = masterImagesData.MasterImages.filter(img => selectedImages.has(img.Name));
+
+    const selectedImageObjects = dedupeImagesByLeafName(
+        masterImagesData.MasterImages.filter(img => selectedImages.has(img.Name))
+    );
     
     // Generate PowerShell script
     let script = `# Clone Master Images Script
