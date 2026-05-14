@@ -200,6 +200,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         serverLoadBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
     }
 
+    const userReportBaseInput = document.getElementById('userReportHorizonBase');
+    if (userReportBaseInput && !userReportBaseInput.value) {
+        userReportBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
+    }
+
     // GoldenSun VMware toggle
     const goldenSunVmwareToggle = document.getElementById('goldenSunVmwareToggle');
     if (goldenSunVmwareToggle) {
@@ -2134,6 +2139,11 @@ function showHorizonTask(taskName) {
         const serverLoadBaseInput = document.getElementById('serverLoadHorizonBase');
         if (serverLoadBaseInput && !serverLoadBaseInput.value) {
             serverLoadBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
+        }
+    } else if (taskName === 'userReport') {
+        const userReportBaseInput = document.getElementById('userReportHorizonBase');
+        if (userReportBaseInput && !userReportBaseInput.value) {
+            userReportBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
         }
     }
 }
@@ -5839,6 +5849,371 @@ function downloadServerLoadScript() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'Horizon-Server-Load-Report.ps1';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USER REPORT TAB (HZ Tasks → User Report)
+// Generates PowerShell: Horizon REST login → inventory sessions (active) +
+// audit events (time window) → Reports/horizon-user-report.{json,html}
+// ─────────────────────────────────────────────────────────────────────────────
+
+function generateUserReportScript() {
+    const uidEl = document.getElementById('userReportUserId');
+    const needle = (uidEl && uidEl.value ? uidEl.value : '').trim();
+    if (!needle) {
+        alert('Enter a user ID (samAccountName, DOMAIN\\user, or similar).');
+        return;
+    }
+    const userEsc = needle.replace(/'/g, "''");
+
+    const baseInput = document.getElementById('userReportHorizonBase');
+    let baseUrl = baseInput ? (baseInput.value || '').trim() : '';
+    if (!baseUrl) baseUrl = HZ_ADMIN_DEFAULT_BASE;
+    if (!/^https?:\/\//i.test(baseUrl)) {
+        baseUrl = 'https://' + baseUrl;
+    }
+    const protoMatch = baseUrl.match(/^(https?:\/\/)(.*)$/i);
+    if (protoMatch) {
+        const proto = protoMatch[1];
+        const rest = protoMatch[2].replace(/^\/+/, '');
+        baseUrl = proto + rest;
+    }
+    if (!baseUrl.toLowerCase().includes('/rest')) {
+        baseUrl = baseUrl.replace(/\/+$/, '') + '/rest';
+    }
+    baseUrl = baseUrl.replace(/\/+$/, '');
+
+    const selected = document.querySelector('input[name="userReportRange"]:checked');
+    const range = selected ? selected.value : '7d';
+    const rangeMap = { '1d': { days: 1, label: '1 day' }, '7d': { days: 7, label: '1 week' }, '30d': { days: 30, label: '1 month' }, '90d': { days: 90, label: '3 months' } };
+    const cfg = rangeMap[range] || rangeMap['7d'];
+
+    const lines = [];
+    lines.push('# Horizon User Report (PowerShell, REST) — Horizon Server API 2506');
+    lines.push('# Active sessions from inventory; past activity from audit events in the time window.');
+    lines.push('# Outputs: Reports\\horizon-user-report.json and .html');
+    lines.push('');
+    lines.push('$ErrorActionPreference = "Stop"');
+    lines.push('$cwd = Get-Location');
+    lines.push('$ReportsDir = Join-Path $cwd.Path "Reports"');
+    lines.push('if (-not (Test-Path $ReportsDir)) { New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null }');
+    lines.push(`$BaseUrl = "${baseUrl}"`);
+    lines.push(`$WindowDays = ${cfg.days}`);
+    lines.push(`$WindowLabel = "${cfg.label}"`);
+    lines.push(`$UserSearch = '${userEsc}'`);
+    lines.push('$OutJson = Join-Path $ReportsDir "horizon-user-report.json"');
+    lines.push('$OutHtml = Join-Path $ReportsDir "horizon-user-report.html"');
+    lines.push('$UnfilteredMaxPages = 1200');
+    lines.push('');
+    lines.push('# --- TLS + self-signed cert handling (PS 5.1) ---');
+    lines.push('try {');
+    lines.push('    if (-not ("TrustAllCertsPolicy" -as [type])) {');
+    lines.push('        Add-Type @"');
+    lines.push('using System.Net;');
+    lines.push('using System.Security.Cryptography.X509Certificates;');
+    lines.push('public class TrustAllCertsPolicy : ICertificatePolicy {');
+    lines.push('    public bool CheckValidationResult(ServicePoint sp, X509Certificate cert, WebRequest req, int problem) { return true; }');
+    lines.push('}');
+    lines.push('"@');
+    lines.push('    }');
+    lines.push('    [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy');
+    lines.push('    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12');
+    lines.push('} catch {}');
+    lines.push('');
+    lines.push('$Domain = Read-Host "Domain (optional, leave blank if not needed)"');
+    lines.push('$cred   = Get-Credential -Message "Enter Horizon credentials (REST)"');
+    lines.push('$loginBody = @{ username = $cred.UserName; password = $cred.GetNetworkCredential().Password }');
+    lines.push('if ($Domain) { $loginBody.domain = $Domain }');
+    lines.push('$tokenResp = Invoke-RestMethod -Method Post -Uri "$BaseUrl/login" -ContentType "application/json" -Body ($loginBody | ConvertTo-Json)');
+    lines.push('$token = $tokenResp.access_token');
+    lines.push('if (-not $token) { throw "Login did not return access_token" }');
+    lines.push('$headers = @{ Authorization = "Bearer $token"; Accept = "application/json" }');
+    lines.push('');
+    lines.push('$nowMs   = [int64]([DateTime]::UtcNow - (Get-Date "1970-01-01")).TotalMilliseconds');
+    lines.push('$startMs = $nowMs - ($WindowDays * 24L * 60L * 60L * 1000L)');
+    lines.push('Write-Host ("User report window: {0}  ({1} -> {2} UTC)" -f $WindowLabel, ([DateTimeOffset]::FromUnixTimeMilliseconds($startMs).UtcDateTime.ToString("o")), ([DateTimeOffset]::FromUnixTimeMilliseconds($nowMs).UtcDateTime.ToString("o"))) -ForegroundColor Cyan');
+    lines.push('');
+    lines.push('function Get-RestErrorDetail($errRec) {');
+    lines.push('    $status = $null; $body = $null');
+    lines.push('    try { if ($errRec.Exception.Response) { $status = [int]$errRec.Exception.Response.StatusCode } } catch {}');
+    lines.push('    try { if ($errRec.ErrorDetails -and $errRec.ErrorDetails.Message) { $body = [string]$errRec.ErrorDetails.Message } } catch {}');
+    lines.push('    if (-not $body) { try { $resp = $errRec.Exception.Response; if ($resp) { $sr = New-Object System.IO.StreamReader($resp.GetResponseStream()); $body = $sr.ReadToEnd(); $sr.Close() } } catch {} }');
+    lines.push('    return @{ status = $status; body = $body }');
+    lines.push('}');
+    lines.push('function Trim-ForLog([string]$s, [int]$max) { if (-not $s) { return "" }; if ($s.Length -le $max) { return $s }; return $s.Substring(0, $max) + "..." }');
+    lines.push('');
+    lines.push('function Get-HzAuditEventsUnfiltered($base, $hdrs, $epPath, $maxPages, $stopAtMs) {');
+    lines.push('    $all = New-Object System.Collections.ArrayList');
+    lines.push('    $page = 1; $size = 250; $start = Get-Date');
+    lines.push('    if (-not $maxPages -or $maxPages -le 0) { $maxPages = 10 }');
+    lines.push('    while ($true) {');
+    lines.push('        $uri = "$base$epPath" + [char]63 + "page=$page" + [char]38 + "size=$size"');
+    lines.push('        try { $r = Invoke-RestMethod -Method Get -Uri $uri -Headers $hdrs } catch {');
+    lines.push('            $det = Get-RestErrorDetail $_');
+    lines.push('            Write-Warning ("  audit-events page $page failed: " + $_.Exception.Message)');
+    lines.push('            if ($det.body) { Write-Warning ("    " + (Trim-ForLog $det.body 300)) }');
+    lines.push('            break');
+    lines.push('        }');
+    lines.push('        $items = $null');
+    lines.push('        if ($r -is [array]) { $items = $r }');
+    lines.push('        elseif ($r -is [pscustomobject] -and $r.PSObject.Properties.Name -contains "items") { $items = $r.items }');
+    lines.push('        elseif ($r -is [hashtable] -and $r.ContainsKey("items")) { $items = $r.items }');
+    lines.push('        if (-not $items -or $items.Count -eq 0) { break }');
+    lines.push('        foreach ($it in $items) { [void]$all.Add($it) }');
+    lines.push('        if ($stopAtMs) {');
+    lines.push('            $oldest = $items[$items.Count - 1]');
+    lines.push('            $oldestTimeRaw = $null');
+    lines.push('            foreach ($tf in @("time","eventTime","timestamp","event_time","createdAt")) {');
+    lines.push('                if ($oldest.PSObject.Properties.Name -contains $tf) { $oldestTimeRaw = $oldest.$tf; break }');
+    lines.push('            }');
+    lines.push('            if ($oldestTimeRaw) { $oldestMs = 0L; if ([int64]::TryParse([string]$oldestTimeRaw, [ref]$oldestMs)) { if ($oldestMs -lt $stopAtMs) { break } } }');
+    lines.push('        }');
+    lines.push('        if ($items.Count -lt $size) { break }');
+    lines.push('        $page++; if ($page -gt $maxPages) { Write-Warning "  audit-events page cap hit"; break }');
+    lines.push('    }');
+    lines.push('    return ,$all');
+    lines.push('}');
+    lines.push('');
+    lines.push('Write-Host "Pulling audit events (unfiltered, newest-first, early-stop at window)..." -ForegroundColor Cyan');
+    lines.push('$events = @(); $auditEp = $null');
+    lines.push('foreach ($p in @("/external/v1/audit-events","/external/v2/audit-events")) {');
+    lines.push('    $try = Get-HzAuditEventsUnfiltered -base $BaseUrl -hdrs $headers -epPath $p -maxPages $UnfilteredMaxPages -stopAtMs $startMs');
+    lines.push('    if ($try -and $try.Count -gt 0) { $events = $try; $auditEp = $p; Write-Host ("  Using {0} ({1} events)" -f $p, $events.Count) -ForegroundColor Green; break }');
+    lines.push('}');
+    lines.push('if (-not $events) { $events = @() }');
+    lines.push('');
+    lines.push('function Unpack-Items($r) {');
+    lines.push('    if ($null -eq $r) { return @() }');
+    lines.push('    if ($r -is [System.Array]) { return $r }');
+    lines.push('    if ($r -is [hashtable]) { foreach ($k in "items","value","data") { if ($r.ContainsKey($k)) { $v = $r[$k]; if ($v -is [System.Array]) { return $v }; return @($v) } }; return @() }');
+    lines.push('    $names = $r.PSObject.Properties.Name');
+    lines.push('    foreach ($k in "items","value","data") { if ($names -contains $k) { $v = $r.$k; if ($v -is [System.Array]) { return $v }; return @($v) } }');
+    lines.push('    return @($r)');
+    lines.push('}');
+    lines.push('function Test-SessConnected($s) {');
+    lines.push('    $v = $null');
+    lines.push('    foreach ($k in @("session_state","sessionState","state","connection_state")) { if ($s.PSObject.Properties.Name -contains $k) { $v = $s.$k; break } }');
+    lines.push('    if ($null -eq $v) { return $false }; $t = [string]$v; $u = $t.ToUpperInvariant()');
+    lines.push('    if ($u -like "*DISCONNECT*") { return $false }');
+    lines.push('    return ($u -eq "CONNECTED" -or $u -eq "ACTIVE")');
+    lines.push('}');
+    lines.push('function Sess-FarmId($s) {');
+    lines.push('    foreach ($k in @("farm_id","farmId","rds_farm_id")) { if ($s.PSObject.Properties.Name -contains $k -and $s.$k) { return [string]$s.$k } }');
+    lines.push('    if ($s.resource_settings -and $s.resource_settings.farm_id) { return [string]$s.resource_settings.farm_id }');
+    lines.push('    if ($s.farm -and $s.farm.id) { return [string]$s.farm.id }; return $null');
+    lines.push('}');
+    lines.push('function Sess-FarmDisplay($s) {');
+    lines.push('    foreach ($k in @("farm_name","farmName","resource_name","resourceName")) { if ($s.PSObject.Properties.Name -contains $k -and $s.$k) { return [string]$s.$k } }');
+    lines.push('    if ($s.farm -and $s.farm.name) { return [string]$s.farm.name }');
+    lines.push('    if ($s.resource_settings -and $s.resource_settings.display_name) { return [string]$s.resource_settings.display_name }');
+    lines.push('    $fid = Sess-FarmId $s; if ($fid) { return $fid }; return "Unknown"');
+    lines.push('}');
+    lines.push('function Sess-User($s) {');
+    lines.push('    foreach ($k in @("user_name","username","user_id","name","user")) { if ($s.PSObject.Properties.Name -contains $k -and $s.$k) { return [string]$s.$k } }');
+    lines.push('    return ""');
+    lines.push('}');
+    lines.push('function Sess-IdStr($s) {');
+    lines.push('    foreach ($k in @("id","session_id","sessionId")) { if ($s.PSObject.Properties.Name -contains $k -and $s.$k) { return [string]$s.$k } }');
+    lines.push('    return ""');
+    lines.push('}');
+    lines.push('function Sess-StartStr($s) {');
+    lines.push('    foreach ($k in @("session_created_time","created_time","logon_time","start_time","time")) {');
+    lines.push('        if ($s.PSObject.Properties.Name -contains $k -and $s.$k) {');
+    lines.push('            $raw = $s.$k; $ms = 0L');
+    lines.push('            if ([int64]::TryParse([string]$raw, [ref]$ms)) { return ([DateTimeOffset]::FromUnixTimeMilliseconds($ms).LocalDateTime.ToString("yyyy-MM-dd HH:mm")) }');
+    lines.push('            return [string]$raw');
+    lines.push('        }');
+    lines.push('    }; return ""');
+    lines.push('}');
+    lines.push('function Sess-StateStr($s) {');
+    lines.push('    foreach ($k in @("session_state","sessionState","state","connection_state")) { if ($s.PSObject.Properties.Name -contains $k -and $s.$k) { return [string]$s.$k } }');
+    lines.push('    return ""');
+    lines.push('}');
+    lines.push('');
+    lines.push('function Normalize-Needle([string]$u) {');
+    lines.push('    if (-not $u) { return "" }; $x = $u.Trim().ToLowerInvariant()');
+    lines.push('    if ($x.Contains("\\")) { $x = $x.Split("\\")[-1] }');
+    lines.push('    if ($x.Contains("@")) { $x = $x.Split("@")[0] }');
+    lines.push('    return $x');
+    lines.push('}');
+    lines.push('$Needle = Normalize-Needle $UserSearch');
+    lines.push('function User-Haystack([string]$s) { if (-not $s) { return "" }; return $s.Trim().ToLowerInvariant() }');
+    lines.push('function User-Matches([string]$needle, [string]$hay) {');
+    lines.push('    if (-not $needle -or -not $hay) { return $false }; $h = User-Haystack $hay; $n = Normalize-Needle $needle');
+    lines.push('    if ($h -eq $n) { return $true }; if ($h.Contains($n)) { return $true }; return $false');
+    lines.push('}');
+    lines.push('function Get-EventProp($obj, [string[]]$names) {');
+    lines.push('    if ($null -eq $obj) { return $null }');
+    lines.push('    foreach ($n in $names) { if ($obj.PSObject.Properties.Name -contains $n) { $v = $obj.$n; if ($null -ne $v -and "$v" -ne "") { return [string]$v } } }');
+    lines.push('    return $null');
+    lines.push('}');
+    lines.push('function Event-UserBlob($e) {');
+    lines.push('    $parts = New-Object System.Collections.ArrayList');
+    lines.push('    foreach ($k in @("user_name","username","user_id","user","samAccountName","account_name","principal","subject","message")) {');
+    lines.push('        if ($e.PSObject.Properties.Name -contains $k -and $e.$k) { [void]$parts.Add([string]$e.$k) }');
+    lines.push('    }');
+    lines.push('    if ($e.data) { $d = $e.data; foreach ($k in @("user_name","username","user_id","user","session_id","sessionId")) {');
+    lines.push('        if ($d.PSObject.Properties.Name -contains $k -and $d.$k) { [void]$parts.Add([string]$d.$k) }');
+    lines.push('    } }');
+    lines.push('    return (($parts | ForEach-Object { $_ }) -join " ")');
+    lines.push('}');
+    lines.push('function Get-EventTimeMs($e) {');
+    lines.push('    foreach ($tf in @("time","eventTime","timestamp","event_time","createdAt")) {');
+    lines.push('        if ($e.PSObject.Properties.Name -contains $tf) { $raw = $e.$tf; $ms = 0L; if ([int64]::TryParse([string]$raw, [ref]$ms)) { return $ms } }');
+    lines.push('    }; return $null');
+    lines.push('}');
+    lines.push('function Event-SessionId($e) {');
+    lines.push('    $v = Get-EventProp $e @("session_id","sessionId","id")');
+    lines.push('    if ($v) { return $v }');
+    lines.push('    if ($e.data) { $d = $e.data; return (Get-EventProp $d @("session_id","sessionId","id")) }');
+    lines.push('    return $null');
+    lines.push('}');
+    lines.push('function Event-FarmLabel($e) {');
+    lines.push('    $f = Get-EventProp $e @("farm_name","farm","desktop_name","pool_name","resource_name","farm_id","farmId")');
+    lines.push('    if ($f) { return $f }');
+    lines.push('    if ($e.data) { return (Get-EventProp $e.data @("farm_name","farm","desktop_name","pool_name","resource_name")) }');
+    lines.push('    return ""');
+    lines.push('}');
+    lines.push('function Event-TypeStr($e) { return (Get-EventProp $e @("type","event_type","eventType","name")) }');
+    lines.push('function Event-IsLogon([string]$t) { if (-not $t) { return $false }; $u = $t.ToUpperInvariant(); return ($u.Contains("LOGON") -and $u -notlike "*LOGOFF*") }');
+    lines.push('function Event-IsLogoff([string]$t) { if (-not $t) { return $false }; $u = $t.ToUpperInvariant(); return ($u.Contains("LOGOFF") -or $u.Contains("SESSION_END") -or $u.Contains("LOGGEDOFF")) }');
+    lines.push('');
+    lines.push('Write-Host "Scanning inventory sessions for active connections..." -ForegroundColor Cyan');
+    lines.push('$activeRows = @(); $sessEpUsed = $null');
+    lines.push('foreach ($rel in @("/inventory/v8/sessions","/inventory/v7/sessions","/inventory/v6/sessions","/inventory/v5/sessions","/inventory/v4/sessions","/inventory/v3/sessions","/inventory/v2/sessions","/inventory/v1/sessions")) {');
+    lines.push('    $page = 1; $got = 0');
+    lines.push('    while ($page -le 40) {');
+    lines.push('        $uri = "$BaseUrl$rel" + [char]63 + "page=$page" + [char]38 + "size=250"');
+    lines.push('        try { $r = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers } catch { break }');
+    lines.push('        $items = Unpack-Items $r');
+    lines.push('        if (-not $items -or $items.Count -eq 0) { break }');
+    lines.push('        foreach ($s in $items) {');
+    lines.push('            if (-not (Test-SessConnected $s)) { continue }');
+    lines.push('            $su = Sess-User $s');
+    lines.push('            if (-not (User-Matches $UserSearch $su)) { continue }');
+    lines.push('            $activeRows += [pscustomobject]@{');
+    lines.push('                FarmName     = (Sess-FarmDisplay $s)');
+    lines.push('                FarmId       = (Sess-FarmId $s)');
+    lines.push('                User         = $su');
+    lines.push('                SessionId    = (Sess-IdStr $s)');
+    lines.push('                State        = (Sess-StateStr $s)');
+    lines.push('                ConnectedSince = (Sess-StartStr $s)');
+    lines.push('            }');
+    lines.push('            $got++');
+    lines.push('        }');
+    lines.push('        if ($items.Count -lt 250) { break }; $page++');
+    lines.push('    }');
+    lines.push('    if ($got -gt 0) { $sessEpUsed = $rel; Write-Host ("  Active matches: {0} via {1}" -f $got, $rel) -ForegroundColor Green; break }');
+    lines.push('}');
+    lines.push('');
+    lines.push('$userEvents = New-Object System.Collections.ArrayList');
+    lines.push('foreach ($e in $events) {');
+    lines.push('    $blob = Event-UserBlob $e');
+    lines.push('    if (User-Matches $UserSearch $blob) { [void]$userEvents.Add($e) }');
+    lines.push('}');
+    lines.push('Write-Host ("Audit events total: {0}  matching user filter: {1}" -f $events.Count, $userEvents.Count) -ForegroundColor Cyan');
+    lines.push('');
+    lines.push('$pastRows = @()');
+    lines.push('$sorted = @($userEvents | Sort-Object @{ Expression = { Get-EventTimeMs $_ }; Ascending = $true })');
+    lines.push('$open = @{}');
+    lines.push('foreach ($e in $sorted) {');
+    lines.push('    $ms = Get-EventTimeMs $e; if (-not $ms) { continue }');
+    lines.push('    $sid = Event-SessionId $e; if (-not $sid) { continue }');
+    lines.push('    $et = Event-TypeStr $e; $farm = Event-FarmLabel $e');
+    lines.push('    if (Event-IsLogon $et) {');
+    lines.push('        $open[$sid] = @{ StartMs = $ms; Farm = $farm }');
+    lines.push('    } elseif (Event-IsLogoff $et) {');
+    lines.push('        if ($open.ContainsKey($sid)) {');
+    lines.push('            $st = $open[$sid].StartMs; $fn = $open[$sid].Farm; if (-not $fn) { $fn = $farm }');
+    lines.push('            $durSec = [math]::Max(0, [int](($ms - $st) / 1000))');
+    lines.push('            $durMin = [math]::Round($durSec / 60.0, 1)');
+    lines.push('            $pastRows += [pscustomobject]@{');
+    lines.push('                SessionId   = $sid');
+    lines.push('                FarmName    = $(if ($fn) { $fn } else { "(see events)" })');
+    lines.push('                StartLocal  = ([DateTimeOffset]::FromUnixTimeMilliseconds($st).LocalDateTime.ToString("yyyy-MM-dd HH:mm"))');
+    lines.push('                EndLocal    = ([DateTimeOffset]::FromUnixTimeMilliseconds($ms).LocalDateTime.ToString("yyyy-MM-dd HH:mm"))');
+    lines.push('                TimeActive  = ("{0} min ({1} s)" -f $durMin, $durSec)');
+    lines.push('            }');
+    lines.push('            $open.Remove($sid)');
+    lines.push('        }');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('foreach ($kv in $open.GetEnumerator()) {');
+    lines.push('    $sid = $kv.Key; $st = $kv.Value.StartMs; $fn = $kv.Value.Farm');
+    lines.push('    $pastRows += [pscustomobject]@{');
+    lines.push('        SessionId = $sid; FarmName = $(if ($fn) { $fn } else { "(unknown)" });');
+    lines.push('        StartLocal = ([DateTimeOffset]::FromUnixTimeMilliseconds($st).LocalDateTime.ToString("yyyy-MM-dd HH:mm"));');
+    lines.push('        EndLocal = "(no matching logoff in window — may still be active)"; TimeActive = ""');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('$pastRows = @($pastRows | Sort-Object @{ Expression = { $_.StartLocal }; Ascending = $false })');
+    lines.push('');
+    lines.push('$payload = [ordered]@{');
+    lines.push('    generatedAt = (Get-Date).ToString("o")');
+    lines.push('    userSearch  = $UserSearch');
+    lines.push('    matchNeedle = $Needle');
+    lines.push('    windowLabel = $WindowLabel');
+    lines.push('    windowDays  = $WindowDays');
+    lines.push('    auditEndpoint = $auditEp');
+    lines.push('    sessionsEndpoint = $sessEpUsed');
+    lines.push('    activeSessions = @($activeRows)');
+    lines.push('    pastSessions   = @($pastRows)');
+    lines.push('    matchingEventCount = $userEvents.Count');
+    lines.push('    totalEventCount    = $events.Count');
+    lines.push('}');
+    lines.push('$payload | ConvertTo-Json -Depth 10 | Set-Content -Path $OutJson -Encoding UTF8');
+    lines.push('Write-Host "Wrote JSON: $OutJson" -ForegroundColor Green');
+    lines.push('');
+    lines.push('$actHtml = if ($activeRows.Count -eq 0) { "<p><em>No CONNECTED/ACTIVE inventory sessions matched this user on the first sessions endpoint that returned data.</em></p>" } else { ($activeRows | ConvertTo-Html -Fragment) }');
+    lines.push('$pastHtml = if ($pastRows.Count -eq 0) { "<p><em>No logon/logoff pairs with a session id were reconstructed for this user in the audit window. See JSON for raw matching events.</em></p>" } else { ($pastRows | ConvertTo-Html -Fragment) }');
+    lines.push('$style = "body{font-family:Segoe UI,Arial,sans-serif;margin:24px;background:#f6f7fb;color:#1a1a1a}h1{font-size:1.35rem}h2{font-size:1.1rem;margin-top:28px}.meta{color:#555;font-size:0.9rem}table{border-collapse:collapse;width:100%;max-width:1100px;background:#fff;box-shadow:0 1px 3px #0001}th,td{border:1px solid #ddd;padding:8px 10px;text-align:left;font-size:0.88rem}th{background:#eef2fb}"');
+    lines.push('$html = @"');
+    lines.push('<!DOCTYPE html>');
+    lines.push('<html><head><meta charset="utf-8"/><title>Horizon User Report</title><style>');
+    lines.push('$style');
+    lines.push('</style></head><body>');
+    lines.push('<h1>Horizon User Report</h1>');
+    lines.push('<p class="meta">User: <strong>$UserSearch</strong> &nbsp;|&nbsp; Window: <strong>$WindowLabel</strong> &nbsp;|&nbsp; Generated: ');
+    lines.push('$(Get-Date)');
+    lines.push('</p>');
+    lines.push('<h2>Active sessions (inventory)</h2>');
+    lines.push('$actHtml');
+    lines.push('<h2>Past sessions (from audit logon/logoff pairs)</h2>');
+    lines.push('$pastHtml');
+    lines.push('<p class="meta">Endpoints: audit <code>$auditEp</code> · sessions <code>$sessEpUsed</code></p>');
+    lines.push('</body></html>');
+    lines.push('"@');
+    lines.push('$html | Out-File -FilePath $OutHtml -Encoding UTF8');
+    lines.push('Write-Host "Wrote HTML: $OutHtml" -ForegroundColor Green');
+    lines.push('try { Start-Process $OutHtml } catch {}');
+    lines.push('Write-Host "Done." -ForegroundColor Cyan');
+
+    const out = document.getElementById('userReportScriptContent');
+    if (out) out.value = lines.join('\n');
+}
+
+function copyUserReportScript() {
+    const area = document.getElementById('userReportScriptContent');
+    if (!area) return;
+    area.select();
+    document.execCommand('copy');
+}
+
+function downloadUserReportScript() {
+    const scriptContent = document.getElementById('userReportScriptContent')?.value || '';
+    if (!scriptContent) {
+        alert('Generate the script first.');
+        return;
+    }
+    const blob = new Blob([scriptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Horizon-User-Report.ps1';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
