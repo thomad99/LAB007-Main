@@ -1194,7 +1194,7 @@
                 <!-- User Report (session history + live sessions) -->
                 <div id="userReportTask" class="horizon-task-panel">
                     <h3>User Report (Horizon REST - 2506)</h3>
-                    <p style="color:#666;">Enter a <strong>user ID</strong> (samAccountName, <code>DOMAIN\\user</code>, or email prefix). Generate a PowerShell script that logs into Horizon REST, reads <strong>inventory sessions</strong> for any <strong>active</strong> connection for that user, pulls <strong>audit events</strong> in the selected window, and writes a tidy report to <code>Reports\\horizon-user-report.json</code> and <code>.html</code> (live session card + past sessions with farm and duration where logon/logoff pairs can be inferred).</p>
+                    <p style="color:#666;">Enter a <strong>user ID</strong> (samAccountName, <code>DOMAIN\\user</code>, or email prefix). Generate a PowerShell script that logs into Horizon REST, reads <strong>inventory sessions</strong> for any <strong>active</strong> connection for that user, pulls <strong>audit events</strong> in the selected window, and writes a tidy report to <code>Reports\\horizon-user-report.json</code> and <code>.html</code> (live session card + past sessions with farm and duration where logon/logoff pairs can be inferred). The script prints each audit and session page as it runs; tune <code>$RestTimeoutSec</code> and <code>$HzUserReportDeadline</code> at the top if needed (per-request timeouts apply on PowerShell 7+).</p>
 
                     <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin: 10px 0 15px 0;">
                         <div>
