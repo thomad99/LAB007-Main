@@ -7,6 +7,10 @@ Data/citrix-policies-export.txt
 !Data/sample-*.json
 !Data/.gitkeep
 
+# Horizon REST scripts — saved login (Export-Clixml, do not commit)
+.horizon-rest.cred.xml
+**/.horizon-rest.cred.xml
+
 # Ignore sensitive configuration files
 lab007-config.json
 *config*.json

@@ -3475,6 +3475,41 @@ function generateGoldenSunSearchScript() {
 // -------------------------------
 // Horizon Admin REST Scripts
 // -------------------------------
+
+/** Emit PS: load/save Horizon REST creds in .horizon-rest.cred.xml beside the script (prompt once). */
+function pushHorizonRestCredentialLines(lines) {
+    lines.push('# --- Horizon REST credentials (saved beside this script; delete .horizon-rest.cred.xml to sign in again) ---');
+    lines.push('$HzCredRoot = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }');
+    lines.push('$HzCredPath = Join-Path $HzCredRoot ".horizon-rest.cred.xml"');
+    lines.push('$Domain = ""');
+    lines.push('$HzRestCred = $null');
+    lines.push('if (Test-Path -LiteralPath $HzCredPath) {');
+    lines.push('    $HzSaved = Import-Clixml -LiteralPath $HzCredPath');
+    lines.push('    if ($HzSaved -is [System.Management.Automation.PSCredential]) {');
+    lines.push('        $HzRestCred = $HzSaved');
+    lines.push('    } elseif ($HzSaved.PSObject.Properties.Name -contains "Credential") {');
+    lines.push('        $HzRestCred = $HzSaved.Credential');
+    lines.push('        if ($HzSaved.PSObject.Properties.Name -contains "Domain") { $Domain = [string]$HzSaved.Domain }');
+    lines.push('    }');
+    lines.push('    if ($HzRestCred) {');
+    lines.push('        Write-Host ("Using saved Horizon credentials: {0}" -f $HzRestCred.UserName) -ForegroundColor Green');
+    lines.push('    }');
+    lines.push('}');
+    lines.push('if (-not $HzRestCred) {');
+    lines.push('    Write-Host "First run for this folder: enter Horizon REST credentials once (saved for later runs)." -ForegroundColor Yellow');
+    lines.push('    $Domain = Read-Host "Domain (optional, press Enter to skip)"');
+    lines.push('    $HzRestCred = Get-Credential -Message "Horizon REST API"');
+    lines.push('    @{ Credential = $HzRestCred; Domain = $Domain } | Export-Clixml -LiteralPath $HzCredPath');
+    lines.push('    Write-Host ("Saved: {0}" -f $HzCredPath) -ForegroundColor DarkGray');
+    lines.push('}');
+    lines.push('$cred = $HzRestCred');
+    lines.push('$loginUser = $HzRestCred.UserName');
+    lines.push('$loginPass = $HzRestCred.GetNetworkCredential().Password');
+    lines.push('$user = $loginUser');
+    lines.push('$pass = $loginPass');
+    lines.push('');
+}
+
 function generateHorizonAdminScript(action) {
     const baseInput = document.getElementById('adminHorizonBase');
     let baseUrl = baseInput ? (baseInput.value || '').trim() : '';
@@ -3562,13 +3597,9 @@ function generateHorizonAdminScript(action) {
         scriptLines.push('$OutHtml = Join-Path $ReportsDir "FarmData.html"');
     }
     if (action === 'imageDates') {
-        scriptLines.push('Write-Host "[DEBUG] Image Dates - Will prompt for Domain, Horizon credentials, then vCenter." -ForegroundColor Magenta');
+        scriptLines.push('Write-Host "[DEBUG] Image Dates - Horizon login (saved creds) then vCenter." -ForegroundColor Magenta');
     }
-    scriptLines.push('$Domain = Read-Host "Domain (optional, leave blank if not needed)"');
-    scriptLines.push('$cred = Get-Credential -Message "Enter Horizon credentials (REST)"');
-    scriptLines.push('$user = $cred.UserName');
-    scriptLines.push('$pass = $cred.GetNetworkCredential().Password');
-    scriptLines.push('');
+    pushHorizonRestCredentialLines(scriptLines);
     scriptLines.push('# --- Login to get bearer token ---');
     if (action === 'imageDates') {
         scriptLines.push('Write-Host "[DEBUG] Image Dates - Calling Horizon login API..." -ForegroundColor Magenta');
@@ -4521,11 +4552,7 @@ function generateAppReportScript() {
     lines.push('    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12');
     lines.push('} catch {}');
     lines.push('');
-    lines.push('$Domain = Read-Host "Domain (optional, leave blank if not needed)"');
-    lines.push('$cred   = Get-Credential -Message "Enter Horizon credentials (REST)"');
-    lines.push('$loginUser = $cred.UserName');
-    lines.push('$loginPass = $cred.GetNetworkCredential().Password');
-    lines.push('');
+    pushHorizonRestCredentialLines(lines);
     lines.push('# --- Login to get bearer token (Horizon REST /login) ---');
     lines.push('$loginBody = @{ username = $loginUser; password = $loginPass }');
     lines.push('if ($Domain) { $loginBody.domain = $Domain }');
@@ -5585,10 +5612,7 @@ function generateServerLoadScript() {
     lines.push('    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12');
     lines.push('} catch {}');
     lines.push('');
-    lines.push('$Domain = Read-Host "Domain (optional, leave blank if not needed)"');
-    lines.push('$cred   = Get-Credential -Message "Enter Horizon credentials (REST)"');
-    lines.push('$loginUser = $cred.UserName');
-    lines.push('$loginPass = $cred.GetNetworkCredential().Password');
+    pushHorizonRestCredentialLines(lines);
     lines.push('$loginBody = @{ username = $loginUser; password = $loginPass }');
     lines.push('if ($Domain) { $loginBody.domain = $Domain }');
     lines.push('$tokenResp = Invoke-RestMethod -Method Post -Uri "$BaseUrl/login" -ContentType "application/json" -Body ($loginBody | ConvertTo-Json)');
@@ -6130,6 +6154,7 @@ function generateUserReportScript() {
     lines.push('    return ,$all');
     lines.push('}');
     lines.push('');
+    pushHorizonRestCredentialLines(lines);
     lines.push('$headers = $null; $token = $null; $usedCachedToken = $false');
     lines.push('if (Test-Path -LiteralPath $TokenCachePath) {');
     lines.push('    try {');
@@ -6157,12 +6182,9 @@ function generateUserReportScript() {
     lines.push('    } catch { }');
     lines.push('}');
     lines.push('if (-not $headers) {');
-    lines.push('    Write-Host "No valid cached token for this broker — prompting for credentials." -ForegroundColor DarkGray');
-    lines.push('    $Domain = Read-Host "Domain (optional, leave blank if not needed)"');
-    lines.push('    $cred   = Get-Credential -Message "Enter Horizon credentials (REST)"');
-    lines.push('    $loginBody = @{ username = $cred.UserName; password = $cred.GetNetworkCredential().Password }');
+    lines.push('    Write-Host "Logging in to Horizon REST (saved credentials)..." -ForegroundColor Cyan');
+    lines.push('    $loginBody = @{ username = $loginUser; password = $loginPass }');
     lines.push('    if ($Domain) { $loginBody.domain = $Domain }');
-    lines.push('    Write-Host "Logging in to Horizon REST..." -ForegroundColor Cyan');
     lines.push('    $tokenResp = Invoke-HzRestMethod -Method Post -Uri "$BaseUrl/login" -Headers @{} -ContentType "application/json" -Body ($loginBody | ConvertTo-Json) -TimeoutSec $RestTimeoutSec');
     lines.push('    $token = $tokenResp.access_token');
     lines.push('    if (-not $token) { throw "Login did not return access_token" }');
