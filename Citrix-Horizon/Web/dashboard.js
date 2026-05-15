@@ -5536,6 +5536,14 @@ function copyAppReportScript() {
     document.execCommand('copy');
 }
 
+/** Push PS here-string assignment for sortable-table + CSV export JS (used in generated report HTML). */
+function pushHorizonTableInteractionJs(lines, psVarName) {
+    const v = psVarName || 'hzTableJs';
+    lines.push(`$${v} = @'`);
+    HORIZON_SORTABLE_TABLE_JS.split('\n').forEach((l) => lines.push(l));
+    lines.push("'@");
+}
+
 function downloadAppReportScript() {
     const scriptContent = document.getElementById('appReportScriptContent')?.value || '';
     if (!scriptContent) {
@@ -5552,6 +5560,73 @@ function downloadAppReportScript() {
     document.body.removeChild(a);
     window.URL.revokeObjectURL(url);
 }
+
+// Interactive HTML table helpers (sort by column click, text filter, CSV download)
+const HORIZON_SORTABLE_TABLE_JS = `function _hzEscapeCsv(v) {
+    var s = (v == null) ? "" : String(v);
+    if (/[",\\r\\n]/.test(s)) { s = '"' + s.replace(/"/g, '""') + '"'; }
+    return s;
+}
+function hzDownloadCsv(tableId, filename) {
+    var t = document.getElementById(tableId);
+    if (!t) return;
+    var rows = t.querySelectorAll("tr");
+    var out = [];
+    for (var i = 0; i < rows.length; i++) {
+        if (rows[i].style.display === "none") continue;
+        var cells = rows[i].querySelectorAll("th,td");
+        var arr = [];
+        for (var j = 0; j < cells.length; j++) {
+            arr.push(_hzEscapeCsv((cells[j].textContent || "").trim()));
+        }
+        out.push(arr.join(","));
+    }
+    var blob = new Blob(["\\uFEFF" + out.join("\\r\\n")], { type: "text/csv;charset=utf-8;" });
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 100);
+}
+function hzFilterTable(inputId, tableId) {
+    var q = (document.getElementById(inputId).value || "").toLowerCase();
+    var t = document.getElementById(tableId);
+    if (!t) return;
+    var rows = t.querySelectorAll("tbody tr");
+    for (var i = 0; i < rows.length; i++) {
+        var txt = (rows[i].textContent || "").toLowerCase();
+        rows[i].style.display = (q === "" || txt.indexOf(q) !== -1) ? "" : "none";
+    }
+}
+function hzSortTable(tableId, colIdx, asNumber) {
+    var t = document.getElementById(tableId);
+    if (!t) return;
+    var tbody = t.tBodies[0];
+    var rows = Array.prototype.slice.call(tbody.querySelectorAll("tr"));
+    var headers = t.tHead ? t.tHead.querySelectorAll("th") : [];
+    var th = headers[colIdx];
+    var asc = !(th && th.classList.contains("sort-asc"));
+    for (var h = 0; h < headers.length; h++) { headers[h].classList.remove("sort-asc","sort-desc"); }
+    if (th) th.classList.add(asc ? "sort-asc" : "sort-desc");
+    rows.sort(function (a, b) {
+        var av = a.cells[colIdx] ? a.cells[colIdx].textContent.trim() : "";
+        var bv = b.cells[colIdx] ? b.cells[colIdx].textContent.trim() : "";
+        if (asNumber) { av = parseFloat(av.replace(/,/g, "")) || 0; bv = parseFloat(bv.replace(/,/g, "")) || 0; return asc ? av - bv : bv - av; }
+        return asc ? av.localeCompare(bv) : bv.localeCompare(av);
+    });
+    for (var k = 0; k < rows.length; k++) { tbody.appendChild(rows[k]); }
+}
+document.addEventListener("DOMContentLoaded", function () {
+    document.querySelectorAll("table.sortable").forEach(function (tbl) {
+        var ths = tbl.tHead ? tbl.tHead.querySelectorAll("th") : [];
+        ths.forEach(function (th, idx) {
+            th.addEventListener("click", function () {
+                hzSortTable(tbl.id, idx, th.classList.contains("num"));
+            });
+        });
+    });
+});`;
 
 // ─────────────────────────────────────────────────────────────────────────────
 // SERVER LOAD TAB (HZ Tasks → Server Load)
@@ -5581,7 +5656,7 @@ function generateServerLoadScript() {
     lines.push('# Lists farms, counts RDS servers per farm (monitor RDS list + inventory farm detail),');
     lines.push('# aggregates CONNECTED/ACTIVE inventory sessions by farm when possible, optional per-farm monitor hint.');
     lines.push('# Console shows Step 1–5 progress; tune $MaxSessionPages and $HzServerLoadDeadline at top if a phase is slow.');
-    lines.push('# Outputs: Reports\\horizon-server-load.json and .html');
+    lines.push('# Outputs: Reports\\horizon-server-load.json, .html, and .csv');
     lines.push('');
     lines.push('$ErrorActionPreference = "Stop"');
     lines.push('$cwd = Get-Location');
@@ -5590,6 +5665,7 @@ function generateServerLoadScript() {
     lines.push(`$BaseUrl = "${baseUrl}"`);
     lines.push('$OutJson = Join-Path $ReportsDir "horizon-server-load.json"');
     lines.push('$OutHtml = Join-Path $ReportsDir "horizon-server-load.html"');
+    lines.push('$OutCsv = Join-Path $ReportsDir "horizon-server-load.csv"');
     lines.push('$HzServerLoadDeadline = (Get-Date).AddMinutes(30)   # Stop long paging loops after this');
     lines.push('$MaxSessionPages = 80                              # Per sessions API version (raise if needed)');
     lines.push('$RestTimeoutSec = 90                               # Per GET (PS 5.1 uses HttpWebRequest timeout)');
@@ -5936,10 +6012,60 @@ function generateServerLoadScript() {
     lines.push('$summary | ConvertTo-Json -Depth 8 | Set-Content -Path $OutJson -Encoding UTF8');
     lines.push('Write-Host "Saved JSON: $OutJson" -ForegroundColor Green');
     lines.push('');
-    lines.push('$style = "body{font-family:Segoe UI,Arial,sans-serif;margin:24px;color:#222}table{border-collapse:collapse;max-width:1200px}th,td{border:1px solid #ccc;padding:8px 10px}th{background:#f4f4f4;text-align:left}.num{text-align:right;font-variant-numeric:tabular-nums}"');
-    lines.push('$frag = ($outRows | Sort-Object -Property SessionsPerServer -Descending) | ConvertTo-Html -Fragment');
-    lines.push('$html = "<!DOCTYPE html><html><head><meta charset=`"utf-8`"/><title>Horizon Server Load</title><style>$style</style></head><body><h1>Horizon Farm Server Load</h1><p class=`"meta`">Farms from <code>$farmSource</code>. Density = connected sessions / RDS servers (and unique users / servers).</p>$frag<p style=`"margin-top:16px;color:#666`">Open JSON for full metadata.</p></body></html>"');
-    lines.push('$html | Out-File -FilePath $OutHtml -Encoding UTF8');
+    lines.push('$displayRows = $outRows | Sort-Object -Property SessionsPerServer -Descending');
+    lines.push('$displayRows | Export-Csv -Path $OutCsv -NoTypeInformation -Encoding UTF8');
+    lines.push('Write-Host "Saved CSV: $OutCsv" -ForegroundColor Green');
+    lines.push('');
+    lines.push('Add-Type -AssemblyName System.Web');
+    lines.push('$style = @"');
+    lines.push('body { font-family: Segoe UI, Arial, sans-serif; margin: 24px; color: #222; }');
+    lines.push('h1 { margin: 0 0 6px; }');
+    lines.push('.meta { color: #666; margin-bottom: 14px; font-size: 13px; }');
+    lines.push('table { border-collapse: collapse; width: 100%; max-width: 1200px; }');
+    lines.push('th, td { border: 1px solid #ddd; padding: 8px 10px; text-align: left; }');
+    lines.push('th { background: #f4f4f4; cursor: pointer; user-select: none; }');
+    lines.push('th.sort-asc::after  { content: " \\25B2"; color: #888; font-size: 11px; }');
+    lines.push('th.sort-desc::after { content: " \\25BC"; color: #888; font-size: 11px; }');
+    lines.push('tbody tr:nth-child(even) { background: #fafafa; }');
+    lines.push('.num { text-align: right; font-variant-numeric: tabular-nums; }');
+    lines.push('.toolbar { margin: 12px 0; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }');
+    lines.push('.btn { padding: 6px 12px; border: 1px solid #888; background: #fafafa; cursor: pointer; border-radius: 4px; font: inherit; }');
+    lines.push('.btn:hover { background: #e8eef7; border-color: #406ebf; }');
+    lines.push('.filter { padding: 6px 10px; border: 1px solid #ccc; border-radius: 4px; min-width: 260px; }');
+    lines.push('"@');
+    pushHorizonTableInteractionJs(lines, 'hzTableJs');
+    lines.push('$slTableRows = ($displayRows | ForEach-Object {');
+    lines.push('    $fn = [System.Web.HttpUtility]::HtmlEncode($_.FarmName)');
+    lines.push('    $sps = if ($null -ne $_.SessionsPerServer) { [string]$_.SessionsPerServer } else { "" }');
+    lines.push('    $ups = if ($null -ne $_.UsersPerServer) { [string]$_.UsersPerServer } else { "" }');
+    lines.push('    "<tr><td>$fn</td><td class=`"num`">$($_.Servers)</td><td class=`"num`">$($_.ConnectedSessions)</td><td class=`"num`">$($_.UniqueUsers)</td><td class=`"num`">$sps</td><td class=`"num`">$ups</td></tr>"');
+    lines.push('}) -join "`n"');
+    lines.push('if (-not $slTableRows) { $slTableRows = "<tr><td colspan=`"6`">No farm rows.</td></tr>" }');
+    lines.push('$htmlOut = @"');
+    lines.push('<!DOCTYPE html>');
+    lines.push('<html><head><meta charset="utf-8"><title>Horizon Server Load</title><style>$style</style></head>');
+    lines.push('<body>');
+    lines.push('<h1>Horizon Farm Server Load</h1>');
+    lines.push('<p class="meta">Generated: $(Get-Date) &nbsp;|&nbsp; Farms from <code>$farmSource</code><br/>');
+    lines.push('Density = connected sessions / RDS servers (and unique users / servers). Click a column header to sort. JSON: <code>$OutJson</code> &nbsp; CSV: <code>$OutCsv</code></p>');
+    lines.push('<' + 'div class="toolbar">');
+    lines.push('  <input id="flt-serverload" class="filter" placeholder="Filter rows (any column)..." oninput="hzFilterTable(\'flt-serverload\',\'tbl-serverload\')">');
+    lines.push('  <button type="button" class="btn" onclick="hzDownloadCsv(\'tbl-serverload\',\'horizon-server-load.csv\')">Download CSV</button>');
+    lines.push('  <span class="meta">Tip: click column headers to sort</span>');
+    lines.push('</div>');
+    lines.push('<table id="tbl-serverload" class="sortable">');
+    lines.push('<thead><tr>');
+    lines.push('<th>Farm</th><th class="num">Servers</th><th class="num">Connected sessions</th>');
+    lines.push('<th class="num">Unique users</th><th class="num">Sessions / server</th><th class="num">Users / server</th>');
+    lines.push('</tr></thead><tbody>');
+    lines.push('$slTableRows');
+    lines.push('</tbody></table>');
+    lines.push('<script>');
+    lines.push('$hzTableJs');
+    lines.push('</script>');
+    lines.push('</body></html>');
+    lines.push('"@');
+    lines.push('$htmlOut | Out-File -FilePath $OutHtml -Encoding UTF8');
     lines.push('Write-Host "Saved HTML: $OutHtml" -ForegroundColor Green');
     lines.push('try { Start-Process $OutHtml } catch { Write-Warning "Could not open HTML automatically: $($_.Exception.Message)" }');
     lines.push('');
