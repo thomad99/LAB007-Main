@@ -130,7 +130,10 @@ window.runAnalysis = async function runAnalysis() {
       data.imageAltAudit || [],
       data.pageMetaAudit || [],
       data.siteKeywords || [],
-      Number(data.pagesScanned || 0)
+      Number(data.pagesScanned || 0),
+      data.provider,
+      data.failover,
+      data.model
     );
     await loadGscReport(url);
   } catch (err) {
@@ -308,10 +311,33 @@ function getScoreClass(score) {
   return 'bad';
 }
 
-function renderAnalyzerResults(data, url, hostname, imageAltAudit, pageMetaAudit, siteKeywords, pagesScanned) {
+function renderAnalyzerResults(
+  data,
+  url,
+  hostname,
+  imageAltAudit,
+  pageMetaAudit,
+  siteKeywords,
+  pagesScanned,
+  provider,
+  failover,
+  model
+) {
   document.getElementById('analyzer-loading').style.display = 'none';
   document.getElementById('analyzer-results').style.display = 'block';
   document.getElementById('analyzeBtn').disabled = false;
+
+  const providerNote = document.getElementById('analyzer-provider-note');
+  if (providerNote) {
+    if (provider === 'openai') {
+      const label = failover ? 'OpenAI backup' : 'OpenAI';
+      providerNote.textContent = `Analysis engine: ${label}${model ? ` (${model})` : ''}`;
+      providerNote.style.display = 'block';
+    } else {
+      providerNote.style.display = 'none';
+      providerNote.textContent = '';
+    }
+  }
 
   const overall = Math.min(100, Math.max(0, data.overall || 0));
   const cls = getScoreClass(overall);

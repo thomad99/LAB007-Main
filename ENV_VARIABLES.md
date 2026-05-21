@@ -139,6 +139,40 @@ NODE_ENV=production
 
 ---
 
+## Marketing Manager (private — lab007.ai/marketing-manager)
+
+Password-protects the Marketing Manager UI and all `/api/marketing-manager/*` routes except public contract signing (`/marketing-manager/sign/...`).
+
+- `MARKETING_MANAGER_PASSWORD` — **Required** for access. Set a strong password in Render env vars.
+- `MARKETING_MANAGER_SESSION_SECRET` — Optional HMAC secret for session cookies (defaults to a hash of the password).
+- `MARKETING_MANAGER_COOKIE_SECURE` — Set to `1` to force `Secure` cookies when not in `NODE_ENV=production`.
+
+```bash
+MARKETING_MANAGER_PASSWORD=your_strong_password_here
+```
+
+---
+
+## Digital Marketing / SEO Analyzer (lab007.ai)
+
+Used by `POST /api/analyze` on the main LAB007 server (`/digitalmarketing`).
+
+- `ANTHROPIC_API_KEY` — Primary analyzer (Claude). When credits or rate limits fail, the server can fail over to OpenAI if configured.
+- `OPENAI_API_KEY` (or `OPENAI_KEY`) — Failover / backup for the website SEO analyzer and keyword suggestions.
+- `ANTHROPIC_ANALYZE_MODEL` — Optional Claude model (default: `claude-sonnet-4-5`).
+- `OPENAI_ANALYZE_MODEL` — Optional OpenAI model for failover (default: `gpt-4o`). Set to a Codex model (e.g. `gpt-5.2-codex`) if your account supports it.
+- `OPENAI_CODEX_MODEL` — Alias for `OPENAI_ANALYZE_MODEL` when you want Codex specifically.
+- `ANALYZE_LLM_PROVIDER` — Optional: `auto` (default), `anthropic`, or `openai`.
+
+```bash
+ANTHROPIC_API_KEY=your_anthropic_key
+OPENAI_API_KEY=your_openai_key
+# OPENAI_ANALYZE_MODEL=gpt-5.2-codex
+# ANALYZE_LLM_PROVIDER=auto
+```
+
+---
+
 ## Notes
 
 1. **Email Configuration**: For 3D Print project, you only need ONE email method (SendGrid, External Service, or SMTP). SendGrid is recommended for free Render plans.

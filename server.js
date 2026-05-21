@@ -131,6 +131,124 @@ if (!fs.existsSync(marketingManagerPath) && fs.existsSync(legacyMarketingManager
 console.log('Marketing manager dir:', marketingManagerDataDir);
 console.log('Marketing manager file:', marketingManagerPath);
 
+const MARKETING_MANAGER_COOKIE = 'mm_auth';
+const MARKETING_MANAGER_SESSION_MS = 7 * 24 * 60 * 60 * 1000;
+
+function marketingManagerPassword() {
+  return String(process.env.MARKETING_MANAGER_PASSWORD || '').trim();
+}
+
+function marketingManagerSessionSecret() {
+  const explicit = String(process.env.MARKETING_MANAGER_SESSION_SECRET || '').trim();
+  if (explicit) return explicit;
+  const pwd = marketingManagerPassword();
+  if (pwd) return crypto.createHash('sha256').update(`mm:${pwd}`).digest('hex');
+  return '';
+}
+
+function parseReqCookie(req, name) {
+  const raw = req.headers.cookie;
+  if (!raw) return '';
+  for (const part of raw.split(';')) {
+    const idx = part.indexOf('=');
+    if (idx < 0) continue;
+    const k = part.slice(0, idx).trim();
+    if (k !== name) continue;
+    try {
+      return decodeURIComponent(part.slice(idx + 1).trim());
+    } catch {
+      return part.slice(idx + 1).trim();
+    }
+  }
+  return '';
+}
+
+function signMarketingManagerToken() {
+  const secret = marketingManagerSessionSecret();
+  if (!secret) return '';
+  const exp = String(Date.now() + MARKETING_MANAGER_SESSION_MS);
+  const sig = crypto.createHmac('sha256', secret).update(exp).digest('hex');
+  return `${exp}.${sig}`;
+}
+
+function verifyMarketingManagerToken(token) {
+  const secret = marketingManagerSessionSecret();
+  if (!secret || !token) return false;
+  const parts = String(token).split('.');
+  if (parts.length !== 2) return false;
+  const [expStr, sig] = parts;
+  const exp = Number(expStr);
+  if (!Number.isFinite(exp) || Date.now() > exp) return false;
+  const expected = crypto.createHmac('sha256', secret).update(expStr).digest('hex');
+  try {
+    const a = Buffer.from(sig, 'hex');
+    const b = Buffer.from(expected, 'hex');
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+function isMarketingManagerAuthed(req) {
+  if (!marketingManagerPassword()) return false;
+  return verifyMarketingManagerToken(parseReqCookie(req, MARKETING_MANAGER_COOKIE));
+}
+
+function isPublicMarketingManagerApi(req) {
+  const p = req.path || '';
+  const m = req.method;
+  if (p === '/api/marketing-manager/auth/login' && m === 'POST') return true;
+  if (p === '/api/marketing-manager/auth/status' && m === 'GET') return true;
+  if (/^\/api\/marketing-manager\/contracts\/sign\/[^/]+$/.test(p) && (m === 'GET' || m === 'POST')) {
+    return true;
+  }
+  if (
+    /^\/api\/marketing-manager\/contracts\/sign\/[^/]+\/(document|download)$/.test(p) &&
+    m === 'GET'
+  ) {
+    return true;
+  }
+  if (
+    /^\/api\/marketing-manager\/contracts\/sign\/[^/]+\/email-copy$/.test(p) &&
+    m === 'POST'
+  ) {
+    return true;
+  }
+  return false;
+}
+
+function setMarketingManagerAuthCookie(res, token) {
+  const secure =
+    process.env.NODE_ENV === 'production' ||
+    String(process.env.MARKETING_MANAGER_COOKIE_SECURE || '').trim() === '1';
+  const maxAgeSec = Math.floor(MARKETING_MANAGER_SESSION_MS / 1000);
+  const parts = [
+    `${MARKETING_MANAGER_COOKIE}=${encodeURIComponent(token)}`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    `Max-Age=${maxAgeSec}`
+  ];
+  if (secure) parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+
+function clearMarketingManagerAuthCookie(res) {
+  const secure =
+    process.env.NODE_ENV === 'production' ||
+    String(process.env.MARKETING_MANAGER_COOKIE_SECURE || '').trim() === '1';
+  const parts = [
+    `${MARKETING_MANAGER_COOKIE}=`,
+    'Path=/',
+    'HttpOnly',
+    'SameSite=Lax',
+    'Max-Age=0'
+  ];
+  if (secure) parts.push('Secure');
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+
 /** When set, task JSON always uses this volume path (GitHub task sync stays off — avoids empty GitHub wiping the UI). */
 const ggppiDataDirExplicit = String(process.env.GGPPI_DATA_DIR || '').trim().length > 0;
 
@@ -271,7 +389,7 @@ app.get('/digitalmarketing', (req, res) => {
   return res.status(404).send('Not found');
 });
 
-// Serve marketing manager page
+// Serve marketing manager page (client gate + API auth; contract signing stays public)
 app.get('/marketing-manager', (req, res) => {
   const p = path.join(__dirname, 'public', 'marketing-manager.html');
   if (fs.existsSync(p)) return res.sendFile(p);
@@ -1747,8 +1865,136 @@ app.post('/api/marketing-analyzer/compare', (req, res) => {
   }
 });
 
-// ── Digital Marketing: Anthropic SEO analyzer proxy (used by /digitalmarketing) ──
+// ── Digital Marketing: SEO analyzer LLM (Anthropic primary, OpenAI/Codex failover) ──
 const ANTHROPIC_ANALYZE_MODEL = process.env.ANTHROPIC_ANALYZE_MODEL || 'claude-sonnet-4-5';
+const OPENAI_ANALYZE_MODEL =
+  process.env.OPENAI_ANALYZE_MODEL ||
+  process.env.OPENAI_CODEX_MODEL ||
+  'gpt-4o';
+
+function anthropicAnalyzerErrorMessage(data) {
+  if (!data || typeof data !== 'object') return '';
+  const err = data.error;
+  if (err && typeof err === 'object') return String(err.message || err.type || '');
+  return String(data.message || '');
+}
+
+function shouldFailoverAnthropicToOpenAi(status, data, errMsg) {
+  const msg = String(anthropicAnalyzerErrorMessage(data) || errMsg || '').toLowerCase();
+  if ([402, 429, 500, 502, 503, 529].includes(Number(status))) return true;
+  return /credit|billing|balance|quota|rate.?limit|overloaded|capacity|insufficient|exceeded|spend|payment|subscription|out of|too many requests/.test(
+    msg
+  );
+}
+
+async function callAnthropicAnalyzer(prompt, apiKey) {
+  const payload = {
+    model: ANTHROPIC_ANALYZE_MODEL,
+    max_tokens: 6000,
+    messages: [{ role: 'user', content: prompt }]
+  };
+  const response = await fetchFn('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01'
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || data.type === 'error' || data.error) {
+    const msg =
+      anthropicAnalyzerErrorMessage(data) || `Anthropic request failed (${response.status})`;
+    const err = new Error(String(msg));
+    err.status = response.status;
+    err.data = data;
+    throw err;
+  }
+  const text = (data.content || []).map((c) => c.text || '').join('');
+  if (!text) throw new Error('Empty response from Anthropic');
+  return text;
+}
+
+async function callOpenAiAnalyzer(prompt, apiKey) {
+  const body = {
+    model: OPENAI_ANALYZE_MODEL,
+    max_tokens: 6000,
+    temperature: 0.3,
+    response_format: { type: 'json_object' },
+    messages: [
+      {
+        role: 'system',
+        content:
+          'You are an expert SEO analyst. Follow the user instructions and return only valid JSON (no markdown fences).'
+      },
+      { role: 'user', content: prompt }
+    ]
+  };
+  const response = await fetchFn('https://api.openai.com/v1/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`
+    },
+    body: JSON.stringify(body)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const msg = data?.error?.message || `OpenAI request failed (${response.status})`;
+    const err = new Error(String(msg));
+    err.status = response.status;
+    err.data = data;
+    throw err;
+  }
+  const text = String(data?.choices?.[0]?.message?.content || '').trim();
+  if (!text) throw new Error('Empty response from OpenAI');
+  return text;
+}
+
+async function runMarketingAnalyzerLlm(prompt) {
+  const anthropicKey = String(process.env.ANTHROPIC_API_KEY || '').trim();
+  const openAiKey = String(process.env.OPENAI_API_KEY || process.env.OPENAI_KEY || '').trim();
+  const pref = String(process.env.ANALYZE_LLM_PROVIDER || 'auto').trim().toLowerCase();
+
+  if (pref === 'openai') {
+    if (!openAiKey) throw new Error('OPENAI_API_KEY not set in environment variables');
+    const text = await callOpenAiAnalyzer(prompt, openAiKey);
+    return { text, provider: 'openai', failover: false, model: OPENAI_ANALYZE_MODEL };
+  }
+
+  if (pref === 'anthropic') {
+    if (!anthropicKey) throw new Error('ANTHROPIC_API_KEY not set in environment variables');
+    const text = await callAnthropicAnalyzer(prompt, anthropicKey);
+    return { text, provider: 'anthropic', failover: false, model: ANTHROPIC_ANALYZE_MODEL };
+  }
+
+  // auto: try Anthropic first, failover to OpenAI on credit/rate-limit style errors
+  if (anthropicKey) {
+    try {
+      const text = await callAnthropicAnalyzer(prompt, anthropicKey);
+      return { text, provider: 'anthropic', failover: false, model: ANTHROPIC_ANALYZE_MODEL };
+    } catch (anthropicErr) {
+      if (openAiKey && shouldFailoverAnthropicToOpenAi(anthropicErr.status, anthropicErr.data, anthropicErr.message)) {
+        console.warn(
+          '[analyze] Anthropic unavailable (%s), failing over to OpenAI model %s',
+          anthropicErr.message,
+          OPENAI_ANALYZE_MODEL
+        );
+        const text = await callOpenAiAnalyzer(prompt, openAiKey);
+        return { text, provider: 'openai', failover: true, model: OPENAI_ANALYZE_MODEL };
+      }
+      throw anthropicErr;
+    }
+  }
+
+  if (openAiKey) {
+    const text = await callOpenAiAnalyzer(prompt, openAiKey);
+    return { text, provider: 'openai', failover: false, model: OPENAI_ANALYZE_MODEL };
+  }
+
+  throw new Error('Configure ANTHROPIC_API_KEY or OPENAI_API_KEY for the SEO analyzer');
+}
 
 function extractImageAltAuditFromHtml(html, pageUrl) {
   const out = [];
@@ -2207,39 +2453,13 @@ app.post('/api/analyze', async (req, res) => {
     if (!prompt || typeof prompt !== 'string') {
       return res.status(400).json({ success: false, error: 'No prompt provided' });
     }
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return res.status(500).json({
-        success: false,
-        error: 'ANTHROPIC_API_KEY not set in environment variables'
-      });
+    let llm;
+    try {
+      llm = await runMarketingAnalyzerLlm(prompt);
+    } catch (llmErr) {
+      return res.status(500).json({ success: false, error: llmErr.message || 'Analyze failed' });
     }
-    const payload = {
-      model: ANTHROPIC_ANALYZE_MODEL,
-      max_tokens: 6000,
-      messages: [{ role: 'user', content: prompt }]
-    };
-    const response = await fetchFn('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify(payload)
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || data.type === 'error' || data.error) {
-      const msg =
-        (data.error && (data.error.message || data.error.type)) ||
-        data.message ||
-        `Anthropic request failed (${response.status})`;
-      return res.status(500).json({ success: false, error: String(msg) });
-    }
-    const text = (data.content || []).map((c) => c.text || '').join('');
-    if (!text) {
-      return res.status(500).json({ success: false, error: 'Empty response from Anthropic' });
-    }
+    const text = llm.text;
     let imageAltAudit = [];
     let pageMetaAudit = [];
     let siteKeywords = [];
@@ -2262,7 +2482,17 @@ app.post('/api/analyze', async (req, res) => {
         pagesScanned = 0;
       }
     }
-    return res.json({ success: true, text, imageAltAudit, pageMetaAudit, siteKeywords, pagesScanned });
+    return res.json({
+      success: true,
+      text,
+      provider: llm.provider,
+      failover: !!llm.failover,
+      model: llm.model,
+      imageAltAudit,
+      pageMetaAudit,
+      siteKeywords,
+      pagesScanned
+    });
   } catch (error) {
     console.error('/api/analyze error:', error);
     return res.status(500).json({ success: false, error: error.message || 'Analyze failed' });
@@ -4356,6 +4586,62 @@ async function mmTryFetchLogo(websiteUrl) {
   }
 }
 
+app.post('/api/marketing-manager/auth/login', (req, res) => {
+  const expected = marketingManagerPassword();
+  if (!expected) {
+    return res.status(503).json({
+      ok: false,
+      error: 'Marketing Manager password is not configured on the server (MARKETING_MANAGER_PASSWORD).'
+    });
+  }
+  const given = String(req.body?.password || '');
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  let match = false;
+  if (a.length === b.length) {
+    try {
+      match = crypto.timingSafeEqual(a, b);
+    } catch {
+      match = false;
+    }
+  }
+  if (!match) {
+    return res.status(401).json({ ok: false, error: 'Incorrect password.' });
+  }
+  const token = signMarketingManagerToken();
+  if (!token) {
+    return res.status(503).json({ ok: false, error: 'Could not create session token.' });
+  }
+  setMarketingManagerAuthCookie(res, token);
+  return res.json({ ok: true });
+});
+
+app.get('/api/marketing-manager/auth/status', (req, res) => {
+  if (!marketingManagerPassword()) {
+    return res.json({ ok: false, configured: false });
+  }
+  return res.json({ ok: isMarketingManagerAuthed(req), configured: true });
+});
+
+app.post('/api/marketing-manager/auth/logout', (req, res) => {
+  clearMarketingManagerAuthCookie(res);
+  return res.json({ ok: true });
+});
+
+app.use((req, res, next) => {
+  if (!req.path.startsWith('/api/marketing-manager')) return next();
+  if (isPublicMarketingManagerApi(req)) return next();
+  if (!marketingManagerPassword()) {
+    return res.status(503).json({
+      error: 'Marketing Manager password is not configured on the server (MARKETING_MANAGER_PASSWORD).'
+    });
+  }
+  if (!isMarketingManagerAuthed(req)) {
+    return res.status(401).json({ error: 'Authentication required.', code: 'MM_AUTH_REQUIRED' });
+  }
+  return next();
+});
+
 app.get('/api/marketing-manager/catalog', (req, res) => {
   return res.json({
     directory: {
@@ -5261,42 +5547,35 @@ app.post('/api/marketing-manager/keyword-suggest', async (req, res) => {
     const clean = seeds.map((s) => String(s || '').trim()).filter(Boolean).slice(0, 12);
     if (!clean.length) return res.status(400).json({ error: 'Provide seeds as a non-empty array' });
 
-    const apiKey = process.env.ANTHROPIC_API_KEY;
-    if (!apiKey) {
-      return res.json({ suggestions: mmHeuristicKeywordSuggestions(clean), source: 'heuristic' });
-    }
-
     const prompt = `The user is building a local SEO keyword list for a business. Seed keywords:
 ${clean.map((k, i) => `${i + 1}. ${k}`).join('\n')}
 
-Return ONLY a JSON array of 20-35 short keyword phrases (strings), no markdown, no explanation. Include local and commercial intent variations, long-tail phrases, and related services. JSON only.`;
+Return ONLY a JSON object (no markdown): {"suggestions":["phrase one","phrase two",...]} with 20-35 short keyword strings. Include local and commercial intent variations, long-tail phrases, and related services.`;
 
-    const payload = {
-      model: ANTHROPIC_ANALYZE_MODEL,
-      max_tokens: 1200,
-      messages: [{ role: 'user', content: prompt }]
-    };
-    const response = await fetchFn('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01'
-      },
-      body: JSON.stringify(payload)
-    });
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || data.type === 'error' || data.error) {
-      return res.json({ suggestions: mmHeuristicKeywordSuggestions(clean), source: 'heuristic' });
-    }
-    const text = (data.content || []).map((c) => c.text || '').join('').trim();
-    const jsonText = text.replace(/```json|```/g, '').trim();
-    let arr;
+    let text = '';
+    let source = 'heuristic';
     try {
-      arr = JSON.parse(jsonText);
+      const llm = await runMarketingAnalyzerLlm(prompt);
+      text = String(llm.text || '').trim();
+      source = llm.failover ? 'openai-failover' : llm.provider;
     } catch {
       return res.json({ suggestions: mmHeuristicKeywordSuggestions(clean), source: 'heuristic' });
     }
+    if (!text) {
+      return res.json({ suggestions: mmHeuristicKeywordSuggestions(clean), source: 'heuristic' });
+    }
+    const jsonText = text.replace(/```json|```/g, '').trim();
+    let parsed;
+    try {
+      parsed = JSON.parse(jsonText);
+    } catch {
+      return res.json({ suggestions: mmHeuristicKeywordSuggestions(clean), source: 'heuristic' });
+    }
+    const arr = Array.isArray(parsed)
+      ? parsed
+      : Array.isArray(parsed?.suggestions)
+      ? parsed.suggestions
+      : [];
     const suggestions = (Array.isArray(arr) ? arr : [])
       .map((x) => (typeof x === 'string' ? x.trim() : ''))
       .filter(Boolean)
@@ -5304,7 +5583,7 @@ Return ONLY a JSON array of 20-35 short keyword phrases (strings), no markdown, 
     if (!suggestions.length) {
       return res.json({ suggestions: mmHeuristicKeywordSuggestions(clean), source: 'heuristic' });
     }
-    return res.json({ suggestions, source: 'anthropic' });
+    return res.json({ suggestions, source });
   } catch (error) {
     console.error('keyword-suggest:', error);
     return res.status(500).json({ error: error.message });

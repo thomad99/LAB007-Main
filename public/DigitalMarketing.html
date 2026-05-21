@@ -222,6 +222,7 @@
   .results-url { font-size: 13px; color: var(--gold); margin-bottom: 4px; }
   .results-title { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 12px; }
   .results-meta { display: flex; gap: 20px; flex-wrap: wrap; margin-bottom: 20px; }
+  #analyzer-provider-note { display: none; font-size: 12px; color: var(--muted); margin: 0 0 12px; }
   .meta-pill { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--muted); background: var(--panel); border: 1px solid var(--border); padding: 4px 10px; border-radius: 6px; }
   .meta-dot { width: 6px; height: 6px; border-radius: 50%; }
   .meta-dot.g { background: var(--green); }
@@ -548,6 +549,18 @@
       <ul class="service-items"><li>Keyword gap analysis</li><li>Content calendar & brief writing</li><li>Landing page copy optimization</li><li>Blog & news publishing</li></ul>
     </div>
     <div class="service-card">
+      <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="13.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="10.5" r="2.5"/><circle cx="8.5" cy="7.5" r="2.5"/><circle cx="6.5" cy="12.5" r="2.5"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.83 0 1.5-.67 1.5-1.5 0-.39-.15-.74-.39-1.01-.23-.26-.38-.61-.38-1 0-.83.67-1.5 1.5-1.5H16c2.76 0 5-2.24 5-5 0-4.42-4.03-8-9-8z"/></svg></div>
+      <h3>Branding</h3>
+      <p>While AI tools can help, a human with AI tools is even better. Get a consistent, well-thought-out branding approach.</p>
+      <ul class="service-items"><li>Voice, tone, and visual identity</li><li>Logo, color, and typography direction</li><li>Brand story across web, social, and ads</li><li>Human-led strategy with AI support</li></ul>
+    </div>
+    <div class="service-card">
+      <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 7l-7 5 7 5V7z"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg></div>
+      <h3>Media Mgmt</h3>
+      <p>Real photography and video for your brand, with approved assets scheduled to social automatically.</p>
+      <ul class="service-items"><li>Real photo shoots</li><li>Real video footage</li><li>Automated social media release of approved images and videos</li></ul>
+    </div>
+    <div class="service-card">
       <div class="service-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg></div>
       <h3>Analytics & Reporting</h3>
       <p>Clear dashboards that show exactly what's working and what's not.</p>
@@ -629,6 +642,7 @@
         <div class="results-summary">
           <div id="results-url-display" class="results-url"></div>
           <div id="results-headline" class="results-title"></div>
+          <p id="analyzer-provider-note"></p>
           <div id="results-meta" class="results-meta"></div>
           <div id="score-breakdown" class="score-breakdown"></div>
         </div>

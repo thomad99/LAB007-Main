@@ -76,19 +76,76 @@
     return { customers: customers.length, total, not_started: ns, in_progress: s, parked: p, completed: c };
   }
 
+  const fetchOpts = { credentials: 'same-origin' };
+
+  function showAuthGate(message) {
+    document.body.classList.add('mm-locked');
+    const gate = document.getElementById('mm-auth-gate');
+    if (gate) gate.classList.remove('is-hidden');
+    const err = document.getElementById('mm-auth-error');
+    if (err) err.textContent = message || '';
+    const pw = document.getElementById('mm-auth-password');
+    if (pw) pw.focus();
+  }
+
+  function hideAuthGate() {
+    document.body.classList.remove('mm-locked');
+    const gate = document.getElementById('mm-auth-gate');
+    if (gate) gate.classList.add('is-hidden');
+    const err = document.getElementById('mm-auth-error');
+    if (err) err.textContent = '';
+  }
+
+  async function checkAuthStatus() {
+    const r = await fetch('/api/marketing-manager/auth/status', fetchOpts);
+    const j = await r.json().catch(() => ({}));
+    if (!j.configured) {
+      showAuthGate('Marketing Manager is not configured on the server yet.');
+      return false;
+    }
+    if (j.ok) {
+      hideAuthGate();
+      return true;
+    }
+    showAuthGate('');
+    return false;
+  }
+
+  async function loginWithPassword(password) {
+    const r = await fetch('/api/marketing-manager/auth/login', {
+      ...fetchOpts,
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || 'Login failed');
+    hideAuthGate();
+    return true;
+  }
+
   async function api(path, opt) {
     const r = await fetch(path, {
+      ...fetchOpts,
       headers: { 'Content-Type': 'application/json' },
       ...opt
     });
     const j = await r.json().catch(() => ({}));
+    if (r.status === 401 && j.code === 'MM_AUTH_REQUIRED') {
+      showAuthGate('Session expired. Enter your password again.');
+      throw new Error(j.error || 'Authentication required');
+    }
     if (!r.ok) throw new Error(j.error || r.statusText);
     return j;
   }
 
   async function apiForm(path, method, formData) {
-    const r = await fetch(path, { method, body: formData });
+    const r = await fetch(path, { ...fetchOpts, method, body: formData });
     const j = await r.json().catch(() => ({}));
+    if (r.status === 401 && j.code === 'MM_AUTH_REQUIRED') {
+      showAuthGate('Session expired. Enter your password again.');
+      throw new Error(j.error || 'Authentication required');
+    }
     if (!r.ok) throw new Error(j.error || r.statusText);
     return j;
   }
@@ -1398,10 +1455,37 @@
   }
 
   window.addEventListener('DOMContentLoaded', () => {
-    refresh().catch((e) => {
-      console.error(e);
-      const el = $('#mm-overview');
-      if (el) el.innerHTML = `<p class="mm-error">Could not load Marketing Manager: ${escapeHtml(e.message)}</p>`;
-    });
+    const form = document.getElementById('mm-auth-form');
+    if (form) {
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const errEl = document.getElementById('mm-auth-error');
+        const btn = document.getElementById('mm-auth-submit');
+        const pw = document.getElementById('mm-auth-password');
+        const password = pw ? pw.value : '';
+        if (errEl) errEl.textContent = '';
+        if (btn) btn.disabled = true;
+        try {
+          await loginWithPassword(password);
+          if (pw) pw.value = '';
+          await refresh();
+        } catch (err) {
+          if (errEl) errEl.textContent = err.message || 'Login failed';
+        } finally {
+          if (btn) btn.disabled = false;
+        }
+      });
+    }
+
+    checkAuthStatus()
+      .then((ok) => {
+        if (!ok) return;
+        return refresh();
+      })
+      .catch((e) => {
+        console.error(e);
+        const el = $('#mm-overview');
+        if (el) el.innerHTML = `<p class="mm-error">Could not load Marketing Manager: ${escapeHtml(e.message)}</p>`;
+      });
   });
 })();
