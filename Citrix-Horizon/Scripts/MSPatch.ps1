@@ -88,7 +88,7 @@ function Write-Log {
 # Teams Workflow Webhook URL
 # -------------------------------
 # Treat this URL like a password.
-$TeamsWorkflowUrl = "https://default47eb93f93c37419cae4e37c50e7d1d.c0.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/72ca894639d14c8fae484f6db87527b2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=M38KwWz-oLmqc6joZdCgC54BfzjQCYsghHAEvMmW198"
+$TeamsWorkflowUrl = "https://default47eb93f93c37419cae4e37c50e7d1d.c0.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/3b8032e8b228481d98cf1fb1d083ecac/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=nq_ebssrZskaYpgfNF5CEcPdQ4hSgD3WVGxuyJojEeM"
 
 # -------------------------------
 # Helpers
