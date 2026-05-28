@@ -22,7 +22,7 @@ let currentRoles = [];
 let goldenSunImages = [];
 let goldenSunReportSort = 'name';
 let goldenSunSelectedImages = new Set();
-let goldenSunActiveTab = 'search';
+let goldenSunActiveTab = 'farm';
 let goldenSunFileOptions = [];
 // Farm report (Horizon + VMware master images)
 let farmReportRows = [];
@@ -132,43 +132,20 @@ document.addEventListener('DOMContentLoaded', async function() {
         });
     }
 
-    // GoldenSun file select refresh
-    window.fetchGoldenSunFileList = fetchGoldenSunFileList;
-    window.openGoldenSunFileDialog = openGoldenSunFileDialog;
-
     // GoldenSun tabs
     window.showGoldenSunTab = function(tab) {
-        goldenSunActiveTab = tab;
-        const clonePanel = document.getElementById('goldenSunClonePanel');
-        const reportPanel = document.getElementById('goldenSunReportPanel');
+        goldenSunActiveTab = 'farm';
         const farmPanel = document.getElementById('goldenSunFarmPanel');
-        const tabClone = document.getElementById('goldenSunTabClone');
-        const tabReport = document.getElementById('goldenSunTabReport');
         const tabFarm = document.getElementById('goldenSunTabFarm');
-        if (clonePanel) clonePanel.style.display = tab === 'clone' ? 'block' : 'none';
-        if (reportPanel) reportPanel.style.display = tab === 'report' ? 'block' : 'none';
-        if (farmPanel) farmPanel.style.display = tab === 'farm' ? 'block' : 'none';
-        if (tabClone) tabClone.classList.toggle('active', tab === 'clone');
-        if (tabReport) tabReport.classList.toggle('active', tab === 'report');
-        if (tabFarm) tabFarm.classList.toggle('active', tab === 'farm');
-        if (tab === 'report') renderGoldenSunReport();
-        if (tab === 'farm') renderGoldenSunFarmReport();
+        if (farmPanel) farmPanel.style.display = 'block';
+        if (tabFarm) tabFarm.classList.add('active');
+        renderGoldenSunFarmReport();
     };
 
     // GoldenSun search generate
     window.generateGoldenSunSearchScript = generateGoldenSunSearchScript;
     window.copyGoldenSunSearchScript = copyGoldenSunSearchScript;
     window.downloadGoldenSunSearchScript = downloadGoldenSunSearchScript;
-    window.generateGoldenSunReportScript = generateGoldenSunReportScript;
-    window.copyGoldenSunReportScript = copyGoldenSunReportScript;
-    window.downloadGoldenSunReportScript = downloadGoldenSunReportScript;
-
-    // GoldenSun file picker
-    const gsPicker = document.getElementById('goldenSunFilePicker');
-    if (gsPicker) {
-        gsPicker.addEventListener('change', handleGoldenSunFilePick);
-    }
-
     // Farm report JSON file picker (local file to avoid CORS)
     const farmPicker = document.getElementById('goldenSunFarmFilePicker');
     if (farmPicker) {
@@ -2880,9 +2857,9 @@ function showGoldenSunModal() {
         gsVcInput.value = GOLDEN_SUN_DEFAULT_VCENTER;
     }
 
-    goldenSunActiveTab = 'search';
+    goldenSunActiveTab = 'farm';
     showGoldenSunTab(goldenSunActiveTab);
-    fetchGoldenSunFileList().then(() => reloadGoldenSunImages());
+    renderGoldenSunFarmReport();
 }
 
 function closeGoldenSunModal() {
@@ -2919,441 +2896,7 @@ function handleGoldenSunMoveSourceToggle() {
 }
 
 function reloadGoldenSunImages() {
-    loadGoldenSunImages();
-}
-
-function openGoldenSunFileDialog() {
-    const picker = document.getElementById('goldenSunFilePicker');
-    if (picker) {
-        picker.value = '';
-        picker.click();
-    }
-}
-
-function handleGoldenSunFilePick(event) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const lower = file.name.toLowerCase();
-    if (!lower.includes('master-images') || !lower.endsWith('.json')) {
-        alert('Please select a file matching *-Master-Images.json');
-        return;
-    }
-
-    const statusEl = document.getElementById('goldenSunStatus');
-    if (statusEl) statusEl.textContent = `Loading ${file.name}...`;
-
-    const reader = new FileReader();
-    reader.onload = function(e) {
-        try {
-            const obj = JSON.parse(e.target.result);
-            ingestGoldenSunJson(obj, file.name);
-        } catch (err) {
-            alert('Error parsing JSON: ' + err.message);
-        }
-    };
-    reader.readAsText(file);
-}
-
-function ingestGoldenSunJson(obj, fileName) {
-    const statusEl = document.getElementById('goldenSunStatus');
-    const imagesSection = document.getElementById('goldenSunImagesSection');
-    const cloneSection = document.getElementById('goldenSunCloneSection');
-    const scriptOutput = document.getElementById('goldenSunScriptOutput');
-
-    let images = [];
-    if (Array.isArray(obj)) images = obj;
-    else if (Array.isArray(obj.MasterImages)) images = obj.MasterImages;
-    else if (Array.isArray(obj.masterImages)) images = obj.masterImages;
-    else if (Array.isArray(obj.Images)) images = obj.Images;
-    else if (Array.isArray(obj.images)) images = obj.images;
-
-    goldenSunImages = images.map(normalizeGoldenSunImage).filter(img => !!img.Name);
-    goldenSunSelectedImages.clear();
-
-    if (statusEl) statusEl.textContent = goldenSunImages.length
-        ? `Loaded ${goldenSunImages.length} image(s) from ${fileName}`
-        : `No master images found in ${fileName}`;
-
-    if (goldenSunImages.length) {
-        if (imagesSection) imagesSection.style.display = 'block';
-        if (cloneSection) cloneSection.style.display = 'block';
-    } else {
-        if (imagesSection) imagesSection.style.display = 'none';
-        if (cloneSection) cloneSection.style.display = 'none';
-    }
-    if (scriptOutput) scriptOutput.style.display = 'none';
-
-    renderGoldenSunImages();
-    renderGoldenSunReport();
-}
-
-async function fetchGoldenSunFileList() {
-    const sel = document.getElementById('goldenSunFileSelect');
-    const statusEl = document.getElementById('goldenSunStatus');
-    const defaults = ['Prod_Images.json', 'Test_Images.json'];
-
-    if (!sel) return defaults;
-
-    try {
-        const res = await fetch('/citrix/api/master-image-files');
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        const data = await res.json();
-        const files = Array.isArray(data.files) ? data.files : [];
-        const all = Array.from(new Set([...defaults, ...files]));
-        goldenSunFileOptions = all;
-        sel.innerHTML = '';
-        all.forEach(f => {
-            const opt = document.createElement('option');
-            opt.value = f;
-            opt.textContent = f;
-            sel.appendChild(opt);
-        });
-        if (statusEl) statusEl.textContent = `Found ${all.length} file(s).`;
-        if (all.length > 0) {
-            sel.value = all[0];
-        }
-        return all;
-    } catch (err) {
-        console.warn('Could not fetch master image files:', err);
-        goldenSunFileOptions = defaults;
-        sel.innerHTML = '';
-        defaults.forEach(f => {
-            const opt = document.createElement('option');
-            opt.value = f;
-            opt.textContent = f;
-            sel.appendChild(opt);
-        });
-        if (defaults.length > 0) {
-            sel.value = defaults[0];
-        }
-        if (statusEl) statusEl.textContent = defaults.length ? 'Using default file list.' : 'No master image files found.';
-        return defaults;
-    }
-}
-
-async function loadGoldenSunImages() {
-    const statusEl = document.getElementById('goldenSunStatus');
-    const imagesSection = document.getElementById('goldenSunImagesSection');
-    const cloneSection = document.getElementById('goldenSunCloneSection');
-
-    if (statusEl) statusEl.textContent = `Loading master list...`;
-    if (imagesSection) imagesSection.style.display = 'none';
-    if (cloneSection) cloneSection.style.display = 'none';
-
-    const fileSelect = document.getElementById('goldenSunFileSelect');
-    const selectedFile = (fileSelect?.value || '').trim();
-    if (!selectedFile) {
-        if (statusEl) statusEl.textContent = 'No master image files found.';
-        return;
-    }
-    const fileName = selectedFile;
-    const pathsToTry = [
-        `/citrix/${fileName}`,
-        `/${fileName}`,
-        fileName,
-        `./${fileName}`
-    ];
-
-    let data = null;
-    for (const p of pathsToTry) {
-        try {
-            const res = await fetch(p, { cache: 'no-cache' });
-            if (res.ok) {
-                data = await res.json();
-                break;
-            }
-        } catch (err) {
-            console.warn('GoldenSun fetch failed for', p, err.message || err);
-        }
-    }
-
-    if (!data) {
-        if (statusEl) statusEl.textContent = `Could not load ${fileName}. Place it next to index.html.`;
-        return;
-    }
-
-    let images = [];
-    if (Array.isArray(data)) {
-        images = data;
-    } else if (Array.isArray(data.MasterImages)) {
-        images = data.MasterImages;
-    } else if (Array.isArray(data.Images)) {
-        images = data.Images;
-    } else if (Array.isArray(data.images)) {
-        images = data.images;
-    } else if (Array.isArray(data.masterImages)) {
-        images = data.masterImages;
-    }
-
-    goldenSunImages = images.map(normalizeGoldenSunImage).filter(img => !!img.Name);
-    goldenSunSelectedImages.clear();
-
-    if (statusEl) {
-        statusEl.textContent = `Loaded ${goldenSunImages.length} image(s) from ${fileName}`;
-    }
-
-    renderGoldenSunImages();
-
-    if (imagesSection) imagesSection.style.display = goldenSunImages.length ? 'block' : 'none';
-    if (cloneSection) cloneSection.style.display = goldenSunImages.length ? 'block' : 'none';
-    const scriptOutput = document.getElementById('goldenSunScriptOutput');
-    if (scriptOutput) scriptOutput.style.display = 'none';
-}
-
-function normalizeGoldenSunImage(image) {
-    if (!image) return { Name: 'Unknown', Cluster: 'Unknown', Host: 'Unknown', Datastore: 'Unknown' };
-    if (typeof image === 'string') {
-        return { Name: image, Cluster: 'Unknown', Host: 'Unknown', Datastore: 'Unknown' };
-    }
-    return {
-        Name: image.Name || image.VMName || image.vmName || image.Image || image.Master || image.ImageMachineName || 'Unknown',
-        Cluster: image.Cluster || image.ClusterName || image.HostingUnitName || 'Unknown',
-        Host: image.Host || image.HostName || 'Unknown',
-        Datastore: image.Datastore || image.DatastoreName || 'Unknown',
-        LatestSnapshotName: image.LatestSnapshotName || image.Snapshot || image.SnapshotName || '',
-        LatestSnapshotTimestamp: image.LatestSnapshotTimestamp || image.SnapshotTimestamp || image.SnapshotCreated || image.SnapshotDate || ''
-    };
-}
-
-function renderGoldenSunImages() {
-    const container = document.getElementById('goldenSunImagesList');
-    if (!container) return;
-
-    if (!goldenSunImages.length) {
-        container.innerHTML = '<p style="color: #666;">No images found. Ensure the JSON file exists.</p>';
-        return;
-    }
-
-    let html = `<p style="margin-bottom: 10px; color: #666;">Found ${goldenSunImages.length} master image(s) for ${goldenSunCurrentEnv}.</p>`;
-
-    goldenSunImages.forEach((img, index) => {
-        const isChecked = goldenSunSelectedImages.has(img.Name) ? 'checked' : '';
-        const safeName = img.Name ? img.Name.replace(/'/g, "\\'") : `img-${index}`;
-
-        html += `
-            <div style="border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 8px; background: #fff;">
-                <label style="display: flex; align-items: flex-start; cursor: pointer;">
-                    <input type="checkbox" style="margin-right: 10px; margin-top: 2px;" ${isChecked}
-                           onchange="toggleGoldenSunImage('${safeName}')">
-                    <div style="flex: 1;">
-                        <strong>${escapeHtml(img.Name || 'Unknown')}</strong>
-                        <div style="font-size: 12px; color: #666; margin-top: 2px;">
-                            Cluster: ${escapeHtml(img.Cluster || 'Unknown')} | Host: ${escapeHtml(img.Host || 'Unknown')} | Datastore: ${escapeHtml(img.Datastore || 'Unknown')}
-                        </div>
-                        <div style="font-size: 12px; color: #555; margin-top: 2px;">
-                            Snapshot: ${escapeHtml(img.LatestSnapshotName || 'N/A')}${img.LatestSnapshotTimestamp ? ' @ ' + escapeHtml(img.LatestSnapshotTimestamp) : ''}
-                        </div>
-                    </div>
-                </label>
-            </div>
-        `;
-    });
-
-    container.innerHTML = html;
-}
-
-function setGoldenSunReportSort(mode) {
-    goldenSunReportSort = mode;
-    renderGoldenSunReport();
-}
-
-function renderGoldenSunReport() {
-    const container = document.getElementById('goldenSunReportList');
-    const status = document.getElementById('goldenSunReportStatus');
-    if (!container) return;
-    if (!goldenSunImages.length) {
-        container.innerHTML = '<p style="color:#666;">Load a Master Images JSON first.</p>';
-        if (status) status.textContent = '';
-        return;
-    }
-
-    const map = new Map();
-    goldenSunImages.forEach(img => {
-        const key = img.Name || 'Unknown';
-        if (!map.has(key)) {
-            map.set(key, img);
-        } else {
-            const existing = map.get(key);
-            const tNew = new Date(img.LatestSnapshotTimestamp || 0).getTime();
-            const tOld = new Date(existing.LatestSnapshotTimestamp || 0).getTime();
-            if (tNew > tOld) map.set(key, img);
-        }
-    });
-
-    let rows = Array.from(map.values());
-    if (goldenSunReportSort === 'date') {
-        rows.sort((a, b) => new Date(b.LatestSnapshotTimestamp || 0) - new Date(a.LatestSnapshotTimestamp || 0));
-    } else {
-        rows.sort((a, b) => (a.Name || '').localeCompare(b.Name || ''));
-    }
-
-    if (status) status.textContent = `${rows.length} image(s) loaded. Sorted by ${goldenSunReportSort === 'date' ? 'Snapshot Date' : 'Name'}.`;
-
-    let html = `
-    <div style="display:grid;grid-template-columns:2fr 1.5fr 1fr;font-weight:700;border-bottom:1px solid #ddd;padding:6px 4px;margin-bottom:6px;">
-        <div>Image Name</div>
-        <div>Snapshot Name</div>
-        <div>Snapshot Timestamp</div>
-    </div>
-    `;
-    rows.forEach(img => {
-        const ts = img.LatestSnapshotTimestamp ? new Date(img.LatestSnapshotTimestamp) : null;
-        let isFresh = false;
-        if (ts && !isNaN(ts.getTime())) {
-            const now = new Date();
-            const nowMonth = now.getMonth(); // 0-11
-            const nowYear = now.getFullYear();
-            const tsMonth = ts.getMonth();
-            const tsYear = ts.getFullYear();
-            // fresh if same month/year, or previous month (account for year rollover)
-            const sameMonth = (tsMonth === nowMonth && tsYear === nowYear);
-            const prevMonth = (tsMonth === (nowMonth + 11) % 12) && (tsYear === (nowMonth === 0 ? nowYear - 1 : nowYear));
-            isFresh = sameMonth || prevMonth;
-        }
-        const snapStyle = isFresh ? 'color:#0f9d58;font-weight:700;' : 'color:#555;';
-        const timeStyle = isFresh ? 'color:#0f9d58;font-weight:700;' : 'color:#333;';
-        html += `
-        <div style="display:grid;grid-template-columns:2fr 1.5fr 1fr;gap:6px;border:1px solid #ddd;border-radius:4px;padding:8px;margin-bottom:6px;background:#fff;align-items:center;">
-            <div style="font-weight:600;overflow-wrap:anywhere;">${escapeHtml(img.Name || 'Unknown')}</div>
-            <div style="${snapStyle}overflow-wrap:anywhere;">${escapeHtml(img.LatestSnapshotName || 'N/A')}</div>
-            <div style="${timeStyle}">${img.LatestSnapshotTimestamp ? escapeHtml(img.LatestSnapshotTimestamp) : 'N/A'}</div>
-        </div>
-        `;
-    });
-    container.innerHTML = html || '<p style="color:#666;">No images to display.</p>';
-}
-
-function generateGoldenSunReportScript() {
-    if (!goldenSunImages.length) {
-        alert('Load a Master Images JSON first.');
-        return;
-    }
-    const unique = Array.from(new Set(goldenSunImages.map(i => (i.Name || '').trim()).filter(Boolean)));
-    if (!unique.length) {
-        alert('No VM names found in the loaded JSON.');
-        return;
-    }
-    let vcenter = (document.getElementById('goldenSunSearchVCenter')?.value || '').trim();
-    if (!vcenter) vcenter = GOLDEN_SUN_DEFAULT_VCENTER;
-    const lines = [];
-    lines.push('# GoldenSun snapshot re-check');
-    lines.push(`# Generated: ${new Date().toISOString()}`);
-    lines.push('');
-    lines.push('Import-Module VMware.PowerCLI -ErrorAction SilentlyContinue');
-    lines.push('$ErrorActionPreference = "Stop"');
-    lines.push('$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path');
-    lines.push('$ReportsDir = Join-Path $scriptDir "Reports"');
-    lines.push('if (-not (Test-Path $ReportsDir)) { New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null }');
-    lines.push('');
-    lines.push(`$vc = "${vcenter || GOLDEN_SUN_DEFAULT_VCENTER}"`);
-    lines.push('if ([string]::IsNullOrWhiteSpace($vc)) { $vc = Read-Host "Enter vCenter server" }');
-    lines.push('$cred = Get-Credential -Message "Enter vCenter credentials"');
-    lines.push('Connect-VIServer -Server $vc -Credential $cred -ErrorAction Stop | Out-Null');
-    lines.push('');
-    lines.push('# VM list from loaded JSON');
-    lines.push(`$vmNames = @(${unique.map(n=>`"${n}"`).join(', ')})`);
-    lines.push('');
-    lines.push('$results = @()');
-    lines.push('foreach ($name in $vmNames) {');
-    lines.push('    Write-Host "Checking snapshots for $name" -ForegroundColor Cyan');
-    lines.push('    $vm = Get-VM -Name $name -ErrorAction SilentlyContinue');
-    lines.push('    if (-not $vm) { Write-Warning "VM not found: $name"; continue }');
-    lines.push('    $snap = Get-Snapshot -VM $vm -ErrorAction SilentlyContinue | Sort-Object Created -Descending | Select-Object -First 1');
-    lines.push('    $latestName = $snap?.Name');
-    lines.push('    $latestTime = $snap?.Created');
-    lines.push('    $results += [pscustomobject]@{');
-    lines.push('        Name = $vm.Name');
-    lines.push('        Cluster = ($vm | Get-Cluster | Select-Object -First 1).Name');
-    lines.push('        Host = ($vm | Get-VMHost | Select-Object -First 1).Name');
-    lines.push('        Datastore = ($vm | Get-Datastore | Select-Object -First 1).Name');
-    lines.push('        LatestSnapshot = $latestName');
-    lines.push('        LatestSnapshotTime = if ($latestTime) { $latestTime.ToString("yyyy-MM-dd HH:mm") } else { $null }');
-    lines.push('    }');
-    lines.push('}');
-    lines.push('');
-    lines.push('$results | Format-Table -AutoSize');
-    lines.push('');
-    lines.push('# Export JSON for report into Reports folder');
-    lines.push('$snapJson = Join-Path $ReportsDir "Snapshot-Recheck.json"');
-    lines.push('$results | ConvertTo-Json -Depth 4 | Set-Content -Path $snapJson -Encoding UTF8');
-    const script = lines.join('\n');
-    const out = document.getElementById('goldenSunReportScriptContent');
-    const wrap = document.getElementById('goldenSunReportScriptOutput');
-    if (out) out.value = script;
-    if (wrap) { wrap.style.display = 'block'; wrap.scrollIntoView({behavior:'smooth', block:'nearest'}); }
-}
-function copyGoldenSunReportScript(){
-    const ta = document.getElementById('goldenSunReportScriptContent');
-    if (!ta) return;
-    ta.select(); document.execCommand('copy');
-}
-function downloadGoldenSunReportScript(){
-    const scriptContent = document.getElementById('goldenSunReportScriptContent')?.value || '';
-    const blob = new Blob([scriptContent], { type:'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url; a.download = 'GoldenSun-Snapshot-Recheck.ps1';
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-}
-
-function toggleGoldenSunImage(name) {
-    if (goldenSunSelectedImages.has(name)) {
-        goldenSunSelectedImages.delete(name);
-    } else {
-        goldenSunSelectedImages.add(name);
-    }
-}
-
-function goldenSunSelectAll() {
-    goldenSunImages.forEach(img => {
-        if (img.Name) goldenSunSelectedImages.add(img.Name);
-    });
-    renderGoldenSunImages();
-}
-
-function goldenSunDeselectAll() {
-    goldenSunSelectedImages.clear();
-    renderGoldenSunImages();
-}
-
-function generateGoldenSunCloneScript() {
-    if (goldenSunSelectedImages.size === 0) {
-        alert('Please select at least one master image to clone.');
-        return;
-    }
-
-    const selectedImages = goldenSunImages.filter(img => goldenSunSelectedImages.has(img.Name));
-
-    const enableVMwareFolders = document.getElementById('goldenSunVmwareToggle')?.checked || false;
-    const destinationFolder = enableVMwareFolders ? document.getElementById('goldenSunDestinationFolder').value.trim() : '';
-    const moveSourceAfterClone = enableVMwareFolders ? document.getElementById('goldenSunMoveSource').checked : false;
-    const sourceMoveFolder = enableVMwareFolders ? document.getElementById('goldenSunSourceFolder').value.trim() : '';
-    const pushWindowsUpdate = document.getElementById('goldenSunPushWindowsUpdateToggle')?.checked !== false;
-
-    if (enableVMwareFolders) {
-        if (!destinationFolder) {
-            alert('Please specify a destination folder for the cloned VMs.');
-            return;
-        }
-
-        if (moveSourceAfterClone && !sourceMoveFolder) {
-            alert('Please specify a folder to move source VMs to.');
-            return;
-        }
-    }
-
-    const script = generateCloneScript(selectedImages, destinationFolder, moveSourceAfterClone, sourceMoveFolder, enableVMwareFolders, pushWindowsUpdate);
-
-    const output = document.getElementById('goldenSunScriptContent');
-    if (output) {
-        output.value = script;
-    }
-    const wrapper = document.getElementById('goldenSunScriptOutput');
-    if (wrapper) {
-        wrapper.style.display = 'block';
-        wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    renderGoldenSunFarmReport();
 }
 
 function copyGoldenSunScript() {
@@ -8626,6 +8169,15 @@ async function renderGoldenSunFarmReport() {
 function handleGoldenSunFarmFilePick(event) {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
+    const lower = file.name.toLowerCase();
+    if (lower !== 'farmdata.json') {
+        const status = document.getElementById('goldenSunFarmStatus');
+        if (status) {
+            status.textContent = 'Please select farmdata.json.';
+        }
+        alert('Please select the file named farmdata.json');
+        return;
+    }
 
     const reader = new FileReader();
     reader.onload = (e) => {
@@ -8741,8 +8293,8 @@ function generateFarmCloneScriptFromReport() {
     if (wrapper) {
         wrapper.style.display = 'block';
     }
-    // Switch to Clone tab so the user sees the script and can copy/download it
-    showGoldenSunTab('clone');
+    // Keep the single Clone Images tab active so script controls stay visible
+    showGoldenSunTab('farm');
     if (wrapper) {
         wrapper.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }

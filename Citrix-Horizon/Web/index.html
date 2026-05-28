@@ -1255,122 +1255,13 @@
             <p style="color: #666;">Use this section to manage cloning of master images. Group names create files named &lt;Group&gt;-Master-Images.json.</p>
 
                     <div style="border-bottom: 2px solid #ddd; margin-bottom: 20px; display: flex; gap: 10px; justify-content: flex-start;">
-                        <button class="task-tab active" id="goldenSunTabFarm" onclick="showGoldenSunTab('farm')">Farm Report</button>
-                        <button class="task-tab" id="goldenSunTabClone" onclick="showGoldenSunTab('clone')">Clone Master Images</button>
-                        <button class="task-tab" id="goldenSunTabReport" onclick="showGoldenSunTab('report')">Image Report</button>
+                        <button class="task-tab active" id="goldenSunTabFarm" onclick="showGoldenSunTab('farm')">Clone Images</button>
                     </div>
-
-            <!-- Clone Tab -->
-            <div id="goldenSunClonePanel" class="horizon-task-panel" style="display: none;">
-                <div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin: 15px 0;">
-                    <label for="goldenSunFileSelect" style="font-weight: 600;">Master List File:</label>
-                    <button class="btn btn-secondary" onclick="openGoldenSunFileDialog()">Load Images</button>
-                    <input type="file" id="goldenSunFilePicker" accept=".json" style="display: none;">
-                    <span id="goldenSunStatus" style="color: #666;">Load a Master Images JSON to begin.</span>
-                </div>
-
-            <div id="goldenSunImagesSection" style="margin: 20px 0; display: none;">
-                <div style="margin-bottom: 10px;">
-                <button class="btn btn-sm" onclick="goldenSunSelectAll()">Select All</button>
-                <button class="btn btn-sm" onclick="goldenSunDeselectAll()">Deselect All</button>
-                </div>
-                <div id="goldenSunImagesList" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background-color: #f8f9fa;">
-                    <p>Loading images...</p>
-                </div>
-            </div>
-
-            <div id="goldenSunCloneSection" style="margin: 20px 0; display: none;">
-                <h4 style="margin-bottom: 15px;">Clone Destination Configuration</h4>
-
-                        <!-- Push Windows Update Toggle -->
-                        <div style="margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
-                            <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-                                <div style="flex: 1; min-width: 240px;">
-                                    <h5 style="margin: 0 0 5px 0; font-weight: bold;">Push Windows Update (On / Off)</h5>
-                                    <p style="margin: 0; color: #666; font-size: 14px;">Default ON. When ON, cloned VMs power on and run mspatch.ps1 to install updates.</p>
-                                </div>
-                                <label class="toggle-switch" aria-label="GoldenSun Push Windows Update">
-                                    <input type="checkbox" id="goldenSunPushWindowsUpdateToggle" checked>
-                                    <span class="toggle-slider"></span>
-                                </label>
-                            </div>
-                        </div>
-
-                <!-- VMware Folder Operations Toggle -->
-                <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
-                        <div style="flex: 1; min-width: 240px;">
-                            <h5 style="margin: 0 0 5px 0; font-weight: bold;">Change VMware Folders (On / Off)</h5>
-                            <p style="margin: 0; color: #666; font-size: 14px;">Default OFF. When OFF, no VMware folder changes are made.</p>
-                        </div>
-                        <label class="toggle-switch" aria-label="GoldenSun Change VMware Folders">
-                            <input type="checkbox" id="goldenSunVmwareToggle">
-                            <span class="toggle-slider"></span>
-                        </label>
-                    </div>
-                </div>
-
-                <div id="goldenSunVmwareSection" style="display: none;">
-                    <div style="margin-bottom: 15px;">
-                        <label for="goldenSunDestinationFolder" style="display: block; margin-bottom: 6px; font-weight: bold;">VMware Destination Folder:</label>
-                        <input type="text" id="goldenSunDestinationFolder" placeholder="/vm/prod/goldensun" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
-                    </div>
-                    <div style="margin-bottom: 15px;">
-                        <label style="display: block; margin-bottom: 6px; font-weight: bold;">Source VM Move Options:</label>
-                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px;">
-                            <input type="checkbox" id="goldenSunMoveSource">
-                            Move source VMs to folder after cloning
-                        </label>
-                        <input type="text" id="goldenSunSourceFolder" placeholder="/vm/archive/goldensun" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;" disabled>
-                    </div>
-                </div>
-
-                <div style="text-align: right;">
-                    <button class="btn btn-primary" onclick="generateGoldenSunCloneScript()">Create Script</button>
-                </div>
-            </div>
-
-            <div id="goldenSunScriptOutput" style="display: none; margin-top: 20px;">
-                <h4>Generated Script:</h4>
-                <textarea id="goldenSunScriptContent" readonly style="width: 100%; height: 320px; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
-                <div style="margin-top: 10px; text-align: right;">
-                    <button class="btn btn-secondary" onclick="copyGoldenSunScript()">Copy Script</button>
-                    <button class="btn btn-secondary" onclick="downloadGoldenSunScript()">Download Script</button>
-                </div>
-            </div>
-            </div>
 
             <!-- Search / Build Tab moved to HZ Tasks (panel removed from GoldenSun) -->
 
-            <!-- Image Report Tab -->
-            <div id="goldenSunReportPanel" class="horizon-task-panel" style="display: none;">
-                <h3>Image Report</h3>
-                <p style="color:#666;">Load the master images JSON and view snapshot timestamps. Sorted by name (A-Z) by default.</p>
-                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;">
-                    <button class="btn btn-secondary" onclick="openGoldenSunFileDialog()">Load JSON</button>
-                    <span id="goldenSunReportStatus" style="color:#666;"></span>
-                    <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
-                        <label style="font-weight:600;">Sort:</label>
-                        <button class="btn btn-sm" onclick="setGoldenSunReportSort('name')">Name</button>
-                        <button class="btn btn-sm" onclick="setGoldenSunReportSort('date')">Snapshot Date</button>
-                    </div>
-                </div>
-                <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin:8px 0;">
-                    <button class="btn btn-primary" onclick="generateGoldenSunReportScript()">Re-run snapshot check (PowerShell)</button>
-                </div>
-                <div id="goldenSunReportScriptOutput" style="display:none; margin:10px 0;">
-                    <h4 style="margin:0 0 6px 0;">Snapshot Re-check Script</h4>
-                    <textarea id="goldenSunReportScriptContent" readonly style="width:100%; height:240px; font-family:'Courier New', monospace; font-size:12px; padding:8px; border:1px solid #ddd; border-radius:4px; background:#f8f9fa;"></textarea>
-                    <div style="margin-top:8px; display:flex; gap:8px; justify-content:flex-end;">
-                        <button class="btn btn-secondary" onclick="copyGoldenSunReportScript()">Copy</button>
-                        <button class="btn btn-secondary" onclick="downloadGoldenSunReportScript()">Download</button>
-                    </div>
-                </div>
-                <div id="goldenSunReportList" style="max-height:400px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:10px; background:#f8f9fa;"></div>
-            </div>
-            <!-- Farm Report Tab -->
             <div id="goldenSunFarmPanel" class="horizon-task-panel active" style="display: block;">
-                <h3>Farm Report</h3>
+                <h3>Clone Images</h3>
                 <p style="color:#666;">Uses the Horizon Admin Image Dates script output (FarmData.html / FarmData.json) to show HZ farms and mapped VMware masters, and to build clone scripts from selected masters.</p>
                 <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;">
                     <button class="btn btn-secondary" onclick="openFarmFileDialog()">Load FarmData.json (file)</button>
@@ -1390,6 +1281,60 @@
                         <div style="margin-top:10px; text-align:right;">
                             <button class="btn btn-primary" onclick="generateFarmCloneScriptFromReport()">Generate Clone Script</button>
                         </div>
+                    </div>
+                </div>
+
+                <div style="margin: 20px 0;">
+                    <h4 style="margin-bottom: 15px;">Clone Destination Configuration</h4>
+
+                    <div style="margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 240px;">
+                                <h5 style="margin: 0 0 5px 0; font-weight: bold;">Push Windows Update (On / Off)</h5>
+                                <p style="margin: 0; color: #666; font-size: 14px;">Default ON. When ON, cloned VMs power on and run mspatch.ps1 to install updates.</p>
+                            </div>
+                            <label class="toggle-switch" aria-label="GoldenSun Push Windows Update">
+                                <input type="checkbox" id="goldenSunPushWindowsUpdateToggle" checked>
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div style="margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
+                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap;">
+                            <div style="flex: 1; min-width: 240px;">
+                                <h5 style="margin: 0 0 5px 0; font-weight: bold;">Change VMware Folders (On / Off)</h5>
+                                <p style="margin: 0; color: #666; font-size: 14px;">Default OFF. When OFF, no VMware folder changes are made.</p>
+                            </div>
+                            <label class="toggle-switch" aria-label="GoldenSun Change VMware Folders">
+                                <input type="checkbox" id="goldenSunVmwareToggle">
+                                <span class="toggle-slider"></span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div id="goldenSunVmwareSection" style="display: none;">
+                        <div style="margin-bottom: 15px;">
+                            <label for="goldenSunDestinationFolder" style="display: block; margin-bottom: 6px; font-weight: bold;">VMware Destination Folder:</label>
+                            <input type="text" id="goldenSunDestinationFolder" placeholder="/vm/prod/goldensun" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;">
+                        </div>
+                        <div style="margin-bottom: 15px;">
+                            <label style="display: block; margin-bottom: 6px; font-weight: bold;">Source VM Move Options:</label>
+                            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; margin-bottom: 8px;">
+                                <input type="checkbox" id="goldenSunMoveSource">
+                                Move source VMs to folder after cloning
+                            </label>
+                            <input type="text" id="goldenSunSourceFolder" placeholder="/vm/archive/goldensun" style="width: 100%; padding: 8px; font-size: 14px; border: 1px solid #ddd; border-radius: 4px;" disabled>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="goldenSunScriptOutput" style="display: none; margin-top: 20px;">
+                    <h4>Generated Script:</h4>
+                    <textarea id="goldenSunScriptContent" readonly style="width: 100%; height: 320px; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
+                    <div style="margin-top: 10px; text-align: right;">
+                        <button class="btn btn-secondary" onclick="copyGoldenSunScript()">Copy Script</button>
+                        <button class="btn btn-secondary" onclick="downloadGoldenSunScript()">Download Script</button>
                     </div>
                 </div>
             </div>
