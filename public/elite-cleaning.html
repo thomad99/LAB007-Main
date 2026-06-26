@@ -179,6 +179,7 @@
       flex-direction: column;
       gap: 28px;
       min-width: 0;
+      container-type: inline-size;
     }
 
     .eyebrow {
@@ -192,11 +193,13 @@
 
     h1 {
       margin: 0;
-      max-width: 780px;
+      width: 100%;
+      max-width: 100%;
       font-family: Georgia, "Times New Roman", serif;
-      font-size: clamp(3.7rem, 6.25vw, 5.7rem);
-      line-height: .92;
-      letter-spacing: 0;
+      font-size: clamp(1.2rem, 8cqi, 5.7rem);
+      line-height: 1;
+      letter-spacing: -0.015em;
+      white-space: nowrap;
       color: var(--text);
     }
 
@@ -360,14 +363,8 @@
 
       main {
         width: 100%;
-        max-width: 330px;
+        max-width: none;
         gap: 22px;
-      }
-
-      h1 {
-        max-width: 8ch;
-        font-size: clamp(2.8rem, 12.5vw, 4rem);
-        line-height: .96;
       }
 
       .intro {
