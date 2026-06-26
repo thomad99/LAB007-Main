@@ -43,6 +43,8 @@
       "addressRegion": "FL",
       "addressCountry": "US"
     },
+    "email": "petra@EliteCleaningServices.us",
+    "telephone": "+1-941-287-7237",
     "serviceType": [
       "Housekeeping",
       "Airbnb turnover cleaning",
@@ -322,6 +324,14 @@
       line-height: 1.45;
     }
 
+    .contact-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      justify-content: center;
+      width: 100%;
+    }
+
     .button {
       min-height: 52px;
       display: inline-flex;
@@ -389,6 +399,10 @@
         padding: 22px;
       }
 
+      .contact-actions {
+        flex-direction: column;
+      }
+
       .button {
         width: 100%;
       }
@@ -432,7 +446,10 @@
             <h2>Contact Us</h2>
             <p>Request a quote or schedule a clean for your Sarasota property.</p>
           </div>
-          <a class="button" href="mailto:info@lab007.ai?subject=Elite%20Cleaning%20Services%20Quote%20Request">Get A Quote</a>
+          <div class="contact-actions">
+            <a class="button" href="mailto:petra@EliteCleaningServices.us?subject=Elite%20Cleaning%20Services%20Quote%20Request">Get A Quote</a>
+            <a class="button" href="tel:+19412877237">Call 941 287 7237</a>
+          </div>
         </section>
 
         <p class="note">Elite Cleaning Services is based in Sarasota, Florida.</p>
