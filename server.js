@@ -414,28 +414,6 @@ app.get('/cursorai/dashboard', (req, res) => {
   return res.status(404).send('Not found');
 });
 
-app.get('/cleanai', (req, res) => {
-  const p = path.join(__dirname, 'public', 'cleanai-dashboard.html');
-  if (fs.existsSync(p)) return res.sendFile(p);
-  return res.status(404).send('Not found');
-});
-
-app.get('/cleanai/capture', (req, res) => {
-  const p = path.join(__dirname, 'public', 'cleanai.html');
-  if (fs.existsSync(p)) return res.sendFile(p);
-  return res.status(404).send('Not found');
-});
-
-app.get('/cleanai/dashboard', (req, res) => {
-  res.redirect(301, '/cleanai');
-});
-
-app.get('/cleanai/report/:sessionId', (req, res) => {
-  const p = path.join(__dirname, 'public', 'cleanai-report.html');
-  if (fs.existsSync(p)) return res.sendFile(p);
-  return res.status(404).send('Not found');
-});
-
 // Serve social dashboard page
 app.get('/social-dashboard', (req, res) => {
   const p = path.join(__dirname, 'public', 'social-dashboard.html');

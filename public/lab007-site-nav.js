@@ -6,9 +6,7 @@
     ['CursorAI', '/cursorai'],
     ['BUCK', 'https://buck-lab007.onrender.com/'],
     ['007Trade', '/007trade'],
-    ['CLEANAI', '/cleanai'],
     ['Elite Cleaning', '/elite-cleaning'],
-    ['GGPPI Tracker', '/ggppi-tracker'],
     ['Citrix-2-HZ', '/citrix'],
     ['Web-Alerts', '/webalert'],
     ['Contact', '/contact']
