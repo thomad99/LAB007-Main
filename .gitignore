@@ -49,6 +49,8 @@ shots/
 *.jpg
 !**/images/**/*.png
 !**/images/**/*.jpg
+!**/elite-cleaning-assets/**/*.png
+!**/elite-cleaning-assets/**/*.jpg
 
 # TomoPI uploaded images - server-only, never in git
 tomopi-data/images/

@@ -5816,6 +5816,14 @@ app.get('/sportsplus', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sportsplus.html'));
 });
 
+// Elite Cleaning Services
+app.get('/elite-cleaning', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'elite-cleaning.html'));
+});
+app.get('/elite-cleaning.html', (req, res) => {
+  res.redirect(301, '/elite-cleaning');
+});
+
 // SRQ Cleaning - Sarasota cleaning services
 app.get('/SRQCleaning', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'SRQCleaning', 'index.html'));
