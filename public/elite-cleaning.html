@@ -16,7 +16,8 @@
   <meta name="keywords" content="Sarasota cleaning company, Sarasota Florida cleaning services, house cleaning Sarasota, Airbnb turnover cleaning Sarasota, VRBO cleaning Sarasota, construction cleaning Sarasota, commercial cleaning Sarasota, deep cleaning Sarasota">
   <meta name="robots" content="index, follow">
   <link rel="canonical" href="https://lab007.ai/elite-cleaning">
-  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG">
+  <link rel="icon" type="image/png" sizes="32x32" href="/elite-cleaning-assets/elite-cleaning-favicon-32.png">
+  <link rel="apple-touch-icon" href="/elite-cleaning-assets/elite-cleaning-favicon-192.png">
   <meta property="og:title" content="Elite Cleaning Services">
   <meta property="og:description" content="Elite Cleaning Services provides detailed cleaning for homes, rentals, construction sites, and commercial spaces in Sarasota, Florida.">
   <meta property="og:type" content="website">
@@ -101,6 +102,10 @@
       gap: clamp(42px, 6vw, 92px);
       align-items: start;
       padding: 56px 0 44px;
+    }
+
+    .mobile-stack {
+      display: contents;
     }
 
     .brand {
@@ -198,10 +203,9 @@
       width: 100%;
       max-width: 100%;
       font-family: Georgia, "Times New Roman", serif;
-      font-size: clamp(1.2rem, 8cqi, 5.7rem);
-      line-height: 1;
+      font-size: clamp(2.4rem, 8cqi, 5.7rem);
+      line-height: 1.05;
       letter-spacing: -0.015em;
-      white-space: nowrap;
       color: var(--text);
     }
 
@@ -356,25 +360,93 @@
       font-weight: 850;
     }
 
+    .logo-downloads {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      align-items: flex-start;
+    }
+
+    .logo-downloads .note {
+      margin-bottom: 2px;
+    }
+
+    .download-links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+    }
+
+    .download-links a {
+      color: var(--soft-gold);
+      font-size: .82rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(242, 210, 123, .35);
+      padding-bottom: 2px;
+    }
+
+    .download-links a:hover {
+      color: #fff3c4;
+      border-bottom-color: var(--soft-gold);
+    }
+
     @media (max-width: 900px) {
       .shell {
-        width: min(680px, calc(100% - 32px));
+        width: 100%;
+        max-width: 100%;
         min-height: 0;
-        grid-template-columns: 1fr;
-        gap: 34px;
-        padding: 14px 0 42px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 0;
+        padding:
+          max(72px, calc(env(safe-area-inset-top, 0px) + 56px))
+          max(18px, env(safe-area-inset-right, 0px))
+          max(36px, env(safe-area-inset-bottom, 0px))
+          max(18px, env(safe-area-inset-left, 0px));
+      }
+
+      .mobile-stack {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        width: 100%;
+        max-width: 520px;
+        gap: 24px;
       }
 
       .brand {
+        width: 100%;
         padding-top: 0;
+        align-items: center;
+        gap: 0;
       }
 
-      .logo-wrap { width: min(320px, 78vw); }
+      .logo-wrap {
+        width: min(260px, 68vw);
+        margin: 0 auto;
+        filter: drop-shadow(0 24px 40px rgba(0, 0, 0, .55));
+      }
 
       main {
         width: 100%;
         max-width: none;
-        gap: 22px;
+        align-items: stretch;
+        gap: 20px;
+        container-type: normal;
+      }
+
+      h1 {
+        font-size: clamp(1.65rem, 7.2vw, 2.35rem);
+        line-height: 1.08;
+        text-align: center;
+        text-wrap: balance;
+      }
+
+      .location {
+        margin: -4px auto 0;
       }
 
       .intro {
@@ -387,16 +459,28 @@
         grid-template-columns: 1fr;
         max-width: none;
         width: 100%;
+        gap: 12px;
       }
 
       .services li {
         min-width: 0;
+        min-height: 52px;
+        padding: 12px 14px;
+        font-size: .95rem;
+      }
+
+      .seo-copy {
+        text-align: center;
+        width: 100%;
+        font-size: .92rem;
       }
 
       .contact {
         grid-template-columns: 1fr;
         width: 100%;
-        padding: 22px;
+        max-width: none;
+        padding: 22px 18px;
+        margin-top: 4px;
       }
 
       .contact-actions {
@@ -406,208 +490,84 @@
       .button {
         width: 100%;
       }
+
+      .note {
+        text-align: center;
+        width: 100%;
+      }
+
+      .logo-downloads {
+        align-items: center;
+        width: 100%;
+      }
+
+      .download-links {
+        justify-content: center;
+        text-align: center;
+      }
     }
   </style>
 </head>
 <body>
   <div class="page">
     <div class="shell">
-      <section class="brand" aria-label="Elite Cleaning Services">
-        <div class="logo-wrap">
-          <picture>
-            <source srcset="/elite-cleaning-assets/elite-cleaning-logo-dots-glow.png" type="image/png">
-            <img src="/elite-cleaning-assets/elite-cleaning-logo-dots-glow.png" alt="Elite Cleaning Services Sarasota Florida logo">
-          </picture>
-        </div>
-        <div class="location"><span class="shine" aria-hidden="true"></span>Sarasota, Florida</div>
-      </section>
-
-      <main>
-        <h1>Elite Cleaning Services</h1>
-        <ul class="services" aria-label="Cleaning services and standards">
-          <li>House Keeping</li>
-          <li>Airbnb / VRBO Turnovers</li>
-          <li>Commercial Cleans</li>
-          <li>Construction Cleans</li>
-          <li>Deep Cleaning</li>
-          <li>High Attention To Detail</li>
-          <li>English Speaking Staff</li>
-          <li>Background Checks</li>
-        </ul>
-
-        <p class="seo-copy">
-          Serving Sarasota, Florida and surrounding areas with residential cleaning,
-          rental turnover cleaning, commercial cleaning, post-construction cleaning,
-          and deep cleaning services.
-        </p>
-
-        <section class="contact" aria-label="Contact Elite Cleaning Services">
-          <div>
-            <h2>Contact Us</h2>
-            <p>Request a quote or schedule a clean for your Sarasota property.</p>
-          </div>
-          <div class="contact-actions">
-            <a class="button" href="mailto:petra@EliteCleaningServices.us?subject=Elite%20Cleaning%20Services%20Quote%20Request">Get A Quote</a>
-            <a class="button" href="tel:+19412877237">Call 941 287 7237</a>
+      <div class="mobile-stack">
+        <section class="brand" aria-label="Elite Cleaning Services">
+          <div class="logo-wrap">
+            <picture>
+              <source srcset="/elite-cleaning-assets/elite-cleaning-logo-dots-glow.png" type="image/png">
+              <img src="/elite-cleaning-assets/elite-cleaning-logo-dots-glow.png" alt="Elite Cleaning Services Sarasota Florida logo">
+            </picture>
           </div>
         </section>
 
-        <p class="note">Elite Cleaning Services is based in Sarasota, Florida.</p>
-      </main>
+        <main>
+          <h1>Elite Cleaning Services</h1>
+          <div class="location"><span class="shine" aria-hidden="true"></span>Sarasota, Florida</div>
+
+          <ul class="services" aria-label="Cleaning services and standards">
+            <li>House Keeping</li>
+            <li>Airbnb / VRBO Turnovers</li>
+            <li>Commercial Cleans</li>
+            <li>Construction Cleans</li>
+            <li>Deep Cleaning</li>
+            <li>High Attention To Detail</li>
+            <li>English Speaking Staff</li>
+            <li>Background Checks</li>
+          </ul>
+
+          <p class="seo-copy">
+            Serving Sarasota, Florida and surrounding areas with residential cleaning,
+            rental turnover cleaning, commercial cleaning, post-construction cleaning,
+            and deep cleaning services.
+          </p>
+
+          <section class="contact" aria-label="Contact Elite Cleaning Services">
+            <div>
+              <h2>Contact Us</h2>
+              <p>Request a quote or schedule a clean for your Sarasota property.</p>
+            </div>
+            <div class="contact-actions">
+              <a class="button" href="mailto:petra@EliteCleaningServices.us?subject=Elite%20Cleaning%20Services%20Quote%20Request">Get A Quote</a>
+              <a class="button" href="tel:+19412877237">Call 941 287 7237</a>
+            </div>
+          </section>
+
+          <p class="note">Elite Cleaning Services is based in Sarasota, Florida.</p>
+
+          <div class="logo-downloads" aria-label="Download animated logo">
+            <p class="note">Animated logo downloads</p>
+            <div class="download-links">
+              <a href="/elite-cleaning-assets/elite-cleaning-logo-animated.gif" download="elite-cleaning-logo-animated.gif">GIF (phones &amp; social)</a>
+              <a href="/elite-cleaning-assets/elite-cleaning-logo-animated.webp" download="elite-cleaning-logo-animated.webp">WebP (smaller file)</a>
+              <a href="/elite-cleaning-assets/elite-cleaning-logo-pack.zip" download="elite-cleaning-logo-pack.zip">Full offline pack (ZIP)</a>
+            </div>
+          </div>
+        </main>
+      </div>
     </div>
   </div>
-  <script>
-    (function initEliteLogoDotGlow() {
-      const wrap = document.querySelector('.logo-wrap');
-      const img = wrap && wrap.querySelector('img');
-      if (!wrap || !img || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
-
-      const canvas = document.createElement('canvas');
-      canvas.className = 'logo-glow-canvas';
-      canvas.setAttribute('role', 'img');
-      canvas.setAttribute('aria-label', img.alt || 'Elite Cleaning Services logo');
-      wrap.appendChild(canvas);
-
-      const ctx = canvas.getContext('2d');
-      const probe = document.createElement('canvas');
-      const pctx = probe.getContext('2d', { willReadFrequently: true });
-
-      const CYCLE_MS = 5200;
-
-      function goldScore(r, g, b) {
-        if (r < 130 || g < 80 || b > 130) return 0;
-        return r * 0.55 + g * 0.35 - b * 0.25;
-      }
-
-      function fallbackDots(w, h) {
-        const count = 34;
-        const cx = w / 2;
-        const cy = h / 2;
-        const radius = Math.min(w, h) * 0.425;
-        return Array.from({ length: count }, (_, i) => {
-          const angle = (i / count) * Math.PI * 2 - Math.PI / 2;
-          return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
-        });
-      }
-
-      function detectDots(w, h, data) {
-        const cx = w / 2;
-        const cy = h / 2;
-        const slices = 80;
-        const found = [];
-
-        for (let s = 0; s < slices; s += 1) {
-          const angle = (s / slices) * Math.PI * 2 - Math.PI / 2;
-          let best = 0;
-          let bx = 0;
-          let by = 0;
-
-          for (let radius = w * 0.33; radius <= w * 0.5; radius += 1) {
-            const x = Math.round(cx + Math.cos(angle) * radius);
-            const y = Math.round(cy + Math.sin(angle) * radius);
-            if (x < 0 || x >= w || y < 0 || y >= h) continue;
-            const idx = (y * w + x) * 4;
-            const score = goldScore(data[idx], data[idx + 1], data[idx + 2]);
-            if (score > best) {
-              best = score;
-              bx = x;
-              by = y;
-            }
-          }
-
-          if (best > 70) found.push({ x: bx, y: by, slice: s });
-        }
-
-        const merged = [];
-        found.forEach((dot) => {
-          const near = merged.find((m) => Math.hypot(m.x - dot.x, m.y - dot.y) < w * 0.022);
-          if (!near) merged.push(dot);
-        });
-
-        merged.sort((a, b) => a.slice - b.slice);
-        return merged.length >= 12 ? merged : fallbackDots(w, h);
-      }
-
-      let dots = [];
-      let viewW = 0;
-      let viewH = 0;
-      let dpr = 1;
-      const start = performance.now();
-
-      function resize() {
-        const rect = wrap.getBoundingClientRect();
-        dpr = Math.min(window.devicePixelRatio || 1, 2);
-        viewW = rect.width;
-        viewH = rect.height;
-        canvas.width = Math.max(1, Math.round(viewW * dpr));
-        canvas.height = Math.max(1, Math.round(viewH * dpr));
-        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      }
-
-      function circularDistance(a, b) {
-        let d = Math.abs(a - b);
-        return Math.min(d, 1 - d);
-      }
-
-      function draw(now) {
-        if (!img.naturalWidth) {
-          requestAnimationFrame(draw);
-          return;
-        }
-
-        ctx.clearRect(0, 0, viewW, viewH);
-        ctx.drawImage(img, 0, 0, viewW, viewH);
-
-        const phase = ((now - start) % CYCLE_MS) / CYCLE_MS;
-        const count = dots.length;
-        const spread = 0.028;
-
-        dots.forEach((dot, index) => {
-          const glow = Math.exp(-(circularDistance(index / count, phase) ** 2) / (2 * spread * spread));
-          if (glow < 0.05) return;
-
-          const sx = (dot.x / img.naturalWidth) * viewW;
-          const sy = (dot.y / img.naturalHeight) * viewH;
-          const core = viewW * 0.011;
-          const halo = viewW * 0.055 * (1 + glow * 0.45);
-
-          const gradient = ctx.createRadialGradient(sx, sy, 0, sx, sy, halo);
-          gradient.addColorStop(0, 'rgba(255, 244, 205, ' + (0.98 * glow) + ')');
-          gradient.addColorStop(0.28, 'rgba(242, 210, 123, ' + (0.72 * glow) + ')');
-          gradient.addColorStop(0.62, 'rgba(215, 173, 75, ' + (0.28 * glow) + ')');
-          gradient.addColorStop(1, 'rgba(215, 173, 75, 0)');
-
-          ctx.fillStyle = gradient;
-          ctx.beginPath();
-          ctx.arc(sx, sy, halo, 0, Math.PI * 2);
-          ctx.fill();
-
-          ctx.fillStyle = 'rgba(255, 248, 228, ' + (0.35 + glow * 0.65) + ')';
-          ctx.beginPath();
-          ctx.arc(sx, sy, core * (1 + glow * 0.35), 0, Math.PI * 2);
-          ctx.fill();
-        });
-
-        requestAnimationFrame(draw);
-      }
-
-      function setup() {
-        probe.width = img.naturalWidth;
-        probe.height = img.naturalHeight;
-        pctx.drawImage(img, 0, 0);
-        const imageData = pctx.getImageData(0, 0, probe.width, probe.height);
-        dots = detectDots(probe.width, probe.height, imageData.data);
-        wrap.classList.add('is-animated');
-        resize();
-        requestAnimationFrame(draw);
-      }
-
-      if (img.complete && img.naturalWidth) setup();
-      else img.addEventListener('load', setup, { once: true });
-
-      window.addEventListener('resize', resize);
-    })();
-  </script>
+  <script src="/elite-cleaning-assets/elite-cleaning-logo-animation.js" defer></script>
   <script src="/lab007-site-nav.js" defer></script>
 </body>
 </html>
