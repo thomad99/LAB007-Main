@@ -3,3 +3,7 @@ Disallow: /007trade
 Disallow: /007trade/
 Disallow: /api/007trade
 Disallow: /api/007trade/
+Disallow: /Elite-Invoices
+Disallow: /elite-invoices
+Disallow: /api/elite-invoices
+Disallow: /api/elite-invoices/

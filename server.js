@@ -5994,6 +5994,20 @@ async function sendEliteInvoiceEmail(client, invoiceNumber, amount, pdfBuffer) {
   });
 }
 
+function eliteInvoicesNoIndexHeaders(res) {
+  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet');
+  res.setHeader('Cache-Control', 'private, no-store');
+}
+
+function eliteInvoicesNoIndexMiddleware(req, res, next) {
+  eliteInvoicesNoIndexHeaders(res);
+  next();
+}
+
+app.use('/Elite-Invoices', eliteInvoicesNoIndexMiddleware);
+app.use('/elite-invoices', eliteInvoicesNoIndexMiddleware);
+app.use('/api/elite-invoices', eliteInvoicesNoIndexMiddleware);
+
 app.get('/Elite-Invoices', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'elite-invoices.html'));
 });
