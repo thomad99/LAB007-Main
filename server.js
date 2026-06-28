@@ -21,11 +21,19 @@ const { startScheduledJobsRunner } = require('./lib/scheduledJobsRunner');
 const { registerTrade007Routes } = require('./lib/trade007');
 const {
   eliteInvoicesDataPath,
+  eliteInvoicesHistoryPath,
+  eliteInvoicesPdfsDir,
   eliteInvoicesSeedPath,
   normalizeClient,
+  normalizeInvoice,
   normalizePrefix,
   loadClients: loadEliteInvoiceClients,
   saveClients: saveEliteInvoiceClients,
+  loadInvoices: loadEliteInvoiceHistory,
+  saveInvoices: saveEliteInvoiceHistory,
+  invoicePdfPath,
+  invoiceToPdfPayload,
+  filterInvoices,
   formatInvoiceNumber,
   formatInvoiceDate,
   buildInvoicePdf
@@ -5818,12 +5826,22 @@ const eliteInvoicesDataDir = process.env.ELITE_INVOICES_DATA_DIR
   ? path.resolve(process.env.ELITE_INVOICES_DATA_DIR)
   : path.join(__dirname, 'data', 'elite-invoices');
 const eliteInvoicesClientsPath = eliteInvoicesDataPath(eliteInvoicesDataDir);
+const eliteInvoicesHistoryFile = eliteInvoicesHistoryPath(eliteInvoicesDataDir);
+const eliteInvoicesPdfDir = eliteInvoicesPdfsDir(eliteInvoicesDataDir);
 if (!fs.existsSync(eliteInvoicesDataDir)) {
   fs.mkdirSync(eliteInvoicesDataDir, { recursive: true });
+}
+if (!fs.existsSync(eliteInvoicesPdfDir)) {
+  fs.mkdirSync(eliteInvoicesPdfDir, { recursive: true });
 }
 if (!fs.existsSync(eliteInvoicesClientsPath)) {
   fs.copyFileSync(eliteInvoicesSeedPath(), eliteInvoicesClientsPath);
 }
+if (!fs.existsSync(eliteInvoicesHistoryFile)) {
+  fs.writeFileSync(eliteInvoicesHistoryFile, '[]', 'utf8');
+}
+
+console.log('[EliteInvoices] data dir:', eliteInvoicesDataDir);
 
 function readEliteInvoiceClients() {
   return loadEliteInvoiceClients(eliteInvoicesClientsPath, eliteInvoicesSeedPath());
@@ -5831,6 +5849,24 @@ function readEliteInvoiceClients() {
 
 function writeEliteInvoiceClients(clients) {
   saveEliteInvoiceClients(eliteInvoicesClientsPath, clients);
+}
+
+function readEliteInvoiceHistory() {
+  return loadEliteInvoiceHistory(eliteInvoicesHistoryFile);
+}
+
+function writeEliteInvoiceHistory(invoices) {
+  saveEliteInvoiceHistory(eliteInvoicesHistoryFile, invoices);
+}
+
+async function getEliteInvoicePdfBuffer(invoice) {
+  const pdfPath = invoicePdfPath(eliteInvoicesPdfDir, invoice.invoiceNumber);
+  if (fs.existsSync(pdfPath)) {
+    return fs.readFileSync(pdfPath);
+  }
+  const pdfBuffer = await buildInvoicePdf(invoiceToPdfPayload(invoice));
+  fs.writeFileSync(pdfPath, pdfBuffer);
+  return pdfBuffer;
 }
 
 function validateEliteInvoiceClients(clients) {
@@ -5907,6 +5943,26 @@ app.post('/api/elite-invoices/create', async (req, res) => {
     };
 
     const pdfBuffer = await buildInvoicePdf(invoice);
+    const record = normalizeInvoice({
+      id: crypto.randomUUID(),
+      invoiceNumber,
+      sequence,
+      clientId: merged.id,
+      clientDisplayName: merged.displayName,
+      billToName: merged.billToName,
+      billToLines: merged.billToLines,
+      amount,
+      date: invoice.date,
+      createdAt: new Date().toISOString(),
+      paid: false,
+      paidAt: null
+    });
+
+    fs.writeFileSync(invoicePdfPath(eliteInvoicesPdfDir, invoiceNumber), pdfBuffer);
+    const history = readEliteInvoiceHistory();
+    history.unshift(record);
+    writeEliteInvoiceHistory(history);
+
     merged.nextSequence = Math.min(9999, sequence + 1);
     clients[index] = merged;
     writeEliteInvoiceClients(clients);
@@ -5914,10 +5970,55 @@ app.post('/api/elite-invoices/create', async (req, res) => {
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${invoiceNumber}.pdf"`);
     res.setHeader('X-Invoice-Number', invoiceNumber);
+    res.setHeader('X-Invoice-Id', record.id);
     res.setHeader('X-Next-Sequence', String(merged.nextSequence));
     return res.send(pdfBuffer);
   } catch (err) {
     console.error('[EliteInvoices] create error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/elite-invoices/invoices', (req, res) => {
+  try {
+    const invoices = filterInvoices(readEliteInvoiceHistory(), req.query);
+    res.json(invoices);
+  } catch (err) {
+    console.error('[EliteInvoices] GET invoices error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/elite-invoices/invoices/:id/pdf', async (req, res) => {
+  try {
+    const invoice = readEliteInvoiceHistory().find((row) => row.id === req.params.id);
+    if (!invoice) return res.status(404).json({ error: 'Invoice not found.' });
+    const pdfBuffer = await getEliteInvoicePdfBuffer(invoice);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${invoice.invoiceNumber}.pdf"`);
+    return res.send(pdfBuffer);
+  } catch (err) {
+    console.error('[EliteInvoices] GET invoice pdf error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.patch('/api/elite-invoices/invoices/:id', (req, res) => {
+  try {
+    const invoices = readEliteInvoiceHistory();
+    const index = invoices.findIndex((row) => row.id === req.params.id);
+    if (index < 0) return res.status(404).json({ error: 'Invoice not found.' });
+
+    const paid = Boolean(req.body?.paid);
+    invoices[index] = normalizeInvoice({
+      ...invoices[index],
+      paid,
+      paidAt: paid ? new Date().toISOString() : null
+    });
+    writeEliteInvoiceHistory(invoices);
+    res.json({ ok: true, invoice: invoices[index] });
+  } catch (err) {
+    console.error('[EliteInvoices] PATCH invoice error:', err);
     res.status(500).json({ error: err.message });
   }
 });

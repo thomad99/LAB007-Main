@@ -15,6 +15,8 @@
       --text: #fffaf0;
       --muted: #ded6c7;
       --line: rgba(215, 173, 75, .28);
+      --paid: #7dd3a0;
+      --unpaid: #ffb4b4;
     }
     * { box-sizing: border-box; }
     body {
@@ -63,7 +65,7 @@
       gap: 10px;
       flex-wrap: wrap;
     }
-    .btn, .btn-link {
+    .btn, .btn-link, .btn-small {
       appearance: none;
       border: 0;
       border-radius: 8px;
@@ -76,19 +78,23 @@
       justify-content: center;
       font-size: .92rem;
     }
+    .btn-small {
+      padding: 7px 12px;
+      font-size: .82rem;
+    }
     .btn {
       background: var(--gold);
       color: #141006;
     }
-    .btn-secondary {
+    .btn-secondary, .btn-link {
       background: transparent;
       color: var(--soft-gold);
       border: 1px solid var(--line);
     }
-    .btn-link {
-      background: transparent;
-      color: var(--soft-gold);
-      border: 1px solid var(--line);
+    .btn-secondary.active {
+      background: rgba(215, 173, 75, .16);
+      border-color: var(--gold);
+      color: #fff3c4;
     }
     .status {
       min-height: 22px;
@@ -122,7 +128,7 @@
       background: rgba(215, 173, 75, .08);
     }
     tr:last-child td { border-bottom: 0; }
-    input[type="text"], input[type="number"] {
+    input[type="text"], input[type="number"], select {
       width: 100%;
       min-width: 0;
       padding: 8px 10px;
@@ -132,21 +138,55 @@
       color: var(--text);
       font: inherit;
     }
-    .prefix {
-      width: 64px;
-      text-transform: uppercase;
-    }
-    .amount {
-      width: 96px;
-    }
-    .actions {
-      white-space: nowrap;
-    }
+    .prefix { width: 64px; text-transform: uppercase; }
+    .amount { width: 96px; }
+    .actions { white-space: nowrap; display: flex; gap: 8px; flex-wrap: wrap; }
     .hint {
       margin-top: 18px;
       color: var(--muted);
       font-size: .86rem;
       line-height: 1.5;
+    }
+    .panel-section { display: none; }
+    .panel-section.active { display: block; }
+    .filters {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+      align-items: end;
+    }
+    .filters label {
+      display: block;
+      font-size: .74rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--soft-gold);
+      margin-bottom: 6px;
+    }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: .74rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+    .badge.paid {
+      background: rgba(125, 211, 160, .16);
+      color: var(--paid);
+      border: 1px solid rgba(125, 211, 160, .35);
+    }
+    .badge.unpaid {
+      background: rgba(255, 180, 180, .12);
+      color: var(--unpaid);
+      border: 1px solid rgba(255, 180, 180, .28);
+    }
+    .empty {
+      padding: 28px 16px;
+      text-align: center;
+      color: var(--muted);
     }
     @media (max-width: 720px) {
       .wrap { padding-top: 64px; }
@@ -161,10 +201,12 @@
         <img src="/elite-cleaning-assets/elite-cleaning-logo-dots-glow.png" alt="Elite Cleaning Services">
         <div>
           <h1>Elite Invoices</h1>
-          <p class="sub">Create branded cleaning invoices with unique invoice numbers.</p>
+          <p class="sub">Create, store, and manage cleaning invoices.</p>
         </div>
       </div>
       <div class="toolbar">
+        <button type="button" class="btn-secondary active" id="clientsTab">Clients</button>
+        <button type="button" class="btn-secondary" id="invoicesTab">View Invoices</button>
         <button type="button" class="btn-secondary" id="saveBtn">Save Changes</button>
         <a class="btn-link" href="/elite-cleaning">Back to Elite Cleaning</a>
       </div>
@@ -172,36 +214,94 @@
 
     <div class="status" id="status" role="status" aria-live="polite"></div>
 
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Client</th>
-            <th>Bill To Name</th>
-            <th>Address Lines</th>
-            <th>Amount ($)</th>
-            <th>Prefix</th>
-            <th>Next #</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="clientRows"></tbody>
-      </table>
-    </div>
+    <section class="panel-section active" id="clientsPanel">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Client</th>
+              <th>Bill To Name</th>
+              <th>Address Lines</th>
+              <th>Amount ($)</th>
+              <th>Prefix</th>
+              <th>Next #</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="clientRows"></tbody>
+        </table>
+      </div>
+      <p class="hint">
+        Invoice numbers use your 2-letter prefix plus a 4-digit counter (for example MV0000, MV0001).
+        Click <strong>Create Invoice</strong> to generate and save a PDF to persistent storage.
+      </p>
+    </section>
 
-    <p class="hint">
-      Invoice numbers use your 2-letter prefix plus a 4-digit counter (for example MV0000, MV0001).
-      Click <strong>Create Invoice</strong> to download a PDF styled like your Elite Cleaning template.
-    </p>
+    <section class="panel-section" id="invoicesPanel">
+      <div class="filters">
+        <div>
+          <label for="filterClient">Client</label>
+          <select id="filterClient">
+            <option value="">All clients</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterPaid">Status</label>
+          <select id="filterPaid">
+            <option value="all">All</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="paid">Paid</option>
+          </select>
+        </div>
+        <div>
+          <label for="filterSearch">Search</label>
+          <input type="text" id="filterSearch" placeholder="Invoice #, client, bill to">
+        </div>
+        <div>
+          <button type="button" class="btn-secondary" id="refreshInvoicesBtn">Refresh</button>
+        </div>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Invoice #</th>
+              <th>Client</th>
+              <th>Bill To</th>
+              <th>Date</th>
+              <th>Amount</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="invoiceRows"></tbody>
+        </table>
+      </div>
+      <p class="hint">
+        Past invoices are stored on the server disk. Use <strong>Resend</strong> to download the PDF again,
+        or mark invoices as paid when payment is received.
+      </p>
+    </section>
   </div>
 
   <script src="/lab007-site-nav.js" defer></script>
   <script>
     (function () {
       const rowsEl = document.getElementById('clientRows');
+      const invoiceRowsEl = document.getElementById('invoiceRows');
       const statusEl = document.getElementById('status');
       const saveBtn = document.getElementById('saveBtn');
+      const clientsTab = document.getElementById('clientsTab');
+      const invoicesTab = document.getElementById('invoicesTab');
+      const clientsPanel = document.getElementById('clientsPanel');
+      const invoicesPanel = document.getElementById('invoicesPanel');
+      const filterClient = document.getElementById('filterClient');
+      const filterPaid = document.getElementById('filterPaid');
+      const filterSearch = document.getElementById('filterSearch');
+      const refreshInvoicesBtn = document.getElementById('refreshInvoicesBtn');
       let clients = [];
+      let invoices = [];
 
       function setStatus(msg, isError) {
         statusEl.textContent = msg || '';
@@ -214,6 +314,20 @@
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;');
+      }
+
+      function formatMoney(amount) {
+        return '$' + Number(amount || 0).toFixed(0);
+      }
+
+      function showPanel(name) {
+        const isClients = name === 'clients';
+        clientsPanel.classList.toggle('active', isClients);
+        invoicesPanel.classList.toggle('active', !isClients);
+        clientsTab.classList.toggle('active', isClients);
+        invoicesTab.classList.toggle('active', !isClients);
+        saveBtn.style.display = isClients ? '' : 'none';
+        if (!isClients) loadInvoices().catch((err) => setStatus(err.message, true));
       }
 
       function readRow(row) {
@@ -231,7 +345,16 @@
         };
       }
 
-      function renderRows() {
+      function renderClientFilterOptions() {
+        const current = filterClient.value;
+        filterClient.innerHTML = '<option value="">All clients</option>' +
+          clients.map((client) =>
+            `<option value="${escapeHtml(client.id)}">${escapeHtml(client.displayName)}</option>`
+          ).join('');
+        filterClient.value = current;
+      }
+
+      function renderClientRows() {
         rowsEl.innerHTML = clients.map((client) => {
           const address = (client.billToLines || []).join('\n');
           const nextLabel = String(client.nextSequence || 0).padStart(4, '0');
@@ -244,11 +367,37 @@
               <td><input class="prefix" type="text" maxlength="2" data-field="invoicePrefix" value="${escapeHtml(client.invoicePrefix || '')}"></td>
               <td><input class="amount" type="number" min="0" max="9999" step="1" data-field="nextSequence" value="${Number(client.nextSequence || 0)}" title="Next invoice suffix (${nextLabel})"></td>
               <td class="actions">
-                <button type="button" class="btn" data-action="create">Create Invoice</button>
+                <button type="button" class="btn btn-small" data-action="create">Create Invoice</button>
               </td>
             </tr>
           `;
         }).join('');
+        renderClientFilterOptions();
+      }
+
+      function renderInvoiceRows() {
+        if (!invoices.length) {
+          invoiceRowsEl.innerHTML = '<tr><td colspan="7" class="empty">No invoices match your filters.</td></tr>';
+          return;
+        }
+        invoiceRowsEl.innerHTML = invoices.map((invoice) => `
+          <tr data-id="${escapeHtml(invoice.id)}">
+            <td><strong>${escapeHtml(invoice.invoiceNumber)}</strong></td>
+            <td>${escapeHtml(invoice.clientDisplayName)}</td>
+            <td>${escapeHtml(invoice.billToName)}</td>
+            <td>${escapeHtml(invoice.date)}</td>
+            <td>${formatMoney(invoice.amount)}</td>
+            <td>
+              <span class="badge ${invoice.paid ? 'paid' : 'unpaid'}">${invoice.paid ? 'Paid' : 'Unpaid'}</span>
+            </td>
+            <td class="actions">
+              <button type="button" class="btn btn-small" data-action="resend">Resend</button>
+              <button type="button" class="btn-secondary btn-small" data-action="toggle-paid">
+                ${invoice.paid ? 'Mark Unpaid' : 'Mark Paid'}
+              </button>
+            </td>
+          </tr>
+        `).join('');
       }
 
       async function loadClients() {
@@ -256,8 +405,19 @@
         const res = await fetch('/api/elite-invoices/clients');
         if (!res.ok) throw new Error('Failed to load clients');
         clients = await res.json();
-        renderRows();
+        renderClientRows();
         setStatus('');
+      }
+
+      async function loadInvoices() {
+        const params = new URLSearchParams();
+        if (filterClient.value) params.set('clientId', filterClient.value);
+        if (filterPaid.value) params.set('paid', filterPaid.value);
+        if (filterSearch.value.trim()) params.set('q', filterSearch.value.trim());
+        const res = await fetch('/api/elite-invoices/invoices?' + params.toString());
+        if (!res.ok) throw new Error('Failed to load invoices');
+        invoices = await res.json();
+        renderInvoiceRows();
       }
 
       async function saveClients() {
@@ -271,9 +431,26 @@
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Save failed');
         clients = data.clients || clients;
-        renderRows();
+        renderClientRows();
         setStatus('Saved.');
         setTimeout(() => setStatus(''), 1800);
+      }
+
+      async function downloadPdf(url, filename) {
+        const res = await fetch(url);
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Download failed');
+        }
+        const blob = await res.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = objectUrl;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(objectUrl);
       }
 
       async function createInvoice(clientId, button) {
@@ -292,8 +469,8 @@
             const err = await res.json().catch(() => ({}));
             throw new Error(err.error || 'Invoice creation failed');
           }
-          const blob = await res.blob();
           const invoiceNumber = res.headers.get('X-Invoice-Number') || 'invoice';
+          const blob = await res.blob();
           const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
           a.href = url;
@@ -308,9 +485,46 @@
             row.querySelector('[data-field="nextSequence"]').value = nextSeq;
           }
           await loadClients();
-          setStatus(`Downloaded ${invoiceNumber}.pdf`);
+          setStatus(`Saved and downloaded ${invoiceNumber}.pdf`);
         } catch (err) {
           setStatus(err.message || 'Invoice creation failed', true);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      async function resendInvoice(invoiceId, button) {
+        button.disabled = true;
+        setStatus('Downloading invoice...');
+        try {
+          const invoice = invoices.find((row) => row.id === invoiceId);
+          const filename = (invoice && invoice.invoiceNumber ? invoice.invoiceNumber : 'invoice') + '.pdf';
+          await downloadPdf('/api/elite-invoices/invoices/' + encodeURIComponent(invoiceId) + '/pdf', filename);
+          setStatus(`Downloaded ${filename}`);
+        } catch (err) {
+          setStatus(err.message, true);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      async function togglePaid(invoiceId, button) {
+        const invoice = invoices.find((row) => row.id === invoiceId);
+        if (!invoice) return;
+        button.disabled = true;
+        try {
+          const res = await fetch('/api/elite-invoices/invoices/' + encodeURIComponent(invoiceId), {
+            method: 'PATCH',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ paid: !invoice.paid })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Update failed');
+          await loadInvoices();
+          setStatus(data.invoice.paid ? 'Marked as paid.' : 'Marked as unpaid.');
+          setTimeout(() => setStatus(''), 1800);
+        } catch (err) {
+          setStatus(err.message, true);
         } finally {
           button.disabled = false;
         }
@@ -319,12 +533,29 @@
       rowsEl.addEventListener('click', (event) => {
         const btn = event.target.closest('[data-action="create"]');
         if (!btn) return;
-        const row = btn.closest('tr');
-        createInvoice(row.dataset.id, btn);
+        createInvoice(btn.closest('tr').dataset.id, btn);
       });
 
-      saveBtn.addEventListener('click', () => {
-        saveClients().catch((err) => setStatus(err.message, true));
+      invoiceRowsEl.addEventListener('click', (event) => {
+        const row = event.target.closest('tr[data-id]');
+        if (!row) return;
+        const resendBtn = event.target.closest('[data-action="resend"]');
+        const paidBtn = event.target.closest('[data-action="toggle-paid"]');
+        if (resendBtn) resendInvoice(row.dataset.id, resendBtn);
+        if (paidBtn) togglePaid(row.dataset.id, paidBtn);
+      });
+
+      clientsTab.addEventListener('click', () => showPanel('clients'));
+      invoicesTab.addEventListener('click', () => showPanel('invoices'));
+      saveBtn.addEventListener('click', () => saveClients().catch((err) => setStatus(err.message, true)));
+      refreshInvoicesBtn.addEventListener('click', () => loadInvoices().catch((err) => setStatus(err.message, true)));
+      filterClient.addEventListener('change', () => loadInvoices().catch((err) => setStatus(err.message, true)));
+      filterPaid.addEventListener('change', () => loadInvoices().catch((err) => setStatus(err.message, true)));
+      filterSearch.addEventListener('input', () => {
+        clearTimeout(filterSearch._timer);
+        filterSearch._timer = setTimeout(() => {
+          loadInvoices().catch((err) => setStatus(err.message, true));
+        }, 250);
       });
 
       loadClients().catch((err) => setStatus(err.message, true));
