@@ -6021,6 +6021,27 @@ app.patch('/api/elite-invoices/invoices/:id', (req, res) => {
   }
 });
 
+app.delete('/api/elite-invoices/invoices/:id', (req, res) => {
+  try {
+    const invoices = readEliteInvoiceHistory();
+    const index = invoices.findIndex((row) => row.id === req.params.id);
+    if (index < 0) return res.status(404).json({ error: 'Invoice not found.' });
+
+    const [removed] = invoices.splice(index, 1);
+    writeEliteInvoiceHistory(invoices);
+
+    const pdfPath = invoicePdfPath(eliteInvoicesPdfDir, removed.invoiceNumber);
+    if (fs.existsSync(pdfPath)) {
+      fs.unlinkSync(pdfPath);
+    }
+
+    res.json({ ok: true, invoiceNumber: removed.invoiceNumber });
+  } catch (err) {
+    console.error('[EliteInvoices] DELETE invoice error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // SRQ Cleaning - Sarasota cleaning services
 app.get('/SRQCleaning', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'SRQCleaning', 'index.html'));

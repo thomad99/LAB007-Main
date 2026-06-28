@@ -96,6 +96,11 @@
       border-color: var(--gold);
       color: #fff3c4;
     }
+    .btn-danger {
+      background: transparent;
+      color: #ffb4b4;
+      border: 1px solid rgba(255, 180, 180, .35);
+    }
     .status {
       min-height: 22px;
       margin-bottom: 12px;
@@ -280,7 +285,7 @@
       </div>
       <p class="hint">
         Past invoices are stored on the server disk. Use <strong>Resend</strong> to download the PDF again,
-        or mark invoices as paid when payment is received.
+        mark invoices as paid when payment is received, or <strong>Delete</strong> to remove an invoice permanently.
       </p>
     </section>
   </div>
@@ -395,6 +400,7 @@
               <button type="button" class="btn-secondary btn-small" data-action="toggle-paid">
                 ${invoice.paid ? 'Mark Unpaid' : 'Mark Paid'}
               </button>
+              <button type="button" class="btn-danger btn-small" data-action="delete">Delete</button>
             </td>
           </tr>
         `).join('');
@@ -530,6 +536,30 @@
         }
       }
 
+      async function deleteInvoice(invoiceId, button) {
+        const invoice = invoices.find((row) => row.id === invoiceId);
+        if (!invoice) return;
+        const label = invoice.invoiceNumber || 'this invoice';
+        if (!window.confirm(`Delete ${label}? This removes the invoice record and stored PDF permanently.`)) {
+          return;
+        }
+        button.disabled = true;
+        try {
+          const res = await fetch('/api/elite-invoices/invoices/' + encodeURIComponent(invoiceId), {
+            method: 'DELETE'
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Delete failed');
+          await loadInvoices();
+          setStatus(`Deleted ${data.invoiceNumber || label}.`);
+          setTimeout(() => setStatus(''), 1800);
+        } catch (err) {
+          setStatus(err.message, true);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
       rowsEl.addEventListener('click', (event) => {
         const btn = event.target.closest('[data-action="create"]');
         if (!btn) return;
@@ -541,8 +571,10 @@
         if (!row) return;
         const resendBtn = event.target.closest('[data-action="resend"]');
         const paidBtn = event.target.closest('[data-action="toggle-paid"]');
+        const deleteBtn = event.target.closest('[data-action="delete"]');
         if (resendBtn) resendInvoice(row.dataset.id, resendBtn);
         if (paidBtn) togglePaid(row.dataset.id, paidBtn);
+        if (deleteBtn) deleteInvoice(row.dataset.id, deleteBtn);
       });
 
       clientsTab.addEventListener('click', () => showPanel('clients'));
