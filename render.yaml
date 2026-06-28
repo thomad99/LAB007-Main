@@ -9,7 +9,7 @@ services:
   - type: web
     name: lab007-unified-services
     env: node
-    buildCommand: git submodule update --init --recursive && npm install --no-optional && npm run install-browsers
+    buildCommand: git submodule update --init --recursive && npm install --no-optional && PUPPETEER_CACHE_DIR=/opt/render/.cache/puppeteer PLAYWRIGHT_BROWSERS_PATH=/opt/render/.cache/ms-playwright npm run install-browsers || true
     startCommand: npm start
     plan: free
     envVars:
