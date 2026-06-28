@@ -117,7 +117,7 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 920px;
+      min-width: 1020px;
     }
     th, td {
       padding: 12px 10px;
@@ -133,7 +133,7 @@
       background: rgba(215, 173, 75, .08);
     }
     tr:last-child td { border-bottom: 0; }
-    input[type="text"], input[type="number"], select {
+    input[type="text"], input[type="number"], input[type="email"], select {
       width: 100%;
       min-width: 0;
       padding: 8px 10px;
@@ -226,6 +226,7 @@
             <tr>
               <th>Client</th>
               <th>Bill To Name</th>
+              <th>Email</th>
               <th>Address Lines</th>
               <th>Amount ($)</th>
               <th>Prefix</th>
@@ -238,7 +239,7 @@
       </div>
       <p class="hint">
         Invoice numbers use your prefix plus a dash and 4-digit counter (for example MV-0000, MV-0001, ELITE-0002).
-        Click <strong>Create Invoice</strong> to generate and save a PDF to persistent storage.
+        Use <strong>Email</strong> to create an invoice and send it to the client address with the PDF attached.
       </p>
     </section>
 
@@ -340,6 +341,7 @@
           id: row.dataset.id,
           displayName: row.querySelector('[data-field="displayName"]').value.trim(),
           billToName: row.querySelector('[data-field="billToName"]').value.trim(),
+          email: row.querySelector('[data-field="email"]').value.trim(),
           billToLines: row.querySelector('[data-field="billToLines"]').value
             .split('\n')
             .map((line) => line.trim())
@@ -367,12 +369,14 @@
             <tr data-id="${escapeHtml(client.id)}">
               <td><input type="text" data-field="displayName" value="${escapeHtml(client.displayName)}"></td>
               <td><input type="text" data-field="billToName" value="${escapeHtml(client.billToName)}"></td>
+              <td><input type="email" data-field="email" value="${escapeHtml(client.email || '')}" placeholder="client@email.com"></td>
               <td><textarea data-field="billToLines" rows="3" style="width:100%;resize:vertical;padding:8px 10px;border-radius:6px;border:1px solid rgba(215,173,75,.25);background:#0d0d0d;color:#fffaf0;font:inherit;">${escapeHtml(address)}</textarea></td>
               <td><input class="amount" type="number" min="0" step="1" data-field="defaultAmount" value="${Number(client.defaultAmount || 0)}"></td>
               <td><input class="prefix" type="text" data-field="invoicePrefix" value="${escapeHtml(client.invoicePrefix || '')}" placeholder="MV"></td>
               <td><input class="amount" type="number" min="0" max="9999" step="1" data-field="nextSequence" value="${Number(client.nextSequence || 0)}" title="Next invoice suffix (${nextLabel})"></td>
               <td class="actions">
                 <button type="button" class="btn btn-small" data-action="create">Create Invoice</button>
+                <button type="button" class="btn-secondary btn-small" data-action="email">Email</button>
               </td>
             </tr>
           `;
@@ -499,6 +503,37 @@
         }
       }
 
+      async function emailInvoice(clientId, button) {
+        const row = rowsEl.querySelector(`tr[data-id="${clientId}"]`);
+        if (!row) return;
+        const payload = readRow(row);
+        if (!payload.email) {
+          setStatus('Add a client email address before sending.', true);
+          return;
+        }
+        button.disabled = true;
+        setStatus(`Creating and emailing invoice to ${payload.email}...`);
+        try {
+          const res = await fetch('/api/elite-invoices/create-and-email', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clientId, client: payload })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Invoice email failed');
+
+          if (data.nextSequence != null) {
+            row.querySelector('[data-field="nextSequence"]').value = data.nextSequence;
+          }
+          await loadClients();
+          setStatus(`Emailed ${data.invoiceNumber}.pdf to ${data.emailedTo}.`);
+        } catch (err) {
+          setStatus(err.message || 'Invoice email failed', true);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
       async function resendInvoice(invoiceId, button) {
         button.disabled = true;
         setStatus('Downloading invoice...');
@@ -561,9 +596,11 @@
       }
 
       rowsEl.addEventListener('click', (event) => {
-        const btn = event.target.closest('[data-action="create"]');
+        const btn = event.target.closest('[data-action="create"], [data-action="email"]');
         if (!btn) return;
-        createInvoice(btn.closest('tr').dataset.id, btn);
+        const clientId = btn.closest('tr').dataset.id;
+        if (btn.dataset.action === 'email') emailInvoice(clientId, btn);
+        else createInvoice(clientId, btn);
       });
 
       invoiceRowsEl.addEventListener('click', (event) => {

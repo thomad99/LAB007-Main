@@ -36,7 +36,8 @@ const {
   filterInvoices,
   formatInvoiceNumber,
   formatInvoiceDate,
-  buildInvoicePdf
+  buildInvoicePdf,
+  isValidClientEmail
 } = require('./lib/elite-invoices');
 registerCursorAiTelegramHandlers(registerTelegramInboundHandler);
 registerCronTelegramHandlers(registerTelegramInboundHandler);
@@ -5873,12 +5874,124 @@ function validateEliteInvoiceClients(clients) {
     if (!client.id) return 'Each client must have an id.';
     if (!client.displayName) return 'Each client must have a display name.';
     if (!client.billToName) return `Client "${client.displayName}" needs a bill-to name.`;
+    if (client.email && !isValidClientEmail(client.email)) {
+      return `Client "${client.displayName}" has an invalid email address.`;
+    }
     const prefix = normalizePrefix(client.invoicePrefix);
     if (!prefix) return `Client "${client.displayName}" needs an invoice prefix.`;
     if (prefixes.has(prefix)) return `Duplicate invoice prefix "${prefix}". Each client needs a unique prefix.`;
     prefixes.add(prefix);
   }
   return null;
+}
+
+async function createEliteInvoiceForClient(clientId, inlineClient) {
+  const clients = readEliteInvoiceClients();
+  const index = clients.findIndex((c) => c.id === clientId);
+  if (index < 0) {
+    const err = new Error('Client not found.');
+    err.status = 404;
+    throw err;
+  }
+
+  const merged = normalizeClient({ ...clients[index], ...(inlineClient || {}) });
+  const validationError = validateEliteInvoiceClients(
+    clients.map((c, i) => (i === index ? merged : c))
+  );
+  if (validationError) {
+    const err = new Error(validationError);
+    err.status = 400;
+    throw err;
+  }
+
+  const sequence = Math.max(0, Math.min(9999, merged.nextSequence || 0));
+  const invoiceNumber = formatInvoiceNumber(merged.invoicePrefix, sequence);
+  const amount = Math.max(0, Number(merged.defaultAmount) || 0);
+
+  const invoice = {
+    invoiceNumber,
+    date: formatInvoiceDate(new Date()),
+    billToName: merged.billToName,
+    billToLines: merged.billToLines,
+    amount
+  };
+
+  const pdfBuffer = await buildInvoicePdf(invoice);
+  const record = normalizeInvoice({
+    id: crypto.randomUUID(),
+    invoiceNumber,
+    sequence,
+    clientId: merged.id,
+    clientDisplayName: merged.displayName,
+    billToName: merged.billToName,
+    billToLines: merged.billToLines,
+    amount,
+    date: invoice.date,
+    createdAt: new Date().toISOString(),
+    paid: false,
+    paidAt: null
+  });
+
+  fs.writeFileSync(invoicePdfPath(eliteInvoicesPdfDir, invoiceNumber), pdfBuffer);
+  const history = readEliteInvoiceHistory();
+  history.unshift(record);
+  writeEliteInvoiceHistory(history);
+
+  merged.nextSequence = Math.min(9999, sequence + 1);
+  clients[index] = merged;
+  writeEliteInvoiceClients(clients);
+
+  return { pdfBuffer, record, merged, invoiceNumber };
+}
+
+async function sendEliteInvoiceEmail(client, invoiceNumber, amount, pdfBuffer) {
+  if (!emailTransporter) {
+    throw new Error('Email service is not configured on the server (SMTP_USER / SMTP_PASS).');
+  }
+  if (!isValidClientEmail(client.email)) {
+    throw new Error('Add a valid email address for this client before sending.');
+  }
+
+  const from = process.env.ELITE_INVOICES_FROM || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@lab007.ai';
+  const replyTo = process.env.ELITE_INVOICES_REPLY_TO || 'petra@EliteCleaningServices.us';
+  const formattedAmount = `$${Number(amount || 0).toFixed(0)}`;
+  const greetingName = client.billToName || client.displayName || 'there';
+
+  await emailTransporter.sendMail({
+    from,
+    replyTo,
+    to: client.email,
+    subject: `Invoice ${invoiceNumber} — Elite Cleaning Services`,
+    text: [
+      `Hello ${greetingName},`,
+      '',
+      `Please find attached invoice ${invoiceNumber} for ${formattedAmount} for cleaning services.`,
+      '',
+      'Payment options:',
+      'Send Zelle to 941 287 7237',
+      'Cheque payable to My Smart Life LLC',
+      '',
+      'Thank you,',
+      'Elite Cleaning Services'
+    ].join('\n'),
+    html: `
+      <p>Hello ${greetingName},</p>
+      <p>Please find attached invoice <strong>${invoiceNumber}</strong> for <strong>${formattedAmount}</strong> for cleaning services.</p>
+      <p><strong>Payment options</strong></p>
+      <ul>
+        <li>Send Zelle to 941 287 7237</li>
+        <li>Cheque payable to My Smart Life LLC</li>
+      </ul>
+      <p>Thank you,<br>Elite Cleaning Services</p>
+    `,
+    attachments: [
+      {
+        filename: `${invoiceNumber}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }
+    ]
+  });
 }
 
 app.get('/Elite-Invoices', (req, res) => {
@@ -5918,52 +6031,7 @@ app.post('/api/elite-invoices/create', async (req, res) => {
     const inlineClient = req.body?.client && typeof req.body.client === 'object' ? req.body.client : null;
     if (!clientId) return res.status(400).json({ error: 'clientId is required.' });
 
-    const clients = readEliteInvoiceClients();
-    const index = clients.findIndex((c) => c.id === clientId);
-    if (index < 0) return res.status(404).json({ error: 'Client not found.' });
-
-    const merged = normalizeClient({ ...clients[index], ...(inlineClient || {}) });
-    const validationError = validateEliteInvoiceClients(
-      clients.map((c, i) => (i === index ? merged : c))
-    );
-    if (validationError) return res.status(400).json({ error: validationError });
-
-    const sequence = Math.max(0, Math.min(9999, merged.nextSequence || 0));
-    const invoiceNumber = formatInvoiceNumber(merged.invoicePrefix, sequence);
-    const amount = Math.max(0, Number(merged.defaultAmount) || 0);
-
-    const invoice = {
-      invoiceNumber,
-      date: formatInvoiceDate(new Date()),
-      billToName: merged.billToName,
-      billToLines: merged.billToLines,
-      amount
-    };
-
-    const pdfBuffer = await buildInvoicePdf(invoice);
-    const record = normalizeInvoice({
-      id: crypto.randomUUID(),
-      invoiceNumber,
-      sequence,
-      clientId: merged.id,
-      clientDisplayName: merged.displayName,
-      billToName: merged.billToName,
-      billToLines: merged.billToLines,
-      amount,
-      date: invoice.date,
-      createdAt: new Date().toISOString(),
-      paid: false,
-      paidAt: null
-    });
-
-    fs.writeFileSync(invoicePdfPath(eliteInvoicesPdfDir, invoiceNumber), pdfBuffer);
-    const history = readEliteInvoiceHistory();
-    history.unshift(record);
-    writeEliteInvoiceHistory(history);
-
-    merged.nextSequence = Math.min(9999, sequence + 1);
-    clients[index] = merged;
-    writeEliteInvoiceClients(clients);
+    const { pdfBuffer, record, merged, invoiceNumber } = await createEliteInvoiceForClient(clientId, inlineClient);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="${invoiceNumber}.pdf"`);
@@ -5973,7 +6041,29 @@ app.post('/api/elite-invoices/create', async (req, res) => {
     return res.send(pdfBuffer);
   } catch (err) {
     console.error('[EliteInvoices] create error:', err);
-    res.status(500).json({ error: err.message });
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+app.post('/api/elite-invoices/create-and-email', async (req, res) => {
+  try {
+    const clientId = String(req.body?.clientId || '').trim();
+    const inlineClient = req.body?.client && typeof req.body.client === 'object' ? req.body.client : null;
+    if (!clientId) return res.status(400).json({ error: 'clientId is required.' });
+
+    const { pdfBuffer, record, merged, invoiceNumber } = await createEliteInvoiceForClient(clientId, inlineClient);
+    await sendEliteInvoiceEmail(merged, invoiceNumber, merged.defaultAmount, pdfBuffer);
+
+    res.json({
+      ok: true,
+      invoiceNumber,
+      invoiceId: record.id,
+      emailedTo: merged.email,
+      nextSequence: merged.nextSequence
+    });
+  } catch (err) {
+    console.error('[EliteInvoices] create-and-email error:', err);
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 
