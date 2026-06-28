@@ -5877,7 +5877,8 @@ function validateEliteInvoiceClients(clients) {
     if (!client.displayName) return 'Each client must have a display name.';
     if (!client.billToName) return `Client "${client.displayName}" needs a bill-to name.`;
     const prefix = normalizePrefix(client.invoicePrefix);
-    if (prefixes.has(prefix)) return `Duplicate invoice prefix "${prefix}". Each client needs unique 2-letter codes.`;
+    if (!prefix) return `Client "${client.displayName}" needs an invoice prefix.`;
+    if (prefixes.has(prefix)) return `Duplicate invoice prefix "${prefix}". Each client needs a unique prefix.`;
     prefixes.add(prefix);
   }
   return null;

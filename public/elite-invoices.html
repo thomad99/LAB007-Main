@@ -138,7 +138,7 @@
       color: var(--text);
       font: inherit;
     }
-    .prefix { width: 64px; text-transform: uppercase; }
+    .prefix { min-width: 96px; max-width: 180px; text-transform: uppercase; }
     .amount { width: 96px; }
     .actions { white-space: nowrap; display: flex; gap: 8px; flex-wrap: wrap; }
     .hint {
@@ -232,7 +232,7 @@
         </table>
       </div>
       <p class="hint">
-        Invoice numbers use your 2-letter prefix plus a 4-digit counter (for example MV0000, MV0001).
+        Invoice numbers use your prefix plus a dash and 4-digit counter (for example MV-0000, MV-0001, ELITE-0002).
         Click <strong>Create Invoice</strong> to generate and save a PDF to persistent storage.
       </p>
     </section>
@@ -364,7 +364,7 @@
               <td><input type="text" data-field="billToName" value="${escapeHtml(client.billToName)}"></td>
               <td><textarea data-field="billToLines" rows="3" style="width:100%;resize:vertical;padding:8px 10px;border-radius:6px;border:1px solid rgba(215,173,75,.25);background:#0d0d0d;color:#fffaf0;font:inherit;">${escapeHtml(address)}</textarea></td>
               <td><input class="amount" type="number" min="0" step="1" data-field="defaultAmount" value="${Number(client.defaultAmount || 0)}"></td>
-              <td><input class="prefix" type="text" maxlength="2" data-field="invoicePrefix" value="${escapeHtml(client.invoicePrefix || '')}"></td>
+              <td><input class="prefix" type="text" data-field="invoicePrefix" value="${escapeHtml(client.invoicePrefix || '')}" placeholder="MV"></td>
               <td><input class="amount" type="number" min="0" max="9999" step="1" data-field="nextSequence" value="${Number(client.nextSequence || 0)}" title="Next invoice suffix (${nextLabel})"></td>
               <td class="actions">
                 <button type="button" class="btn btn-small" data-action="create">Create Invoice</button>
