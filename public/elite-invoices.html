@@ -1,0 +1,334 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Elite Invoices | Elite Cleaning Services</title>
+  <link rel="icon" type="image/png" sizes="32x32" href="/elite-cleaning-assets/elite-cleaning-favicon-32.png">
+  <style>
+    :root {
+      --black: #030303;
+      --panel: #151515;
+      --gold: #d7ad4b;
+      --soft-gold: #f2d27b;
+      --cream: #fff8e8;
+      --text: #fffaf0;
+      --muted: #ded6c7;
+      --line: rgba(215, 173, 75, .28);
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      background: linear-gradient(180deg, #050505 0%, #020202 100%);
+      color: var(--text);
+      min-height: 100vh;
+    }
+    .wrap {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 72px 0 40px;
+    }
+    header {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 24px;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 24px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+    .brand img {
+      width: 72px;
+      height: 72px;
+      object-fit: contain;
+    }
+    h1 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: clamp(1.5rem, 4vw, 2.2rem);
+      line-height: 1.1;
+    }
+    .sub {
+      margin: 4px 0 0;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn, .btn-link {
+      appearance: none;
+      border: 0;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-weight: 700;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: .92rem;
+    }
+    .btn {
+      background: var(--gold);
+      color: #141006;
+    }
+    .btn-secondary {
+      background: transparent;
+      color: var(--soft-gold);
+      border: 1px solid var(--line);
+    }
+    .btn-link {
+      background: transparent;
+      color: var(--soft-gold);
+      border: 1px solid var(--line);
+    }
+    .status {
+      min-height: 22px;
+      margin-bottom: 12px;
+      color: var(--soft-gold);
+      font-size: .9rem;
+    }
+    .table-wrap {
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(21, 21, 21, .92);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 920px;
+    }
+    th, td {
+      padding: 12px 10px;
+      border-bottom: 1px solid var(--line);
+      vertical-align: middle;
+      text-align: left;
+    }
+    th {
+      font-size: .74rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--soft-gold);
+      background: rgba(215, 173, 75, .08);
+    }
+    tr:last-child td { border-bottom: 0; }
+    input[type="text"], input[type="number"] {
+      width: 100%;
+      min-width: 0;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(215, 173, 75, .25);
+      background: #0d0d0d;
+      color: var(--text);
+      font: inherit;
+    }
+    .prefix {
+      width: 64px;
+      text-transform: uppercase;
+    }
+    .amount {
+      width: 96px;
+    }
+    .actions {
+      white-space: nowrap;
+    }
+    .hint {
+      margin-top: 18px;
+      color: var(--muted);
+      font-size: .86rem;
+      line-height: 1.5;
+    }
+    @media (max-width: 720px) {
+      .wrap { padding-top: 64px; }
+      header { align-items: flex-start; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <div class="brand">
+        <img src="/elite-cleaning-assets/elite-cleaning-logo-dots-glow.png" alt="Elite Cleaning Services">
+        <div>
+          <h1>Elite Invoices</h1>
+          <p class="sub">Create branded cleaning invoices with unique invoice numbers.</p>
+        </div>
+      </div>
+      <div class="toolbar">
+        <button type="button" class="btn-secondary" id="saveBtn">Save Changes</button>
+        <a class="btn-link" href="/elite-cleaning">Back to Elite Cleaning</a>
+      </div>
+    </header>
+
+    <div class="status" id="status" role="status" aria-live="polite"></div>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Client</th>
+            <th>Bill To Name</th>
+            <th>Address Lines</th>
+            <th>Amount ($)</th>
+            <th>Prefix</th>
+            <th>Next #</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="clientRows"></tbody>
+      </table>
+    </div>
+
+    <p class="hint">
+      Invoice numbers use your 2-letter prefix plus a 4-digit counter (for example MV0000, MV0001).
+      Click <strong>Create Invoice</strong> to download a PDF styled like your Elite Cleaning template.
+    </p>
+  </div>
+
+  <script src="/lab007-site-nav.js" defer></script>
+  <script>
+    (function () {
+      const rowsEl = document.getElementById('clientRows');
+      const statusEl = document.getElementById('status');
+      const saveBtn = document.getElementById('saveBtn');
+      let clients = [];
+
+      function setStatus(msg, isError) {
+        statusEl.textContent = msg || '';
+        statusEl.style.color = isError ? '#ffb4b4' : '';
+      }
+
+      function escapeHtml(text) {
+        return String(text || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function readRow(row) {
+        return {
+          id: row.dataset.id,
+          displayName: row.querySelector('[data-field="displayName"]').value.trim(),
+          billToName: row.querySelector('[data-field="billToName"]').value.trim(),
+          billToLines: row.querySelector('[data-field="billToLines"]').value
+            .split('\n')
+            .map((line) => line.trim())
+            .filter(Boolean),
+          defaultAmount: Number(row.querySelector('[data-field="defaultAmount"]').value || 0),
+          invoicePrefix: row.querySelector('[data-field="invoicePrefix"]').value.trim().toUpperCase(),
+          nextSequence: Number(row.querySelector('[data-field="nextSequence"]').value || 0)
+        };
+      }
+
+      function renderRows() {
+        rowsEl.innerHTML = clients.map((client) => {
+          const address = (client.billToLines || []).join('\n');
+          const nextLabel = String(client.nextSequence || 0).padStart(4, '0');
+          return `
+            <tr data-id="${escapeHtml(client.id)}">
+              <td><input type="text" data-field="displayName" value="${escapeHtml(client.displayName)}"></td>
+              <td><input type="text" data-field="billToName" value="${escapeHtml(client.billToName)}"></td>
+              <td><textarea data-field="billToLines" rows="3" style="width:100%;resize:vertical;padding:8px 10px;border-radius:6px;border:1px solid rgba(215,173,75,.25);background:#0d0d0d;color:#fffaf0;font:inherit;">${escapeHtml(address)}</textarea></td>
+              <td><input class="amount" type="number" min="0" step="1" data-field="defaultAmount" value="${Number(client.defaultAmount || 0)}"></td>
+              <td><input class="prefix" type="text" maxlength="2" data-field="invoicePrefix" value="${escapeHtml(client.invoicePrefix || '')}"></td>
+              <td><input class="amount" type="number" min="0" max="9999" step="1" data-field="nextSequence" value="${Number(client.nextSequence || 0)}" title="Next invoice suffix (${nextLabel})"></td>
+              <td class="actions">
+                <button type="button" class="btn" data-action="create">Create Invoice</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      async function loadClients() {
+        setStatus('Loading clients...');
+        const res = await fetch('/api/elite-invoices/clients');
+        if (!res.ok) throw new Error('Failed to load clients');
+        clients = await res.json();
+        renderRows();
+        setStatus('');
+      }
+
+      async function saveClients() {
+        clients = Array.from(rowsEl.querySelectorAll('tr')).map(readRow);
+        setStatus('Saving...');
+        const res = await fetch('/api/elite-invoices/clients', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(clients)
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Save failed');
+        clients = data.clients || clients;
+        renderRows();
+        setStatus('Saved.');
+        setTimeout(() => setStatus(''), 1800);
+      }
+
+      async function createInvoice(clientId, button) {
+        const row = rowsEl.querySelector(`tr[data-id="${clientId}"]`);
+        if (!row) return;
+        const payload = readRow(row);
+        button.disabled = true;
+        setStatus(`Creating invoice for ${payload.displayName || payload.billToName}...`);
+        try {
+          const res = await fetch('/api/elite-invoices/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ clientId, client: payload })
+          });
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Invoice creation failed');
+          }
+          const blob = await res.blob();
+          const invoiceNumber = res.headers.get('X-Invoice-Number') || 'invoice';
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `${invoiceNumber}.pdf`;
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+          URL.revokeObjectURL(url);
+
+          const nextSeq = res.headers.get('X-Next-Sequence');
+          if (nextSeq != null) {
+            row.querySelector('[data-field="nextSequence"]').value = nextSeq;
+          }
+          await loadClients();
+          setStatus(`Downloaded ${invoiceNumber}.pdf`);
+        } catch (err) {
+          setStatus(err.message || 'Invoice creation failed', true);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
+      rowsEl.addEventListener('click', (event) => {
+        const btn = event.target.closest('[data-action="create"]');
+        if (!btn) return;
+        const row = btn.closest('tr');
+        createInvoice(row.dataset.id, btn);
+      });
+
+      saveBtn.addEventListener('click', () => {
+        saveClients().catch((err) => setStatus(err.message, true));
+      });
+
+      loadClients().catch((err) => setStatus(err.message, true));
+    })();
+  </script>
+</body>
+</html>

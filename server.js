@@ -19,6 +19,17 @@ const { registerCursorAiTelegramHandlers } = require('./lib/telegramHandlersCurs
 const { registerCronTelegramHandlers } = require('./lib/telegramHandlersCron');
 const { startScheduledJobsRunner } = require('./lib/scheduledJobsRunner');
 const { registerTrade007Routes } = require('./lib/trade007');
+const {
+  eliteInvoicesDataPath,
+  eliteInvoicesSeedPath,
+  normalizeClient,
+  normalizePrefix,
+  loadClients: loadEliteInvoiceClients,
+  saveClients: saveEliteInvoiceClients,
+  formatInvoiceNumber,
+  formatInvoiceDate,
+  buildInvoicePdf
+} = require('./lib/elite-invoices');
 registerCursorAiTelegramHandlers(registerTelegramInboundHandler);
 registerCronTelegramHandlers(registerTelegramInboundHandler);
 const fetchFn = global.fetch || ((...args) => import('node-fetch').then(({ default: f }) => f(...args)));
@@ -5800,6 +5811,115 @@ app.get('/elite-cleaning', (req, res) => {
 });
 app.get('/elite-cleaning.html', (req, res) => {
   res.redirect(301, '/elite-cleaning');
+});
+
+// Elite Invoices — cleaning client invoice generator
+const eliteInvoicesDataDir = process.env.ELITE_INVOICES_DATA_DIR
+  ? path.resolve(process.env.ELITE_INVOICES_DATA_DIR)
+  : path.join(__dirname, 'data', 'elite-invoices');
+const eliteInvoicesClientsPath = eliteInvoicesDataPath(eliteInvoicesDataDir);
+if (!fs.existsSync(eliteInvoicesDataDir)) {
+  fs.mkdirSync(eliteInvoicesDataDir, { recursive: true });
+}
+if (!fs.existsSync(eliteInvoicesClientsPath)) {
+  fs.copyFileSync(eliteInvoicesSeedPath(), eliteInvoicesClientsPath);
+}
+
+function readEliteInvoiceClients() {
+  return loadEliteInvoiceClients(eliteInvoicesClientsPath, eliteInvoicesSeedPath());
+}
+
+function writeEliteInvoiceClients(clients) {
+  saveEliteInvoiceClients(eliteInvoicesClientsPath, clients);
+}
+
+function validateEliteInvoiceClients(clients) {
+  const prefixes = new Set();
+  for (const raw of clients) {
+    const client = normalizeClient(raw);
+    if (!client.id) return 'Each client must have an id.';
+    if (!client.displayName) return 'Each client must have a display name.';
+    if (!client.billToName) return `Client "${client.displayName}" needs a bill-to name.`;
+    const prefix = normalizePrefix(client.invoicePrefix);
+    if (prefixes.has(prefix)) return `Duplicate invoice prefix "${prefix}". Each client needs unique 2-letter codes.`;
+    prefixes.add(prefix);
+  }
+  return null;
+}
+
+app.get('/Elite-Invoices', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'elite-invoices.html'));
+});
+app.get('/elite-invoices', (req, res) => {
+  res.redirect(301, '/Elite-Invoices');
+});
+
+app.get('/api/elite-invoices/clients', (req, res) => {
+  try {
+    res.json(readEliteInvoiceClients());
+  } catch (err) {
+    console.error('[EliteInvoices] GET clients error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/elite-invoices/clients', (req, res) => {
+  try {
+    const body = req.body;
+    if (!Array.isArray(body)) return res.status(400).json({ error: 'Expected an array of clients.' });
+    const clients = body.map(normalizeClient);
+    const validationError = validateEliteInvoiceClients(clients);
+    if (validationError) return res.status(400).json({ error: validationError });
+    writeEliteInvoiceClients(clients);
+    res.json({ ok: true, clients });
+  } catch (err) {
+    console.error('[EliteInvoices] PUT clients error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/elite-invoices/create', async (req, res) => {
+  try {
+    const clientId = String(req.body?.clientId || '').trim();
+    const inlineClient = req.body?.client && typeof req.body.client === 'object' ? req.body.client : null;
+    if (!clientId) return res.status(400).json({ error: 'clientId is required.' });
+
+    const clients = readEliteInvoiceClients();
+    const index = clients.findIndex((c) => c.id === clientId);
+    if (index < 0) return res.status(404).json({ error: 'Client not found.' });
+
+    const merged = normalizeClient({ ...clients[index], ...(inlineClient || {}) });
+    const validationError = validateEliteInvoiceClients(
+      clients.map((c, i) => (i === index ? merged : c))
+    );
+    if (validationError) return res.status(400).json({ error: validationError });
+
+    const sequence = Math.max(0, Math.min(9999, merged.nextSequence || 0));
+    const invoiceNumber = formatInvoiceNumber(merged.invoicePrefix, sequence);
+    const amount = Math.max(0, Number(merged.defaultAmount) || 0);
+
+    const invoice = {
+      invoiceNumber,
+      date: formatInvoiceDate(new Date()),
+      billToName: merged.billToName,
+      billToLines: merged.billToLines,
+      amount
+    };
+
+    const pdfBuffer = await buildInvoicePdf(invoice);
+    merged.nextSequence = Math.min(9999, sequence + 1);
+    clients[index] = merged;
+    writeEliteInvoiceClients(clients);
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${invoiceNumber}.pdf"`);
+    res.setHeader('X-Invoice-Number', invoiceNumber);
+    res.setHeader('X-Next-Sequence', String(merged.nextSequence));
+    return res.send(pdfBuffer);
+  } catch (err) {
+    console.error('[EliteInvoices] create error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // SRQ Cleaning - Sarasota cleaning services

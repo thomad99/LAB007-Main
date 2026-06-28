@@ -7,6 +7,7 @@
     ['BUCK', 'https://buck-lab007.onrender.com/'],
     ['007Trade', '/007trade'],
     ['Elite Cleaning', '/elite-cleaning'],
+    ['Elite Invoices', '/Elite-Invoices'],
     ['Citrix-2-HZ', '/citrix'],
     ['Web-Alerts', '/webalert'],
     ['Contact', '/contact']

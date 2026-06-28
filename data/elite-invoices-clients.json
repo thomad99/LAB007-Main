@@ -1,0 +1,155 @@
+[
+  {
+    "id": "85",
+    "displayName": "#85",
+    "billToName": "Bay Oaks",
+    "billToLines": [],
+    "defaultAmount": 150,
+    "invoicePrefix": "BO",
+    "nextSequence": 0
+  },
+  {
+    "id": "603-703",
+    "displayName": "603-703",
+    "billToName": "Sunrise Vacation Rentals, LLC",
+    "billToLines": ["1749 S. Creek Drive", "Osprey, FL 34229"],
+    "defaultAmount": 300,
+    "invoicePrefix": "SR",
+    "nextSequence": 0
+  },
+  {
+    "id": "afton",
+    "displayName": "Afton",
+    "billToName": "Magdalena Halbowicz",
+    "billToLines": ["1350 Paddock Place", "Bartlett, IL 60103"],
+    "defaultAmount": 200,
+    "invoicePrefix": "AF",
+    "nextSequence": 0
+  },
+  {
+    "id": "c01-b13",
+    "displayName": "C01-B13",
+    "billToName": "Bob Pezzuti",
+    "billToLines": [],
+    "defaultAmount": 140,
+    "invoicePrefix": "BP",
+    "nextSequence": 0
+  },
+  {
+    "id": "coastal-mold",
+    "displayName": "Coastal Mold",
+    "billToName": "Villa Maya LLC",
+    "billToLines": ["23904 Deer Chase Ln", "Naperville, IL 60564"],
+    "defaultAmount": 180,
+    "invoicePrefix": "VM",
+    "nextSequence": 0
+  },
+  {
+    "id": "custom-design-srq-ari",
+    "displayName": "Custom Design SRQ (Ari)",
+    "billToName": "O'Connor Building Comp LLC",
+    "billToLines": ["1739 Redwood Street", "Sarasota, FL 34231"],
+    "defaultAmount": 180,
+    "invoicePrefix": "OC",
+    "nextSequence": 0
+  },
+  {
+    "id": "excelsior-2-302",
+    "displayName": "Excelsior 2-302",
+    "billToName": "Alliance Solution Group",
+    "billToLines": [],
+    "defaultAmount": 150,
+    "invoicePrefix": "AS",
+    "nextSequence": 0
+  },
+  {
+    "id": "fairfield",
+    "displayName": "Fairfield",
+    "billToName": "Apartment 24",
+    "billToLines": [],
+    "defaultAmount": 110,
+    "invoicePrefix": "FF",
+    "nextSequence": 0
+  },
+  {
+    "id": "justyna-venice",
+    "displayName": "Justyna Venice",
+    "billToName": "Pamela Michalek",
+    "billToLines": ["Villa C01"],
+    "defaultAmount": 335,
+    "invoicePrefix": "JV",
+    "nextSequence": 0
+  },
+  {
+    "id": "lachman-corp",
+    "displayName": "Lachman Corp",
+    "billToName": "Custom Design of Sarasota",
+    "billToLines": [],
+    "defaultAmount": 180,
+    "invoicePrefix": "LC",
+    "nextSequence": 0
+  },
+  {
+    "id": "mango-venice",
+    "displayName": "Mango Venice",
+    "billToName": "Linda Tolar",
+    "billToLines": ["302 Mango Av", "Venice, FL 34285"],
+    "defaultAmount": 180,
+    "invoicePrefix": "MV",
+    "nextSequence": 1
+  },
+  {
+    "id": "nokomis",
+    "displayName": "Nokomis",
+    "billToName": "Justyna Olkiewicz",
+    "billToLines": [],
+    "defaultAmount": 180,
+    "invoicePrefix": "NO",
+    "nextSequence": 0
+  },
+  {
+    "id": "o-connor-building",
+    "displayName": "O'Connor Building",
+    "billToName": "Coastal Mold and Water Removal",
+    "billToLines": [],
+    "defaultAmount": 180,
+    "invoicePrefix": "CM",
+    "nextSequence": 0
+  },
+  {
+    "id": "office",
+    "displayName": "Office",
+    "billToName": "Joan Wiley",
+    "billToLines": ["1446 Sailview Place", "Sarasota, FL"],
+    "defaultAmount": 180,
+    "invoicePrefix": "OF",
+    "nextSequence": 0
+  },
+  {
+    "id": "palm-bay-24",
+    "displayName": "Palm Bay 24",
+    "billToName": "Apartment 24",
+    "billToLines": [],
+    "defaultAmount": 110,
+    "invoicePrefix": "P4",
+    "nextSequence": 0
+  },
+  {
+    "id": "palm-bay-54",
+    "displayName": "Palm Bay 54",
+    "billToName": "Palm Bay",
+    "billToLines": [],
+    "defaultAmount": 120,
+    "invoicePrefix": "P5",
+    "nextSequence": 0
+  },
+  {
+    "id": "sailview-place",
+    "displayName": "Sailview Place",
+    "billToName": "Lachman Corp",
+    "billToLines": ["1101 Tamiami Trail South, Ste. 102N", "Venice, FL"],
+    "defaultAmount": 180,
+    "invoicePrefix": "SV",
+    "nextSequence": 0
+  }
+]

@@ -38,11 +38,11 @@
     "ffmpeg-static": "^5.2.0",
     "jsonrepair": "^3.12.0",
     "youtube-transcript": "^1.2.1",
-    "form-data": "^4.0.4"
+    "form-data": "^4.0.4",
+    "puppeteer": "^24.9.0"
   },
   "optionalDependencies": {
-    "playwright": "^1.47.0",
-    "puppeteer": "^24.9.0"
+    "playwright": "^1.47.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
