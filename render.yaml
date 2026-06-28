@@ -9,7 +9,7 @@ services:
   - type: web
     name: lab007-unified-services
     env: node
-    buildCommand: git submodule update --init --recursive && npm install --no-optional && npx puppeteer browsers install chrome
+    buildCommand: git submodule update --init --recursive && npm install --no-optional && npm run install-browsers
     startCommand: npm start
     plan: free
     envVars:
@@ -26,3 +26,7 @@ services:
         value: /var/data/lab007/GGPPI/uploads
       - key: ELITE_INVOICES_DATA_DIR
         value: /var/data/lab007/elite-invoices
+      - key: PUPPETEER_CACHE_DIR
+        value: /opt/render/.cache/puppeteer
+      - key: PLAYWRIGHT_BROWSERS_PATH
+        value: /opt/render/.cache/ms-playwright

@@ -5861,9 +5861,6 @@ function writeEliteInvoiceHistory(invoices) {
 
 async function getEliteInvoicePdfBuffer(invoice) {
   const pdfPath = invoicePdfPath(eliteInvoicesPdfDir, invoice.invoiceNumber);
-  if (fs.existsSync(pdfPath)) {
-    return fs.readFileSync(pdfPath);
-  }
   const pdfBuffer = await buildInvoicePdf(invoiceToPdfPayload(invoice));
   fs.writeFileSync(pdfPath, pdfBuffer);
   return pdfBuffer;
