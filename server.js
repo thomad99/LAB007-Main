@@ -6024,8 +6024,13 @@ function requireEliteInvoicesAuth(req, res, next) {
   }
 
   const idx = decoded.indexOf(':');
+  const gotUser = idx >= 0 ? decoded.slice(0, idx) : decoded;
   const gotPass = idx >= 0 ? decoded.slice(idx + 1) : '';
-  if (gotPass !== expectedPass) {
+  const passwordOk =
+    gotPass === expectedPass ||
+    gotUser === expectedPass ||
+    decoded === expectedPass;
+  if (!passwordOk) {
     res.setHeader('WWW-Authenticate', 'Basic realm="Elite Invoices"');
     return res.status(401).send('Authentication required');
   }
@@ -6033,8 +6038,6 @@ function requireEliteInvoicesAuth(req, res, next) {
   next();
 }
 
-app.use('/Elite-Invoices', requireEliteInvoicesAuth);
-app.use('/elite-invoices', requireEliteInvoicesAuth);
 app.use('/api/elite-invoices', requireEliteInvoicesAuth);
 
 app.get('/Elite-Invoices', (req, res) => {

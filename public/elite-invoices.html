@@ -194,6 +194,52 @@
       text-align: center;
       color: var(--muted);
     }
+    .login-gate {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .login-card {
+      width: min(380px, 100%);
+      padding: 28px 24px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(21, 21, 21, .95);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .35);
+      text-align: center;
+    }
+    .login-card h2 {
+      margin: 0 0 8px;
+      font-family: Georgia, "Times New Roman", serif;
+      color: var(--soft-gold);
+    }
+    .login-card p {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: .92rem;
+    }
+    .login-card form {
+      display: grid;
+      gap: 12px;
+    }
+    .login-card input[type="password"] {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(215, 173, 75, .25);
+      background: #0d0d0d;
+      color: var(--text);
+      font: inherit;
+    }
+    .login-error {
+      min-height: 20px;
+      margin: 12px 0 0;
+      color: var(--unpaid);
+      font-size: .88rem;
+    }
+    .hidden { display: none !important; }
     @media (max-width: 720px) {
       .wrap { padding-top: 64px; }
       header { align-items: flex-start; }
@@ -201,6 +247,19 @@
   </style>
 </head>
 <body>
+  <div id="loginGate" class="login-gate">
+    <div class="login-card">
+      <h2>Elite Invoices</h2>
+      <p>Enter password to continue.</p>
+      <form id="loginForm">
+        <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Password" required>
+        <button type="submit" class="btn">Enter</button>
+      </form>
+      <p id="loginError" class="login-error" role="alert"></p>
+    </div>
+  </div>
+
+  <div id="appContent" class="hidden">
   <div class="wrap">
     <header>
       <div class="brand">
@@ -292,10 +351,17 @@
       </p>
     </section>
   </div>
+  </div>
 
   <script src="/lab007-site-nav.js" defer></script>
   <script>
     (function () {
+      const AUTH_KEY = 'eliteInvoicesPassword';
+      const loginGate = document.getElementById('loginGate');
+      const loginForm = document.getElementById('loginForm');
+      const loginPassword = document.getElementById('loginPassword');
+      const loginError = document.getElementById('loginError');
+      const appContent = document.getElementById('appContent');
       const rowsEl = document.getElementById('clientRows');
       const invoiceRowsEl = document.getElementById('invoiceRows');
       const statusEl = document.getElementById('status');
@@ -311,6 +377,65 @@
       const refreshInvoicesBtn = document.getElementById('refreshInvoicesBtn');
       let clients = [];
       let invoices = [];
+
+      function authHeaderValue() {
+        const password = sessionStorage.getItem(AUTH_KEY);
+        if (!password) return null;
+        return 'Basic ' + btoa(`elite:${password}`);
+      }
+
+      function apiFetch(url, options) {
+        const opts = options || {};
+        const headers = Object.assign({}, opts.headers || {});
+        const auth = authHeaderValue();
+        if (auth) headers.Authorization = auth;
+        return fetch(url, Object.assign({}, opts, { headers, credentials: 'include' }));
+      }
+
+      function showApp() {
+        loginGate.classList.add('hidden');
+        appContent.classList.remove('hidden');
+      }
+
+      function showLogin(message) {
+        loginGate.classList.remove('hidden');
+        appContent.classList.add('hidden');
+        loginError.textContent = message || '';
+      }
+
+      async function verifyPassword(password) {
+        const res = await fetch('/api/elite-invoices/clients', {
+          headers: { Authorization: 'Basic ' + btoa(`elite:${password}`) },
+          credentials: 'include'
+        });
+        if (res.status === 401) return false;
+        if (!res.ok) throw new Error('Could not verify password.');
+        return true;
+      }
+
+      async function startSession(password) {
+        const ok = await verifyPassword(password);
+        if (!ok) return false;
+        sessionStorage.setItem(AUTH_KEY, password);
+        showApp();
+        await loadClients();
+        return true;
+      }
+
+      loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        loginError.textContent = '';
+        const password = loginPassword.value;
+        try {
+          const ok = await startSession(password);
+          if (!ok) {
+            loginError.textContent = 'Wrong password. Try again.';
+            loginPassword.select();
+          }
+        } catch (err) {
+          loginError.textContent = err.message || 'Login failed.';
+        }
+      });
 
       function setStatus(msg, isError) {
         statusEl.textContent = msg || '';
@@ -440,7 +565,12 @@
 
       async function loadClients() {
         setStatus('Loading clients...');
-        const res = await fetch('/api/elite-invoices/clients');
+        const res = await apiFetch('/api/elite-invoices/clients');
+        if (res.status === 401) {
+          sessionStorage.removeItem(AUTH_KEY);
+          showLogin('Session expired. Enter password again.');
+          return;
+        }
         if (!res.ok) throw new Error('Failed to load clients');
         clients = await res.json();
         renderClientRows();
@@ -452,7 +582,12 @@
         if (filterClient.value) params.set('clientId', filterClient.value);
         if (filterPaid.value) params.set('paid', filterPaid.value);
         if (filterSearch.value.trim()) params.set('q', filterSearch.value.trim());
-        const res = await fetch('/api/elite-invoices/invoices?' + params.toString());
+        const res = await apiFetch('/api/elite-invoices/invoices?' + params.toString());
+        if (res.status === 401) {
+          sessionStorage.removeItem(AUTH_KEY);
+          showLogin('Session expired. Enter password again.');
+          return;
+        }
         if (!res.ok) throw new Error('Failed to load invoices');
         invoices = await res.json();
         renderInvoiceRows();
@@ -461,7 +596,7 @@
       async function saveClients() {
         clients = Array.from(rowsEl.querySelectorAll('tr')).map(readRow);
         setStatus('Saving...');
-        const res = await fetch('/api/elite-invoices/clients', {
+        const res = await apiFetch('/api/elite-invoices/clients', {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(clients)
@@ -475,7 +610,12 @@
       }
 
       async function downloadPdf(url, filename) {
-        const res = await fetch(url);
+        const res = await apiFetch(url);
+        if (res.status === 401) {
+          sessionStorage.removeItem(AUTH_KEY);
+          showLogin('Session expired. Enter password again.');
+          throw new Error('Session expired.');
+        }
         if (!res.ok) {
           const err = await res.json().catch(() => ({}));
           throw new Error(err.error || 'Download failed');
@@ -540,7 +680,7 @@
         button.disabled = true;
         setStatus(`Creating invoice for ${payload.displayName || payload.billToName}...`);
         try {
-          const res = await fetch('/api/elite-invoices/create', {
+          const res = await apiFetch('/api/elite-invoices/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ clientId, client: payload })
@@ -577,7 +717,7 @@
         button.disabled = true;
         setStatus(`Creating invoice for ${payload.email}...`);
         try {
-          const res = await fetch('/api/elite-invoices/create', {
+          const res = await apiFetch('/api/elite-invoices/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ clientId, client: payload })
@@ -633,7 +773,7 @@
         if (!invoice) return;
         button.disabled = true;
         try {
-          const res = await fetch('/api/elite-invoices/invoices/' + encodeURIComponent(invoiceId), {
+          const res = await apiFetch('/api/elite-invoices/invoices/' + encodeURIComponent(invoiceId), {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ paid: !invoice.paid })
@@ -659,7 +799,7 @@
         }
         button.disabled = true;
         try {
-          const res = await fetch('/api/elite-invoices/invoices/' + encodeURIComponent(invoiceId), {
+          const res = await apiFetch('/api/elite-invoices/invoices/' + encodeURIComponent(invoiceId), {
             method: 'DELETE'
           });
           const data = await res.json().catch(() => ({}));
@@ -707,7 +847,16 @@
         }, 250);
       });
 
-      loadClients().catch((err) => setStatus(err.message, true));
+      const savedPassword = sessionStorage.getItem(AUTH_KEY);
+      if (savedPassword) {
+        startSession(savedPassword).catch((err) => {
+          sessionStorage.removeItem(AUTH_KEY);
+          showLogin(err.message || 'Login failed.');
+        });
+      } else {
+        showLogin('');
+        loginPassword.focus();
+      }
     })();
   </script>
 </body>
