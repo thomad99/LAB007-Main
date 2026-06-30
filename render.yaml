@@ -24,6 +24,8 @@ services:
         value: /var/data/lab007/GGPPI
       - key: GGPPI_UPLOAD_DIR
         value: /var/data/lab007/GGPPI/uploads
+      - key: LAB007_DATA_DIR
+        value: /var/data/lab007
       - key: ELITE_INVOICES_DATA_DIR
         value: /var/data/lab007/elite-invoices
       - key: PUPPETEER_CACHE_DIR

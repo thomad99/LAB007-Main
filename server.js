@@ -5823,9 +5823,14 @@ app.get('/elite-cleaning.html', (req, res) => {
 });
 
 // Elite Invoices — cleaning client invoice generator
-const eliteInvoicesDataDir = process.env.ELITE_INVOICES_DATA_DIR
-  ? path.resolve(process.env.ELITE_INVOICES_DATA_DIR)
-  : path.join(__dirname, 'data', 'elite-invoices');
+// Set LAB007_DATA_DIR=/var/data/lab007 (Render disk) or ELITE_INVOICES_DATA_DIR for a custom folder.
+const eliteInvoicesDataDir = (() => {
+  const explicit = String(process.env.ELITE_INVOICES_DATA_DIR || '').trim();
+  if (explicit) return path.resolve(explicit);
+  const diskRoot = String(process.env.LAB007_DATA_DIR || process.env.LAB007_DISK_ROOT || '').trim();
+  if (diskRoot) return path.join(path.resolve(diskRoot), 'elite-invoices');
+  return path.join(__dirname, 'data', 'elite-invoices');
+})();
 const eliteInvoicesClientsPath = eliteInvoicesDataPath(eliteInvoicesDataDir);
 const eliteInvoicesHistoryFile = eliteInvoicesHistoryPath(eliteInvoicesDataDir);
 const eliteInvoicesPdfDir = eliteInvoicesPdfsDir(eliteInvoicesDataDir);
@@ -5843,6 +5848,9 @@ if (!fs.existsSync(eliteInvoicesHistoryFile)) {
 }
 
 console.log('[EliteInvoices] data dir:', eliteInvoicesDataDir);
+if (process.env.LAB007_DATA_DIR) {
+  console.log('[EliteInvoices] LAB007_DATA_DIR:', process.env.LAB007_DATA_DIR);
+}
 
 function readEliteInvoiceClients() {
   return loadEliteInvoiceClients(eliteInvoicesClientsPath, eliteInvoicesSeedPath());
