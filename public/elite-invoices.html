@@ -241,7 +241,7 @@
       </div>
       <p class="hint">
         Invoice numbers use your prefix plus a dash and 4-digit counter (for example MV-0000, MV-0001, ELITE-0002).
-        Use <strong>Add Client</strong> for new customers, then <strong>Save Changes</strong>. Use <strong>Email</strong> to send the PDF to the client.
+        Use <strong>Add Client</strong> for new customers, then <strong>Save Changes</strong>. Use <strong>Email</strong> to create the invoice, open your email app with a template message, and download the PDF to attach.
       </p>
     </section>
 
@@ -491,6 +491,48 @@
         URL.revokeObjectURL(objectUrl);
       }
 
+      function buildInvoiceEmailBody() {
+        return 'Hi,\n\nPlease see invoice attached.\n\nKind Regards\nPetra';
+      }
+
+      function downloadInvoiceBlob(blob, invoiceNumber) {
+        const filename = `${invoiceNumber}.pdf`;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        return filename;
+      }
+
+      async function openInvoiceEmailClient(to, invoiceNumber, pdfBlob) {
+        const subject = `Invoice ${invoiceNumber}`;
+        const body = buildInvoiceEmailBody();
+        const filename = `${invoiceNumber}.pdf`;
+        const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+
+        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+          try {
+            await navigator.share({
+              files: [file],
+              title: subject,
+              text: body
+            });
+            return 'share';
+          } catch (err) {
+            if (err && err.name === 'AbortError') throw err;
+          }
+        }
+
+        downloadInvoiceBlob(pdfBlob, invoiceNumber);
+        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+        window.location.href = mailto;
+        return 'mailto';
+      }
+
       async function createInvoice(clientId, button) {
         const row = rowsEl.querySelector(`tr[data-id="${clientId}"]`);
         if (!row) return;
@@ -509,14 +551,7 @@
           }
           const invoiceNumber = res.headers.get('X-Invoice-Number') || 'invoice';
           const blob = await res.blob();
-          const url = URL.createObjectURL(blob);
-          const a = document.createElement('a');
-          a.href = url;
-          a.download = `${invoiceNumber}.pdf`;
-          document.body.appendChild(a);
-          a.click();
-          a.remove();
-          URL.revokeObjectURL(url);
+          downloadInvoiceBlob(blob, invoiceNumber);
 
           const nextSeq = res.headers.get('X-Next-Sequence');
           if (nextSeq != null) {
@@ -540,23 +575,39 @@
           return;
         }
         button.disabled = true;
-        setStatus(`Creating and emailing invoice to ${payload.email}...`);
+        setStatus(`Creating invoice for ${payload.email}...`);
         try {
-          const res = await fetch('/api/elite-invoices/create-and-email', {
+          const res = await fetch('/api/elite-invoices/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ clientId, client: payload })
           });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.error || 'Invoice email failed');
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Invoice creation failed');
+          }
 
-          if (data.nextSequence != null) {
-            row.querySelector('[data-field="nextSequence"]').value = data.nextSequence;
+          const invoiceNumber = res.headers.get('X-Invoice-Number') || 'invoice';
+          const blob = await res.blob();
+          const method = await openInvoiceEmailClient(payload.email, invoiceNumber, blob);
+
+          const nextSeq = res.headers.get('X-Next-Sequence');
+          if (nextSeq != null) {
+            row.querySelector('[data-field="nextSequence"]').value = nextSeq;
           }
           await loadClients();
-          setStatus(`Emailed ${data.invoiceNumber}.pdf to ${data.emailedTo}.`);
+
+          if (method === 'share') {
+            setStatus(`Invoice ${invoiceNumber}.pdf ready to send to ${payload.email}.`);
+          } else {
+            setStatus(`Invoice ${invoiceNumber}.pdf downloaded. Attach it to the email that opened for ${payload.email}.`);
+          }
         } catch (err) {
-          setStatus(err.message || 'Invoice email failed', true);
+          if (err && err.name === 'AbortError') {
+            setStatus('Email cancelled.');
+          } else {
+            setStatus(err.message || 'Invoice email failed', true);
+          }
         } finally {
           button.disabled = false;
         }
