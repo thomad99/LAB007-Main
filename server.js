@@ -6009,18 +6009,21 @@ function requireEliteInvoicesAuth(req, res, next) {
   if (!eliteInvoicesAuthRequired()) return next();
 
   const expectedPass = String(process.env.ELITE_INVOICES_AUTH_PASS || 'danger').trim();
+  const customPass = String(req.get('x-elite-invoices-password') || '').trim();
+  if (customPass && customPass === expectedPass) {
+    return next();
+  }
+
   const header = String(req.get('authorization') || '');
   if (!header.startsWith('Basic ')) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Elite Invoices"');
-    return res.status(401).send('Authentication required');
+    return res.status(401).json({ error: 'Authentication required' });
   }
 
   let decoded = '';
   try {
     decoded = Buffer.from(header.slice(6), 'base64').toString('utf8');
   } catch {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Elite Invoices"');
-    return res.status(401).send('Authentication required');
+    return res.status(401).json({ error: 'Authentication required' });
   }
 
   const idx = decoded.indexOf(':');
@@ -6031,8 +6034,7 @@ function requireEliteInvoicesAuth(req, res, next) {
     gotUser === expectedPass ||
     decoded === expectedPass;
   if (!passwordOk) {
-    res.setHeader('WWW-Authenticate', 'Basic realm="Elite Invoices"');
-    return res.status(401).send('Authentication required');
+    return res.status(401).json({ error: 'Authentication required' });
   }
 
   next();

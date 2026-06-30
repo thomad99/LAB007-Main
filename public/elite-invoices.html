@@ -378,18 +378,16 @@
       let clients = [];
       let invoices = [];
 
-      function authHeaderValue() {
+      function authHeaders() {
         const password = sessionStorage.getItem(AUTH_KEY);
-        if (!password) return null;
-        return 'Basic ' + btoa(`elite:${password}`);
+        if (!password) return {};
+        return { 'X-Elite-Invoices-Password': password };
       }
 
       function apiFetch(url, options) {
         const opts = options || {};
-        const headers = Object.assign({}, opts.headers || {});
-        const auth = authHeaderValue();
-        if (auth) headers.Authorization = auth;
-        return fetch(url, Object.assign({}, opts, { headers, credentials: 'include' }));
+        const headers = Object.assign({}, opts.headers || {}, authHeaders());
+        return fetch(url, Object.assign({}, opts, { headers, credentials: 'omit' }));
       }
 
       function showApp() {
@@ -405,8 +403,8 @@
 
       async function verifyPassword(password) {
         const res = await fetch('/api/elite-invoices/clients', {
-          headers: { Authorization: 'Basic ' + btoa(`elite:${password}`) },
-          credentials: 'include'
+          headers: { 'X-Elite-Invoices-Password': password },
+          credentials: 'omit'
         });
         if (res.status === 401) return false;
         if (!res.ok) throw new Error('Could not verify password.');
@@ -425,7 +423,7 @@
       loginForm.addEventListener('submit', async (event) => {
         event.preventDefault();
         loginError.textContent = '';
-        const password = loginPassword.value;
+        const password = loginPassword.value.trim();
         try {
           const ok = await startSession(password);
           if (!ok) {
