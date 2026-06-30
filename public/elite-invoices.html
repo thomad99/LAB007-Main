@@ -213,6 +213,7 @@
       <div class="toolbar">
         <button type="button" class="btn-secondary active" id="clientsTab">Clients</button>
         <button type="button" class="btn-secondary" id="invoicesTab">View Invoices</button>
+        <button type="button" class="btn" id="addClientBtn">Add Client</button>
         <button type="button" class="btn-secondary" id="saveBtn">Save Changes</button>
         <a class="btn-link" href="/elite-cleaning">Back to Elite Cleaning</a>
       </div>
@@ -240,7 +241,7 @@
       </div>
       <p class="hint">
         Invoice numbers use your prefix plus a dash and 4-digit counter (for example MV-0000, MV-0001, ELITE-0002).
-        Use <strong>Email</strong> to create an invoice and send it to the client address with the PDF attached.
+        Use <strong>Add Client</strong> for new customers, then <strong>Save Changes</strong>. Use <strong>Email</strong> to send the PDF to the client.
       </p>
     </section>
 
@@ -299,6 +300,7 @@
       const invoiceRowsEl = document.getElementById('invoiceRows');
       const statusEl = document.getElementById('status');
       const saveBtn = document.getElementById('saveBtn');
+      const addClientBtn = document.getElementById('addClientBtn');
       const clientsTab = document.getElementById('clientsTab');
       const invoicesTab = document.getElementById('invoicesTab');
       const clientsPanel = document.getElementById('clientsPanel');
@@ -334,8 +336,33 @@
         clientsTab.classList.toggle('active', isClients);
         invoicesTab.classList.toggle('active', !isClients);
         saveBtn.style.display = isClients ? '' : 'none';
+        addClientBtn.style.display = isClients ? '' : 'none';
         if (!isClients) loadInvoices().catch((err) => setStatus(err.message, true));
       }
+
+      function addClient() {
+        const id = 'client-' + Date.now().toString(36);
+        clients.push({
+          id,
+          displayName: 'New Client',
+          billToName: '',
+          billToLines: [],
+          email: '',
+          defaultAmount: 0,
+          invoicePrefix: '',
+          nextSequence: 0
+        });
+        renderClientRows();
+        const row = rowsEl.querySelector(`tr[data-id="${id}"]`);
+        if (row) {
+          row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          const nameInput = row.querySelector('[data-field="displayName"]');
+          if (nameInput) {
+            nameInput.focus();
+            nameInput.select();
+          }
+        }
+        setStatus('New client added. Fill in details and click Save Changes.');
 
       function readRow(row) {
         return {
@@ -617,6 +644,7 @@
 
       clientsTab.addEventListener('click', () => showPanel('clients'));
       invoicesTab.addEventListener('click', () => showPanel('invoices'));
+      addClientBtn.addEventListener('click', addClient);
       saveBtn.addEventListener('click', () => saveClients().catch((err) => setStatus(err.message, true)));
       refreshInvoicesBtn.addEventListener('click', () => loadInvoices().catch((err) => setStatus(err.message, true)));
       filterClient.addEventListener('change', () => loadInvoices().catch((err) => setStatus(err.message, true)));

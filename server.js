@@ -5999,14 +5999,43 @@ function eliteInvoicesNoIndexHeaders(res) {
   res.setHeader('Cache-Control', 'private, no-store');
 }
 
-function eliteInvoicesNoIndexMiddleware(req, res, next) {
+function eliteInvoicesAuthRequired() {
+  const v = String(process.env.ELITE_INVOICES_AUTH_REQUIRED || 'true').toLowerCase();
+  return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
+}
+
+function requireEliteInvoicesAuth(req, res, next) {
   eliteInvoicesNoIndexHeaders(res);
+  if (!eliteInvoicesAuthRequired()) return next();
+
+  const expectedPass = String(process.env.ELITE_INVOICES_AUTH_PASS || 'danger').trim();
+  const header = String(req.get('authorization') || '');
+  if (!header.startsWith('Basic ')) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Elite Invoices"');
+    return res.status(401).send('Authentication required');
+  }
+
+  let decoded = '';
+  try {
+    decoded = Buffer.from(header.slice(6), 'base64').toString('utf8');
+  } catch {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Elite Invoices"');
+    return res.status(401).send('Authentication required');
+  }
+
+  const idx = decoded.indexOf(':');
+  const gotPass = idx >= 0 ? decoded.slice(idx + 1) : '';
+  if (gotPass !== expectedPass) {
+    res.setHeader('WWW-Authenticate', 'Basic realm="Elite Invoices"');
+    return res.status(401).send('Authentication required');
+  }
+
   next();
 }
 
-app.use('/Elite-Invoices', eliteInvoicesNoIndexMiddleware);
-app.use('/elite-invoices', eliteInvoicesNoIndexMiddleware);
-app.use('/api/elite-invoices', eliteInvoicesNoIndexMiddleware);
+app.use('/Elite-Invoices', requireEliteInvoicesAuth);
+app.use('/elite-invoices', requireEliteInvoicesAuth);
+app.use('/api/elite-invoices', requireEliteInvoicesAuth);
 
 app.get('/Elite-Invoices', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'elite-invoices.html'));
