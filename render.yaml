@@ -30,3 +30,5 @@ services:
         value: /opt/render/.cache/puppeteer
       - key: PLAYWRIGHT_BROWSERS_PATH
         value: /opt/render/.cache/ms-playwright
+      - key: ELITE_INVOICES_AUTH_PASS
+        sync: false

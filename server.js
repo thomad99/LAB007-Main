@@ -6042,6 +6042,13 @@ function requireEliteInvoicesAuth(req, res, next) {
 
 app.use('/api/elite-invoices', requireEliteInvoicesAuth);
 
+console.log(
+  '[EliteInvoices] auth:',
+  eliteInvoicesAuthRequired()
+    ? (process.env.ELITE_INVOICES_AUTH_PASS ? 'enabled (from ELITE_INVOICES_AUTH_PASS)' : 'enabled (default password)')
+    : 'disabled'
+);
+
 app.get('/Elite-Invoices', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'elite-invoices.html'));
 });
