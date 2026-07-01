@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-SDLJQHH25Q"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-SDLJQHH25Q');
+  </script>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Elite Cleaners 2 | Elite Cleaning Services</title>
+  <meta name="description" content="Elite Cleaning Services — a higher standard of clean. Residential, rental turnover, deep cleaning, and custom solutions in Sarasota, Florida.">
+  <link rel="icon" type="image/png" sizes="32x32" href="/elite-cleaning-assets/elite-cleaning-favicon-32.png">
+  <link rel="canonical" href="https://lab007.ai/elite-cleaners-2">
+  <style>
+    :root {
+      --black: #050505;
+      --gold: #c8a951;
+      --gold-soft: #e2c878;
+      --white: #ffffff;
+      --muted: rgba(255, 255, 255, .82);
+      --line: rgba(200, 169, 81, .55);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Arial, sans-serif;
+      color: var(--white);
+      background: var(--black);
+    }
+
+    .flyer {
+      max-width: 1100px;
+      margin: 0 auto;
+      background: var(--black);
+      overflow: hidden;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: 1fr 1.05fr;
+      min-height: 420px;
+      position: relative;
+    }
+
+    .hero-left {
+      padding: 42px 36px 36px 40px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      z-index: 2;
+    }
+
+    .brand-title {
+      margin: 0;
+      font-size: clamp(2.4rem, 4vw, 3.4rem);
+      font-weight: 300;
+      letter-spacing: .28em;
+      line-height: 1;
+    }
+
+    .brand-sub {
+      margin: 8px 0 0;
+      font-size: .95rem;
+      letter-spacing: .42em;
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    .tool-icons {
+      display: flex;
+      gap: 18px;
+      margin: 22px 0 0;
+      color: var(--gold);
+    }
+
+    .tool-icons svg {
+      width: 34px;
+      height: 34px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.6;
+    }
+
+    .hero-rule {
+      border: 0;
+      border-top: 1px solid var(--line);
+      margin: 28px 0 24px;
+      width: 100%;
+    }
+
+    .hero-headline {
+      margin: 0;
+      font-size: clamp(1.85rem, 3.2vw, 2.55rem);
+      font-weight: 800;
+      letter-spacing: .06em;
+      line-height: 1.08;
+    }
+
+    .hero-headline .gold { color: var(--gold); }
+
+    .hero-copy {
+      margin: 18px 0 0;
+      max-width: 360px;
+      font-size: .98rem;
+      line-height: 1.55;
+      color: var(--muted);
+    }
+
+    .hero-right {
+      position: relative;
+      min-height: 320px;
+    }
+
+    .hero-photo-wrap {
+      position: absolute;
+      inset: 0 0 0 8%;
+      clip-path: ellipse(88% 92% at 72% 48%);
+      border: 3px solid var(--gold);
+      overflow: hidden;
+      background: #111;
+    }
+
+    .hero-photo {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      object-position: center;
+      display: block;
+    }
+
+    .section-title {
+      text-align: center;
+      margin: 0;
+      padding: 36px 20px 28px;
+      font-size: 1.15rem;
+      letter-spacing: .22em;
+      color: var(--gold);
+      font-weight: 700;
+      border-top: 1px solid var(--line);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .services {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      padding: 28px 24px 34px;
+    }
+
+    .service {
+      padding: 12px 16px;
+      text-align: center;
+    }
+
+    .service svg {
+      width: 42px;
+      height: 42px;
+      stroke: var(--gold);
+      fill: none;
+      stroke-width: 1.5;
+      margin-bottom: 12px;
+    }
+
+    .service h3 {
+      margin: 0 0 10px;
+      font-size: .78rem;
+      letter-spacing: .08em;
+      line-height: 1.35;
+    }
+
+    .service p {
+      margin: 0;
+      font-size: .78rem;
+      line-height: 1.45;
+      color: var(--muted);
+      max-width: 180px;
+      margin-inline: auto;
+    }
+
+    .trust-box {
+      margin: 0 28px 32px;
+      border: 1px solid var(--line);
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 0;
+      padding: 22px 12px;
+    }
+
+    .trust-item {
+      padding: 8px 14px;
+      text-align: center;
+    }
+
+    .trust-item svg {
+      width: 36px;
+      height: 36px;
+      stroke: var(--gold);
+      fill: none;
+      stroke-width: 1.5;
+      margin-bottom: 10px;
+    }
+
+    .trust-item h3 {
+      margin: 0 0 8px;
+      font-size: .74rem;
+      letter-spacing: .06em;
+    }
+
+    .trust-item p {
+      margin: 0;
+      font-size: .74rem;
+      line-height: 1.4;
+      color: var(--muted);
+    }
+
+    .trust-item a {
+      color: inherit;
+      text-decoration: none;
+      border-bottom: 1px solid rgba(200, 169, 81, .45);
+    }
+
+    .trust-item a:hover { color: var(--gold-soft); }
+
+    .footer-grid {
+      display: grid;
+      grid-template-columns: 1fr 1.1fr;
+      gap: 24px;
+      padding: 8px 36px 28px;
+      align-items: end;
+    }
+
+    .footer-tagline .line1 {
+      margin: 0;
+      font-size: clamp(1.5rem, 2.8vw, 2rem);
+      font-weight: 800;
+      letter-spacing: .04em;
+      color: var(--gold);
+    }
+
+    .footer-tagline .line2 {
+      margin: 0;
+      font-size: clamp(1.5rem, 2.8vw, 2rem);
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+
+    .footer-tagline .sub {
+      margin: 14px 0 0;
+      font-size: .88rem;
+      color: var(--muted);
+      max-width: 320px;
+      line-height: 1.5;
+    }
+
+    .contact-block {
+      text-align: left;
+    }
+
+    .quote-label {
+      margin: 0 0 6px;
+      font-size: .72rem;
+      letter-spacing: .12em;
+      color: var(--gold);
+      font-weight: 700;
+    }
+
+    .phone-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .phone-row svg {
+      width: 28px;
+      height: 28px;
+      stroke: var(--gold);
+      fill: none;
+      stroke-width: 1.6;
+      flex-shrink: 0;
+    }
+
+    .phone-row a {
+      color: var(--white);
+      text-decoration: none;
+      font-size: clamp(1.35rem, 2.5vw, 1.85rem);
+      font-weight: 800;
+      letter-spacing: .04em;
+    }
+
+    .contact-line {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 8px 0;
+      font-size: .88rem;
+      color: var(--muted);
+    }
+
+    .contact-line svg {
+      width: 20px;
+      height: 20px;
+      stroke: var(--gold);
+      fill: none;
+      stroke-width: 1.5;
+      flex-shrink: 0;
+    }
+
+    .contact-line a {
+      color: var(--white);
+      text-decoration: none;
+    }
+
+    .contact-line a:hover { color: var(--gold-soft); }
+
+    .bottom-bar {
+      background: var(--gold);
+      color: #111;
+      text-align: center;
+      padding: 10px 16px;
+      font-size: .82rem;
+      font-weight: 800;
+      letter-spacing: .18em;
+    }
+
+    @media (max-width: 900px) {
+      .hero {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-right {
+        min-height: 280px;
+        order: -1;
+      }
+
+      .hero-photo-wrap {
+        inset: 0;
+        clip-path: none;
+        border-left: 0;
+        border-right: 0;
+        border-top: 0;
+      }
+
+      .services,
+      .trust-box {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .footer-grid {
+        grid-template-columns: 1fr;
+        padding-inline: 24px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .services,
+      .trust-box {
+        grid-template-columns: 1fr;
+      }
+
+      .hero-left {
+        padding: 28px 20px;
+      }
+
+      .trust-box {
+        margin-inline: 16px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="flyer">
+    <section class="hero">
+      <div class="hero-left">
+        <p class="brand-title">ELITE</p>
+        <p class="brand-sub">CLEANING SERVICES</p>
+        <div class="tool-icons" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V8l6-4 6 4v12"/><path d="M9 12h6"/></svg>
+          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="14" rx="8" ry="5"/><path d="M8 14c0-3 2-5 4-5s4 2 4 5"/></svg>
+          <svg viewBox="0 0 24 24"><rect x="8" y="4" width="8" height="16" rx="2"/><path d="M10 8h4M9 20h6"/></svg>
+          <svg viewBox="0 0 24 24"><path d="M4 10h16v10H4z"/><path d="M8 10V6h8v4"/><path d="M12 3v3"/></svg>
+        </div>
+        <hr class="hero-rule">
+        <h1 class="hero-headline">A HIGHER STANDARD<br><span class="gold">OF CLEAN.</span></h1>
+        <p class="hero-copy">Elite Cleaning Services delivers exceptional cleaning with attention to detail you can see and trust.</p>
+      </div>
+      <div class="hero-right">
+        <div class="hero-photo-wrap">
+          <img
+            class="hero-photo"
+            src="/elite-cleaning-assets/elite-cleaners-2-living-room.png"
+            alt="Bright, professionally cleaned modern living room"
+          >
+        </div>
+      </div>
+    </section>
+
+    <h2 class="section-title">OUR SERVICES</h2>
+    <section class="services" aria-label="Our services">
+      <article class="service">
+        <svg viewBox="0 0 24 24"><path d="M4 10h16v10H4z"/><path d="M8 10V7h8v3"/><path d="M12 4v3"/></svg>
+        <h3>RESIDENTIAL<br>CLEANING</h3>
+        <p>Keep your home spotless, fresh and comfortable.</p>
+      </article>
+      <article class="service">
+        <svg viewBox="0 0 24 24"><rect x="5" y="3" width="14" height="18" rx="1"/><path d="M9 7h6M9 11h6M9 15h4"/></svg>
+        <h3>RENTAL &amp; TURNOVER<br>CLEANING</h3>
+        <p>Move-in / move-out cleaning for property managers and owners.</p>
+      </article>
+      <article class="service">
+        <svg viewBox="0 0 24 24"><path d="M9 4h6v3H9z"/><path d="M10 7v13M14 7v13"/><path d="M8 20h8"/></svg>
+        <h3>DEEP<br>CLEANING</h3>
+        <p>Thorough top-to-bottom cleaning for a healthier, refreshed space.</p>
+      </article>
+      <article class="service">
+        <svg viewBox="0 0 24 24"><ellipse cx="12" cy="14" rx="8" ry="5"/><path d="M8 14c0-3 2-5 4-5s4 2 4 5"/></svg>
+        <h3>CUSTOM CLEANING<br>SOLUTIONS</h3>
+        <p>Tailored cleaning plans to fit your needs and schedule.</p>
+      </article>
+    </section>
+
+    <section class="trust-box" aria-label="Why choose us">
+      <article class="trust-item">
+        <svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M9 12l2 2 4-4"/></svg>
+        <h3>TRUSTED &amp;<br>RELIABLE</h3>
+        <p>Dependable service you can count on.</p>
+      </article>
+      <article class="trust-item">
+        <svg viewBox="0 0 24 24"><path d="M12 2l2 5 5 1-4 4 1 5-4-2-4 2 1-5-4-1 5-2z"/></svg>
+        <h3>ATTENTION TO<br>DETAIL</h3>
+        <p>We don't just clean, we perfect.</p>
+      </article>
+      <article class="trust-item">
+        <svg viewBox="0 0 24 24"><path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/></svg>
+        <h3><a href="https://portal.nextinsurance.com/public/certificates/live-certificate/bfef4c4ece621c236fdb00acd89e29ad" target="_blank" rel="noopener noreferrer">FULLY INSURED</a></h3>
+        <p>Your property is protected.</p>
+      </article>
+      <article class="trust-item">
+        <svg viewBox="0 0 24 24"><path d="M12 3c-4 4-6 7-6 10a6 6 0 0012 0c0-3-2-6-6-10z"/></svg>
+        <h3>QUALITY<br>PRODUCTS</h3>
+        <p>Safe for your home, family &amp; pets.</p>
+      </article>
+    </section>
+
+    <section class="footer-grid">
+      <div class="footer-tagline">
+        <p class="line1">CLEAN SPACES.</p>
+        <p class="line2">BETTER PLACES.</p>
+        <p class="sub">Let us take care of the cleaning, so you can enjoy what matters most.</p>
+      </div>
+      <div class="contact-block">
+        <p class="quote-label">GET YOUR FREE QUOTE TODAY!</p>
+        <div class="phone-row">
+          <svg viewBox="0 0 24 24"><path d="M6 4h4l2 5-3 2a11 11 0 005 5l2-3 5 2v4a2 2 0 01-2 2A16 16 0 014 6a2 2 0 012-2z"/></svg>
+          <a href="tel:+19412877237">941 287 7237</a>
+        </div>
+        <div class="contact-line">
+          <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/></svg>
+          <a href="mailto:petra@EliteCleaningServices.us">Petra@EliteCleaningServices.us</a>
+        </div>
+        <div class="contact-line">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 010 18M12 3a14 14 0 000 18"/></svg>
+          <span>Serving Sarasota &amp; Surrounding Areas</span>
+        </div>
+      </div>
+    </section>
+
+    <div class="bottom-bar">PROFESSIONAL. RELIABLE. ELITE.</div>
+  </main>
+  <script src="/lab007-site-nav.js" defer></script>
+</body>
+</html>

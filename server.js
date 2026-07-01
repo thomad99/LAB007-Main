@@ -5821,6 +5821,15 @@ app.get('/elite-cleaning', (req, res) => {
 app.get('/elite-cleaning.html', (req, res) => {
   res.redirect(301, '/elite-cleaning');
 });
+app.get('/elite-cleaners-2', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'elite-cleaners-2.html'));
+});
+app.get('/Elite-Cleaners-2', (req, res) => {
+  res.redirect(301, '/elite-cleaners-2');
+});
+app.get('/elite-cleaners-2.html', (req, res) => {
+  res.redirect(301, '/elite-cleaners-2');
+});
 
 // Elite Invoices — cleaning client invoice generator
 // Set LAB007_DATA_DIR=/var/data/lab007 (Render disk) or ELITE_INVOICES_DATA_DIR for a custom folder.

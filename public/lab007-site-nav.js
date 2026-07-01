@@ -7,6 +7,7 @@
     ['BUCK', 'https://buck-lab007.onrender.com/'],
     ['007Trade', '/007trade'],
     ['Elite Cleaning', '/elite-cleaning'],
+    ['Elite Cleaners 2', '/elite-cleaners-2'],
     ['Elite Invoices', '/Elite-Invoices'],
     ['Citrix-2-HZ', '/citrix'],
     ['Web-Alerts', '/webalert'],
@@ -32,9 +33,9 @@
   const menu = document.createElement('nav');
   menu.className = 'lab007Menu';
   menu.setAttribute('aria-label', 'LAB007 navigation');
-  const current = location.pathname.replace(/\/index\.html$/, '/').replace(/\/elite-cleaning\.html$/, '/elite-cleaning') || '/';
+  const current = location.pathname.replace(/\/index\.html$/, '/').replace(/\/elite-cleaning\.html$/, '/elite-cleaning').replace(/\/elite-cleaners-2\.html$/, '/elite-cleaners-2') || '/';
   menu.innerHTML = links.map(([label, href, icon]) => {
-    const isActive = href === current || (href === '/elite-cleaning' && current.startsWith('/elite-cleaning'));
+    const isActive = href === current || (href === '/elite-cleaning' && current.startsWith('/elite-cleaning')) || (href === '/elite-cleaners-2' && current.startsWith('/elite-cleaners-2'));
     return `<a href="${href}"${isActive ? ' class="active"' : ''}${href.startsWith('http') ? ' target="_blank" rel="noopener noreferrer"' : ''}>${icon ? `<img class="lab007MenuIcon" src="${icon}" alt="" loading="lazy">` : ''}<span>${label}</span></a>`;
   }).join('');
   button.addEventListener('click', (event) => { event.stopPropagation(); menu.classList.toggle('open'); });
