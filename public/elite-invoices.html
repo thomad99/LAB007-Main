@@ -647,13 +647,27 @@
         return filename;
       }
 
+      function buildMailtoUrl(to, subject, body) {
+        const recipient = String(to || '').trim();
+        const params = new URLSearchParams();
+        params.set('subject', subject);
+        params.set('body', body);
+        return `mailto:${recipient}?${params.toString()}`;
+      }
+
       async function openInvoiceEmailClient(to, invoiceNumber, pdfBlob) {
         const subject = `Invoice ${invoiceNumber}`;
         const body = buildInvoiceEmailBody();
         const filename = `${invoiceNumber}.pdf`;
         const file = new File([pdfBlob], filename, { type: 'application/pdf' });
+        const mailtoUrl = buildMailtoUrl(to, subject, body);
+        const canShareFiles =
+          navigator.share &&
+          navigator.canShare &&
+          navigator.canShare({ files: [file] }) &&
+          window.matchMedia('(pointer: coarse)').matches;
 
-        if (navigator.share && navigator.canShare && navigator.canShare({ files: [file] })) {
+        if (canShareFiles) {
           try {
             await navigator.share({
               files: [file],
@@ -667,8 +681,9 @@
         }
 
         downloadInvoiceBlob(pdfBlob, invoiceNumber);
-        const mailto = `mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
-        window.location.href = mailto;
+        window.setTimeout(() => {
+          window.location.assign(mailtoUrl);
+        }, 250);
         return 'mailto';
       }
 
