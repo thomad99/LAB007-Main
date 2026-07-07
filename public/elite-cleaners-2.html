@@ -55,35 +55,11 @@
       z-index: 2;
     }
 
-    .brand-title {
+    .brand-logo {
+      display: block;
+      width: min(100%, 300px);
+      height: auto;
       margin: 0;
-      font-size: clamp(2.4rem, 4vw, 3.4rem);
-      font-weight: 300;
-      letter-spacing: .28em;
-      line-height: 1;
-    }
-
-    .brand-sub {
-      margin: 8px 0 0;
-      font-size: .95rem;
-      letter-spacing: .42em;
-      color: var(--gold);
-      font-weight: 600;
-    }
-
-    .tool-icons {
-      display: flex;
-      gap: 18px;
-      margin: 22px 0 0;
-      color: var(--gold);
-    }
-
-    .tool-icons svg {
-      width: 34px;
-      height: 34px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 1.6;
     }
 
     .hero-rule {
@@ -118,9 +94,12 @@
 
     .hero-photo-wrap {
       position: absolute;
-      inset: 0 0 0 8%;
-      clip-path: ellipse(88% 92% at 72% 48%);
+      top: 12px;
+      right: 0;
+      bottom: 12px;
+      left: 6%;
       border: 3px solid var(--gold);
+      border-radius: 52% 0 0 52% / 48% 0 0 48%;
       overflow: hidden;
       background: #111;
     }
@@ -129,7 +108,7 @@
       width: 100%;
       height: 100%;
       object-fit: cover;
-      object-position: center;
+      object-position: 58% center;
       display: block;
     }
 
@@ -377,14 +356,11 @@
   <main class="flyer">
     <section class="hero">
       <div class="hero-left">
-        <p class="brand-title">ELITE</p>
-        <p class="brand-sub">CLEANING SERVICES</p>
-        <div class="tool-icons" aria-hidden="true">
-          <svg viewBox="0 0 24 24"><path d="M4 20h16M6 20V8l6-4 6 4v12"/><path d="M9 12h6"/></svg>
-          <svg viewBox="0 0 24 24"><ellipse cx="12" cy="14" rx="8" ry="5"/><path d="M8 14c0-3 2-5 4-5s4 2 4 5"/></svg>
-          <svg viewBox="0 0 24 24"><rect x="8" y="4" width="8" height="16" rx="2"/><path d="M10 8h4M9 20h6"/></svg>
-          <svg viewBox="0 0 24 24"><path d="M4 10h16v10H4z"/><path d="M8 10V6h8v4"/><path d="M12 3v3"/></svg>
-        </div>
+        <img
+          class="brand-logo"
+          src="/elite-cleaning-assets/elite-cleaners-2-logo.png"
+          alt="Elite Cleaning Services"
+        >
         <hr class="hero-rule">
         <h1 class="hero-headline">A HIGHER STANDARD<br><span class="gold">OF CLEAN.</span></h1>
         <p class="hero-copy">Elite Cleaning Services delivers exceptional cleaning with attention to detail you can see and trust.</p>
