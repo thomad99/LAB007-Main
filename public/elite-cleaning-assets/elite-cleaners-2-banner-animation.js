@@ -6,11 +6,35 @@
 
   const ctx = canvas.getContext('2d');
   const CYCLE_MS = 4800;
+  const ICON_CYCLE_MS = 10400;
   const SHIMMER_SPAN = 0.11;
+  const ICON_GLOW_SPREAD = 0.09;
 
   const LAYOUTS = {
-    landscape: { left: 0.0146, top: 0.022, right: 0.974, bottom: 0.974 },
-    portrait: { left: 0.031, top: 0.018, right: 0.998, bottom: 0.979 }
+    landscape: {
+      left: 0.0146,
+      top: 0.022,
+      right: 0.974,
+      bottom: 0.974,
+      icons: [
+        { x: 0.307, y: 0.252 },
+        { x: 0.430, y: 0.256 },
+        { x: 0.564, y: 0.271 },
+        { x: 0.688, y: 0.258 }
+      ]
+    },
+    portrait: {
+      left: 0.031,
+      top: 0.018,
+      right: 0.998,
+      bottom: 0.979,
+      icons: [
+        { x: 0.179, y: 0.277 },
+        { x: 0.388, y: 0.281 },
+        { x: 0.591, y: 0.275 },
+        { x: 0.812, y: 0.277 }
+      ]
+    }
   };
 
   let viewW = 0;
@@ -89,6 +113,27 @@
     ctx.restore();
   }
 
+  function drawIconGlow(cx, cy, size, alpha) {
+    if (alpha < 0.04) return;
+
+    const halo = size * (2.8 + alpha * 1.4);
+    const gradient = ctx.createRadialGradient(cx, cy, 0, cx, cy, halo);
+    gradient.addColorStop(0, 'rgba(255, 248, 214, ' + (0.95 * alpha) + ')');
+    gradient.addColorStop(0.32, 'rgba(242, 210, 123, ' + (0.68 * alpha) + ')');
+    gradient.addColorStop(0.7, 'rgba(215, 173, 75, ' + (0.22 * alpha) + ')');
+    gradient.addColorStop(1, 'rgba(215, 173, 75, 0)');
+
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(cx, cy, halo, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = 'rgba(255, 252, 236, ' + (0.18 + alpha * 0.55) + ')';
+    ctx.beginPath();
+    ctx.arc(cx, cy, size * (0.22 + alpha * 0.12), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   function draw(now) {
     if (!img.naturalWidth) {
       requestAnimationFrame(draw);
@@ -141,6 +186,19 @@
     const starX = rect.right;
     const starY = rect.top;
     drawStar(starX, starY, scale * 0.014, 0.22 + starPulse * 0.78);
+
+    const iconPhase = (now % ICON_CYCLE_MS) / ICON_CYCLE_MS;
+    const icons = LAYOUTS[layoutKey()].icons || [];
+    icons.forEach((icon, index) => {
+      const center = index / icons.length;
+      const glow = Math.exp(-(circularDistance(iconPhase, center) ** 2) / (2 * ICON_GLOW_SPREAD ** 2));
+      drawIconGlow(
+        viewW * icon.x,
+        viewH * icon.y,
+        scale * 0.024,
+        0.12 + glow * 0.88
+      );
+    });
 
     requestAnimationFrame(draw);
   }
