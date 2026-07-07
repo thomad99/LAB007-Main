@@ -41,75 +41,16 @@
       overflow: hidden;
     }
 
-    .hero {
-      display: grid;
-      grid-template-columns: 1fr 1.05fr;
-      min-height: 420px;
-      position: relative;
-    }
-
-    .hero-left {
-      padding: 42px 36px 36px 40px;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      z-index: 2;
-    }
-
-    .brand-logo {
+    .page-header {
       display: block;
-      width: min(100%, 300px);
+      width: 100%;
+      margin: 0;
+      line-height: 0;
+    }
+
+    .page-header img {
+      width: 100%;
       height: auto;
-      margin: 0;
-    }
-
-    .hero-rule {
-      border: 0;
-      border-top: 1px solid var(--line);
-      margin: 28px 0 24px;
-      width: 100%;
-    }
-
-    .hero-headline {
-      margin: 0;
-      font-size: clamp(1.85rem, 3.2vw, 2.55rem);
-      font-weight: 800;
-      letter-spacing: .06em;
-      line-height: 1.08;
-    }
-
-    .hero-headline .gold { color: var(--gold); }
-
-    .hero-copy {
-      margin: 18px 0 0;
-      max-width: 360px;
-      font-size: .98rem;
-      line-height: 1.55;
-      color: var(--muted);
-    }
-
-    .hero-right {
-      position: relative;
-      min-height: 320px;
-    }
-
-    .hero-photo-wrap {
-      position: absolute;
-      top: 12px;
-      right: 0;
-      bottom: 12px;
-      left: 6%;
-      border: 3px solid var(--gold);
-      border-radius: 52% 0 0 52% / 48% 0 0 48%;
-      overflow: hidden;
-      background: #111;
-    }
-
-    .hero-photo {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      object-position: 58% center;
       display: block;
     }
 
@@ -309,26 +250,6 @@
     }
 
     @media (max-width: 900px) {
-      .hero {
-        grid-template-columns: 1fr;
-      }
-
-      .hero-right {
-        min-height: 280px;
-        order: -1;
-      }
-
-      .hero-photo-wrap {
-        top: 0;
-        right: 0;
-        bottom: 0;
-        left: 0;
-        border-radius: 0;
-        border-left: 0;
-        border-right: 0;
-        border-top: 0;
-      }
-
       .services,
       .trust-box {
         grid-template-columns: repeat(2, 1fr);
@@ -346,10 +267,6 @@
         grid-template-columns: 1fr;
       }
 
-      .hero-left {
-        padding: 28px 20px;
-      }
-
       .trust-box {
         margin-inline: 16px;
       }
@@ -358,27 +275,18 @@
 </head>
 <body>
   <main class="flyer">
-    <section class="hero">
-      <div class="hero-left">
-        <img
-          class="brand-logo"
-          src="/elite-cleaning-assets/elite-cleaners-2-logo.png"
-          alt="Elite Cleaning Services"
-        >
-        <hr class="hero-rule">
-        <h1 class="hero-headline">A HIGHER STANDARD<br><span class="gold">OF CLEAN.</span></h1>
-        <p class="hero-copy">Elite Cleaning Services delivers exceptional cleaning with attention to detail you can see and trust.</p>
-      </div>
-      <div class="hero-right">
-        <div class="hero-photo-wrap">
-          <img
-            class="hero-photo"
-            src="/elite-cleaning-assets/elite-cleaners-2-living-room.png"
-            alt="Bright, professionally cleaned modern living room"
-          >
-        </div>
-      </div>
-    </section>
+    <picture class="page-header">
+      <source
+        media="(orientation: portrait) and (max-width: 900px)"
+        srcset="/elite-cleaning-assets/elite-cleaners-2-banner-portrait.png"
+      >
+      <img
+        src="/elite-cleaning-assets/elite-cleaners-2-banner-landscape.png"
+        alt="Elite Cleaning Services — A higher standard of clean"
+        width="1024"
+        height="546"
+      >
+    </picture>
 
     <h2 class="section-title">OUR SERVICES</h2>
     <section class="services" aria-label="Our services">
