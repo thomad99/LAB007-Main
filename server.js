@@ -5822,13 +5822,13 @@ app.get('/elite-cleaning.html', (req, res) => {
   res.redirect(301, '/elite-cleaning');
 });
 app.get('/elite-cleaners-2', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'elite-cleaners-2.html'));
+  res.redirect(301, '/elite-cleaning');
 });
 app.get('/Elite-Cleaners-2', (req, res) => {
-  res.redirect(301, '/elite-cleaners-2');
+  res.redirect(301, '/elite-cleaning');
 });
 app.get('/elite-cleaners-2.html', (req, res) => {
-  res.redirect(301, '/elite-cleaners-2');
+  res.redirect(301, '/elite-cleaning');
 });
 
 // Elite Invoices — cleaning client invoice generator

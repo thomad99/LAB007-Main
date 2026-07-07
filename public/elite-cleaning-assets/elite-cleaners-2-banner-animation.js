@@ -8,26 +8,79 @@
   const ICON_CYCLE_MS = 6933;
   const ICON_GLOW_SPREAD = 0.09;
 
-  const ICON_LAYOUTS = {
+  const FALLBACK_ICONS = {
     landscape: [
-      { x: 0.307, y: 0.252 },
-      { x: 0.430, y: 0.256 },
-      { x: 0.564, y: 0.271 },
-      { x: 0.688, y: 0.258 }
+      { x: 0.295, y: 0.327 },
+      { x: 0.424, y: 0.337 },
+      { x: 0.559, y: 0.322 },
+      { x: 0.694, y: 0.336 }
     ],
     portrait: [
-      { x: 0.179, y: 0.277 },
-      { x: 0.388, y: 0.281 },
-      { x: 0.591, y: 0.275 },
-      { x: 0.812, y: 0.277 }
+      { x: 0.171, y: 0.298 },
+      { x: 0.384, y: 0.300 },
+      { x: 0.591, y: 0.298 },
+      { x: 0.821, y: 0.298 }
     ]
   };
 
   let viewW = 0;
   let viewH = 0;
+  let icons = [];
+
+  function isGold(r, g, b) {
+    return r > 130 && g > 90 && b < 130 && (r + g) > b * 2;
+  }
 
   function layoutKey() {
     return img.naturalHeight > img.naturalWidth ? 'portrait' : 'landscape';
+  }
+
+  function detectIconsFromImage() {
+    const probe = document.createElement('canvas');
+    const pctx = probe.getContext('2d', { willReadFrequently: true });
+    probe.width = img.naturalWidth;
+    probe.height = img.naturalHeight;
+    pctx.drawImage(img, 0, 0);
+    const pixels = pctx.getImageData(0, 0, probe.width, probe.height).data;
+    const w = probe.width;
+    const h = probe.height;
+    const pts = [];
+
+    for (let y = Math.floor(h * 0.14); y < Math.floor(h * 0.42); y += 1) {
+      for (let x = Math.floor(w * 0.05); x < Math.floor(w * 0.95); x += 1) {
+        const i = (y * w + x) * 4;
+        if (isGold(pixels[i], pixels[i + 1], pixels[i + 2])) pts.push({ x, y });
+      }
+    }
+
+    if (pts.length < 40) return null;
+
+    const ys = pts.map((p) => p.y);
+    const minY = Math.min(...ys);
+    const maxY = Math.max(...ys);
+    const iconPts = pts.filter((p) => p.y > minY + (maxY - minY) * 0.15 && p.y < minY + (maxY - minY) * 0.85);
+    if (iconPts.length < 20) return null;
+
+    const xs = iconPts.map((p) => p.x);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const band = (maxX - minX) / 4;
+    const detected = [];
+
+    for (let index = 0; index < 4; index += 1) {
+      const seg = iconPts.filter((p) => minX + index * band <= p.x && p.x < minX + (index + 1) * band);
+      if (!seg.length) return null;
+      detected.push({
+        x: seg.reduce((sum, p) => sum + p.x, 0) / seg.length / w,
+        y: seg.reduce((sum, p) => sum + p.y, 0) / seg.length / h
+      });
+    }
+
+    return detected;
+  }
+
+  function refreshIcons() {
+    icons = detectIconsFromImage() || FALLBACK_ICONS[layoutKey()] || FALLBACK_ICONS.landscape;
   }
 
   function circularDistance(a, b) {
@@ -75,7 +128,6 @@
     ctx.clearRect(0, 0, viewW, viewH);
     const scale = Math.min(viewW, viewH);
     const iconPhase = (now % ICON_CYCLE_MS) / ICON_CYCLE_MS;
-    const icons = ICON_LAYOUTS[layoutKey()] || [];
 
     icons.forEach((icon, index) => {
       const center = index / icons.length;
@@ -96,16 +148,20 @@
   function start() {
     if (started) return;
     started = true;
+    refreshIcons();
     resize();
     header.classList.add('is-animated');
     requestAnimationFrame(draw);
   }
 
-  if (img.complete && img.naturalWidth) start();
-  img.addEventListener('load', () => {
+  function onImageReady() {
+    refreshIcons();
     resize();
     start();
-  });
+  }
+
+  if (img.complete && img.naturalWidth) onImageReady();
+  img.addEventListener('load', onImageReady);
 
   window.addEventListener('resize', resize);
 })();
