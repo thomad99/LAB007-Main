@@ -145,7 +145,11 @@
     requestAnimationFrame(draw);
   }
 
+  let started = false;
+
   function start() {
+    if (started) return;
+    started = true;
     resize();
     header.classList.add('is-animated');
     requestAnimationFrame(draw);
@@ -154,6 +158,7 @@
   if (img.complete && img.naturalWidth) start();
   img.addEventListener('load', () => {
     resize();
+    start();
   });
 
   window.addEventListener('resize', resize);
