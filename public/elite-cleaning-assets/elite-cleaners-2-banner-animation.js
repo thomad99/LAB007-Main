@@ -5,7 +5,7 @@
   if (!header || !img || !canvas || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
   const ctx = canvas.getContext('2d');
-  const CYCLE_MS = 4800;
+  const CYCLE_MS = 9600;
   const ICON_CYCLE_MS = 10400;
   const SHIMMER_SPAN = 0.11;
   const ICON_GLOW_SPREAD = 0.09;
