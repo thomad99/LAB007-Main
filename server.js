@@ -5856,6 +5856,12 @@ if (!fs.existsSync(eliteInvoicesHistoryFile)) {
   fs.writeFileSync(eliteInvoicesHistoryFile, '[]', 'utf8');
 }
 
+const eliteClientFullSeedPath = path.join(__dirname, 'data', 'elite-client-list-new.json');
+const eliteClientFullPath = path.join(eliteInvoicesDataDir, 'client-full.json');
+if (!fs.existsSync(eliteClientFullPath) && fs.existsSync(eliteClientFullSeedPath)) {
+  fs.copyFileSync(eliteClientFullSeedPath, eliteClientFullPath);
+}
+
 console.log('[EliteInvoices] data dir:', eliteInvoicesDataDir);
 if (process.env.LAB007_DATA_DIR) {
   console.log('[EliteInvoices] LAB007_DATA_DIR:', process.env.LAB007_DATA_DIR);
@@ -5875,6 +5881,16 @@ function readEliteInvoiceHistory() {
 
 function writeEliteInvoiceHistory(invoices) {
   saveEliteInvoiceHistory(eliteInvoicesHistoryFile, invoices);
+}
+
+function readEliteClientFull() {
+  const filePath = fs.existsSync(eliteClientFullPath)
+    ? eliteClientFullPath
+    : eliteClientFullSeedPath;
+  if (!fs.existsSync(filePath)) {
+    return { sheet: 'Client List NEW', columns: [], rows: [] };
+  }
+  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
 
 async function getEliteInvoicePdfBuffer(invoice) {
@@ -6067,10 +6083,21 @@ console.log(
 );
 
 app.get('/Elite-Invoices', (req, res) => {
+  eliteInvoicesNoIndexHeaders(res);
   res.sendFile(path.join(__dirname, 'public', 'elite-invoices.html'));
 });
 app.get('/elite-invoices', (req, res) => {
+  eliteInvoicesNoIndexHeaders(res);
   res.redirect(301, '/Elite-Invoices');
+});
+
+app.get('/api/elite-invoices/client-full', (req, res) => {
+  try {
+    res.json(readEliteClientFull());
+  } catch (err) {
+    console.error('[EliteInvoices] GET client-full error:', err);
+    res.status(500).json({ error: err.message });
+  }
 });
 
 app.get('/api/elite-invoices/clients', (req, res) => {

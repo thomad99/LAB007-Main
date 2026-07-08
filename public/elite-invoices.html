@@ -120,6 +120,9 @@
       border-collapse: collapse;
       min-width: 1020px;
     }
+    #clientFullTable {
+      min-width: 1480px;
+    }
     th, td {
       padding: 12px 10px;
       border-bottom: 1px solid var(--line);
@@ -297,6 +300,7 @@
       </div>
       <div class="toolbar">
         <button type="button" class="btn-secondary active" id="clientsTab">Clients</button>
+        <button type="button" class="btn-secondary" id="clientFullTab">ClientFull</button>
         <button type="button" class="btn-secondary" id="invoicesTab">View Invoices</button>
         <button type="button" class="btn" id="addClientBtn">Add Client</button>
         <button type="button" class="btn-secondary" id="saveBtn">Save Changes</button>
@@ -339,6 +343,30 @@
       <p class="hint">
         Invoice numbers use your prefix plus a dash and 4-digit counter (for example MV-0000, MV-0001, ELITE-0002).
         Use <strong>Add Client</strong> for new customers, then <strong>Save Changes</strong>. Use <strong>Email</strong> to create the invoice, open your email app with a template message, and download the PDF to attach.
+      </p>
+    </section>
+
+    <section class="panel-section" id="clientFullPanel">
+      <div class="client-search">
+        <label for="clientFullSearch">Find Client</label>
+        <input
+          type="search"
+          id="clientFullSearch"
+          list="clientFullSearchList"
+          placeholder="Search name, phone, email, address, cleaner, payment..."
+          autocomplete="off"
+        >
+        <datalist id="clientFullSearchList"></datalist>
+        <p class="client-search-meta" id="clientFullSearchMeta"></p>
+      </div>
+      <div class="table-wrap">
+        <table id="clientFullTable">
+          <thead id="clientFullHead"></thead>
+          <tbody id="clientFullRows"></tbody>
+        </table>
+      </div>
+      <p class="hint">
+        Full client list from <strong>Client List NEW</strong>. Data is private, password protected, and not indexed by search engines.
       </p>
     </section>
 
@@ -406,8 +434,10 @@
       const saveBtn = document.getElementById('saveBtn');
       const addClientBtn = document.getElementById('addClientBtn');
       const clientsTab = document.getElementById('clientsTab');
+      const clientFullTab = document.getElementById('clientFullTab');
       const invoicesTab = document.getElementById('invoicesTab');
       const clientsPanel = document.getElementById('clientsPanel');
+      const clientFullPanel = document.getElementById('clientFullPanel');
       const invoicesPanel = document.getElementById('invoicesPanel');
       const filterClient = document.getElementById('filterClient');
       const filterPaid = document.getElementById('filterPaid');
@@ -416,9 +446,17 @@
       const clientSearch = document.getElementById('clientSearch');
       const clientSearchList = document.getElementById('clientSearchList');
       const clientSearchMeta = document.getElementById('clientSearchMeta');
+      const clientFullSearch = document.getElementById('clientFullSearch');
+      const clientFullSearchList = document.getElementById('clientFullSearchList');
+      const clientFullSearchMeta = document.getElementById('clientFullSearchMeta');
+      const clientFullHead = document.getElementById('clientFullHead');
+      const clientFullRows = document.getElementById('clientFullRows');
       let clients = [];
       let invoices = [];
+      let clientFull = { columns: [], rows: [] };
       let clientSearchQuery = '';
+      let clientFullSearchQuery = '';
+      let clientFullLoaded = false;
 
       function authHeaders() {
         const password = sessionStorage.getItem(AUTH_KEY);
@@ -496,13 +534,18 @@
 
       function showPanel(name) {
         const isClients = name === 'clients';
+        const isClientFull = name === 'clientfull';
+        const isInvoices = name === 'invoices';
         clientsPanel.classList.toggle('active', isClients);
-        invoicesPanel.classList.toggle('active', !isClients);
+        clientFullPanel.classList.toggle('active', isClientFull);
+        invoicesPanel.classList.toggle('active', isInvoices);
         clientsTab.classList.toggle('active', isClients);
-        invoicesTab.classList.toggle('active', !isClients);
+        clientFullTab.classList.toggle('active', isClientFull);
+        invoicesTab.classList.toggle('active', isInvoices);
         saveBtn.style.display = isClients ? '' : 'none';
         addClientBtn.style.display = isClients ? '' : 'none';
-        if (!isClients) loadInvoices().catch((err) => setStatus(err.message, true));
+        if (isInvoices) loadInvoices().catch((err) => setStatus(err.message, true));
+        if (isClientFull) loadClientFull().catch((err) => setStatus(err.message, true));
       }
 
       function addClient() {
@@ -544,6 +587,80 @@
           invoicePrefix: row.querySelector('[data-field="invoicePrefix"]').value.trim().toUpperCase(),
           nextSequence: Number(row.querySelector('[data-field="nextSequence"]').value || 0)
         };
+      }
+
+      function rowMatchesSearch(row, query) {
+        const q = String(query || '').trim().toLowerCase();
+        if (!q) return true;
+        return Object.values(row).join(' ').toLowerCase().includes(q);
+      }
+
+      function updateClientFullSearchMeta(visibleCount) {
+        const total = clientFull.rows.length;
+        const q = clientFullSearchQuery.trim();
+        if (!q) {
+          clientFullSearchMeta.textContent = total ? `${total} client${total === 1 ? '' : 's'} in Client List NEW` : '';
+          return;
+        }
+        if (!visibleCount) {
+          clientFullSearchMeta.textContent = `No clients match "${q}"`;
+          return;
+        }
+        clientFullSearchMeta.textContent = `Showing ${visibleCount} of ${total} clients`;
+      }
+
+      function renderClientFullSearchOptions() {
+        clientFullSearchList.innerHTML = clientFull.rows.map((row) => {
+          const label = [row['Client ID'], row.Name, row.Email, row.Address]
+            .filter(Boolean)
+            .join(' — ');
+          return `<option value="${escapeHtml(label)}"></option>`;
+        }).join('');
+      }
+
+      function renderClientFullRows() {
+        const columns = (clientFull.columns || []).filter(Boolean);
+        if (!columns.length) {
+          clientFullHead.innerHTML = '';
+          clientFullRows.innerHTML = '<tr><td class="empty">No client data loaded.</td></tr>';
+          clientFullSearchMeta.textContent = '';
+          return;
+        }
+
+        clientFullHead.innerHTML = `<tr>${columns.map((col) => `<th>${escapeHtml(col)}</th>`).join('')}</tr>`;
+        const visibleRows = clientFull.rows.filter((row) => rowMatchesSearch(row, clientFullSearchQuery));
+        updateClientFullSearchMeta(visibleRows.length);
+        renderClientFullSearchOptions();
+
+        if (!visibleRows.length) {
+          clientFullRows.innerHTML = `<tr><td colspan="${columns.length}" class="empty">${clientFullSearchQuery.trim() ? 'No clients match your search.' : 'No clients in list.'}</td></tr>`;
+          return;
+        }
+
+        clientFullRows.innerHTML = visibleRows.map((row) => `
+          <tr>
+            ${columns.map((col) => `<td>${escapeHtml(row[col])}</td>`).join('')}
+          </tr>
+        `).join('');
+      }
+
+      async function loadClientFull(force) {
+        if (clientFullLoaded && !force) {
+          renderClientFullRows();
+          return;
+        }
+        setStatus('Loading ClientFull list...');
+        const res = await apiFetch('/api/elite-invoices/client-full');
+        if (res.status === 401) {
+          sessionStorage.removeItem(AUTH_KEY);
+          showLogin('Session expired. Enter password again.');
+          return;
+        }
+        if (!res.ok) throw new Error('Failed to load ClientFull list');
+        clientFull = await res.json();
+        clientFullLoaded = true;
+        renderClientFullRows();
+        setStatus('');
       }
 
       function clientMatchesSearch(client, query) {
@@ -975,6 +1092,7 @@
       });
 
       clientsTab.addEventListener('click', () => showPanel('clients'));
+      clientFullTab.addEventListener('click', () => showPanel('clientfull'));
       invoicesTab.addEventListener('click', () => showPanel('invoices'));
       addClientBtn.addEventListener('click', addClient);
       saveBtn.addEventListener('click', () => saveClients().catch((err) => setStatus(err.message, true)));
@@ -984,6 +1102,11 @@
       clientSearch.addEventListener('input', () => {
         clientSearchQuery = clientSearch.value;
         renderClientRows();
+      });
+
+      clientFullSearch.addEventListener('input', () => {
+        clientFullSearchQuery = clientFullSearch.value;
+        renderClientFullRows();
       });
 
       filterSearch.addEventListener('input', () => {
