@@ -162,6 +162,32 @@
       margin-bottom: 16px;
       align-items: end;
     }
+    .client-search {
+      margin-bottom: 16px;
+    }
+    .client-search label {
+      display: block;
+      font-size: .74rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--soft-gold);
+      margin-bottom: 6px;
+    }
+    .client-search input {
+      width: 100%;
+      max-width: 420px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(215, 173, 75, .25);
+      background: #0d0d0d;
+      color: var(--text);
+      font: inherit;
+    }
+    .client-search-meta {
+      margin: 8px 0 0;
+      color: var(--muted);
+      font-size: .84rem;
+    }
     .filters label {
       display: block;
       font-size: .74rem;
@@ -281,6 +307,18 @@
     <div class="status" id="status" role="status" aria-live="polite"></div>
 
     <section class="panel-section active" id="clientsPanel">
+      <div class="client-search">
+        <label for="clientSearch">Find Client</label>
+        <input
+          type="search"
+          id="clientSearch"
+          list="clientSearchList"
+          placeholder="Type client name, bill to, email, or prefix..."
+          autocomplete="off"
+        >
+        <datalist id="clientSearchList"></datalist>
+        <p class="client-search-meta" id="clientSearchMeta"></p>
+      </div>
       <div class="table-wrap">
         <table>
           <thead>
@@ -346,8 +384,8 @@
         </table>
       </div>
       <p class="hint">
-        Past invoices are stored on the server disk. Use <strong>Resend</strong> to download the PDF again,
-        mark invoices as paid when payment is received, or <strong>Delete</strong> to remove an invoice permanently.
+        mark invoices as paid when payment is received, use <strong>View</strong> to open the PDF in a new tab,
+        or <strong>Delete</strong> to remove an invoice permanently.
       </p>
     </section>
   </div>
@@ -375,8 +413,12 @@
       const filterPaid = document.getElementById('filterPaid');
       const filterSearch = document.getElementById('filterSearch');
       const refreshInvoicesBtn = document.getElementById('refreshInvoicesBtn');
+      const clientSearch = document.getElementById('clientSearch');
+      const clientSearchList = document.getElementById('clientSearchList');
+      const clientSearchMeta = document.getElementById('clientSearchMeta');
       let clients = [];
       let invoices = [];
+      let clientSearchQuery = '';
 
       function authHeaders() {
         const password = sessionStorage.getItem(AUTH_KEY);
@@ -504,6 +546,42 @@
         };
       }
 
+      function clientMatchesSearch(client, query) {
+        const q = String(query || '').trim().toLowerCase();
+        if (!q) return true;
+        const haystack = [
+          client.displayName,
+          client.billToName,
+          client.email,
+          (client.billToLines || []).join(' '),
+          client.invoicePrefix
+        ].join(' ').toLowerCase();
+        return haystack.includes(q);
+      }
+
+      function updateClientSearchMeta(visibleCount) {
+        const total = clients.length;
+        const q = clientSearchQuery.trim();
+        if (!q) {
+          clientSearchMeta.textContent = total ? `${total} client${total === 1 ? '' : 's'}` : '';
+          return;
+        }
+        if (!visibleCount) {
+          clientSearchMeta.textContent = `No clients match "${q}"`;
+          return;
+        }
+        clientSearchMeta.textContent = `Showing ${visibleCount} of ${total} client${total === 1 ? '' : 's'}`;
+      }
+
+      function renderClientSearchOptions() {
+        clientSearchList.innerHTML = clients.map((client) => {
+          const label = [client.displayName, client.billToName, client.email]
+            .filter(Boolean)
+            .join(' — ');
+          return `<option value="${escapeHtml(label)}"></option>`;
+        }).join('');
+      }
+
       function renderClientFilterOptions() {
         const current = filterClient.value;
         filterClient.innerHTML = '<option value="">All clients</option>' +
@@ -514,7 +592,17 @@
       }
 
       function renderClientRows() {
-        rowsEl.innerHTML = clients.map((client) => {
+        const visibleClients = clients.filter((client) => clientMatchesSearch(client, clientSearchQuery));
+        updateClientSearchMeta(visibleClients.length);
+        renderClientSearchOptions();
+
+        if (!visibleClients.length) {
+          rowsEl.innerHTML = `<tr><td colspan="8" class="empty">${clientSearchQuery.trim() ? 'No clients match your search.' : 'No clients yet. Click Add Client.'}</td></tr>`;
+          renderClientFilterOptions();
+          return;
+        }
+
+        rowsEl.innerHTML = visibleClients.map((client) => {
           const address = (client.billToLines || []).join('\n');
           const nextLabel = String(client.nextSequence || 0).padStart(4, '0');
           return `
@@ -552,6 +640,7 @@
               <span class="badge ${invoice.paid ? 'paid' : 'unpaid'}">${invoice.paid ? 'Paid' : 'Unpaid'}</span>
             </td>
             <td class="actions">
+              <button type="button" class="btn-secondary btn-small" data-action="view">View</button>
               <button type="button" class="btn btn-small" data-action="resend">Resend</button>
               <button type="button" class="btn-secondary btn-small" data-action="toggle-paid">
                 ${invoice.paid ? 'Mark Unpaid' : 'Mark Paid'}
@@ -593,7 +682,10 @@
       }
 
       async function saveClients() {
-        clients = Array.from(rowsEl.querySelectorAll('tr')).map(readRow);
+        const rowUpdates = new Map(
+          Array.from(rowsEl.querySelectorAll('tr[data-id]')).map((row) => [row.dataset.id, readRow(row)])
+        );
+        clients = clients.map((client) => rowUpdates.get(client.id) || client);
         setStatus('Saving...');
         const res = await apiFetch('/api/elite-invoices/clients', {
           method: 'PUT',
@@ -767,6 +859,39 @@
         }
       }
 
+      async function viewInvoice(invoiceId, button) {
+        button.disabled = true;
+        setStatus('Opening invoice...');
+        try {
+          const invoice = invoices.find((row) => row.id === invoiceId);
+          const res = await apiFetch('/api/elite-invoices/invoices/' + encodeURIComponent(invoiceId) + '/pdf');
+          if (res.status === 401) {
+            sessionStorage.removeItem(AUTH_KEY);
+            showLogin('Session expired. Enter password again.');
+            throw new Error('Session expired.');
+          }
+          if (!res.ok) {
+            const err = await res.json().catch(() => ({}));
+            throw new Error(err.error || 'Could not open invoice');
+          }
+          const blob = await res.blob();
+          const objectUrl = URL.createObjectURL(blob);
+          const popup = window.open(objectUrl, '_blank', 'noopener,noreferrer');
+          if (!popup) {
+            URL.revokeObjectURL(objectUrl);
+            throw new Error('Pop-up blocked. Allow pop-ups to view the PDF.');
+          }
+          window.setTimeout(() => URL.revokeObjectURL(objectUrl), 120000);
+          const label = invoice && invoice.invoiceNumber ? invoice.invoiceNumber + '.pdf' : 'invoice.pdf';
+          setStatus(`Opened ${label}`);
+          window.setTimeout(() => setStatus(''), 1800);
+        } catch (err) {
+          setStatus(err.message, true);
+        } finally {
+          button.disabled = false;
+        }
+      }
+
       async function resendInvoice(invoiceId, button) {
         button.disabled = true;
         setStatus('Downloading invoice...');
@@ -839,9 +964,11 @@
       invoiceRowsEl.addEventListener('click', (event) => {
         const row = event.target.closest('tr[data-id]');
         if (!row) return;
+        const viewBtn = event.target.closest('[data-action="view"]');
         const resendBtn = event.target.closest('[data-action="resend"]');
         const paidBtn = event.target.closest('[data-action="toggle-paid"]');
         const deleteBtn = event.target.closest('[data-action="delete"]');
+        if (viewBtn) viewInvoice(row.dataset.id, viewBtn);
         if (resendBtn) resendInvoice(row.dataset.id, resendBtn);
         if (paidBtn) togglePaid(row.dataset.id, paidBtn);
         if (deleteBtn) deleteInvoice(row.dataset.id, deleteBtn);
@@ -854,6 +981,11 @@
       refreshInvoicesBtn.addEventListener('click', () => loadInvoices().catch((err) => setStatus(err.message, true)));
       filterClient.addEventListener('change', () => loadInvoices().catch((err) => setStatus(err.message, true)));
       filterPaid.addEventListener('change', () => loadInvoices().catch((err) => setStatus(err.message, true)));
+      clientSearch.addEventListener('input', () => {
+        clientSearchQuery = clientSearch.value;
+        renderClientRows();
+      });
+
       filterSearch.addEventListener('input', () => {
         clearTimeout(filterSearch._timer);
         filterSearch._timer = setTimeout(() => {
