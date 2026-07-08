@@ -210,10 +210,15 @@
 
     .footer-grid {
       display: grid;
-      grid-template-columns: 1fr 1.1fr;
-      gap: 24px;
+      grid-template-columns: 1fr;
+      gap: 28px;
       padding: 8px 36px 28px;
-      align-items: end;
+      text-align: center;
+      justify-items: center;
+    }
+
+    .footer-tagline {
+      text-align: center;
     }
 
     .footer-tagline .line1 {
@@ -232,15 +237,15 @@
     }
 
     .footer-tagline .sub {
-      margin: 14px 0 0;
+      margin: 14px auto 0;
       font-size: .88rem;
       color: var(--muted);
-      max-width: 320px;
+      max-width: 420px;
       line-height: 1.5;
     }
 
     .contact-block {
-      text-align: left;
+      text-align: center;
     }
 
     .quote-label {
@@ -254,6 +259,7 @@
     .phone-row {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 12px;
       margin-bottom: 16px;
     }
@@ -278,6 +284,7 @@
     .contact-line {
       display: flex;
       align-items: center;
+      justify-content: center;
       gap: 10px;
       margin: 8px 0;
       font-size: .88rem;
