@@ -28,7 +28,7 @@
       min-height: 100vh;
     }
     .wrap {
-      width: min(1180px, calc(100% - 32px));
+      width: min(1560px, calc(100% - 24px));
       margin: 0 auto;
       padding: 72px 0 40px;
     }
@@ -118,7 +118,47 @@
     table {
       width: 100%;
       border-collapse: collapse;
-      min-width: 1020px;
+    }
+    #clientsTable {
+      table-layout: fixed;
+      min-width: 0;
+    }
+    #clientsTable th,
+    #clientsTable td {
+      padding: 8px 6px;
+      font-size: .86rem;
+    }
+    #clientsTable th:nth-child(1),
+    #clientsTable td:nth-child(1) { width: 12%; }
+    #clientsTable th:nth-child(2),
+    #clientsTable td:nth-child(2) { width: 12%; }
+    #clientsTable th:nth-child(3),
+    #clientsTable td:nth-child(3) { width: 14%; }
+    #clientsTable th:nth-child(4),
+    #clientsTable td:nth-child(4) { width: 18%; }
+    #clientsTable th:nth-child(5),
+    #clientsTable td:nth-child(5) { width: 7%; }
+    #clientsTable th:nth-child(6),
+    #clientsTable td:nth-child(6) { width: 10%; }
+    #clientsTable th:nth-child(7),
+    #clientsTable td:nth-child(7) { width: 7%; }
+    #clientsTable th:nth-child(8),
+    #clientsTable td:nth-child(8) { width: 6%; }
+    #clientsTable th:nth-child(9),
+    #clientsTable td:nth-child(9) { width: 14%; }
+    #clientsTable textarea[data-field="billToLines"] {
+      min-height: 52px;
+      font-size: .82rem;
+      padding: 6px 8px;
+    }
+    #clientsTable .actions {
+      flex-wrap: nowrap;
+      gap: 6px;
+    }
+    #clientsTable .btn-small {
+      padding: 6px 8px;
+      font-size: .74rem;
+      white-space: nowrap;
     }
     #clientFullTable {
       min-width: 1680px;
@@ -174,9 +214,9 @@
       color: var(--text);
       font: inherit;
     }
-    .prefix { min-width: 96px; max-width: 180px; text-transform: uppercase; }
-    .amount { width: 96px; }
-    .cleaning-date { width: 148px; min-width: 132px; }
+    .prefix { width: 100%; min-width: 0; max-width: none; text-transform: uppercase; }
+    .amount { width: 100%; min-width: 0; }
+    .cleaning-date { width: 100%; min-width: 0; }
     .actions { white-space: nowrap; display: flex; gap: 8px; flex-wrap: wrap; }
     .hint {
       margin-top: 18px;
@@ -297,9 +337,16 @@
       font-size: .88rem;
     }
     .hidden { display: none !important; }
-    @media (max-width: 720px) {
+    @media (max-width: 900px) {
       .wrap { padding-top: 64px; }
       header { align-items: flex-start; }
+      #clientsTable {
+        table-layout: auto;
+        min-width: 980px;
+      }
+      #clientsTable .actions {
+        flex-wrap: wrap;
+      }
     }
   </style>
 </head>
@@ -327,12 +374,11 @@
         </div>
       </div>
       <div class="toolbar">
-        <button type="button" class="btn-secondary active" id="clientsTab">Clients</button>
+        <button type="button" class="btn-secondary active" id="clientsTab">Invoices</button>
         <button type="button" class="btn-secondary" id="clientFullTab">ClientFull</button>
         <button type="button" class="btn-secondary" id="invoicesTab">View Invoices</button>
         <button type="button" class="btn" id="addClientBtn">Add Client</button>
         <button type="button" class="btn-secondary" id="saveBtn">Save Changes</button>
-        <a class="btn-link" href="/elite-cleaning">Back to Elite Cleaning</a>
       </div>
     </header>
 
@@ -352,7 +398,7 @@
         <p class="client-search-meta" id="clientSearchMeta"></p>
       </div>
       <div class="table-wrap">
-        <table>
+        <table id="clientsTable">
           <thead>
             <tr>
               <th>Client</th>
@@ -880,7 +926,7 @@
               <td><input class="prefix" type="text" data-field="invoicePrefix" value="${escapeHtml(client.invoicePrefix || '')}" placeholder="MV"></td>
               <td><input class="amount" type="number" min="0" max="9999" step="1" data-field="nextSequence" value="${Number(client.nextSequence || 0)}" title="Next invoice suffix ${nextLabel}"></td>
               <td class="actions">
-                <button type="button" class="btn btn-small" data-action="create">Create Invoice</button>
+                <button type="button" class="btn btn-small" data-action="create">Create</button>
                 <button type="button" class="btn-secondary btn-small" data-action="email">Email</button>
               </td>
             </tr>
