@@ -6073,48 +6073,97 @@ function eliteInvoicesAuthRequired() {
   return !(v === '0' || v === 'false' || v === 'off' || v === 'no');
 }
 
+function eliteInvoicesExpectedPassword() {
+  const raw = process.env.ELITE_INVOICES_AUTH_PASS;
+  if (raw == null || String(raw).trim() === '') return 'danger';
+  let pass = String(raw).trim();
+  // Render dashboard pastes sometimes include wrapping quotes.
+  if (
+    (pass.startsWith('"') && pass.endsWith('"')) ||
+    (pass.startsWith("'") && pass.endsWith("'"))
+  ) {
+    pass = pass.slice(1, -1).trim();
+  }
+  return pass;
+}
+
+function eliteInvoicesPasswordMatches(given) {
+  const expected = eliteInvoicesExpectedPassword();
+  const a = Buffer.from(String(given || ''), 'utf8');
+  const b = Buffer.from(String(expected || ''), 'utf8');
+  if (a.length !== b.length) return false;
+  try {
+    return crypto.timingSafeEqual(a, b);
+  } catch {
+    return false;
+  }
+}
+
+function eliteInvoicesPasswordFromRequest(req) {
+  const headerPass = String(req.get('x-elite-invoices-password') || '').trim();
+  if (headerPass) return headerPass;
+
+  const auth = String(req.get('authorization') || '').trim();
+  if (auth.toLowerCase().startsWith('bearer ')) {
+    return auth.slice(7).trim();
+  }
+  if (auth.startsWith('Basic ')) {
+    try {
+      const decoded = Buffer.from(auth.slice(6), 'base64').toString('utf8');
+      const idx = decoded.indexOf(':');
+      if (idx < 0) return decoded.trim();
+      const user = decoded.slice(0, idx);
+      const pass = decoded.slice(idx + 1);
+      // Accept password in either username or password field.
+      if (eliteInvoicesPasswordMatches(pass)) return pass;
+      if (eliteInvoicesPasswordMatches(user)) return user;
+      if (eliteInvoicesPasswordMatches(decoded)) return decoded;
+      return pass;
+    } catch {
+      return '';
+    }
+  }
+  return '';
+}
+
 function requireEliteInvoicesAuth(req, res, next) {
   eliteInvoicesNoIndexHeaders(res);
+  // Login is public (also registered before this middleware).
+  if (String(req.path || '').replace(/\/+$/, '') === '/auth/login') return next();
   if (!eliteInvoicesAuthRequired()) return next();
 
-  const expectedPass = String(process.env.ELITE_INVOICES_AUTH_PASS || 'danger').trim();
-  const customPass = String(req.get('x-elite-invoices-password') || '').trim();
-  if (customPass && customPass === expectedPass) {
+  const given = eliteInvoicesPasswordFromRequest(req);
+  if (given && eliteInvoicesPasswordMatches(given)) {
     return next();
   }
 
-  const header = String(req.get('authorization') || '');
-  if (!header.startsWith('Basic ')) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-
-  let decoded = '';
-  try {
-    decoded = Buffer.from(header.slice(6), 'base64').toString('utf8');
-  } catch {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-
-  const idx = decoded.indexOf(':');
-  const gotUser = idx >= 0 ? decoded.slice(0, idx) : decoded;
-  const gotPass = idx >= 0 ? decoded.slice(idx + 1) : '';
-  const passwordOk =
-    gotPass === expectedPass ||
-    gotUser === expectedPass ||
-    decoded === expectedPass;
-  if (!passwordOk) {
-    return res.status(401).json({ error: 'Authentication required' });
-  }
-
-  next();
+  return res.status(401).json({ error: 'Authentication required' });
 }
+
+app.post('/api/elite-invoices/auth/login', (req, res) => {
+  eliteInvoicesNoIndexHeaders(res);
+  if (!eliteInvoicesAuthRequired()) {
+    return res.json({ ok: true, authRequired: false });
+  }
+  const password = String(req.body?.password || '').trim();
+  if (!password || !eliteInvoicesPasswordMatches(password)) {
+    return res.status(401).json({ ok: false, error: 'Incorrect password.' });
+  }
+  return res.json({
+    ok: true,
+    authRequired: true,
+    source: process.env.ELITE_INVOICES_AUTH_PASS ? 'env' : 'default'
+  });
+});
 
 app.use('/api/elite-invoices', requireEliteInvoicesAuth);
 
 console.log(
   '[EliteInvoices] auth:',
   eliteInvoicesAuthRequired()
-    ? (process.env.ELITE_INVOICES_AUTH_PASS ? 'enabled (from ELITE_INVOICES_AUTH_PASS)' : 'enabled (default password)')
+    ? (process.env.ELITE_INVOICES_AUTH_PASS
+      ? 'enabled (from ELITE_INVOICES_AUTH_PASS)'
+      : 'enabled (default password "danger")')
     : 'disabled'
 );
 

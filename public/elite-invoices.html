@@ -492,7 +492,10 @@
       function authHeaders() {
         const password = sessionStorage.getItem(AUTH_KEY);
         if (!password) return {};
-        return { 'X-Elite-Invoices-Password': password };
+        return {
+          'X-Elite-Invoices-Password': password,
+          Authorization: 'Bearer ' + password
+        };
       }
 
       function apiFetch(url, options) {
@@ -513,12 +516,15 @@
       }
 
       async function verifyPassword(password) {
-        const res = await fetch('/api/elite-invoices/clients', {
-          headers: { 'X-Elite-Invoices-Password': password },
-          credentials: 'omit'
+        const res = await fetch('/api/elite-invoices/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'omit',
+          body: JSON.stringify({ password })
         });
+        const data = await res.json().catch(() => ({}));
         if (res.status === 401) return false;
-        if (!res.ok) throw new Error('Could not verify password.');
+        if (!res.ok) throw new Error(data.error || 'Could not verify password.');
         return true;
       }
 
