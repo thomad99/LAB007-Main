@@ -878,7 +878,7 @@
               <td><input class="amount" type="number" min="0" step="1" data-field="defaultAmount" value="${Number(client.defaultAmount || 0)}"></td>
               <td><input class="cleaning-date" type="date" data-field="serviceDate" value="${escapeHtml(cleaningDate)}"></td>
               <td><input class="prefix" type="text" data-field="invoicePrefix" value="${escapeHtml(client.invoicePrefix || '')}" placeholder="MV"></td>
-              <td><input class="amount" type="number" min="0" max="9999" step="1" data-field="nextSequence" value="${Number(client.nextSequence || 0)}" title="Next invoice suffix (${nextLabel)}"></td>
+              <td><input class="amount" type="number" min="0" max="9999" step="1" data-field="nextSequence" value="${Number(client.nextSequence || 0)}" title="Next invoice suffix ${nextLabel}"></td>
               <td class="actions">
                 <button type="button" class="btn btn-small" data-action="create">Create Invoice</button>
                 <button type="button" class="btn-secondary btn-small" data-action="email">Email</button>
