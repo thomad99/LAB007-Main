@@ -5,7 +5,7 @@ echo ========================================
 echo.
 
 :: Change to the repository directory
-cd /d "C:\Users\david\OneDrive\My Pet Projects\AI\Web-Alert"
+cd /d "%~dp0"
 echo Changed to directory: %CD%
 echo.
 

@@ -4,7 +4,7 @@ Write-Host "========================================" -ForegroundColor Cyan
 Write-Host "Web-Alert Git Sync Script" -ForegroundColor Cyan
 Write-Host "========================================" -ForegroundColor Cyan
 Write-Host ""
-$projectPath = "C:\Users\david\OneDrive\My Pet Projects\AI\Web-Alert"
+$projectPath = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $projectPath
 Write-Host "Changed to directory: $(Get-Location)" -ForegroundColor Green
 Write-Host ""

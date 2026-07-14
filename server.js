@@ -36,6 +36,7 @@ const {
   filterInvoices,
   formatInvoiceNumber,
   formatInvoiceDate,
+  parseServiceDate,
   buildInvoicePdf,
   isValidClientEmail
 } = require('./lib/elite-invoices');
@@ -5883,14 +5884,46 @@ function writeEliteInvoiceHistory(invoices) {
   saveEliteInvoiceHistory(eliteInvoicesHistoryFile, invoices);
 }
 
+function normalizeEliteClientFull(raw) {
+  const data = raw && typeof raw === 'object' ? raw : {};
+  const baseColumns = Array.isArray(data.columns)
+    ? data.columns.map((col) => String(col || '').trim()).filter(Boolean)
+    : [];
+  const columns = baseColumns.includes('Notes') ? baseColumns.slice() : baseColumns.concat(['Notes']);
+  const rows = Array.isArray(data.rows)
+    ? data.rows.map((row) => {
+        const next = {};
+        columns.forEach((col) => {
+          const value = row && row[col] != null ? row[col] : '';
+          next[col] = typeof value === 'string' ? value : String(value);
+        });
+        if (!Object.prototype.hasOwnProperty.call(next, 'Notes')) next.Notes = '';
+        return next;
+      })
+    : [];
+  return {
+    sheet: String(data.sheet || 'Client List NEW'),
+    columns,
+    rows
+  };
+}
+
 function readEliteClientFull() {
   const filePath = fs.existsSync(eliteClientFullPath)
     ? eliteClientFullPath
     : eliteClientFullSeedPath;
   if (!fs.existsSync(filePath)) {
-    return { sheet: 'Client List NEW', columns: [], rows: [] };
+    return { sheet: 'Client List NEW', columns: ['Notes'], rows: [] };
   }
-  return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return normalizeEliteClientFull(JSON.parse(fs.readFileSync(filePath, 'utf8')));
+}
+
+function writeEliteClientFull(data) {
+  const normalized = normalizeEliteClientFull(data);
+  const dir = path.dirname(eliteClientFullPath);
+  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(eliteClientFullPath, JSON.stringify(normalized, null, 2), 'utf8');
+  return normalized;
 }
 
 async function getEliteInvoicePdfBuffer(invoice) {
@@ -5940,10 +5973,12 @@ async function createEliteInvoiceForClient(clientId, inlineClient) {
   const sequence = Math.max(0, Math.min(9999, merged.nextSequence || 0));
   const invoiceNumber = formatInvoiceNumber(merged.invoicePrefix, sequence);
   const amount = Math.max(0, Number(merged.defaultAmount) || 0);
+  const serviceDate = parseServiceDate(inlineClient && inlineClient.serviceDate);
 
   const invoice = {
     invoiceNumber,
     date: formatInvoiceDate(new Date()),
+    serviceDate,
     billToName: merged.billToName,
     billToLines: merged.billToLines,
     amount
@@ -5960,6 +5995,7 @@ async function createEliteInvoiceForClient(clientId, inlineClient) {
     billToLines: merged.billToLines,
     amount,
     date: invoice.date,
+    serviceDate,
     createdAt: new Date().toISOString(),
     paid: false,
     paidAt: null
@@ -6096,6 +6132,31 @@ app.get('/api/elite-invoices/client-full', (req, res) => {
     res.json(readEliteClientFull());
   } catch (err) {
     console.error('[EliteInvoices] GET client-full error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.put('/api/elite-invoices/client-full/:index', (req, res) => {
+  try {
+    const index = parseInt(req.params.index, 10);
+    if (!Number.isInteger(index) || index < 0) {
+      return res.status(400).json({ error: 'Invalid client row index.' });
+    }
+    const data = readEliteClientFull();
+    if (index >= data.rows.length) {
+      return res.status(404).json({ error: 'Client row not found.' });
+    }
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const nextRow = {};
+    data.columns.forEach((col) => {
+      const value = Object.prototype.hasOwnProperty.call(body, col) ? body[col] : data.rows[index][col];
+      nextRow[col] = value == null ? '' : String(value);
+    });
+    data.rows[index] = nextRow;
+    const saved = writeEliteClientFull(data);
+    res.json({ row: saved.rows[index], index });
+  } catch (err) {
+    console.error('[EliteInvoices] PUT client-full error:', err);
     res.status(500).json({ error: err.message });
   }
 });

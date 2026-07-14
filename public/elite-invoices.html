@@ -121,7 +121,34 @@
       min-width: 1020px;
     }
     #clientFullTable {
-      min-width: 1480px;
+      min-width: 1680px;
+    }
+    #clientFullTable td.notes-cell {
+      min-width: 180px;
+      max-width: 260px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      vertical-align: top;
+    }
+    #clientFullTable textarea.client-full-field {
+      width: 100%;
+      min-width: 140px;
+      min-height: 64px;
+      resize: vertical;
+      padding: 8px 10px;
+      border-radius: 6px;
+      border: 1px solid rgba(215, 173, 75, .25);
+      background: #0d0d0d;
+      color: var(--text);
+      font: inherit;
+      line-height: 1.35;
+    }
+    #clientFullTable input.client-full-field {
+      width: 100%;
+      min-width: 88px;
+    }
+    #clientFullTable tr.editing td {
+      vertical-align: top;
     }
     th, td {
       padding: 12px 10px;
@@ -137,7 +164,7 @@
       background: rgba(215, 173, 75, .08);
     }
     tr:last-child td { border-bottom: 0; }
-    input[type="text"], input[type="number"], input[type="email"], select {
+    input[type="text"], input[type="number"], input[type="email"], input[type="date"], select {
       width: 100%;
       min-width: 0;
       padding: 8px 10px;
@@ -149,6 +176,7 @@
     }
     .prefix { min-width: 96px; max-width: 180px; text-transform: uppercase; }
     .amount { width: 96px; }
+    .cleaning-date { width: 148px; min-width: 132px; }
     .actions { white-space: nowrap; display: flex; gap: 8px; flex-wrap: wrap; }
     .hint {
       margin-top: 18px;
@@ -332,6 +360,7 @@
               <th>Email</th>
               <th>Address Lines</th>
               <th>Amount ($)</th>
+              <th>Cleaning Date</th>
               <th>Prefix</th>
               <th>Next #</th>
               <th></th>
@@ -342,6 +371,7 @@
       </div>
       <p class="hint">
         Invoice numbers use your prefix plus a dash and 4-digit counter (for example MV-0000, MV-0001, ELITE-0002).
+        <strong>Cleaning Date</strong> defaults to today and is written into the invoice description as “Cleaning Services performed on mm/dd/yy”.
         Use <strong>Add Client</strong> for new customers, then <strong>Save Changes</strong>. Use <strong>Email</strong> to create the invoice, open your email app with a template message, and download the PDF to attach.
       </p>
     </section>
@@ -366,7 +396,7 @@
         </table>
       </div>
       <p class="hint">
-        Full client list from <strong>Client List NEW</strong>. Data is private, password protected, and not indexed by search engines.
+        Full client list from <strong>Client List NEW</strong>. Use <strong>Edit</strong> to change any field or add Notes, then <strong>Save</strong>. Data is private, password protected, and not indexed by search engines.
       </p>
     </section>
 
@@ -457,6 +487,7 @@
       let clientSearchQuery = '';
       let clientFullSearchQuery = '';
       let clientFullLoaded = false;
+      let clientFullEditingIndex = null;
 
       function authHeaders() {
         const password = sessionStorage.getItem(AUTH_KEY);
@@ -532,6 +563,27 @@
         return '$' + Number(amount || 0).toFixed(0);
       }
 
+      function todayInputDate() {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        return `${yyyy}-${mm}-${dd}`;
+      }
+
+      function inputDateToServiceDate(value) {
+        const raw = String(value || '').trim();
+        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!match) {
+          const now = new Date();
+          const mm = String(now.getMonth() + 1).padStart(2, '0');
+          const dd = String(now.getDate()).padStart(2, '0');
+          const yy = String(now.getFullYear()).slice(-2);
+          return `${mm}/${dd}/${yy}`;
+        }
+        return `${match[2]}/${match[3]}/${match[1].slice(-2)}`;
+      }
+
       function showPanel(name) {
         const isClients = name === 'clients';
         const isClientFull = name === 'clientfull';
@@ -584,6 +636,7 @@
             .map((line) => line.trim())
             .filter(Boolean),
           defaultAmount: Number(row.querySelector('[data-field="defaultAmount"]').value || 0),
+          serviceDate: inputDateToServiceDate(row.querySelector('[data-field="serviceDate"]').value),
           invoicePrefix: row.querySelector('[data-field="invoicePrefix"]').value.trim().toUpperCase(),
           nextSequence: Number(row.querySelector('[data-field="nextSequence"]').value || 0)
         };
@@ -611,15 +664,39 @@
 
       function renderClientFullSearchOptions() {
         clientFullSearchList.innerHTML = clientFull.rows.map((row) => {
-          const label = [row['Client ID'], row.Name, row.Email, row.Address]
+          const label = [row['Client ID'], row.Name, row.Email, row.Address, row.Notes]
             .filter(Boolean)
             .join(' — ');
           return `<option value="${escapeHtml(label)}"></option>`;
         }).join('');
       }
 
-      function renderClientFullRows() {
+      function clientFullDisplayColumns() {
         const columns = (clientFull.columns || []).filter(Boolean);
+        if (columns.includes('Notes')) return columns;
+        return columns.concat(['Notes']);
+      }
+
+      function clientFullFieldIsNotes(col) {
+        return String(col).toLowerCase() === 'notes';
+      }
+
+      function renderClientFullCell(row, col, isEditing) {
+        const value = row[col] == null ? '' : String(row[col]);
+        if (!isEditing) {
+          if (clientFullFieldIsNotes(col)) {
+            return `<td class="notes-cell">${escapeHtml(value) || '<span class="empty">—</span>'}</td>`;
+          }
+          return `<td>${escapeHtml(value)}</td>`;
+        }
+        if (clientFullFieldIsNotes(col) || col === 'Address') {
+          return `<td class="${clientFullFieldIsNotes(col) ? 'notes-cell' : ''}"><textarea class="client-full-field" data-field="${escapeHtml(col)}" rows="3">${escapeHtml(value)}</textarea></td>`;
+        }
+        return `<td><input class="client-full-field" type="text" data-field="${escapeHtml(col)}" value="${escapeHtml(value)}"></td>`;
+      }
+
+      function renderClientFullRows() {
+        const columns = clientFullDisplayColumns();
         if (!columns.length) {
           clientFullHead.innerHTML = '';
           clientFullRows.innerHTML = '<tr><td class="empty">No client data loaded.</td></tr>';
@@ -627,21 +704,76 @@
           return;
         }
 
-        clientFullHead.innerHTML = `<tr>${columns.map((col) => `<th>${escapeHtml(col)}</th>`).join('')}</tr>`;
-        const visibleRows = clientFull.rows.filter((row) => rowMatchesSearch(row, clientFullSearchQuery));
+        clientFullHead.innerHTML = `<tr>${columns.map((col) => `<th>${escapeHtml(col)}</th>`).join('')}<th></th></tr>`;
+        const visibleRows = clientFull.rows
+          .map((row, index) => ({ row, index }))
+          .filter(({ row }) => rowMatchesSearch(row, clientFullSearchQuery));
         updateClientFullSearchMeta(visibleRows.length);
         renderClientFullSearchOptions();
 
         if (!visibleRows.length) {
-          clientFullRows.innerHTML = `<tr><td colspan="${columns.length}" class="empty">${clientFullSearchQuery.trim() ? 'No clients match your search.' : 'No clients in list.'}</td></tr>`;
+          clientFullRows.innerHTML = `<tr><td colspan="${columns.length + 1}" class="empty">${clientFullSearchQuery.trim() ? 'No clients match your search.' : 'No clients in list.'}</td></tr>`;
           return;
         }
 
-        clientFullRows.innerHTML = visibleRows.map((row) => `
-          <tr>
-            ${columns.map((col) => `<td>${escapeHtml(row[col])}</td>`).join('')}
-          </tr>
-        `).join('');
+        clientFullRows.innerHTML = visibleRows.map(({ row, index }) => {
+          const isEditing = clientFullEditingIndex === index;
+          const actions = isEditing
+            ? `<button type="button" class="btn btn-small" data-action="save-client-full">Save</button>
+               <button type="button" class="btn-secondary btn-small" data-action="cancel-client-full">Cancel</button>`
+            : `<button type="button" class="btn-secondary btn-small" data-action="edit-client-full">Edit</button>`;
+          return `
+            <tr data-index="${index}" class="${isEditing ? 'editing' : ''}">
+              ${columns.map((col) => renderClientFullCell(row, col, isEditing)).join('')}
+              <td class="actions">${actions}</td>
+            </tr>
+          `;
+        }).join('');
+      }
+
+      function readClientFullRow(tr) {
+        const index = Number(tr.dataset.index);
+        const current = Object.assign({}, clientFull.rows[index] || {});
+        const fields = tr.querySelectorAll('[data-field]');
+        fields.forEach((field) => {
+          current[field.dataset.field] = field.value;
+        });
+        if (!Object.prototype.hasOwnProperty.call(current, 'Notes')) current.Notes = '';
+        return current;
+      }
+
+      async function saveClientFullRow(index, button) {
+        const tr = clientFullRows.querySelector(`tr[data-index="${index}"]`);
+        if (!tr) return;
+        const payload = readClientFullRow(tr);
+        button.disabled = true;
+        setStatus('Saving client...');
+        try {
+          const res = await apiFetch('/api/elite-invoices/client-full/' + encodeURIComponent(index), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (res.status === 401) {
+            sessionStorage.removeItem(AUTH_KEY);
+            showLogin('Session expired. Enter password again.');
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Failed to save client');
+          clientFull.rows[index] = data.row || payload;
+          if (!clientFull.columns.includes('Notes')) {
+            clientFull.columns = clientFull.columns.concat(['Notes']);
+          }
+          clientFullEditingIndex = null;
+          renderClientFullRows();
+          setStatus('Client saved.');
+          window.setTimeout(() => setStatus(''), 1800);
+        } catch (err) {
+          setStatus(err.message || 'Failed to save client', true);
+        } finally {
+          button.disabled = false;
+        }
       }
 
       async function loadClientFull(force) {
@@ -659,6 +791,7 @@
         if (!res.ok) throw new Error('Failed to load ClientFull list');
         clientFull = await res.json();
         clientFullLoaded = true;
+        clientFullEditingIndex = null;
         renderClientFullRows();
         setStatus('');
       }
@@ -709,19 +842,27 @@
       }
 
       function renderClientRows() {
+        const existingDates = new Map(
+          Array.from(rowsEl.querySelectorAll('tr[data-id]')).map((row) => {
+            const input = row.querySelector('[data-field="serviceDate"]');
+            return [row.dataset.id, input ? input.value : ''];
+          })
+        );
         const visibleClients = clients.filter((client) => clientMatchesSearch(client, clientSearchQuery));
         updateClientSearchMeta(visibleClients.length);
         renderClientSearchOptions();
 
         if (!visibleClients.length) {
-          rowsEl.innerHTML = `<tr><td colspan="8" class="empty">${clientSearchQuery.trim() ? 'No clients match your search.' : 'No clients yet. Click Add Client.'}</td></tr>`;
+          rowsEl.innerHTML = `<tr><td colspan="9" class="empty">${clientSearchQuery.trim() ? 'No clients match your search.' : 'No clients yet. Click Add Client.'}</td></tr>`;
           renderClientFilterOptions();
           return;
         }
 
+        const defaultCleaningDate = todayInputDate();
         rowsEl.innerHTML = visibleClients.map((client) => {
           const address = (client.billToLines || []).join('\n');
           const nextLabel = String(client.nextSequence || 0).padStart(4, '0');
+          const cleaningDate = existingDates.get(client.id) || defaultCleaningDate;
           return `
             <tr data-id="${escapeHtml(client.id)}">
               <td><input type="text" data-field="displayName" value="${escapeHtml(client.displayName)}"></td>
@@ -729,8 +870,9 @@
               <td><input type="email" data-field="email" value="${escapeHtml(client.email || '')}" placeholder="client@email.com"></td>
               <td><textarea data-field="billToLines" rows="3" style="width:100%;resize:vertical;padding:8px 10px;border-radius:6px;border:1px solid rgba(215,173,75,.25);background:#0d0d0d;color:#fffaf0;font:inherit;">${escapeHtml(address)}</textarea></td>
               <td><input class="amount" type="number" min="0" step="1" data-field="defaultAmount" value="${Number(client.defaultAmount || 0)}"></td>
+              <td><input class="cleaning-date" type="date" data-field="serviceDate" value="${escapeHtml(cleaningDate)}"></td>
               <td><input class="prefix" type="text" data-field="invoicePrefix" value="${escapeHtml(client.invoicePrefix || '')}" placeholder="MV"></td>
-              <td><input class="amount" type="number" min="0" max="9999" step="1" data-field="nextSequence" value="${Number(client.nextSequence || 0)}" title="Next invoice suffix (${nextLabel})"></td>
+              <td><input class="amount" type="number" min="0" max="9999" step="1" data-field="nextSequence" value="${Number(client.nextSequence || 0)}" title="Next invoice suffix (${nextLabel)}"></td>
               <td class="actions">
                 <button type="button" class="btn btn-small" data-action="create">Create Invoice</button>
                 <button type="button" class="btn-secondary btn-small" data-action="email">Email</button>
@@ -1089,6 +1231,34 @@
         if (resendBtn) resendInvoice(row.dataset.id, resendBtn);
         if (paidBtn) togglePaid(row.dataset.id, paidBtn);
         if (deleteBtn) deleteInvoice(row.dataset.id, deleteBtn);
+      });
+
+      clientFullRows.addEventListener('click', (event) => {
+        const row = event.target.closest('tr[data-index]');
+        if (!row) return;
+        const index = Number(row.dataset.index);
+        const editBtn = event.target.closest('[data-action="edit-client-full"]');
+        const saveBtn = event.target.closest('[data-action="save-client-full"]');
+        const cancelBtn = event.target.closest('[data-action="cancel-client-full"]');
+        if (editBtn) {
+          if (clientFullEditingIndex != null && clientFullEditingIndex !== index) {
+            setStatus('Finish or cancel the open edit first.', true);
+            return;
+          }
+          clientFullEditingIndex = index;
+          renderClientFullRows();
+          const focusField = clientFullRows.querySelector(`tr[data-index="${index}"] [data-field="Notes"]`)
+            || clientFullRows.querySelector(`tr[data-index="${index}"] [data-field]`);
+          if (focusField) focusField.focus();
+          return;
+        }
+        if (cancelBtn) {
+          clientFullEditingIndex = null;
+          renderClientFullRows();
+          setStatus('');
+          return;
+        }
+        if (saveBtn) saveClientFullRow(index, saveBtn);
       });
 
       clientsTab.addEventListener('click', () => showPanel('clients'));

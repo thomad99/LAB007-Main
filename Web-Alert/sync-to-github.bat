@@ -13,14 +13,14 @@ echo %CYAN%========================================%RESET%
 echo %CYAN%Web-Alert Git Sync Script%RESET%
 echo %CYAN%========================================%RESET%
 echo.
-cd /d "C:\Users\david\OneDrive\My Pet Projects\AI\Web-Alert"
+cd /d "%~dp0"
 echo %GREEN%Changed to directory: %CD%%RESET%
 echo.
 
 echo %YELLOW%========================================%RESET%
 echo %YELLOW%STEP 0: FIXING GIT OWNERSHIP%RESET%
 echo %YELLOW%========================================%RESET%
-git config --global --add safe.directory "C:/Users/david/OneDrive/My Pet Projects/AI/Web-Alert"
+git config --global --add safe.directory "%CD:\=/%"
 if %errorlevel% equ 0 (
     echo %GREEN%Git ownership fixed successfully%RESET%
 ) else (

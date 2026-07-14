@@ -13,7 +13,8 @@
     "Payment",
     "Frequency",
     "Price per Visit ($)",
-    "Pay"
+    "Pay",
+    "Notes"
   ],
   "rows": [
     {
@@ -29,7 +30,8 @@
       "Payment": "text+zelle",
       "Frequency": "as requested",
       "Price per Visit ($)": 150,
-      "Pay": 60
+      "Pay": 60,
+      "Notes": ""
     },
     {
       "Client ID": "#85",
@@ -44,7 +46,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 150,
-      "Pay": 60
+      "Pay": 60,
+      "Notes": ""
     },
     {
       "Client ID": "468 Quai",
@@ -59,7 +62,8 @@
       "Payment": "invoice",
       "Frequency": "bi weekly",
       "Price per Visit ($)": 180,
-      "Pay": 120
+      "Pay": 120,
+      "Notes": ""
     },
     {
       "Client ID": "501 Halyard",
@@ -74,7 +78,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 180,
-      "Pay": 80
+      "Pay": 80,
+      "Notes": ""
     },
     {
       "Client ID": "Afton ",
@@ -89,7 +94,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 150,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Avenida Nevada",
@@ -104,7 +110,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": 80,
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "B13",
@@ -119,7 +126,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 190,
-      "Pay": 60
+      "Pay": 60,
+      "Notes": ""
     },
     {
       "Client ID": "Bayso",
@@ -134,7 +142,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 180,
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Bayso 903",
@@ -149,7 +158,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 180,
-      "Pay": 80
+      "Pay": 80,
+      "Notes": ""
     },
     {
       "Client ID": "Bayso1605",
@@ -164,7 +174,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 160,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Beach road",
@@ -179,7 +190,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 380,
-      "Pay": 150
+      "Pay": 150,
+      "Notes": ""
     },
     {
       "Client ID": "Bellagio way",
@@ -194,7 +206,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 160,
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Blvd od Arts",
@@ -209,7 +222,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": 160,
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Bożena gulf gate",
@@ -224,7 +238,8 @@
       "Payment": "zelle",
       "Frequency": "as requested",
       "Price per Visit ($)": 140,
-      "Pay": 80
+      "Pay": 80,
+      "Notes": ""
     },
     {
       "Client ID": "Brandy heron",
@@ -239,7 +254,8 @@
       "Payment": "dd",
       "Frequency": "once a month",
       "Price per Visit ($)": 170,
-      "Pay": 120
+      "Pay": 120,
+      "Notes": ""
     },
     {
       "Client ID": "Burns ct",
@@ -254,7 +270,8 @@
       "Payment": "invoice",
       "Frequency": "bi weekly",
       "Price per Visit ($)": 150,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "C1",
@@ -269,7 +286,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 145,
-      "Pay": 40
+      "Pay": 40,
+      "Notes": ""
     },
     {
       "Client ID": "Carla Deer",
@@ -284,7 +302,8 @@
       "Payment": "lr",
       "Frequency": "bi weekly",
       "Price per Visit ($)": 170,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Casa Blanka",
@@ -299,7 +318,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": "",
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Cecilia gulf and bay",
@@ -314,7 +334,8 @@
       "Payment": "",
       "Frequency": "as requested",
       "Price per Visit ($)": 140,
-      "Pay": 80
+      "Pay": 80,
+      "Notes": ""
     },
     {
       "Client ID": "Cecyli prestancia",
@@ -329,7 +350,8 @@
       "Payment": "zelle",
       "Frequency": "once a month",
       "Price per Visit ($)": 130,
-      "Pay": 80
+      "Pay": 80,
+      "Notes": ""
     },
     {
       "Client ID": "Costal Mold",
@@ -344,7 +366,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": "",
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Cove Terrace",
@@ -359,7 +382,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": "",
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Crescent Arms 603",
@@ -374,7 +398,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 150,
-      "Pay": 60
+      "Pay": 60,
+      "Notes": ""
     },
     {
       "Client ID": "Crescent Arms 703",
@@ -389,7 +414,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 150,
-      "Pay": 60
+      "Pay": 60,
+      "Notes": ""
     },
     {
       "Client ID": "Custom Design SRQ (Ari)",
@@ -404,7 +430,8 @@
       "Payment": "",
       "Frequency": "as required",
       "Price per Visit ($)": "",
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Denise Girona Place",
@@ -419,7 +446,8 @@
       "Payment": "",
       "Frequency": "as requested",
       "Price per Visit ($)": 160,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Edward Ramirez",
@@ -434,7 +462,8 @@
       "Payment": "zelle",
       "Frequency": "once a month",
       "Price per Visit ($)": 160,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "excelcior 2-302",
@@ -449,7 +478,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 140,
-      "Pay": 60
+      "Pay": 60,
+      "Notes": ""
     },
     {
       "Client ID": "Excelsior G-106",
@@ -464,7 +494,8 @@
       "Payment": "text - check",
       "Frequency": "as requested",
       "Price per Visit ($)": 150,
-      "Pay": 60
+      "Pay": 60,
+      "Notes": ""
     },
     {
       "Client ID": "Fairfield",
@@ -479,7 +510,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": 180,
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Gigi",
@@ -494,7 +526,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 180,
-      "Pay": 80
+      "Pay": 80,
+      "Notes": ""
     },
     {
       "Client ID": "Golden Gate",
@@ -509,7 +542,8 @@
       "Payment": "invoice",
       "Frequency": "weekly",
       "Price per Visit ($)": 180,
-      "Pay": 120
+      "Pay": 120,
+      "Notes": ""
     },
     {
       "Client ID": "Judy deer creek",
@@ -524,7 +558,8 @@
       "Payment": "zelle",
       "Frequency": "once a month",
       "Price per Visit ($)": 140,
-      "Pay": 80
+      "Pay": 80,
+      "Notes": ""
     },
     {
       "Client ID": "Kesja island walk",
@@ -539,7 +574,8 @@
       "Payment": "zelle",
       "Frequency": "once a month",
       "Price per Visit ($)": 160,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Kim Micanopy",
@@ -554,7 +590,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": 160,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Lachman corp",
@@ -569,7 +606,8 @@
       "Payment": "zelle",
       "Frequency": "as requested",
       "Price per Visit ($)": "25h",
-      "Pay": "25h"
+      "Pay": "25h",
+      "Notes": ""
     },
     {
       "Client ID": "Lido ",
@@ -584,7 +622,8 @@
       "Payment": "check",
       "Frequency": "as requested",
       "Price per Visit ($)": 160,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Louis siesta",
@@ -599,7 +638,8 @@
       "Payment": "text",
       "Frequency": "as requested",
       "Price per Visit ($)": 380,
-      "Pay": 160
+      "Pay": 160,
+      "Notes": ""
     },
     {
       "Client ID": "Main Street",
@@ -614,7 +654,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": 180,
-      "Pay": "100-lt"
+      "Pay": "100-lt",
+      "Notes": ""
     },
     {
       "Client ID": "Mango Venice",
@@ -629,7 +670,8 @@
       "Payment": "invoice",
       "Frequency": "As requested",
       "Price per Visit ($)": 180,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Melva Hunter",
@@ -644,7 +686,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": 180,
-      "Pay": 120
+      "Pay": 120,
+      "Notes": ""
     },
     {
       "Client ID": "Mrs Davis",
@@ -659,7 +702,8 @@
       "Payment": "check",
       "Frequency": "once a month",
       "Price per Visit ($)": 160,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Murray Home",
@@ -674,7 +718,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": "",
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Nancy ",
@@ -689,7 +734,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": 160,
-      "Pay": "100 Magda"
+      "Pay": "100 Magda",
+      "Notes": ""
     },
     {
       "Client ID": "Nokomis",
@@ -704,7 +750,8 @@
       "Payment": "",
       "Frequency": "as requested",
       "Price per Visit ($)": 200,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "O'Connor building",
@@ -719,7 +766,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": "",
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "office",
@@ -734,7 +782,8 @@
       "Payment": "invoice",
       "Frequency": "weekly",
       "Price per Visit ($)": 150,
-      "Pay": 80
+      "Pay": 80,
+      "Notes": ""
     },
     {
       "Client ID": "Palm bay 54",
@@ -749,7 +798,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 110,
-      "Pay": 40
+      "Pay": 40,
+      "Notes": ""
     },
     {
       "Client ID": "Palm Bay 24",
@@ -764,7 +814,8 @@
       "Payment": "zelle",
       "Frequency": "as requested",
       "Price per Visit ($)": 110,
-      "Pay": 40
+      "Pay": 40,
+      "Notes": ""
     },
     {
       "Client ID": "Pelican dr",
@@ -779,7 +830,8 @@
       "Payment": "lr",
       "Frequency": "bi weekly",
       "Price per Visit ($)": 130,
-      "Pay": 80
+      "Pay": 80,
+      "Notes": ""
     },
     {
       "Client ID": "Sailview place",
@@ -794,7 +846,8 @@
       "Payment": "invoice",
       "Frequency": "bi weekly",
       "Price per Visit ($)": 180,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Sandalwood",
@@ -809,7 +862,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 190,
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Shannon P",
@@ -824,7 +878,8 @@
       "Payment": "cash",
       "Frequency": "bi weekly",
       "Price per Visit ($)": 160,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "staci holweger",
@@ -839,7 +894,8 @@
       "Payment": "zelle",
       "Frequency": "weekly",
       "Price per Visit ($)": 200,
-      "Pay": 115
+      "Pay": 115,
+      "Notes": ""
     },
     {
       "Client ID": "Steven deer",
@@ -854,7 +910,8 @@
       "Payment": "zelle",
       "Frequency": "bi weekly",
       "Price per Visit ($)": 175,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Strand 304B",
@@ -869,7 +926,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": 150,
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Stringer Managment",
@@ -884,7 +942,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": "",
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Sue",
@@ -899,7 +958,8 @@
       "Payment": "onoprio",
       "Frequency": "",
       "Price per Visit ($)": 160,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Sweet meadow Circle",
@@ -914,7 +974,8 @@
       "Payment": "",
       "Frequency": "",
       "Price per Visit ($)": 220,
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Trails Drive",
@@ -929,7 +990,8 @@
       "Payment": "invoice",
       "Frequency": "every 3 weeks",
       "Price per Visit ($)": 130,
-      "Pay": 80
+      "Pay": 80,
+      "Notes": ""
     },
     {
       "Client ID": "Venice Justyna",
@@ -944,7 +1006,8 @@
       "Payment": "",
       "Frequency": "as requested",
       "Price per Visit ($)": 180,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Wilddunes drive",
@@ -959,7 +1022,8 @@
       "Payment": "zelle",
       "Frequency": "bi weekly",
       "Price per Visit ($)": 160,
-      "Pay": 100
+      "Pay": 100,
+      "Notes": ""
     },
     {
       "Client ID": "Winslow Beacon",
@@ -974,7 +1038,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 120,
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     },
     {
       "Client ID": "Yawl lane",
@@ -989,7 +1054,8 @@
       "Payment": "invoice",
       "Frequency": "as requested",
       "Price per Visit ($)": 180,
-      "Pay": ""
+      "Pay": "",
+      "Notes": ""
     }
   ]
 }
