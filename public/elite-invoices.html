@@ -291,6 +291,31 @@
       text-align: center;
       color: var(--muted);
     }
+    .invoice-totals {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 12px 28px;
+      padding: 14px 16px;
+      border-top: 1px solid var(--line);
+      background: rgba(215, 173, 75, .06);
+      font-size: .95rem;
+    }
+    .invoice-totals .total-line {
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      color: var(--muted);
+    }
+    .invoice-totals .total-line strong {
+      color: var(--soft-gold);
+      font-size: 1.05rem;
+      letter-spacing: .02em;
+    }
+    .invoice-totals .total-line.grand strong {
+      color: var(--cream);
+      font-size: 1.15rem;
+    }
     .login-gate {
       min-height: 100vh;
       display: flex;
@@ -467,7 +492,7 @@
       </div>
 
       <div class="table-wrap">
-        <table>
+        <table id="invoicesTable">
           <thead>
             <tr>
               <th>Invoice #</th>
@@ -481,6 +506,7 @@
           </thead>
           <tbody id="invoiceRows"></tbody>
         </table>
+        <div class="invoice-totals" id="invoiceTotals" aria-live="polite"></div>
       </div>
       <p class="hint">
         mark invoices as paid when payment is received, use <strong>View</strong> to open the PDF in a new tab,
@@ -501,6 +527,7 @@
       const appContent = document.getElementById('appContent');
       const rowsEl = document.getElementById('clientRows');
       const invoiceRowsEl = document.getElementById('invoiceRows');
+      const invoiceTotalsEl = document.getElementById('invoiceTotals');
       const statusEl = document.getElementById('status');
       const saveBtn = document.getElementById('saveBtn');
       const addClientBtn = document.getElementById('addClientBtn');
@@ -524,6 +551,7 @@
       const clientFullRows = document.getElementById('clientFullRows');
       let clients = [];
       let invoices = [];
+      let invoiceGrandTotal = 0;
       let clientFull = { columns: [], rows: [] };
       let clientSearchQuery = '';
       let clientFullSearchQuery = '';
@@ -930,9 +958,35 @@
         renderClientFilterOptions();
       }
 
+      function sumInvoiceAmounts(list) {
+        return (list || []).reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
+      }
+
+      function renderInvoiceTotals() {
+        if (!invoiceTotalsEl) return;
+        const visibleTotal = sumInvoiceAmounts(invoices);
+        const clientId = filterClient.value;
+        const parts = [];
+
+        if (clientId) {
+          const option = filterClient.options[filterClient.selectedIndex];
+          const clientName = option ? option.textContent.trim() : 'Customer';
+          parts.push(
+            `<div class="total-line"><span>Total for ${escapeHtml(clientName)}</span><strong>${formatMoney(visibleTotal)}</strong></div>`
+          );
+        }
+
+        parts.push(
+          `<div class="total-line grand"><span>Grand Total</span><strong>${formatMoney(invoiceGrandTotal)}</strong></div>`
+        );
+
+        invoiceTotalsEl.innerHTML = parts.join('');
+      }
+
       function renderInvoiceRows() {
         if (!invoices.length) {
           invoiceRowsEl.innerHTML = '<tr><td colspan="7" class="empty">No invoices match your filters.</td></tr>';
+          renderInvoiceTotals();
           return;
         }
         invoiceRowsEl.innerHTML = invoices.map((invoice) => `
@@ -955,6 +1009,7 @@
             </td>
           </tr>
         `).join('');
+        renderInvoiceTotals();
       }
 
       async function loadClients() {
@@ -976,14 +1031,19 @@
         if (filterClient.value) params.set('clientId', filterClient.value);
         if (filterPaid.value) params.set('paid', filterPaid.value);
         if (filterSearch.value.trim()) params.set('q', filterSearch.value.trim());
-        const res = await apiFetch('/api/elite-invoices/invoices?' + params.toString());
-        if (res.status === 401) {
+        const [res, grandRes] = await Promise.all([
+          apiFetch('/api/elite-invoices/invoices?' + params.toString()),
+          apiFetch('/api/elite-invoices/invoices')
+        ]);
+        if (res.status === 401 || grandRes.status === 401) {
           sessionStorage.removeItem(AUTH_KEY);
           showLogin('Session expired. Enter password again.');
           return;
         }
-        if (!res.ok) throw new Error('Failed to load invoices');
+        if (!res.ok || !grandRes.ok) throw new Error('Failed to load invoices');
         invoices = await res.json();
+        const allInvoices = await grandRes.json();
+        invoiceGrandTotal = sumInvoiceAmounts(allInvoices);
         renderInvoiceRows();
       }
 
