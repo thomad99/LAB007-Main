@@ -2,17 +2,20 @@
  * Marketing Manager — customers, tasks, dashboards (uses /api/marketing-manager/*)
  */
 (function () {
+  const DEFAULT_AGENT_IDENTITY = 'Elite Cleaning (Owner)';
+  const AGENT_IDENTITIES = [
+    'LAB007 Owners',
+    'Elite Cleaning (Owner)',
+    'Tiger Lily Floral (Owner)'
+  ];
   const state = {
     data: { customers: [] },
     catalog: { directory: { usa: [], paid: [] }, campaigns: [] },
     contractStats: { total: 0, pending: 0, signed: 0 },
     contracts: [],
     agentSig: {
-      hasSignature: false,
-      updatedAt: null,
-      signatureDataUrl: '',
-      agentName: '',
-      agentIdentity: 'LAB007 Owners'
+      profiles: {},
+      agentIdentity: DEFAULT_AGENT_IDENTITY
     }
   };
   let selectedId = null;
@@ -30,6 +33,11 @@
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
   const textToHtml = (s) => escapeHtml(String(s || '')).replace(/\n/g, '<br>');
+  const agentIdentityOptions = (selected = DEFAULT_AGENT_IDENTITY) =>
+    AGENT_IDENTITIES.map(
+      (identity) =>
+        `<option value="${escapeHtml(identity)}" ${identity === selected ? 'selected' : ''}>${escapeHtml(identity)}</option>`
+    ).join('');
 
   function statusClass(st) {
     if (st === 'completed') return 'mm-st-done';
@@ -162,18 +170,15 @@
       api('/api/marketing-manager/catalog'),
       api('/api/marketing-manager/contracts/stats').catch(() => ({ total: 0, pending: 0, signed: 0 })),
       api('/api/marketing-manager/contracts').catch(() => ({ contracts: [] })),
-      api('/api/marketing-manager/agent-signature').catch(() => ({ hasSignature: false }))
+      api('/api/marketing-manager/agent-signature').catch(() => ({ profiles: {} }))
     ]);
     state.data = st;
     state.catalog = cat;
     state.contractStats = cstats || { total: 0, pending: 0, signed: 0 };
     state.contracts = (contractsResp && contractsResp.contracts) || [];
     state.agentSig = {
-      hasSignature: Boolean(agentResp?.hasSignature && agentResp?.signatureDataUrl),
-      updatedAt: agentResp?.updatedAt || null,
-      signatureDataUrl: agentResp?.signatureDataUrl || '',
-      agentName: agentResp?.agentName || '',
-      agentIdentity: agentResp?.agentIdentity || 'LAB007 Owners'
+      profiles: agentResp?.profiles || {},
+      agentIdentity: agentResp?.defaultIdentity || DEFAULT_AGENT_IDENTITY
     };
     if (selectedId && !state.data.customers.find((c) => c.id === selectedId)) selectedId = null;
     if (!selectedId && state.data.customers.length) selectedId = state.data.customers[0].id;
@@ -756,8 +761,11 @@
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     const statusEl = document.getElementById('mm-agent-sig-status');
+    const identityEl = document.getElementById('mm-agent-sig-identity');
+    const nameEl = document.getElementById('mm-agent-sig-name');
     let drawing = false;
     let hasInk = false;
+    let loadVersion = 0;
 
     function fillWhite() {
       ctx.fillStyle = '#ffffff';
@@ -794,23 +802,38 @@
       drawing = false;
     }
 
-    fillWhite();
-    const existingUrl = state.agentSig?.signatureDataUrl;
-    if (existingUrl) {
+    function loadProfile(identity) {
+      const version = ++loadVersion;
+      const profile = state.agentSig?.profiles?.[identity] || {};
+      fillWhite();
+      hasInk = false;
+      if (nameEl) nameEl.value = profile.agentName || '';
+      const existingUrl = profile.signatureDataUrl || '';
+      if (!existingUrl) {
+        if (statusEl) statusEl.textContent = `No signature saved for ${identity}.`;
+        return;
+      }
       const img = new Image();
       img.onload = () => {
+        if (version !== loadVersion) return;
         fillWhite();
         ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         hasInk = true;
-        if (statusEl) statusEl.textContent = 'Saved signature loaded — draw to replace.';
+        if (statusEl) statusEl.textContent = `Saved signature loaded for ${identity}.`;
       };
       img.onerror = () => {
+        if (version !== loadVersion) return;
         if (statusEl) statusEl.textContent = 'Could not load saved signature.';
       };
       img.src = existingUrl;
-    } else if (statusEl) {
-      statusEl.textContent = 'No Agent signature saved yet.';
     }
+
+    fillWhite();
+    loadProfile(identityEl?.value || DEFAULT_AGENT_IDENTITY);
+    identityEl?.addEventListener('change', () => {
+      state.agentSig.agentIdentity = identityEl.value || DEFAULT_AGENT_IDENTITY;
+      loadProfile(state.agentSig.agentIdentity);
+    });
 
     canvas.addEventListener('mousedown', startDraw);
     canvas.addEventListener('mousemove', moveDraw);
@@ -835,7 +858,7 @@
         const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
         const agentName = String(document.getElementById('mm-agent-sig-name')?.value || '').trim();
         const agentIdentity =
-          document.getElementById('mm-agent-sig-identity')?.value || 'LAB007 Owners';
+          document.getElementById('mm-agent-sig-identity')?.value || DEFAULT_AGENT_IDENTITY;
         const saved = await api('/api/marketing-manager/agent-signature', {
           method: 'POST',
           body: JSON.stringify({ signatureDataUrl: dataUrl, agentName, agentIdentity })
@@ -844,14 +867,14 @@
         if (elapsed < minSavingMs) await new Promise((r) => setTimeout(r, minSavingMs - elapsed));
         frame?.classList.remove('mm-sig-saving');
         frame?.classList.add('mm-sig-saved');
-        state.agentSig = {
+        state.agentSig.profiles[agentIdentity] = {
           hasSignature: true,
           signatureDataUrl: dataUrl,
           agentName: saved?.agentName || agentName,
-          agentIdentity: saved?.agentIdentity || agentIdentity,
           updatedAt: saved?.updatedAt || new Date().toISOString()
         };
-        if (statusEl) statusEl.textContent = 'Saved on server.';
+        state.agentSig.agentIdentity = saved?.agentIdentity || agentIdentity;
+        if (statusEl) statusEl.textContent = `Saved for ${state.agentSig.agentIdentity}.`;
         window.setTimeout(() => frame?.classList.remove('mm-sig-saved'), 3200);
       } catch (e) {
         alert(e.message);
@@ -860,23 +883,18 @@
       }
     });
     $('#mm-agent-sig-remove')?.addEventListener('click', async () => {
-      if (!confirm('Remove the saved Agent signature from the server?')) return;
+      const agentIdentity = identityEl?.value || DEFAULT_AGENT_IDENTITY;
+      if (!confirm(`Remove the saved signature for ${agentIdentity}?`)) return;
       try {
-        await api('/api/marketing-manager/agent-signature', { method: 'DELETE' });
-        state.agentSig = {
-          hasSignature: false,
-          signatureDataUrl: '',
-          updatedAt: null,
-          agentName: '',
-          agentIdentity: 'LAB007 Owners'
-        };
+        await api(
+          '/api/marketing-manager/agent-signature?agentIdentity=' + encodeURIComponent(agentIdentity),
+          { method: 'DELETE' }
+        );
+        delete state.agentSig.profiles[agentIdentity];
         fillWhite();
         hasInk = false;
-        const nameEl = document.getElementById('mm-agent-sig-name');
         if (nameEl) nameEl.value = '';
-        const identityEl = document.getElementById('mm-agent-sig-identity');
-        if (identityEl) identityEl.value = 'LAB007 Owners';
-        if (statusEl) statusEl.textContent = 'Removed.';
+        if (statusEl) statusEl.textContent = `Removed signature for ${agentIdentity}.`;
       } catch (e) {
         alert(e.message);
       }
@@ -892,6 +910,8 @@
       main.innerHTML = `<p class="mm-muted">Select or add a client to manage tasks.</p>`;
       return;
     }
+    const agentDesignerIdentity = state.agentSig?.agentIdentity || DEFAULT_AGENT_IDENTITY;
+    const agentDesignerProfile = state.agentSig?.profiles?.[agentDesignerIdentity] || {};
 
     const co = countTasks(cust);
     const socialRows = [
@@ -1010,7 +1030,7 @@
           <summary>Electronic contracts</summary>
           <details class="mm-campaign-details mm-agent-sig-wrap" id="mm-agent-sig-details">
             <summary>Agent signature (you)</summary>
-            <p class="mm-small">Draw once, enter your printed name, and choose which business you represent. You can edit these details and save again. Future documents will keep a snapshot of this selection.</p>
+            <p class="mm-small">Each business keeps its own printed name and signature. Choose a business to load, edit, save, or remove only that signature.</p>
             <div class="mm-sig-frame" id="mm-sig-frame">
               <div class="mm-sig-frame-rot" aria-hidden="true"></div>
               <div class="mm-sig-frame-inner">
@@ -1020,12 +1040,10 @@
             <div class="mm-task-meta" style="margin-top:10px;">
               <label class="mm-muted" for="mm-agent-sig-identity" style="font-size:11px;display:block;margin-bottom:4px;">Signing as</label>
               <select id="mm-agent-sig-identity" class="mm-select" style="margin-bottom:8px;">
-                <option value="LAB007 Owners" ${state.agentSig?.agentIdentity === 'LAB007 Owners' ? 'selected' : ''}>LAB007 Owners</option>
-                <option value="Elite Cleaning (Owner)" ${state.agentSig?.agentIdentity === 'Elite Cleaning (Owner)' ? 'selected' : ''}>Elite Cleaning (Owner)</option>
-                <option value="Tiger Lily Floral (Owner)" ${state.agentSig?.agentIdentity === 'Tiger Lily Floral (Owner)' ? 'selected' : ''}>Tiger Lily Floral (Owner)</option>
+                ${agentIdentityOptions(agentDesignerIdentity)}
               </select>
               <label class="mm-muted" for="mm-agent-sig-name" style="font-size:11px;display:block;margin-bottom:4px;">Printed name (added in plain text below the signature on documents)</label>
-              <input type="text" id="mm-agent-sig-name" class="mm-input" maxlength="200" placeholder="e.g. Jane Doe" value="${escapeHtml(state.agentSig?.agentName || '')}" />
+              <input type="text" id="mm-agent-sig-name" class="mm-input" maxlength="200" placeholder="e.g. Jane Doe" value="${escapeHtml(agentDesignerProfile.agentName || '')}" />
             </div>
             <div class="mm-task-meta" style="margin-top:8px; display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
               <button type="button" class="btn-mm-ghost" id="mm-agent-sig-clear">Clear</button>
@@ -1041,8 +1059,12 @@
               <div id="mm-contract-create-body" class="mm-rich-editor" style="margin-top:8px;" contenteditable="true"></div>
               <label class="mm-muted" style="display:flex;gap:10px;align-items:flex-start;margin-top:12px;cursor:pointer;">
                 <input type="checkbox" id="mm-include-agent-sig" checked style="margin-top:3px;" />
-                <span>Include my saved owner signature on this document, dated today — requires a saved signature and “Signing as” selection above.</span>
+                <span>Include my saved owner signature, dated today.</span>
               </label>
+              <label class="mm-notes-label" for="mm-contract-create-agent-identity" style="margin-top:8px;display:block;">Who will I sign this as?</label>
+              <select id="mm-contract-create-agent-identity" class="mm-select">
+                ${agentIdentityOptions(DEFAULT_AGENT_IDENTITY)}
+              </select>
               <button type="button" class="btn-mm" id="mm-create-contract" style="margin-top:8px;">Save doc for signing</button>
               <p class="mm-small">Paste rich text directly. A signing section is automatically added if missing.</p>
             </div>
@@ -1055,6 +1077,14 @@
               <select id="mm-contract-signer-role" class="mm-select">
                 <option value="customer" selected>Customer</option>
                 <option value="employee">Employee</option>
+              </select>
+              <label class="mm-muted" style="display:flex;gap:10px;align-items:flex-start;margin-top:12px;cursor:pointer;">
+                <input type="checkbox" id="mm-upload-include-agent-sig" checked style="margin-top:3px;" />
+                <span>Include my saved owner signature, dated today.</span>
+              </label>
+              <label class="mm-notes-label" for="mm-contract-upload-agent-identity" style="margin-top:8px;display:block;">Who will I sign this as?</label>
+              <select id="mm-contract-upload-agent-identity" class="mm-select">
+                ${agentIdentityOptions(DEFAULT_AGENT_IDENTITY)}
               </select>
               <input type="file" id="mm-contract-upload-file" class="mm-input" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" style="margin-top:8px;" />
               <button type="button" class="btn-mm" id="mm-upload-contract" style="margin-top:8px;">Create E-Sign Doc</button>
@@ -1220,9 +1250,11 @@
                   <button type="button" class="btn-mm-tiny" data-open-contract="${escapeHtml(ct.signPath)}">Open</button>
                   <button type="button" class="btn-mm-tiny" data-copy-contract="${escapeHtml(ct.signPath)}">Copy link</button>
                   ${
-                    ct.documentPath
-                      ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.documentPath)}" target="_blank" rel="noopener" style="text-decoration:none;">Doc</a>`
-                      : ''
+                    ct.status === 'signed' && ct.signedDocumentPath
+                      ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.signedDocumentPath)}" target="_blank" rel="noopener" style="text-decoration:none;">Signed doc</a>`
+                      : ct.documentPath
+                        ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.documentPath)}" target="_blank" rel="noopener" style="text-decoration:none;">Doc</a>`
+                        : ''
                   }
                   <button type="button" class="btn-mm-tiny-danger" data-delete-contract="${escapeHtml(ct.id)}">Delete</button>
                 </div>
@@ -1275,17 +1307,26 @@
       const titleEl = document.getElementById('mm-contract-create-title');
       const bodyEl = document.getElementById('mm-contract-create-body');
       const includeAgent = Boolean(document.getElementById('mm-include-agent-sig')?.checked);
+      const agentIdentity =
+        document.getElementById('mm-contract-create-agent-identity')?.value ||
+        DEFAULT_AGENT_IDENTITY;
       const title = String(titleEl?.value || '').trim();
       const bodyHtml = String(bodyEl?.innerHTML || '').trim();
       const body = String(bodyEl?.innerText || '').trim();
       if (!title) return alert('Document title is required.');
       if (!body) return alert('Document body is required.');
-      if (includeAgent && !state.agentSig?.signatureDataUrl) {
-        return alert('Save your Agent signature first, or uncheck “Include my Agent signature”.');
+      if (includeAgent && !state.agentSig?.profiles?.[agentIdentity]?.signatureDataUrl) {
+        return alert(`Save a signature for ${agentIdentity} first, or turn off the owner signature.`);
       }
       await api(`/api/marketing-manager/customers/${cust.id}/contracts`, {
         method: 'POST',
-        body: JSON.stringify({ title, body, bodyHtml, includeAgentSignature: includeAgent })
+        body: JSON.stringify({
+          title,
+          body,
+          bodyHtml,
+          includeAgentSignature: includeAgent,
+          agentIdentity
+        })
       });
       if (titleEl) titleEl.value = '';
       if (bodyEl) bodyEl.innerHTML = '';
@@ -1303,12 +1344,19 @@
       const titleInput = $('#mm-contract-upload-title');
       const file = fileInput?.files && fileInput.files[0];
       if (!file) return alert('Select a document file to upload.');
-      const includeAgent = Boolean(document.getElementById('mm-include-agent-sig')?.checked);
+      const includeAgent = Boolean(document.getElementById('mm-upload-include-agent-sig')?.checked);
+      const agentIdentity =
+        document.getElementById('mm-contract-upload-agent-identity')?.value ||
+        DEFAULT_AGENT_IDENTITY;
+      if (includeAgent && !state.agentSig?.profiles?.[agentIdentity]?.signatureDataUrl) {
+        return alert(`Save a signature for ${agentIdentity} first, or turn off the owner signature.`);
+      }
       const fd = new FormData();
       fd.append('document', file);
       if (titleInput?.value?.trim()) fd.append('title', titleInput.value.trim());
       fd.append('signerRole', document.getElementById('mm-contract-signer-role')?.value || 'customer');
       fd.append('includeAgentSignature', includeAgent ? '1' : '0');
+      fd.append('agentIdentity', agentIdentity);
       const originalLabel = uploadBtn?.textContent || 'Create E-Sign Doc';
       try {
         if (uploadBtn) {

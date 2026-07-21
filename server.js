@@ -3650,41 +3650,78 @@ const MM_AGENT_IDENTITIES = new Set([
   'Tiger Lily Floral (Owner)'
 ]);
 
-function mmNormalizeAgentIdentity(value) {
+function mmNormalizeAgentIdentity(value, fallback = 'LAB007 Owners') {
   const identity = String(value || '').trim();
-  return MM_AGENT_IDENTITIES.has(identity) ? identity : 'LAB007 Owners';
+  return MM_AGENT_IDENTITIES.has(identity) ? identity : fallback;
 }
 
-function readMarketingAgentSignature() {
+function mmValidStoredAgentSignature(value) {
+  const signatureDataUrl = String(value?.signatureDataUrl || '').trim();
+  if (!signatureDataUrl || !mmValidSignatureDataUrl(signatureDataUrl)) return null;
+  return {
+    signatureDataUrl,
+    agentName: mmSanitizeAgentName(value?.agentName),
+    updatedAt: value?.updatedAt || null
+  };
+}
+
+function readMarketingAgentSignatureStore() {
   try {
-    if (!fs.existsSync(marketingManagerAgentSignaturePath)) return null;
+    if (!fs.existsSync(marketingManagerAgentSignaturePath)) return { version: 2, profiles: {} };
     const raw = fs.readFileSync(marketingManagerAgentSignaturePath, 'utf8');
     const data = JSON.parse(raw);
-    if (!data || typeof data !== 'object') return null;
-    const signatureDataUrl = String(data.signatureDataUrl || '').trim();
-    if (!signatureDataUrl || !mmValidSignatureDataUrl(signatureDataUrl)) return null;
-    return {
-      signatureDataUrl,
-      agentName: mmSanitizeAgentName(data.agentName),
-      agentIdentity: mmNormalizeAgentIdentity(data.agentIdentity),
-      updatedAt: data.updatedAt || null
-    };
+    if (!data || typeof data !== 'object') return { version: 2, profiles: {} };
+
+    const profiles = {};
+    if (data.profiles && typeof data.profiles === 'object') {
+      MM_AGENT_IDENTITIES.forEach((identity) => {
+        const profile = mmValidStoredAgentSignature(data.profiles[identity]);
+        if (profile) profiles[identity] = profile;
+      });
+    } else {
+      // Migrate the original single-signature format without losing the saved image.
+      const legacy = mmValidStoredAgentSignature(data);
+      if (legacy) {
+        const legacyIdentity = mmNormalizeAgentIdentity(data.agentIdentity);
+        profiles[legacyIdentity] = legacy;
+      }
+    }
+    return { version: 2, profiles };
   } catch {
-    return null;
+    return { version: 2, profiles: {} };
   }
+}
+
+function readMarketingAgentSignature(agentIdentity) {
+  const identity = mmNormalizeAgentIdentity(agentIdentity);
+  const profile = readMarketingAgentSignatureStore().profiles[identity];
+  return profile ? { ...profile, agentIdentity: identity } : null;
 }
 
 function writeMarketingAgentSignature(signatureDataUrl, agentName, agentIdentity) {
   const dir = path.dirname(marketingManagerAgentSignaturePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  const payload = {
+  const identity = mmNormalizeAgentIdentity(agentIdentity);
+  const store = readMarketingAgentSignatureStore();
+  const profile = {
     signatureDataUrl: String(signatureDataUrl || '').trim(),
     agentName: mmSanitizeAgentName(agentName),
-    agentIdentity: mmNormalizeAgentIdentity(agentIdentity),
     updatedAt: new Date().toISOString()
   };
-  fs.writeFileSync(marketingManagerAgentSignaturePath, JSON.stringify(payload, null, 2), 'utf8');
-  return payload;
+  store.profiles[identity] = profile;
+  fs.writeFileSync(marketingManagerAgentSignaturePath, JSON.stringify(store, null, 2), 'utf8');
+  return { ...profile, agentIdentity: identity };
+}
+
+function deleteMarketingAgentSignature(agentIdentity) {
+  const identity = mmNormalizeAgentIdentity(agentIdentity);
+  const store = readMarketingAgentSignatureStore();
+  delete store.profiles[identity];
+  if (Object.keys(store.profiles).length) {
+    fs.writeFileSync(marketingManagerAgentSignaturePath, JSON.stringify(store, null, 2), 'utf8');
+  } else if (fs.existsSync(marketingManagerAgentSignaturePath)) {
+    fs.unlinkSync(marketingManagerAgentSignaturePath);
+  }
 }
 
 /** Appends the selected owner's signature block after the signer section. */
@@ -4692,23 +4729,20 @@ app.get('/api/marketing-manager/catalog', (req, res) => {
 
 app.get('/api/marketing-manager/agent-signature', (req, res) => {
   try {
-    const agent = readMarketingAgentSignature();
-    if (!agent) {
-      return res.json({
-        hasSignature: false,
-        updatedAt: null,
-        signatureDataUrl: '',
-        agentName: '',
-        agentIdentity: 'LAB007 Owners'
-      });
-    }
-    return res.json({
-      hasSignature: true,
-      updatedAt: agent.updatedAt || null,
-      signatureDataUrl: agent.signatureDataUrl,
-      agentName: agent.agentName || '',
-      agentIdentity: mmNormalizeAgentIdentity(agent.agentIdentity)
+    const store = readMarketingAgentSignatureStore();
+    const profiles = {};
+    MM_AGENT_IDENTITIES.forEach((identity) => {
+      const profile = store.profiles[identity];
+      profiles[identity] = profile
+        ? {
+            hasSignature: true,
+            updatedAt: profile.updatedAt || null,
+            signatureDataUrl: profile.signatureDataUrl,
+            agentName: profile.agentName || ''
+          }
+        : { hasSignature: false, updatedAt: null, signatureDataUrl: '', agentName: '' };
     });
+    return res.json({ profiles, defaultIdentity: 'Elite Cleaning (Owner)' });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -4719,7 +4753,7 @@ app.post('/api/marketing-manager/agent-signature', (req, res) => {
     const incomingSig = String(req.body?.signatureDataUrl || '').trim();
     const incomingName = mmSanitizeAgentName(req.body?.agentName);
     const incomingIdentity = mmNormalizeAgentIdentity(req.body?.agentIdentity);
-    const existing = readMarketingAgentSignature();
+    const existing = readMarketingAgentSignature(incomingIdentity);
 
     let effectiveSig = '';
     if (incomingSig) {
@@ -4747,10 +4781,9 @@ app.post('/api/marketing-manager/agent-signature', (req, res) => {
 
 app.delete('/api/marketing-manager/agent-signature', (req, res) => {
   try {
-    if (fs.existsSync(marketingManagerAgentSignaturePath)) {
-      fs.unlinkSync(marketingManagerAgentSignaturePath);
-    }
-    return res.json({ success: true });
+    const identity = mmNormalizeAgentIdentity(req.query?.agentIdentity);
+    deleteMarketingAgentSignature(identity);
+    return res.json({ success: true, agentIdentity: identity });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -5088,6 +5121,10 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
     if (!c) return res.status(404).json({ error: 'Customer not found' });
     const title = String(req.body?.title || '').trim();
     const includeAgentSignature = Boolean(req.body?.includeAgentSignature);
+    const requestedAgentIdentity = mmNormalizeAgentIdentity(
+      req.body?.agentIdentity,
+      'Elite Cleaning (Owner)'
+    );
     const bodyHtmlRaw = String(req.body?.bodyHtml || '').trim();
     let bodyHtml = bodyHtmlRaw ? mmEnsureSignatureSectionHtml(bodyHtmlRaw) : '';
     const bodyRaw = String(req.body?.body || '').trim();
@@ -5101,10 +5138,10 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
     let agentNameSnapshot = '';
     let agentIdentitySnapshot = 'LAB007 Owners';
     if (includeAgentSignature) {
-      const agent = readMarketingAgentSignature();
+      const agent = readMarketingAgentSignature(requestedAgentIdentity);
       if (!agent?.signatureDataUrl) {
         return res.status(400).json({
-          error: 'Save your Agent signature first (Electronic contracts → Agent signature), or uncheck “Include Agent signature”.'
+          error: `Save a signature for ${requestedAgentIdentity} first, or uncheck “Include owner signature”.`
         });
       }
       agentNameSnapshot = agent.agentName || '';
@@ -5180,6 +5217,10 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
       const titleRaw = String(req.body?.title || '').trim();
       const title = titleRaw || req.file.originalname || 'Contract document';
       const signerRole = mmNormalizeSignerRole(req.body?.signerRole);
+      const requestedAgentIdentity = mmNormalizeAgentIdentity(
+        req.body?.agentIdentity,
+        'Elite Cleaning (Owner)'
+      );
       const uploadExt = path.extname(String(req.file.originalname || '').toLowerCase());
       const includeAgentRaw = req.body?.includeAgentSignature;
       const includeAgentSignature =
@@ -5212,14 +5253,13 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
       let agentNameSnapshot = '';
       let agentIdentitySnapshot = 'LAB007 Owners';
       if (includeAgentSignature && uploadExt === '.pdf') {
-        const agent = readMarketingAgentSignature();
+        const agent = readMarketingAgentSignature(requestedAgentIdentity);
         if (!agent?.signatureDataUrl) {
           try {
             if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
           } catch {}
           return res.status(400).json({
-            error:
-              'Save your Agent signature first (Electronic contracts → Agent signature), or do not include it on upload.'
+            error: `Save a signature for ${requestedAgentIdentity} first, or do not include it on upload.`
           });
         }
         agentNameSnapshot = agent.agentName || '';
