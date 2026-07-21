@@ -7,7 +7,13 @@
     catalog: { directory: { usa: [], paid: [] }, campaigns: [] },
     contractStats: { total: 0, pending: 0, signed: 0 },
     contracts: [],
-    agentSig: { hasSignature: false, updatedAt: null, signatureDataUrl: '', agentName: '' }
+    agentSig: {
+      hasSignature: false,
+      updatedAt: null,
+      signatureDataUrl: '',
+      agentName: '',
+      agentIdentity: 'LAB007 Owners'
+    }
   };
   let selectedId = null;
   const contractBrowser = {
@@ -166,7 +172,8 @@
       hasSignature: Boolean(agentResp?.hasSignature && agentResp?.signatureDataUrl),
       updatedAt: agentResp?.updatedAt || null,
       signatureDataUrl: agentResp?.signatureDataUrl || '',
-      agentName: agentResp?.agentName || ''
+      agentName: agentResp?.agentName || '',
+      agentIdentity: agentResp?.agentIdentity || 'LAB007 Owners'
     };
     if (selectedId && !state.data.customers.find((c) => c.id === selectedId)) selectedId = null;
     if (!selectedId && state.data.customers.length) selectedId = state.data.customers[0].id;
@@ -256,13 +263,13 @@
                     <div class="mm-contract-row">
                       <div class="mm-contract-row-main">
                         <div class="mm-contract-row-title">${escapeHtml(ct.title || 'Contract')}</div>
-                        <div class="mm-small">${escapeHtml(ct.customerName || 'Customer')} • Created ${escapeHtml(fmtDate(ct.createdAt))}</div>
+                        <div class="mm-small">${escapeHtml(ct.customerName || 'Customer')} • Created ${escapeHtml(fmtDate(ct.createdAt))} • Signer: ${escapeHtml(ct.signerRoleLabel || 'Customer')}</div>
                         ${
                           ct.includeAgentSignature && ct.agentSignatureDate
-                            ? `<div class="mm-small">Agent on doc: ${escapeHtml(ct.agentSignatureDate)}</div>`
+                            ? `<div class="mm-small">Owner signature: ${escapeHtml(ct.agentIdentity || 'LAB007 Owners')} • ${escapeHtml(ct.agentSignatureDate)}</div>`
                             : ''
                         }
-                        ${ct.signedAt ? `<div class="mm-small">Signed ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerName || 'Signer')}</div>` : ''}
+                        ${ct.signedAt ? `<div class="mm-small">Signed ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerRoleLabel || 'Customer')} ${escapeHtml(ct.signerName || 'Signer')}</div>` : ''}
                       </div>
                       <div class="mm-contract-row-actions">
                         <span class="mm-status-badge ${stClass}">${stLabel}</span>
@@ -827,9 +834,11 @@
       try {
         const dataUrl = canvas.toDataURL('image/jpeg', 0.92);
         const agentName = String(document.getElementById('mm-agent-sig-name')?.value || '').trim();
+        const agentIdentity =
+          document.getElementById('mm-agent-sig-identity')?.value || 'LAB007 Owners';
         const saved = await api('/api/marketing-manager/agent-signature', {
           method: 'POST',
-          body: JSON.stringify({ signatureDataUrl: dataUrl, agentName })
+          body: JSON.stringify({ signatureDataUrl: dataUrl, agentName, agentIdentity })
         });
         const elapsed = Date.now() - t0;
         if (elapsed < minSavingMs) await new Promise((r) => setTimeout(r, minSavingMs - elapsed));
@@ -839,6 +848,7 @@
           hasSignature: true,
           signatureDataUrl: dataUrl,
           agentName: saved?.agentName || agentName,
+          agentIdentity: saved?.agentIdentity || agentIdentity,
           updatedAt: saved?.updatedAt || new Date().toISOString()
         };
         if (statusEl) statusEl.textContent = 'Saved on server.';
@@ -853,11 +863,19 @@
       if (!confirm('Remove the saved Agent signature from the server?')) return;
       try {
         await api('/api/marketing-manager/agent-signature', { method: 'DELETE' });
-        state.agentSig = { hasSignature: false, signatureDataUrl: '', updatedAt: null, agentName: '' };
+        state.agentSig = {
+          hasSignature: false,
+          signatureDataUrl: '',
+          updatedAt: null,
+          agentName: '',
+          agentIdentity: 'LAB007 Owners'
+        };
         fillWhite();
         hasInk = false;
         const nameEl = document.getElementById('mm-agent-sig-name');
         if (nameEl) nameEl.value = '';
+        const identityEl = document.getElementById('mm-agent-sig-identity');
+        if (identityEl) identityEl.value = 'LAB007 Owners';
         if (statusEl) statusEl.textContent = 'Removed.';
       } catch (e) {
         alert(e.message);
@@ -992,7 +1010,7 @@
           <summary>Electronic contracts</summary>
           <details class="mm-campaign-details mm-agent-sig-wrap" id="mm-agent-sig-details">
             <summary>Agent signature (you)</summary>
-            <p class="mm-small">Draw once and save. JPEG is used for PDF embedding. Check the box below when creating a doc to include your signature as Agency (LAB007), dated the day you generate the document.</p>
+            <p class="mm-small">Draw once, enter your printed name, and choose which business you represent. You can edit these details and save again. Future documents will keep a snapshot of this selection.</p>
             <div class="mm-sig-frame" id="mm-sig-frame">
               <div class="mm-sig-frame-rot" aria-hidden="true"></div>
               <div class="mm-sig-frame-inner">
@@ -1000,6 +1018,12 @@
               </div>
             </div>
             <div class="mm-task-meta" style="margin-top:10px;">
+              <label class="mm-muted" for="mm-agent-sig-identity" style="font-size:11px;display:block;margin-bottom:4px;">Signing as</label>
+              <select id="mm-agent-sig-identity" class="mm-select" style="margin-bottom:8px;">
+                <option value="LAB007 Owners" ${state.agentSig?.agentIdentity === 'LAB007 Owners' ? 'selected' : ''}>LAB007 Owners</option>
+                <option value="Elite Cleaning (Owner)" ${state.agentSig?.agentIdentity === 'Elite Cleaning (Owner)' ? 'selected' : ''}>Elite Cleaning (Owner)</option>
+                <option value="Tiger Lily Floral (Owner)" ${state.agentSig?.agentIdentity === 'Tiger Lily Floral (Owner)' ? 'selected' : ''}>Tiger Lily Floral (Owner)</option>
+              </select>
               <label class="mm-muted" for="mm-agent-sig-name" style="font-size:11px;display:block;margin-bottom:4px;">Printed name (added in plain text below the signature on documents)</label>
               <input type="text" id="mm-agent-sig-name" class="mm-input" maxlength="200" placeholder="e.g. Jane Doe" value="${escapeHtml(state.agentSig?.agentName || '')}" />
             </div>
@@ -1017,7 +1041,7 @@
               <div id="mm-contract-create-body" class="mm-rich-editor" style="margin-top:8px;" contenteditable="true"></div>
               <label class="mm-muted" style="display:flex;gap:10px;align-items:flex-start;margin-top:12px;cursor:pointer;">
                 <input type="checkbox" id="mm-include-agent-sig" checked style="margin-top:3px;" />
-                <span>Include my Agent signature on this document (LAB007), dated today — requires a saved signature above.</span>
+                <span>Include my saved owner signature on this document, dated today — requires a saved signature and “Signing as” selection above.</span>
               </label>
               <button type="button" class="btn-mm" id="mm-create-contract" style="margin-top:8px;">Save doc for signing</button>
               <p class="mm-small">Paste rich text directly. A signing section is automatically added if missing.</p>
@@ -1027,9 +1051,14 @@
             <summary>Upload a doc for signing</summary>
             <div class="mm-task-meta" style="margin-top:12px;">
               <input type="text" id="mm-contract-upload-title" class="mm-input" placeholder="Uploaded document title (optional)" />
+              <label class="mm-notes-label" for="mm-contract-signer-role" style="margin-top:8px;display:block;">Who will sign this document?</label>
+              <select id="mm-contract-signer-role" class="mm-select">
+                <option value="customer" selected>Customer</option>
+                <option value="employee">Employee</option>
+              </select>
               <input type="file" id="mm-contract-upload-file" class="mm-input" accept=".pdf,.doc,.docx,.txt,.png,.jpg,.jpeg" style="margin-top:8px;" />
               <button type="button" class="btn-mm" id="mm-upload-contract" style="margin-top:8px;">Create E-Sign Doc</button>
-              <p class="mm-small">Supported: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG (max 25MB).</p>
+              <p class="mm-small">Supported: PDF, DOC, DOCX, TXT, PNG, JPG, JPEG (max 25MB). The signer will be referred to as the selected role (Customer or Employee) on the signing page and the signed copy.</p>
             </div>
           </details>
           <details class="mm-campaign-details" id="mm-contract-view-details" style="margin-top:12px;">
@@ -1178,13 +1207,13 @@
               <div class="mm-sug-row">
                 <div style="min-width:0;">
                   <div style="font-weight:600;">${escapeHtml(ct.title || 'Contract')}</div>
-                  <div class="mm-small">Created: ${escapeHtml(fmtDate(ct.createdAt))}</div>
+                  <div class="mm-small">Created: ${escapeHtml(fmtDate(ct.createdAt))} • Signer: ${escapeHtml(ct.signerRoleLabel || 'Customer')}</div>
                   ${
                     ct.includeAgentSignature && ct.agentSignatureDate
-                      ? `<div class="mm-small">Agent on document: ${escapeHtml(ct.agentSignatureDate)}</div>`
+                      ? `<div class="mm-small">Owner signature: ${escapeHtml(ct.agentIdentity || 'LAB007 Owners')} • ${escapeHtml(ct.agentSignatureDate)}</div>`
                       : ''
                   }
-                  ${ct.signedAt ? `<div class="mm-small">Signed: ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerName || 'Signer')}</div>` : ''}
+                  ${ct.signedAt ? `<div class="mm-small">Signed: ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerRoleLabel || 'Customer')} ${escapeHtml(ct.signerName || 'Signer')}</div>` : ''}
                 </div>
                 <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; justify-content:flex-end;">
                   <span class="mm-status-badge ${statusClass}">${statusText}</span>
@@ -1278,6 +1307,7 @@
       const fd = new FormData();
       fd.append('document', file);
       if (titleInput?.value?.trim()) fd.append('title', titleInput.value.trim());
+      fd.append('signerRole', document.getElementById('mm-contract-signer-role')?.value || 'customer');
       fd.append('includeAgentSignature', includeAgent ? '1' : '0');
       const originalLabel = uploadBtn?.textContent || 'Create E-Sign Doc';
       try {

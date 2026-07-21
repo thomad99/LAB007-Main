@@ -1,5 +1,5 @@
 """
-Append Agency (LAB007) signature block on a new page at the end of a PDF.
+Append the selected owner's signature block on a new page at the end of a PDF.
 Keeps all existing pages unchanged so body text is never overlapped.
 """
 import argparse
@@ -48,6 +48,7 @@ def main():
     parser.add_argument("--signature", required=True)
     parser.add_argument("--date", required=True)
     parser.add_argument("--name", required=False, default="")
+    parser.add_argument("--identity", required=False, default="LAB007 Owners")
     args = parser.parse_args()
 
     if not os.path.exists(args.input):
@@ -66,10 +67,17 @@ def main():
     margin_x = 50
     # Start near top so appended signature page doesn't show a large blank gap.
     y = 72
+    identity = (args.identity or "LAB007 Owners").replace("\r", " ").replace("\n", " ").strip()
+    if identity not in {
+        "LAB007 Owners",
+        "Elite Cleaning (Owner)",
+        "Tiger Lily Floral (Owner)",
+    }:
+        identity = "LAB007 Owners"
 
     page.insert_text(
         fitz.Point(margin_x, y),
-        "Agency representative (LAB007)",
+        f"Representing: {identity}",
         fontsize=12,
         fontname="helv",
         color=(0, 0, 0),

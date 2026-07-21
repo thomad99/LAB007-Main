@@ -45,7 +45,7 @@ def _ensure_fitz():
 fitz = _ensure_fitz()  # PyMuPDF
 
 
-def _stamp_client_on_last_page_bottom(page, page_rect, signature_path, name, date_str):
+def _stamp_client_on_last_page_bottom(page, page_rect, signature_path, name, date_str, role_label="Client"):
     """
     Place client signature + labels only in the bottom margin of the page.
     Do not search the document for the word 'Date' (that matches body text like 'date of signing').
@@ -93,7 +93,7 @@ def _stamp_client_on_last_page_bottom(page, page_rect, signature_path, name, dat
     y_label = y_top - 6
     page.insert_text(
         fitz.Point(margin_x, y_label - 2),
-        "Client Signature:",
+        f"{role_label} Signature:",
         fontsize=10,
         fontname="helv",
         color=(0, 0, 0),
@@ -102,7 +102,7 @@ def _stamp_client_on_last_page_bottom(page, page_rect, signature_path, name, dat
     y_head = y_label - 18
     page.insert_text(
         fitz.Point(margin_x, y_head),
-        "Client Acceptance and Signature",
+        f"{role_label} Acceptance and Signature",
         fontsize=11,
         fontname="helv",
         color=(0, 0, 0),
@@ -110,7 +110,7 @@ def _stamp_client_on_last_page_bottom(page, page_rect, signature_path, name, dat
     )
 
 
-def _stamp_client_below_agent_block(page, page_rect, signature_path, name, date_str):
+def _stamp_client_below_agent_block(page, page_rect, signature_path, name, date_str, role_label="Client"):
     """
     When an Agency block exists on the page (uploaded-doc flow), place the client
     signature block directly underneath it instead of at the very bottom.
@@ -148,7 +148,7 @@ def _stamp_client_below_agent_block(page, page_rect, signature_path, name, date_
 
     page.insert_text(
         fitz.Point(margin_x, y_head),
-        "Client Acceptance and Signature",
+        f"{role_label} Acceptance and Signature",
         fontsize=11,
         fontname="helv",
         color=(0, 0, 0),
@@ -156,7 +156,7 @@ def _stamp_client_below_agent_block(page, page_rect, signature_path, name, date_
     )
     page.insert_text(
         fitz.Point(margin_x, y_label),
-        "Client Signature:",
+        f"{role_label} Signature:",
         fontsize=10,
         fontname="helv",
         color=(0, 0, 0),
@@ -190,6 +190,7 @@ def main():
     parser.add_argument("--signature", required=True)
     parser.add_argument("--name", required=True)
     parser.add_argument("--date", required=True)
+    parser.add_argument("--role", default="Client")
     args = parser.parse_args()
 
     if not os.path.exists(args.input):
@@ -207,16 +208,17 @@ def main():
     page = doc[last_idx]
     page_rect = page.rect
 
+    role_label = (args.role or "Client").strip() or "Client"
     try:
         # Uploaded-doc flow adds an "Agency representative (LAB007)" block to the
         # last page first. In that case, place the client block directly under it.
-        used_near_agent = _stamp_client_below_agent_block(page, page_rect, args.signature, args.name, args.date)
+        used_near_agent = _stamp_client_below_agent_block(page, page_rect, args.signature, args.name, args.date, role_label)
         if not used_near_agent:
-            _stamp_client_on_last_page_bottom(page, page_rect, args.signature, args.name, args.date)
+            _stamp_client_on_last_page_bottom(page, page_rect, args.signature, args.name, args.date, role_label)
     except RuntimeError:
         # Not enough room: append a new page and stamp there.
         page = doc.new_page(width=page_rect.width, height=page_rect.height)
-        _stamp_client_on_last_page_bottom(page, page.rect, args.signature, args.name, args.date)
+        _stamp_client_on_last_page_bottom(page, page.rect, args.signature, args.name, args.date, role_label)
 
     if os.path.exists(args.output):
         os.remove(args.output)

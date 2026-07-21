@@ -153,8 +153,8 @@
       <p class="muted" id="signedMeta"></p>
     </div>
     <div class="card sign-section" id="signCard">
-      <h2 style="font-size:17px; margin-bottom:10px;">Sign below</h2>
-      <label for="fullName">Full name</label>
+      <h2 style="font-size:17px; margin-bottom:10px;" id="signHeading">Sign below</h2>
+      <label for="fullName" id="fullNameLabel">Full name</label>
       <input id="fullName" type="text" placeholder="Your full name" />
       <label for="signDate">Date</label>
       <input id="signDate" type="date" />
@@ -195,6 +195,8 @@
       const contractFullscreenBody = document.getElementById('contractFullscreenBody');
       const closeContractFullBtn = document.getElementById('closeContractFullBtn');
       const nameEl = document.getElementById('fullName');
+      const nameLabelEl = document.getElementById('fullNameLabel');
+      const signHeadingEl = document.getElementById('signHeading');
       const dateEl = document.getElementById('signDate');
       const signBtn = document.getElementById('signBtn');
       const clearBtn = document.getElementById('clearBtn');
@@ -209,6 +211,7 @@
       let signed = false;
       let fullContractMode = 'none';
       let fullContractPayload = '';
+      let signerRoleLabel = 'Customer';
 
       function fillCanvasWhite() {
         ctx.save();
@@ -265,7 +268,7 @@
       function stripAutoSignatureSectionHtml(html) {
         const s = String(html || '');
         if (!s) return '';
-        const marker = /<p[^>]*>\s*<strong>\s*Client Acceptance\s*(?:&(?:amp;)?|and)\s*Signature\s*<\/strong>\s*<\/p>/i;
+        const marker = /<p[^>]*>\s*<strong>\s*(?:Client|Employee) Acceptance\s*(?:&(?:amp;)?|and)\s*Signature\s*<\/strong>\s*<\/p>/i;
         const m = s.match(marker);
         if (!m || typeof m.index !== 'number') return s;
         const cut = s.lastIndexOf('<hr', m.index);
@@ -275,9 +278,9 @@
       function stripAutoSignatureSectionText(text) {
         const s = String(text || '');
         if (!s) return '';
-        const idx = s.search(/\n\s*---\s*\n[\s\S]*Client Acceptance\s*(?:&|and)\s*Signature/i);
+        const idx = s.search(/\n\s*---\s*\n[\s\S]*(?:Client|Employee) Acceptance\s*(?:&|and)\s*Signature/i);
         if (idx >= 0) return s.slice(0, idx).trim();
-        const idx2 = s.search(/Client Acceptance\s*(?:&|and)\s*Signature/i);
+        const idx2 = s.search(/(?:Client|Employee) Acceptance\s*(?:&|and)\s*Signature/i);
         if (idx2 >= 0) return s.slice(0, idx2).trim();
         return s;
       }
@@ -305,7 +308,13 @@
           titleEl.textContent = c.title || 'Contract';
           if (c.bodyHtml) bodyEl.innerHTML = stripAutoSignatureSectionHtml(c.bodyHtml);
           else bodyEl.textContent = stripAutoSignatureSectionText(c.body || '');
-          custEl.textContent = 'Customer: ' + (c.customerName || 'Customer');
+          signerRoleLabel = c.signerRoleLabel || (c.signerRole === 'employee' ? 'Employee' : 'Customer');
+          custEl.textContent =
+            'Customer: ' + (c.customerName || 'Customer') +
+            (signerRoleLabel === 'Employee' ? ' — to be signed by an Employee' : '');
+          signHeadingEl.textContent = signerRoleLabel + ' — sign below';
+          nameLabelEl.textContent = signerRoleLabel + ' full name';
+          nameEl.placeholder = 'Your full name (' + signerRoleLabel + ')';
           if (c.hasDocument && c.documentPath) {
             bodyEl.style.display = 'none';
             const docUrl = c.documentPath;
@@ -356,7 +365,9 @@
               img.src = c.signatureDataUrl;
             }
             signedMetaEl.className = 'ok';
-            signedMetaEl.textContent = 'Signed on ' + (c.signedAt || c.signDate || 'saved date');
+            signedMetaEl.textContent =
+              'Signed by ' + signerRoleLabel + (c.signerName ? ' ' + c.signerName : '') +
+              ' on ' + (c.signedAt || c.signDate || 'saved date');
           } else {
             dateEl.value = new Date().toISOString().slice(0, 10);
           }
@@ -371,7 +382,7 @@
         const date = dateEl.value;
         if (!fullName) {
           msgEl.className = 'error';
-          msgEl.textContent = 'Full name is required.';
+          msgEl.textContent = signerRoleLabel + ' full name is required.';
           return;
         }
         if (!date) {

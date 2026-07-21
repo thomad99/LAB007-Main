@@ -3592,6 +3592,19 @@ function mmValidSignatureDataUrl(value) {
   return /^data:image\/(?:png|jpe?g);base64,[a-z0-9+/=\s]+$/i.test(s) && s.length <= 4_000_000;
 }
 
+function mmNormalizeSignerRole(value) {
+  return String(value || '').trim().toLowerCase() === 'employee' ? 'employee' : 'customer';
+}
+
+function mmSignerRoleLabel(role) {
+  return mmNormalizeSignerRole(role) === 'employee' ? 'Employee' : 'Customer';
+}
+
+/** Label used inside signature blocks ("Client" kept for customer docs for continuity). */
+function mmSignerBlockLabel(role) {
+  return mmNormalizeSignerRole(role) === 'employee' ? 'Employee' : 'Client';
+}
+
 function mmContractView(c, customerName) {
   const signedDocPath =
     c.status === 'signed' && (c.signedPdfPath || c.signedTextPath)
@@ -3608,6 +3621,8 @@ function mmContractView(c, customerName) {
     createdAt: c.createdAt,
     signedAt: c.signedAt || null,
     signerName: c.signerName || '',
+    signerRole: mmNormalizeSignerRole(c.signerRole),
+    signerRoleLabel: mmSignerRoleLabel(c.signerRole),
     signDate: c.signDate || '',
     signPath: `/marketing-manager/sign/${c.token}`,
     hasDocument: Boolean(c.filePath),
@@ -3616,7 +3631,8 @@ function mmContractView(c, customerName) {
     signedDocumentPath: signedDocPath,
     includeAgentSignature: Boolean(c.includeAgentSignature),
     agentSignatureDate: c.agentSignatureDate || '',
-    agentName: c.agentName || ''
+    agentName: c.agentName || '',
+    agentIdentity: mmNormalizeAgentIdentity(c.agentIdentity)
   };
 }
 
@@ -3626,6 +3642,17 @@ function mmSanitizeAgentName(value) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 200);
+}
+
+const MM_AGENT_IDENTITIES = new Set([
+  'LAB007 Owners',
+  'Elite Cleaning (Owner)',
+  'Tiger Lily Floral (Owner)'
+]);
+
+function mmNormalizeAgentIdentity(value) {
+  const identity = String(value || '').trim();
+  return MM_AGENT_IDENTITIES.has(identity) ? identity : 'LAB007 Owners';
 }
 
 function readMarketingAgentSignature() {
@@ -3639,6 +3666,7 @@ function readMarketingAgentSignature() {
     return {
       signatureDataUrl,
       agentName: mmSanitizeAgentName(data.agentName),
+      agentIdentity: mmNormalizeAgentIdentity(data.agentIdentity),
       updatedAt: data.updatedAt || null
     };
   } catch {
@@ -3646,30 +3674,32 @@ function readMarketingAgentSignature() {
   }
 }
 
-function writeMarketingAgentSignature(signatureDataUrl, agentName) {
+function writeMarketingAgentSignature(signatureDataUrl, agentName, agentIdentity) {
   const dir = path.dirname(marketingManagerAgentSignaturePath);
   if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
   const payload = {
     signatureDataUrl: String(signatureDataUrl || '').trim(),
     agentName: mmSanitizeAgentName(agentName),
+    agentIdentity: mmNormalizeAgentIdentity(agentIdentity),
     updatedAt: new Date().toISOString()
   };
   fs.writeFileSync(marketingManagerAgentSignaturePath, JSON.stringify(payload, null, 2), 'utf8');
   return payload;
 }
 
-/** Appends Agency block after client section; dateStr is YYYY-MM-DD (document generation date). */
-function mmAppendAgentSignatureBlocks(bodyText, bodyHtml, signatureDataUrl, dateStr, agentName) {
+/** Appends the selected owner's signature block after the signer section. */
+function mmAppendAgentSignatureBlocks(bodyText, bodyHtml, signatureDataUrl, dateStr, agentName, agentIdentity) {
   const safeDate = String(dateStr || '').trim();
   const safeName = mmSanitizeAgentName(agentName);
+  const safeIdentity = mmNormalizeAgentIdentity(agentIdentity);
   const namedTextLine = safeName ? `\nName: ${safeName}` : '';
-  const textAppend = `\n\n---\nAgency representative (LAB007)\nDate: ${safeDate}\nAgent Signature:\n${namedTextLine ? `${namedTextLine}\n` : ''}`;
+  const textAppend = `\n\n---\nRepresenting: ${safeIdentity}\nDate: ${safeDate}\nAgent Signature:\n${namedTextLine ? `${namedTextLine}\n` : ''}`;
   const escSrc = String(signatureDataUrl || '').replace(/"/g, '&quot;');
   const namedHtmlLine = safeName
     ? `<p style="margin-top:4px;"><strong>Name:</strong> ${mmEscapeHtml(safeName)}</p>`
     : '';
   const htmlAppend = `<hr />
-<p><strong>Agency representative (LAB007)</strong></p>
+<p><strong>Representing:</strong> ${mmEscapeHtml(safeIdentity)}</p>
 <p><strong>Date:</strong> ${mmEscapeHtml(safeDate)}</p>
 <p><strong>Agent Signature:</strong></p>
 <p><img alt="Agent signature" src="${escSrc}" style="max-height:96px;max-width:320px;border:1px solid rgba(0,0,0,0.12);border-radius:6px;background:#fff;" /></p>
@@ -3729,7 +3759,7 @@ async function mmNotifyContractSigned(contract, customerName) {
       '',
       `Customer: ${customerName || 'Customer'}`,
       `Contract: ${contract.title || 'Untitled contract'}`,
-      `Signed by: ${contract.signerName || 'Unknown signer'}`,
+      `Signed by (${mmSignerRoleLabel(contract.signerRole)}): ${contract.signerName || 'Unknown signer'}`,
       `Date entered: ${contract.signDate || 'N/A'}`,
       `Signed at: ${contract.signedAt || 'N/A'}`
     ]
@@ -3757,6 +3787,7 @@ function mmBuildSignedContractText(contract, customerName) {
     `Customer: ${customerName || 'Customer'}`,
     `Contract: ${contract.title || 'Untitled contract'}`,
     `Status: ${contract.status || 'pending'}`,
+    `Signer role: ${mmSignerRoleLabel(contract.signerRole)}`,
     `Signer full name: ${contract.signerName || ''}`,
     `Date entered: ${contract.signDate || ''}`,
     `Signed at: ${contract.signedAt || ''}`,
@@ -3777,24 +3808,25 @@ function mmEscapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function mmEnsureSignatureSection(bodyText) {
+function mmEnsureSignatureSection(bodyText, signerRole) {
   const source = String(bodyText || '').trim();
   const hasSignature = /\bsignature\b/i.test(source);
   const hasDate = /\bdate\b/i.test(source);
   const hasName = /\bprinted\s+name\b|\bname\s*[:\-]/i.test(source);
   if (hasSignature && hasDate && hasName) return source;
+  const blockLabel = mmSignerBlockLabel(signerRole);
   const out = source ? `${source}\n\n` : '';
   return (
     out +
     [
       '---',
-      'Client Acceptance and Signature',
+      `${blockLabel} Acceptance and Signature`,
       '',
       '',
       'Printed Name:',
       '',
       '',
-      'Client Signature:',
+      `${blockLabel} Signature:`,
       '',
       '',
       'Date:'
@@ -3818,21 +3850,22 @@ function mmHtmlToPlainText(html) {
     .trim();
 }
 
-function mmEnsureSignatureSectionHtml(bodyHtml) {
+function mmEnsureSignatureSectionHtml(bodyHtml, signerRole) {
   const source = String(bodyHtml || '').trim();
   const textProbe = mmHtmlToPlainText(source);
   const hasSignature = /\bsignature\b/i.test(textProbe);
   const hasDate = /\bdate\b/i.test(textProbe);
   const hasName = /\bprinted\s+name\b|\bname\s*[:\-]/i.test(textProbe);
   if (hasSignature && hasDate && hasName) return source;
+  const blockLabel = mmSignerBlockLabel(signerRole);
   return (
     (source ? `${source}\n` : '') +
     `<hr />
-<p><strong>Client Acceptance and Signature</strong></p>
+<p><strong>${blockLabel} Acceptance and Signature</strong></p>
 <p><br /></p>
 <p><strong>Printed Name:</strong></p>
 <p><br /></p>
-<p><strong>Client Signature:</strong></p>
+<p><strong>${blockLabel} Signature:</strong></p>
 <p><br /></p>
 <p><strong>Date:</strong></p>`
   );
@@ -3852,7 +3885,7 @@ function mmInjectSignatureIntoHtml(templateHtml, contract) {
     `$1${signer}`
   );
   out = out.replace(
-    /(<strong>\s*Client\s+Signature\s*:\s*<\/strong>\s*)(?:_+|\.{2,}|&nbsp;|\s)*(?:[^<]*)/gi,
+    /(<strong>\s*(?:Client|Employee)\s+Signature\s*:\s*<\/strong>\s*)(?:_+|\.{2,}|&nbsp;|\s)*(?:[^<]*)/gi,
     `$1${signer}`
   );
   out = out.replace(
@@ -3871,7 +3904,7 @@ function mmInjectSignatureIntoText(templateText, contract) {
   out = out.replace(/\{\{\s*SIGNATURE\s*\}\}/gi, signer);
   out = out.replace(/\{\{\s*DATE\s*\}\}/gi, signDate);
   // Replace full line values to remove underscores/placeholders completely.
-  out = out.replace(/^(\s*(?:client\s+)?signature\s*[:\-]\s*).*$/gim, `$1${signer}`);
+  out = out.replace(/^(\s*(?:client\s+|employee\s+)?signature\s*[:\-]\s*).*$/gim, `$1${signer}`);
   out = out.replace(/^(\s*date\s*[:\-]\s*).*$/gim, `$1${signDate}`);
   out = out.replace(/^(\s*(?:printed\s+)?name\s*[:\-]\s*).*$/gim, `$1${signer}`);
   return out;
@@ -4131,8 +4164,8 @@ function mmEffectivePythonForMarketingPdf() {
   return effectivePy;
 }
 
-/** Appends a new page with Agency (LAB007) signature at end of PDF; leaves existing pages unchanged. */
-function mmStampAgentPageOnPdf(inputPath, outputPath, agentImagePath, dateStr, agentName) {
+/** Appends a new page with the selected owner's signature; leaves existing pages unchanged. */
+function mmStampAgentPageOnPdf(inputPath, outputPath, agentImagePath, dateStr, agentName, agentIdentity) {
   try {
     const stampScript = path.join(__dirname, 'lib', 'pdf_stamp_agent.py');
     const effectivePy = mmEffectivePythonForMarketingPdf();
@@ -4145,7 +4178,9 @@ function mmStampAgentPageOnPdf(inputPath, outputPath, agentImagePath, dateStr, a
       '--signature',
       agentImagePath,
       '--date',
-      String(dateStr || '')
+      String(dateStr || ''),
+      '--identity',
+      mmNormalizeAgentIdentity(agentIdentity)
     ];
     const safeName = String(agentName || '')
       .replace(/[\r\n\t]+/g, ' ')
@@ -4192,7 +4227,9 @@ function mmTryStampOriginalPdf(contract, signedPdfPath) {
         '--name',
         String(contract.signerName || ''),
         '--date',
-        String(contract.signDate || '')
+        String(contract.signDate || ''),
+        '--role',
+        mmSignerBlockLabel(contract.signerRole)
       ],
       { encoding: 'utf8' }
     );
@@ -4211,25 +4248,26 @@ function mmTryStampOriginalPdf(contract, signedPdfPath) {
 }
 
 function mmCreateSignedArtifacts(contract, customerName) {
+  const signerRole = mmNormalizeSignerRole(contract.signerRole);
   const baseText = (() => {
     const ext = path.extname(String(contract.originalName || '').toLowerCase());
     if (ext === '.txt' && contract.filePath && fs.existsSync(contract.filePath)) {
       try {
-        return mmEnsureSignatureSection(fs.readFileSync(contract.filePath, 'utf8'));
+        return mmEnsureSignatureSection(fs.readFileSync(contract.filePath, 'utf8'), signerRole);
       } catch {
-        return mmEnsureSignatureSection(contract.body || '');
+        return mmEnsureSignatureSection(contract.body || '', signerRole);
       }
     }
-    return mmEnsureSignatureSection(contract.body || '');
+    return mmEnsureSignatureSection(contract.body || '', signerRole);
   })();
   const injected = mmInjectSignatureIntoText(baseText, contract);
-  const baseHtml = mmEnsureSignatureSectionHtml(contract.bodyHtml || mmPlainTextToHtml(baseText));
+  const baseHtml = mmEnsureSignatureSectionHtml(contract.bodyHtml || mmPlainTextToHtml(baseText), signerRole);
   const injectedHtml = mmInjectSignatureIntoHtml(baseHtml, contract);
   const signedTxt = [
     injected.trim(),
     '',
     '---',
-    `Signed by: ${contract.signerName || ''}`,
+    `Signed by (${mmSignerRoleLabel(signerRole)}): ${contract.signerName || ''}`,
     `Date: ${contract.signDate || ''}`,
     `Signed at: ${contract.signedAt || ''}`,
     `Customer: ${customerName || 'Customer'}`
@@ -4656,13 +4694,20 @@ app.get('/api/marketing-manager/agent-signature', (req, res) => {
   try {
     const agent = readMarketingAgentSignature();
     if (!agent) {
-      return res.json({ hasSignature: false, updatedAt: null, signatureDataUrl: '', agentName: '' });
+      return res.json({
+        hasSignature: false,
+        updatedAt: null,
+        signatureDataUrl: '',
+        agentName: '',
+        agentIdentity: 'LAB007 Owners'
+      });
     }
     return res.json({
       hasSignature: true,
       updatedAt: agent.updatedAt || null,
       signatureDataUrl: agent.signatureDataUrl,
-      agentName: agent.agentName || ''
+      agentName: agent.agentName || '',
+      agentIdentity: mmNormalizeAgentIdentity(agent.agentIdentity)
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -4673,6 +4718,7 @@ app.post('/api/marketing-manager/agent-signature', (req, res) => {
   try {
     const incomingSig = String(req.body?.signatureDataUrl || '').trim();
     const incomingName = mmSanitizeAgentName(req.body?.agentName);
+    const incomingIdentity = mmNormalizeAgentIdentity(req.body?.agentIdentity);
     const existing = readMarketingAgentSignature();
 
     let effectiveSig = '';
@@ -4687,11 +4733,12 @@ app.post('/api/marketing-manager/agent-signature', (req, res) => {
       return res.status(400).json({ error: 'Valid signature image (PNG or JPEG data URL) is required' });
     }
 
-    const saved = writeMarketingAgentSignature(effectiveSig, incomingName);
+    const saved = writeMarketingAgentSignature(effectiveSig, incomingName, incomingIdentity);
     return res.json({
       success: true,
       updatedAt: saved.updatedAt,
-      agentName: saved.agentName || ''
+      agentName: saved.agentName || '',
+      agentIdentity: saved.agentIdentity
     });
   } catch (error) {
     return res.status(500).json({ error: error.message });
@@ -5052,6 +5099,7 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
     const genDate = createdAt.slice(0, 10);
     let agentSigForPdf = '';
     let agentNameSnapshot = '';
+    let agentIdentitySnapshot = 'LAB007 Owners';
     if (includeAgentSignature) {
       const agent = readMarketingAgentSignature();
       if (!agent?.signatureDataUrl) {
@@ -5060,7 +5108,15 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
         });
       }
       agentNameSnapshot = agent.agentName || '';
-      const appended = mmAppendAgentSignatureBlocks(body, bodyHtml, agent.signatureDataUrl, genDate, agentNameSnapshot);
+      agentIdentitySnapshot = mmNormalizeAgentIdentity(agent.agentIdentity);
+      const appended = mmAppendAgentSignatureBlocks(
+        body,
+        bodyHtml,
+        agent.signatureDataUrl,
+        genDate,
+        agentNameSnapshot,
+        agentIdentitySnapshot
+      );
       body = appended.body;
       bodyHtml = appended.bodyHtml;
       agentSigForPdf = agent.signatureDataUrl;
@@ -5083,7 +5139,8 @@ app.post('/api/marketing-manager/customers/:customerId/contracts', (req, res) =>
       sourceType: 'created',
       includeAgentSignature,
       agentSignatureDate: includeAgentSignature ? genDate : '',
-      agentName: includeAgentSignature ? agentNameSnapshot : ''
+      agentName: includeAgentSignature ? agentNameSnapshot : '',
+      agentIdentity: includeAgentSignature ? agentIdentitySnapshot : ''
     };
     const originalPdfPath = mmCreateOriginalContractPdf({
       ...contract,
@@ -5122,6 +5179,7 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
 
       const titleRaw = String(req.body?.title || '').trim();
       const title = titleRaw || req.file.originalname || 'Contract document';
+      const signerRole = mmNormalizeSignerRole(req.body?.signerRole);
       const uploadExt = path.extname(String(req.file.originalname || '').toLowerCase());
       const includeAgentRaw = req.body?.includeAgentSignature;
       const includeAgentSignature =
@@ -5152,6 +5210,7 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
 
       let agentTmpPath = '';
       let agentNameSnapshot = '';
+      let agentIdentitySnapshot = 'LAB007 Owners';
       if (includeAgentSignature && uploadExt === '.pdf') {
         const agent = readMarketingAgentSignature();
         if (!agent?.signatureDataUrl) {
@@ -5164,6 +5223,7 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
           });
         }
         agentNameSnapshot = agent.agentName || '';
+        agentIdentitySnapshot = mmNormalizeAgentIdentity(agent.agentIdentity);
         const parsedAgent = mmParseSignatureDataUrl(agent.signatureDataUrl);
         if (!parsedAgent?.buffer?.length) {
           try {
@@ -5180,13 +5240,14 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
         id: mmNewId('contract'),
         customerId: c.id,
         title,
-        body: mmEnsureSignatureSection(uploadBody),
-        bodyHtml: mmEnsureSignatureSectionHtml(uploadBodyHtmlRaw || mmPlainTextToHtml(uploadBody)),
+        body: mmEnsureSignatureSection(uploadBody, signerRole),
+        bodyHtml: mmEnsureSignatureSectionHtml(uploadBodyHtmlRaw || mmPlainTextToHtml(uploadBody), signerRole),
         token: crypto.randomBytes(24).toString('hex'),
         status: 'pending',
         createdAt,
         signedAt: null,
         signerName: '',
+        signerRole,
         signDate: '',
         signatureDataUrl: '',
         sourceType: 'uploaded',
@@ -5196,12 +5257,20 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/upload', (req, 
         fileSize: req.file.size || 0,
         includeAgentSignature: Boolean(includeAgentSignature && uploadExt === '.pdf'),
         agentSignatureDate: includeAgentSignature && uploadExt === '.pdf' ? genDate : '',
-        agentName: includeAgentSignature && uploadExt === '.pdf' ? agentNameSnapshot : ''
+        agentName: includeAgentSignature && uploadExt === '.pdf' ? agentNameSnapshot : '',
+        agentIdentity: includeAgentSignature && uploadExt === '.pdf' ? agentIdentitySnapshot : ''
       };
 
       if (includeAgentSignature && uploadExt === '.pdf' && agentTmpPath) {
         const outPdf = path.join(marketingManagerContractDocsDir, `${contract.id}-with-agent.pdf`);
-        const ok = mmStampAgentPageOnPdf(req.file.path, outPdf, agentTmpPath, genDate, agentNameSnapshot);
+        const ok = mmStampAgentPageOnPdf(
+          req.file.path,
+          outPdf,
+          agentTmpPath,
+          genDate,
+          agentNameSnapshot,
+          agentIdentitySnapshot
+        );
         try {
           if (fs.existsSync(agentTmpPath)) fs.unlinkSync(agentTmpPath);
         } catch {}
@@ -5361,6 +5430,8 @@ app.get('/api/marketing-manager/contracts/sign/:token', (req, res) => {
         status: contract.status || 'pending',
         customerName: customer?.name || 'Customer',
         signerName: contract.signerName || '',
+        signerRole: mmNormalizeSignerRole(contract.signerRole),
+        signerRoleLabel: mmSignerRoleLabel(contract.signerRole),
         signDate: contract.signDate || '',
         signedAt: contract.signedAt || null,
         signatureDataUrl: contract.signatureDataUrl || '',
@@ -5693,6 +5764,84 @@ Keep it concise and actionable.`;
 
     console.error('AI analyze error:', err);
     return res.status(500).json({ error: 'Failed to analyze with AI' });
+  }
+});
+
+// Citrix environment AI summary endpoint (POC sizing)
+app.post('/api/citrix/ai-summary', async (req, res) => {
+  try {
+    const env = req.body || {};
+    const apiKey = process.env.OPENAI_API_KEY || process.env.OPENAI_KEY;
+    if (!apiKey) {
+      return res.status(500).json({ error: 'OPENAI_API_KEY not configured' });
+    }
+
+    // Keep the payload bounded so huge audits can't blow up the prompt.
+    const images = Array.isArray(env.masterImages) ? env.masterImages.slice(0, 100) : [];
+    const catalogs = Array.isArray(env.catalogs) ? env.catalogs.slice(0, 100) : [];
+    const deliveryGroups = Array.isArray(env.deliveryGroups) ? env.deliveryGroups.slice(0, 100) : [];
+    const totals = env.totals || {};
+
+    const promptData = {
+      siteName: env.siteName,
+      licenseType: env.licenseType,
+      controllers: env.controllers,
+      publishedApplications: env.publishedApplications,
+      publishedDesktops: env.publishedDesktops,
+      maxConcurrentUsers30d: env.maxConcurrentUsers30d,
+      uniqueUsers30d: env.uniqueUsers30d,
+      totalServers: env.totalServers,
+      storefrontStores: env.storefrontStores,
+      totals,
+      catalogs,
+      deliveryGroups,
+      masterImages: images
+    };
+
+    const prompt = `
+You are reviewing an exported audit of a customer's Citrix Virtual Apps and Desktops environment.
+The customer is evaluating a migration to Omnissa Horizon, and we need to scope a POC (proof of concept) environment.
+
+Environment data (JSON):
+"""
+${JSON.stringify(promptData, null, 2)}
+"""
+
+Write a concise POC summary with these sections:
+1. **Environment at a Glance** — one short paragraph describing the size and shape of this environment (site, users, apps, desktops, servers, catalogs, delivery groups).
+2. **Master Images** — state the total number of master images used (${Number(totals.masterImageCount) || images.length}). List each image by name with its specs (vCPU / RAM GB / disk GB) when available. Then give the combined totals for those VMs (total vCPU, total RAM GB, total disk GB). If specs are missing for some or all images, say so explicitly.
+3. **POC Environment Recommendation** — recommend what would be required for a Horizon POC that represents this environment: how many master images to replicate, suggested compute sizing (based on the image specs above, with sensible defaults where specs are missing), infrastructure components (connection servers, UAG, database), and a suggested subset of catalogs/delivery groups/apps to include.
+4. **Watch-outs** — up to 5 bullet points of risks or things to verify before the POC (e.g. missing specs, provisioning types like MCS/PVS, multi-session vs single-session mix).
+
+Use the exact numbers from the JSON where available; do not invent specs that are not present. Keep it under ~500 words.`;
+
+    const body = {
+      model: 'gpt-4o-mini',
+      temperature: 0.2,
+      max_tokens: 900,
+      messages: [
+        { role: 'system', content: 'You are a senior EUC architect experienced in Citrix-to-Horizon migrations. Be precise with numbers and concise in prose.' },
+        { role: 'user', content: prompt }
+      ]
+    };
+    const response = await fetchFn('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify(body)
+    });
+    if (!response.ok) {
+      const errText = await response.text().catch(() => '');
+      return res.status(response.status).json({ error: `OpenAI request failed: ${errText || response.statusText}` });
+    }
+    const data = await response.json();
+    const result = data?.choices?.[0]?.message?.content || '';
+    return res.json({ result });
+  } catch (err) {
+    console.error('Citrix AI summary error:', err);
+    return res.status(500).json({ error: 'Failed to generate AI summary' });
   }
 });
 
