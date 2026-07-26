@@ -8,6 +8,7 @@
     ['007Trade', '/007trade'],
     ['Elite Cleaning', '/elite-cleaning'],
     ['Elite Invoices', '/Elite-Invoices'],
+    ['Clever-CRM', '/Clever-CRM'],
     ['Citrix-2-HZ', '/citrix'],
     ['Web-Alerts', '/webalert'],
     ['Contact', '/contact']

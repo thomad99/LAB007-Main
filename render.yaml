@@ -28,6 +28,8 @@ services:
         value: /var/data/lab007
       - key: ELITE_INVOICES_DATA_DIR
         value: /var/data/lab007/elite-invoices
+      - key: CLEVER_CRM_DATA_DIR
+        value: /var/data/lab007/clever-crm
       - key: PUPPETEER_CACHE_DIR
         value: /opt/render/.cache/puppeteer
       - key: PLAYWRIGHT_BROWSERS_PATH

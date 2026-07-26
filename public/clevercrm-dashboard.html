@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CleverCRM Dashboard</title>
+  <meta name="description" content="CleverCRM dashboard and customer breakout view.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7f6;
+      --surface: #ffffff;
+      --ink: #17211f;
+      --muted: #66736f;
+      --line: #d8e1de;
+      --green: #176b5d;
+      --blue: #265d87;
+      --amber: #a86424;
+      --red: #9d3030;
+      font-family: Aptos, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink); font-size: 15px; line-height: 1.45; }
+    a { color: var(--blue); }
+    .page { max-width: 1320px; margin: 0 auto; padding: 28px 22px 46px; }
+    .topbar { display: flex; justify-content: space-between; align-items: flex-end; gap: 18px; margin-bottom: 20px; }
+    h1 { margin: 0; font-size: 34px; line-height: 1.05; }
+    .muted { color: var(--muted); font-weight: 650; }
+    .button { min-height: 40px; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); color: var(--ink); padding: 0 13px; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }
+    .button.primary { background: var(--green); color: #fff; border-color: var(--green); }
+    .grid { display: grid; gap: 16px; }
+    .kpis { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .panel { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 16px 40px rgba(20, 36, 33, 0.10); overflow: hidden; }
+    .metric { padding: 18px; }
+    .metric label { display: block; color: var(--muted); font-size: 12px; font-weight: 850; text-transform: uppercase; margin-bottom: 6px; }
+    .metric b { font-size: 34px; line-height: 1; }
+    .split { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-top: 16px; }
+    .panel h2 { margin: 0; padding: 16px 18px; border-bottom: 1px solid var(--line); font-size: 19px; }
+    .panel-body { padding: 16px 18px; }
+    .bars { display: grid; gap: 12px; }
+    .bar-row { display: grid; grid-template-columns: 130px minmax(0, 1fr) 34px; gap: 10px; align-items: center; font-weight: 750; }
+    .track { height: 12px; border-radius: 999px; background: #e7eeec; overflow: hidden; }
+    .fill { height: 100%; border-radius: inherit; background: var(--green); }
+    .fill.blue { background: var(--blue); }
+    .fill.amber { background: var(--amber); }
+    .lists { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); margin-top: 16px; }
+    .lead-list { display: grid; gap: 10px; }
+    .lead-item { border: 1px solid var(--line); border-radius: 8px; padding: 12px; display: grid; gap: 5px; background: #fbfcfc; }
+    .lead-item strong { font-size: 16px; }
+    .pill { display: inline-flex; align-items: center; width: fit-content; min-height: 23px; border-radius: 999px; padding: 0 9px; background: #e6edf8; color: #214c75; font-size: 12px; font-weight: 850; }
+    .pill.follow { background: #f8eadc; color: var(--amber); }
+    .table-panel { margin-top: 16px; }
+    .table-wrap { overflow: auto; }
+    table { width: 100%; min-width: 920px; border-collapse: collapse; }
+    th, td { border-bottom: 1px solid var(--line); padding: 11px 12px; text-align: left; vertical-align: top; }
+    th { background: #eef4f2; color: #33413e; font-size: 12px; text-transform: uppercase; }
+    @media (max-width: 980px) {
+      .kpis, .split, .lists { grid-template-columns: 1fr; }
+      .topbar { align-items: flex-start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="topbar">
+      <div>
+        <h1>CleverCRM Dashboard</h1>
+        <div class="muted" id="updated">Loading CRM data...</div>
+      </div>
+      <a class="button primary" href="/Clever-CRM">Open CRM</a>
+    </header>
+
+    <section class="grid kpis" aria-label="CRM summary">
+      <div class="panel metric"><label>Total leads</label><b id="totalLeads">0</b></div>
+      <div class="panel metric"><label>Contacted</label><b id="contactedLeads">0</b></div>
+      <div class="panel metric"><label>Not contacted</label><b id="notContacted">0</b></div>
+      <div class="panel metric"><label>Contracted</label><b id="contractedLeads">0</b></div>
+      <div class="panel metric"><label>Follow up</label><b id="followLeads">0</b></div>
+    </section>
+
+    <section class="grid split">
+      <article class="panel">
+        <h2>Pipeline</h2>
+        <div class="panel-body bars" id="statusBars"></div>
+      </article>
+      <article class="panel">
+        <h2>Manager Workload</h2>
+        <div class="panel-body bars" id="managerBars"></div>
+      </article>
+    </section>
+
+    <section class="grid lists">
+      <article class="panel">
+        <h2>Not Contacted</h2>
+        <div class="panel-body lead-list" id="needsCallList"></div>
+      </article>
+      <article class="panel">
+        <h2>Follow-Up Queue</h2>
+        <div class="panel-body lead-list" id="followList"></div>
+      </article>
+    </section>
+
+    <section class="panel table-panel">
+      <h2>Customer Breakout</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Company</th>
+              <th>Manager</th>
+              <th>Status</th>
+              <th>Next Step</th>
+              <th>Phone</th>
+              <th>Last Call</th>
+            </tr>
+          </thead>
+          <tbody id="customerRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="/lab007-site-nav.js"></script>
+  <script>
+    const API_PATH = '/api/clp-crm';
+    const STORAGE_KEY = 'clp-crm-leads-v1';
+    const statuses = ['New lead', 'Contacted', 'Demo requested', 'Follow up', 'Contracted', 'Not a fit'];
+    const managers = ['David', 'Gabriel', 'Steve'];
+    const $ = id => document.getElementById(id);
+    const esc = value => String(value ?? '').replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+
+    function fallbackLeads() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        return Array.isArray(saved) ? saved : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function countBy(items, key, allowed) {
+      const counts = Object.fromEntries(allowed.map(name => [name, 0]));
+      for (const item of items) counts[item[key] || allowed[0]] = (counts[item[key] || allowed[0]] || 0) + 1;
+      return counts;
+    }
+
+    function renderBars(target, counts, labels, tone = '') {
+      const max = Math.max(1, ...Object.values(counts));
+      target.innerHTML = labels.map(label => {
+        const value = counts[label] || 0;
+        return `<div class="bar-row"><span>${esc(label)}</span><div class="track"><div class="fill ${tone}" style="width:${(value / max) * 100}%"></div></div><b>${value}</b></div>`;
+      }).join('');
+    }
+
+    function leadCard(lead) {
+      return `<div class="lead-item"><strong>${esc(lead.company)}</strong><span class="pill ${lead.status === 'Follow up' ? 'follow' : ''}">${esc(lead.status || 'New lead')}</span><span class="muted">${esc(lead.manager || 'David')} · ${esc(lead.phone || 'No phone')}</span><span>${esc(lead.nextStep || lead.notes || 'No next step logged.')}</span></div>`;
+    }
+
+    function render(leads, updatedAt) {
+      $('updated').textContent = updatedAt ? 'Loaded ' + new Date(updatedAt).toLocaleString() : 'Loaded CRM data';
+      $('totalLeads').textContent = leads.length;
+      $('contactedLeads').textContent = leads.filter(isContacted).length;
+      $('notContacted').textContent = leads.filter(isNotContacted).length;
+      $('contractedLeads').textContent = leads.filter(lead => lead.status === 'Contracted').length;
+      $('followLeads').textContent = leads.filter(lead => lead.status === 'Follow up').length;
+
+      renderBars($('statusBars'), countBy(leads, 'status', statuses), statuses, 'blue');
+      renderBars($('managerBars'), countBy(leads, 'manager', managers), managers, 'amber');
+
+      const needsCall = leads.filter(isNotContacted).slice(0, 8);
+      const follow = leads.filter(lead => lead.status === 'Follow up' || lead.status === 'Demo requested').slice(0, 8);
+      $('needsCallList').innerHTML = needsCall.length ? needsCall.map(leadCard).join('') : '<div class="muted">No leads waiting for a first call.</div>';
+      $('followList').innerHTML = follow.length ? follow.map(leadCard).join('') : '<div class="muted">No active follow-ups.</div>';
+      $('customerRows').innerHTML = leads.map(lead => `
+        <tr>
+          <td><strong>${esc(lead.company)}</strong><br><a href="${esc(lead.website || '#')}" target="_blank" rel="noopener">${esc(lead.website || '')}</a></td>
+          <td>${esc(lead.manager || 'David')}</td>
+          <td>${esc(lead.status || 'New lead')}</td>
+          <td>${esc(lead.nextStep || '')}</td>
+          <td>${esc(lead.phone || '')}</td>
+          <td>${esc(lead.lastCall || 'Not called')}</td>
+        </tr>
+      `).join('');
+    }
+
+    function isContacted(lead) {
+      return Boolean(lead.lastCall) || ['Contacted', 'Demo requested', 'Follow up', 'Contracted', 'Not a fit'].includes(lead.status);
+    }
+
+    function isNotContacted(lead) {
+      return !isContacted(lead);
+    }
+
+    async function load() {
+      try {
+        const response = await fetch(API_PATH, { cache: 'no-store' });
+        if (!response.ok) throw new Error('CRM API unavailable');
+        const data = await response.json();
+        const leads = Array.isArray(data.leads) && data.leads.length ? data.leads : fallbackLeads();
+        render(leads, data.updatedAt);
+      } catch {
+        render(fallbackLeads(), null);
+        $('updated').textContent = 'Using browser fallback data.';
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

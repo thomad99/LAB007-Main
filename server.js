@@ -6365,6 +6365,146 @@ app.get('/elite-invoices', (req, res) => {
   res.redirect(301, '/Elite-Invoices');
 });
 
+// CleverCRM — Clever Lifting Products lead/customer CRM
+// Persistent path: $LAB007_DATA_DIR/clever-crm/clp-crm.json (Render: /var/data/lab007/clever-crm/)
+const cleverCrmDataDir = (() => {
+  const explicit = String(process.env.CLEVER_CRM_DATA_DIR || '').trim();
+  if (explicit) return path.resolve(explicit);
+  const diskRoot = String(process.env.LAB007_DATA_DIR || process.env.LAB007_DISK_ROOT || '').trim();
+  if (diskRoot) return path.join(path.resolve(diskRoot), 'clever-crm');
+  return path.join(__dirname, 'data', 'clever-crm');
+})();
+const cleverCrmDataPath = path.join(cleverCrmDataDir, 'clp-crm.json');
+if (!fs.existsSync(cleverCrmDataDir)) {
+  fs.mkdirSync(cleverCrmDataDir, { recursive: true });
+}
+console.log('[CleverCRM] data dir:', cleverCrmDataDir);
+
+function clpCleanText(value, max = 1000) {
+  return String(value || '').replace(/\r/g, '').trim().slice(0, max);
+}
+
+function sanitizeClpCrmLead(lead, idx) {
+  if (!lead || typeof lead !== 'object') return null;
+  const company = clpCleanText(lead.company, 160);
+  if (!company) return null;
+  const idBase = clpCleanText(lead.id, 100) || company;
+  const id =
+    idBase
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .slice(0, 80) || `lead-${idx + 1}`;
+  const statusOptions = new Set([
+    'New lead',
+    'Contacted',
+    'Demo requested',
+    'Follow up',
+    'Contracted',
+    'Not a fit'
+  ]);
+  const managerOptions = new Set(['David', 'Gabriel', 'Steve']);
+  const lastCall = clpCleanText(lead.lastCall, 10);
+  return {
+    id,
+    company,
+    address: clpCleanText(lead.address, 240),
+    phone: clpCleanText(lead.phone, 240),
+    website: clpCleanText(lead.website, 500),
+    manager: managerOptions.has(lead.manager) ? lead.manager : 'David',
+    status: statusOptions.has(lead.status) ? lead.status : 'New lead',
+    lastCall: /^\d{4}-\d{2}-\d{2}$/.test(lastCall) ? lastCall : '',
+    nextStep: clpCleanText(lead.nextStep, 500),
+    notes: clpCleanText(lead.notes, 3000)
+  };
+}
+
+function sanitizeClpCrmData(payload) {
+  const data = payload && typeof payload === 'object' ? payload : {};
+  const leads = (Array.isArray(data.leads) ? data.leads : [])
+    .slice(0, 250)
+    .map(sanitizeClpCrmLead)
+    .filter(Boolean);
+  const templates = data.templates && typeof data.templates === 'object' ? data.templates : {};
+  return {
+    updatedAt: new Date().toISOString(),
+    leads,
+    templates: {
+      email: clpCleanText(templates.email, 12000),
+      phone: clpCleanText(templates.phone, 12000)
+    }
+  };
+}
+
+function readClpCrm() {
+  try {
+    if (!fs.existsSync(cleverCrmDataPath)) {
+      return { updatedAt: null, leads: [], templates: {} };
+    }
+    const raw = fs.readFileSync(cleverCrmDataPath, 'utf8');
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return { updatedAt: null, leads: [], templates: {} };
+    }
+    return {
+      updatedAt: parsed.updatedAt || null,
+      leads: Array.isArray(parsed.leads) ? parsed.leads : [],
+      templates: parsed.templates && typeof parsed.templates === 'object' ? parsed.templates : {}
+    };
+  } catch (err) {
+    console.error('[CleverCRM] read error:', err.message);
+    return { updatedAt: null, leads: [], templates: {} };
+  }
+}
+
+function writeClpCrm(payload) {
+  const data = sanitizeClpCrmData(payload);
+  if (!fs.existsSync(cleverCrmDataDir)) {
+    fs.mkdirSync(cleverCrmDataDir, { recursive: true });
+  }
+  const tmp = `${cleverCrmDataPath}.${process.pid}.tmp`;
+  fs.writeFileSync(tmp, JSON.stringify(data, null, 2), 'utf8');
+  fs.renameSync(tmp, cleverCrmDataPath);
+  return data;
+}
+
+app.get('/Clever-CRM', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'clever-crm.html'));
+});
+app.get('/clever-crm', (req, res) => {
+  res.redirect(301, '/Clever-CRM');
+});
+app.get('/clp-crm.html', (req, res) => {
+  res.redirect(301, '/Clever-CRM');
+});
+app.get('/clevercrm-dashboard', (req, res) => {
+  res.sendFile(path.join(__dirname, 'public', 'clevercrm-dashboard.html'));
+});
+app.get('/clevercrm-dashboard.html', (req, res) => {
+  res.redirect(301, '/clevercrm-dashboard');
+});
+
+app.get('/api/clp-crm', (req, res) => {
+  try {
+    res.set('Cache-Control', 'no-store');
+    return res.json(readClpCrm());
+  } catch (err) {
+    console.error('[CleverCRM] GET error:', err);
+    return res.status(500).json({ error: err.message, updatedAt: new Date().toISOString() });
+  }
+});
+
+app.post('/api/clp-crm', (req, res) => {
+  try {
+    const saved = writeClpCrm(req.body || {});
+    res.set('Cache-Control', 'no-store');
+    return res.json(saved);
+  } catch (err) {
+    console.error('[CleverCRM] POST error:', err);
+    return res.status(500).json({ error: err.message, updatedAt: new Date().toISOString() });
+  }
+});
+
 app.get('/api/elite-invoices/client-full', (req, res) => {
   try {
     res.json(readEliteClientFull());

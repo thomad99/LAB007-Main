@@ -1,0 +1,1612 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CleverCRM</title>
+  <meta name="description" content="Clever Lifting Products distributor and customer tracking CRM.">
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml">
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f4f7f6;
+      --surface: #ffffff;
+      --surface-2: #eef4f2;
+      --ink: #17211f;
+      --muted: #66736f;
+      --line: #d8e1de;
+      --green: #176b5d;
+      --blue: #265d87;
+      --amber: #a86424;
+      --red: #9d3030;
+      --shadow: 0 16px 40px rgba(20, 36, 33, 0.12);
+      font-family: Aptos, Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--ink);
+      font-size: 15px;
+      line-height: 1.45;
+      letter-spacing: 0;
+    }
+
+    button,
+    input,
+    select,
+    textarea {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    a {
+      color: var(--blue);
+    }
+
+    .app {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 280px minmax(0, 1fr);
+    }
+
+    aside {
+      background: #14211f;
+      color: #edf7f4;
+      padding: 24px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding: 0 6px;
+    }
+
+    .brand strong {
+      font-size: 24px;
+      line-height: 1;
+    }
+
+    .brand span {
+      color: #a9bbb5;
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .metric {
+      border: 1px solid rgba(255,255,255,.13);
+      background: rgba(255,255,255,.06);
+      border-radius: 8px;
+      padding: 13px 14px;
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .metric label {
+      display: block;
+      color: #a9bbb5;
+      font-size: 12px;
+      font-weight: 760;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+
+    .metric b {
+      font-size: 26px;
+      line-height: 1;
+    }
+
+    .side-actions {
+      display: grid;
+      gap: 8px;
+    }
+
+    .add-customer-button {
+      min-height: 52px;
+      font-size: 30px;
+      line-height: 1;
+    }
+
+    .button {
+      min-height: 40px;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: var(--surface);
+      color: var(--ink);
+      padding: 0 13px;
+      font-weight: 760;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      text-decoration: none;
+    }
+
+    .button.primary {
+      background: var(--green);
+      color: #ffffff;
+      border-color: var(--green);
+    }
+
+    .button.dark {
+      background: rgba(255,255,255,.08);
+      color: #ffffff;
+      border-color: rgba(255,255,255,.18);
+    }
+
+    .button.danger {
+      color: #ffffff;
+      background: var(--red);
+      border-color: var(--red);
+    }
+
+    main {
+      min-width: 0;
+      padding: 24px;
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .title-lockup {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .clp-logo {
+      width: 68px;
+      height: 68px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid var(--line);
+      background: #ffffff;
+      flex: 0 0 auto;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.1;
+    }
+
+    .updated {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 650;
+    }
+
+    .toolbar {
+      display: grid;
+      grid-template-columns: minmax(220px, 1fr) 180px 180px auto;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .field {
+      display: grid;
+      gap: 5px;
+    }
+
+    .field label {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 780;
+      text-transform: uppercase;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #ffffff;
+      color: var(--ink);
+      padding: 9px 10px;
+      min-height: 40px;
+    }
+
+    textarea {
+      min-height: 112px;
+      resize: vertical;
+    }
+
+    .workspace {
+      min-height: 0;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 18px;
+    }
+
+    .panel {
+      min-width: 0;
+      min-height: 0;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .table-wrap {
+      height: 100%;
+      overflow: auto;
+    }
+
+    .mobile-cards {
+      display: none;
+      padding: 12px;
+      gap: 10px;
+      background: #eef4f2;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 1380px;
+    }
+
+    th,
+    td {
+      border-bottom: 1px solid var(--line);
+      padding: 11px 12px;
+      text-align: left;
+      vertical-align: top;
+    }
+
+    th {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      background: var(--surface-2);
+      color: #33413e;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0;
+    }
+
+    tbody tr {
+      transition: background 120ms ease;
+    }
+
+    tbody tr:hover,
+    tbody tr.selected {
+      background: #eef8f5;
+    }
+
+    .company {
+      display: grid;
+      gap: 4px;
+      font-weight: 800;
+    }
+
+    .company a {
+      font-weight: 650;
+      font-size: 12px;
+      word-break: break-word;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 24px;
+      border-radius: 999px;
+      padding: 0 9px;
+      background: #e6edf8;
+      color: #214c75;
+      font-size: 12px;
+      font-weight: 800;
+      white-space: nowrap;
+    }
+
+    .pill.hot { background: #f8eadc; color: var(--amber); }
+    .pill.active { background: #e0f4ec; color: var(--green); }
+    .pill.contracted { background: #dff3f0; color: #0d6658; }
+    .pill.closed { background: #eceff2; color: #5d6670; }
+
+    .table-input,
+    .table-select {
+      min-height: 34px;
+      padding: 7px 8px;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+
+    .company-cell {
+      min-width: 250px;
+      display: grid;
+      gap: 7px;
+    }
+
+    .company-link {
+      font-size: 12px;
+      font-weight: 700;
+      word-break: break-word;
+    }
+
+    .note-cell {
+      min-width: 210px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .note-actions {
+      display: flex;
+      gap: 7px;
+      align-items: center;
+    }
+
+    .icon-button {
+      width: 36px;
+      min-width: 36px;
+      height: 36px;
+      min-height: 36px;
+      padding: 0;
+      border-radius: 6px;
+    }
+
+    .icon-button svg {
+      width: 18px;
+      height: 18px;
+      stroke: currentColor;
+      stroke-width: 2;
+      fill: none;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .note-preview {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 650;
+      max-width: 260px;
+    }
+
+    .last-call-cell {
+      min-width: 184px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 7px;
+    }
+
+    .row-actions {
+      display: grid;
+      gap: 7px;
+      min-width: 92px;
+    }
+
+    .lead-card {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      overflow: hidden;
+      box-shadow: 0 8px 22px rgba(20, 36, 33, 0.08);
+    }
+
+    .lead-card[open] {
+      border-color: rgba(23, 107, 93, .34);
+    }
+
+    .lead-card summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 12px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .lead-card summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .card-title {
+      display: grid;
+      gap: 5px;
+      min-width: 0;
+    }
+
+    .card-title strong {
+      font-size: 16px;
+      line-height: 1.15;
+      overflow-wrap: anywhere;
+    }
+
+    .card-title span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .card-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+      justify-content: flex-end;
+    }
+
+    .card-body {
+      padding: 0 12px 12px;
+      display: grid;
+      gap: 10px;
+      border-top: 1px solid var(--line);
+      background: #fbfcfc;
+    }
+
+    .card-body .field {
+      gap: 4px;
+    }
+
+    .card-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+    }
+
+    .card-actions {
+      display: grid;
+      grid-template-columns: 1fr auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .detail {
+      display: none;
+      grid-template-rows: auto minmax(0, 1fr) auto;
+      height: 100%;
+    }
+
+    .detail-head {
+      padding: 18px;
+      border-bottom: 1px solid var(--line);
+      background: #fbfcfc;
+    }
+
+    .detail-head h2 {
+      margin: 0 0 6px;
+      font-size: 21px;
+      line-height: 1.18;
+    }
+
+    .detail-head p {
+      margin: 0;
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    form {
+      overflow: auto;
+      padding: 18px;
+      display: grid;
+      gap: 13px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .date-row {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .detail-actions {
+      padding: 14px 18px;
+      border-top: 1px solid var(--line);
+      background: #fbfcfc;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      z-index: 20000;
+      display: none;
+      place-items: center;
+      padding: 22px;
+      background: rgba(12, 20, 18, .52);
+    }
+
+    .modal-backdrop.open {
+      display: grid;
+    }
+
+    .modal {
+      width: min(920px, 100%);
+      max-height: min(760px, calc(100vh - 44px));
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr) auto;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      background: var(--surface);
+      box-shadow: 0 26px 80px rgba(0,0,0,.28);
+    }
+
+    .modal-head,
+    .modal-actions {
+      padding: 16px 18px;
+      background: #fbfcfc;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .modal-actions {
+      border-top: 1px solid var(--line);
+      border-bottom: 0;
+    }
+
+    .modal h2 {
+      margin: 0;
+      font-size: 22px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      padding: 12px 18px 0;
+      background: #fbfcfc;
+    }
+
+    .tab {
+      min-height: 38px;
+      border: 1px solid var(--line);
+      border-bottom-color: transparent;
+      border-radius: 6px 6px 0 0;
+      background: #edf4f1;
+      color: var(--ink);
+      padding: 0 14px;
+      font-weight: 800;
+    }
+
+    .tab.active {
+      background: var(--surface);
+      color: var(--green);
+    }
+
+    .template-pane {
+      min-height: 0;
+      overflow: auto;
+      padding: 18px;
+      display: none;
+    }
+
+    .template-pane.active {
+      display: grid;
+      gap: 10px;
+    }
+
+    .template-pane textarea {
+      min-height: 420px;
+      white-space: pre-wrap;
+    }
+
+    .copy-status {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .template-action-buttons {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    .note-log {
+      min-height: 180px;
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      background: #fbfcfc;
+      padding: 12px;
+      white-space: pre-wrap;
+      color: #25332f;
+      font-size: 14px;
+    }
+
+    .empty {
+      padding: 28px;
+      color: var(--muted);
+      font-weight: 700;
+    }
+
+    @media (max-width: 1020px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+
+      aside {
+        position: static;
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+      }
+
+      .brand,
+      .side-actions {
+        grid-column: 1 / -1;
+      }
+
+      .toolbar,
+      .workspace {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 760px) {
+      body {
+        font-size: 14px;
+      }
+
+      .app {
+        display: block;
+      }
+
+      main {
+        padding: 12px;
+        gap: 12px;
+      }
+
+      aside {
+        grid-template-columns: 1fr;
+        gap: 8px;
+        padding: 12px;
+      }
+
+      aside > * {
+        min-width: 0;
+      }
+
+      .brand {
+        padding: 0;
+      }
+
+      .brand strong {
+        font-size: 20px;
+      }
+
+      .metric {
+        padding: 9px;
+      }
+
+      .metric label {
+        margin: 0;
+      }
+
+      .metric b {
+        font-size: 22px;
+      }
+
+      .side-actions {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+
+      .button {
+        width: 100%;
+        min-width: 0;
+        padding-inline: 8px;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .title-lockup {
+        gap: 10px;
+      }
+
+      .clp-logo {
+        width: 58px;
+        height: 58px;
+      }
+
+      h1 {
+        font-size: 23px;
+      }
+
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .toolbar {
+        gap: 8px;
+      }
+
+      .panel {
+        box-shadow: none;
+      }
+
+      .table-wrap {
+        overflow: visible;
+      }
+
+      table {
+        display: none;
+      }
+
+      .mobile-cards {
+        display: grid;
+      }
+
+      .card-row {
+        grid-template-columns: 1fr;
+      }
+
+      .card-actions {
+        grid-template-columns: minmax(0, 1fr) auto auto;
+      }
+
+      .modal-backdrop {
+        padding: 10px;
+      }
+
+      .modal {
+        max-height: calc(100vh - 20px);
+      }
+
+      .modal-head,
+      .modal-actions {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .template-action-buttons {
+        width: 100%;
+        justify-content: stretch;
+      }
+
+      .template-action-buttons .button {
+        flex: 1;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside>
+      <div class="brand">
+        <strong>CLP-CRM</strong>
+        <span>Clever Lifting Products pipeline</span>
+      </div>
+      <a class="metric" href="/clevercrm-dashboard" aria-label="Open dashboard">
+        <label>Dashboard</label>
+        <b id="totalLeads">0</b>
+        <span>Total leads</span>
+      </a>
+      <div class="side-actions">
+        <button class="button primary add-customer-button" id="addLead" type="button" aria-label="Add customer" title="Add customer">+</button>
+      </div>
+    </aside>
+
+    <main>
+      <div class="topbar">
+        <div class="title-lockup">
+          <img class="clp-logo" src="/clever-crm-assets/clp-logo.jpg" alt="Clever Lifting Products logo">
+          <div>
+            <h1>Potential Customers</h1>
+            <div class="updated" id="updated">Changes save in this browser.</div>
+          </div>
+        </div>
+      </div>
+
+      <section class="toolbar" aria-label="CRM filters">
+        <div class="field">
+          <label for="search">Search</label>
+          <input id="search" type="search" placeholder="Company, city, phone, notes">
+        </div>
+        <div class="field">
+          <label for="statusFilter">Status</label>
+          <select id="statusFilter">
+            <option value="all">All statuses</option>
+            <option>New lead</option>
+            <option>Contacted</option>
+            <option>Demo requested</option>
+            <option>Follow up</option>
+            <option>Contracted</option>
+            <option>Not a fit</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="ownerFilter">Manager</label>
+          <select id="ownerFilter">
+            <option value="all">All managers</option>
+          </select>
+        </div>
+        <button class="button" id="clearFilters" type="button">Clear</button>
+      </section>
+
+      <section class="workspace">
+        <div class="panel table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Company</th>
+                <th>Manager</th>
+                <th>Status</th>
+                <th>Phone</th>
+                <th>Address</th>
+                <th>Notes Log</th>
+                <th>Last Call</th>
+              </tr>
+            </thead>
+            <tbody id="leadRows"></tbody>
+          </table>
+          <div class="mobile-cards" id="leadCards"></div>
+          <div class="empty" id="emptyState" hidden>No matching customers.</div>
+        </div>
+
+        <div class="panel detail">
+          <div class="detail-head">
+            <h2 id="detailTitle">Select a customer</h2>
+            <p id="detailSubtitle">Update owner, call status, and notes.</p>
+          </div>
+          <form id="leadForm">
+            <input id="leadId" type="hidden">
+            <div class="field">
+              <label for="company">Company</label>
+              <input id="company" required>
+            </div>
+            <div class="field">
+              <label for="address">Address</label>
+              <input id="address">
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="phone">Phone</label>
+                <input id="phone">
+              </div>
+              <div class="field">
+                <label for="website">Website</label>
+                <input id="website" type="url">
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="manager">Manager</label>
+                <select id="manager">
+                  <option>David</option>
+                  <option>Gabriel</option>
+                  <option>Steve</option>
+                </select>
+              </div>
+            </div>
+            <div class="grid-2">
+              <div class="field">
+                <label for="status">Status</label>
+                <select id="status">
+                  <option>New lead</option>
+                  <option>Contacted</option>
+                  <option>Demo requested</option>
+                  <option>Follow up</option>
+                  <option>Contracted</option>
+                  <option>Not a fit</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="lastCall">Last call</label>
+                <div class="date-row">
+                  <input id="lastCall" type="date">
+                  <button class="button" id="justCalled" type="button">Just called</button>
+                </div>
+              </div>
+            </div>
+            <div class="field">
+              <label for="notes">Notes</label>
+              <textarea id="notes"></textarea>
+            </div>
+          </form>
+          <div class="detail-actions">
+            <button class="button danger" id="deleteLead" type="button">Delete</button>
+            <button class="button primary" id="saveLead" type="button">Save customer</button>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <div class="modal-backdrop" id="templatesModal" role="dialog" aria-modal="true" aria-labelledby="templatesTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="templatesTitle">Templates</h2>
+        <button class="button" id="closeTemplates" type="button">Close</button>
+      </div>
+      <div class="tabs" role="tablist" aria-label="Pitch templates">
+        <button class="tab active" id="emailTemplateTab" type="button" data-template-tab="email">Email pitch</button>
+        <button class="tab" id="phoneTemplateTab" type="button" data-template-tab="phone">Phone pitch</button>
+      </div>
+      <div class="template-pane active" id="emailTemplatePane">
+        <div class="field">
+          <label for="emailTemplate">Email pitch</label>
+          <textarea id="emailTemplate" spellcheck="true"></textarea>
+        </div>
+      </div>
+      <div class="template-pane" id="phoneTemplatePane">
+        <div class="field">
+          <label for="phoneTemplate">Phone pitch</label>
+          <textarea id="phoneTemplate" spellcheck="true"></textarea>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <span class="copy-status" id="templateStatus">Templates save in this browser.</span>
+        <div class="template-action-buttons">
+          <button class="button" id="copyTemplate" type="button">Copy current</button>
+          <button class="button primary" id="saveTemplates" type="button">Save templates</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-backdrop" id="notesModal" role="dialog" aria-modal="true" aria-labelledby="notesTitle">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="notesTitle">Notes Log</h2>
+        <button class="button" id="closeNotes" type="button">Close</button>
+      </div>
+      <div class="template-pane active">
+        <div class="field">
+          <label for="noteEntry">Add log entry</label>
+          <textarea id="noteEntry" spellcheck="true" placeholder="Type call notes, email follow-up, demo status, or next action."></textarea>
+        </div>
+        <div class="field">
+          <label>Audit history</label>
+          <div class="note-log" id="noteHistory">No notes logged.</div>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <span class="copy-status" id="noteStatus">Notes save to the CRM record.</span>
+        <div class="template-action-buttons">
+          <button class="button primary" id="saveNote" type="button">Add note</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/voice-overlay.js"></script>
+  <script src="/lab007-site-nav.js"></script>
+  <script>
+    const STORAGE_KEY = 'clp-crm-leads-v1';
+    const TEMPLATE_STORAGE_KEY = 'clp-crm-templates-v1';
+    const API_PATH = '/api/clp-crm';
+    const managerOptions = ['David', 'Gabriel', 'Steve'];
+    const statusOptions = ['New lead', 'Contacted', 'Demo requested', 'Follow up', 'Contracted', 'Not a fit'];
+    const defaultTemplates = {
+      email: `Hi,
+
+My name is David, and I'm with Clever Lifting Products, a Sarasota, Florida-based manufacturer of innovative motorized toilet seats designed to help people with reduced mobility maintain their independence.
+
+We're currently expanding our reseller network across North America and believe our product could be an excellent addition to your product range.
+
+You can view the product and its features at www.cleverlifting.com.
+
+Our expected pricing is:
+
+MSRP: Approximately $1,100
+Wholesale Price: Approximately $600 to approved resellers
+
+If this is something that may be of interest, I'd be happy to arrange a demonstration, answer any questions, or discuss reseller opportunities.
+
+I look forward to hearing from you.
+
+Kind regards,
+
+David
+Clever Lifting Products`,
+      phone: `Hi, this is David with Clever Lifting Products in Sarasota, Florida.
+
+We manufacture an innovative motorized toilet seat that helps people with reduced mobility get on and off the toilet more safely while maintaining independence.
+
+We're expanding our reseller network and I thought it could be a strong fit for your mobility, DME, or aging-in-place customers.
+
+The product is at www.cleverlifting.com. Expected MSRP is about $1,100, with wholesale pricing around $600 for approved resellers.
+
+Would you be the right person to speak with about evaluating a demo unit or reseller opportunity?`
+    };
+    const seedLeads = [];
+
+    const els = {
+      rows: document.querySelector('#leadRows'),
+      cards: document.querySelector('#leadCards'),
+      empty: document.querySelector('#emptyState'),
+      search: document.querySelector('#search'),
+      statusFilter: document.querySelector('#statusFilter'),
+      ownerFilter: document.querySelector('#ownerFilter'),
+      clearFilters: document.querySelector('#clearFilters'),
+      totalLeads: document.querySelector('#totalLeads'),
+      activeLeads: document.querySelector('#activeLeads'),
+      needsCall: document.querySelector('#needsCall'),
+      updated: document.querySelector('#updated'),
+      form: document.querySelector('#leadForm'),
+      detailTitle: document.querySelector('#detailTitle'),
+      detailSubtitle: document.querySelector('#detailSubtitle'),
+      addLead: document.querySelector('#addLead'),
+      openTemplates: document.querySelector('#openTemplates'),
+      closeTemplates: document.querySelector('#closeTemplates'),
+      templatesModal: document.querySelector('#templatesModal'),
+      emailTemplate: document.querySelector('#emailTemplate'),
+      phoneTemplate: document.querySelector('#phoneTemplate'),
+      templateStatus: document.querySelector('#templateStatus'),
+      copyTemplate: document.querySelector('#copyTemplate'),
+      saveTemplates: document.querySelector('#saveTemplates'),
+      notesModal: document.querySelector('#notesModal'),
+      closeNotes: document.querySelector('#closeNotes'),
+      noteEntry: document.querySelector('#noteEntry'),
+      noteHistory: document.querySelector('#noteHistory'),
+      noteStatus: document.querySelector('#noteStatus'),
+      saveNote: document.querySelector('#saveNote'),
+      saveLead: document.querySelector('#saveLead'),
+      deleteLead: document.querySelector('#deleteLead'),
+      justCalled: document.querySelector('#justCalled'),
+      exportCsv: document.querySelector('#exportCsv'),
+      resetDemo: document.querySelector('#resetDemo'),
+    };
+
+    const fields = ['leadId', 'company', 'address', 'phone', 'website', 'manager', 'status', 'lastCall', 'notes']
+      .reduce((acc, id) => ({ ...acc, [id]: document.querySelector('#' + id) }), {});
+
+    let leads = loadLeads();
+    let selectedId = leads[0]?.id || '';
+    let notesLeadId = '';
+    let activeTemplate = 'email';
+    let templates = loadTemplates();
+    const expandedLeadIds = new Set();
+
+    function loadLeads() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+        return Array.isArray(saved) ? saved : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function loadTemplates() {
+      try {
+        const saved = JSON.parse(localStorage.getItem(TEMPLATE_STORAGE_KEY));
+        return { ...defaultTemplates, ...(saved || {}) };
+      } catch {
+        return { ...defaultTemplates };
+      }
+    }
+
+    function persist() {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
+      els.updated.textContent = 'Saved ' + new Date().toLocaleString();
+      saveServerData();
+    }
+
+    function persistTemplates() {
+      templates = {
+        email: els.emailTemplate.value,
+        phone: els.phoneTemplate.value
+      };
+      localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify({
+        email: templates.email,
+        phone: templates.phone
+      }));
+      els.templateStatus.textContent = 'Templates saved ' + new Date().toLocaleString();
+      saveServerData();
+    }
+
+    async function loadServerData() {
+      try {
+        const response = await fetch(API_PATH, { cache: 'no-store' });
+        if (!response.ok) throw new Error('CRM API unavailable');
+        const data = await response.json();
+        if (Array.isArray(data.leads)) {
+          leads = data.leads;
+          selectedId = leads[0]?.id || '';
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(leads));
+        }
+        if (data.templates && typeof data.templates === 'object') {
+          templates = { ...defaultTemplates, ...data.templates };
+          localStorage.setItem(TEMPLATE_STORAGE_KEY, JSON.stringify(templates));
+        }
+        els.updated.textContent = data.updatedAt ? 'Loaded server data ' + new Date(data.updatedAt).toLocaleString() : 'Server persistence ready.';
+        render();
+      } catch {
+        els.updated.textContent = 'Using browser fallback storage.';
+      }
+    }
+
+    async function saveServerData() {
+      try {
+        const response = await fetch(API_PATH, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ leads, templates })
+        });
+        if (!response.ok) throw new Error('save failed');
+        const data = await response.json();
+        els.updated.textContent = 'Saved to server ' + new Date(data.updatedAt).toLocaleString();
+      } catch {
+        els.updated.textContent = 'Saved in browser. Server save unavailable.';
+      }
+    }
+
+    function filteredLeads() {
+      const q = els.search.value.trim().toLowerCase();
+      return leads.filter(lead => {
+        const matchesQuery = !q || [lead.company, lead.address, lead.phone, lead.website, lead.manager, lead.status, lead.lastCall, lead.notes].join(' ').toLowerCase().includes(q);
+        const matchesStatus = els.statusFilter.value === 'all' || lead.status === els.statusFilter.value;
+        const matchesOwner = els.ownerFilter.value === 'all' || lead.manager === els.ownerFilter.value;
+        return matchesQuery && matchesStatus && matchesOwner;
+      });
+    }
+
+    function render() {
+      const filtered = filteredLeads();
+      const currentOwner = els.ownerFilter.value;
+
+      els.ownerFilter.innerHTML = '<option value="all">All managers</option>' + managerOptions.map(manager => `<option>${escapeHtml(manager)}</option>`).join('');
+      els.ownerFilter.value = managerOptions.includes(currentOwner) ? currentOwner : 'all';
+
+      els.totalLeads.textContent = leads.length;
+      if (els.activeLeads) els.activeLeads.textContent = leads.filter(isContacted).length;
+      if (els.needsCall) els.needsCall.textContent = leads.filter(isNotContacted).length;
+
+      els.rows.innerHTML = filtered.map(lead => `
+        <tr data-id="${lead.id}" class="${lead.id === selectedId ? 'selected' : ''}">
+          <td>
+            <div class="company-cell">
+              <input class="table-input" data-field="company" data-id="${escapeAttr(lead.id)}" value="${escapeAttr(lead.company)}" aria-label="Company">
+              <input class="table-input" data-field="website" data-id="${escapeAttr(lead.id)}" value="${escapeAttr(lead.website)}" aria-label="Website" placeholder="Website">
+              ${lead.website ? `<a class="company-link" href="${escapeAttr(lead.website)}" target="_blank" rel="noopener">Open website</a>` : ''}
+            </div>
+          </td>
+          <td>${selectControl('manager', lead.id, lead.manager || 'David', managerOptions)}</td>
+          <td>${selectControl('status', lead.id, lead.status || 'New lead', statusOptions, statusClass(lead.status))}</td>
+          <td><input class="table-input" data-field="phone" data-id="${escapeAttr(lead.id)}" value="${escapeAttr(lead.phone)}" aria-label="Phone"></td>
+          <td><input class="table-input" data-field="address" data-id="${escapeAttr(lead.id)}" value="${escapeAttr(lead.address)}" aria-label="Address"></td>
+          <td>
+            <div class="note-cell">
+              <div class="note-actions" aria-label="Customer actions">
+                <button class="button icon-button" data-action="notes" data-id="${escapeAttr(lead.id)}" type="button" aria-label="Edit notes log" title="Edit notes log">
+                  ${iconSvg('edit')}
+                </button>
+                <button class="button danger icon-button" data-action="delete" data-id="${escapeAttr(lead.id)}" type="button" aria-label="Delete customer" title="Delete customer">
+                  ${iconSvg('trash')}
+                </button>
+              </div>
+              <div class="note-preview">${escapeHtml(notePreview(lead.notes))}</div>
+            </div>
+          </td>
+          <td>
+            <div class="last-call-cell">
+              <input class="table-input" data-field="lastCall" data-id="${escapeAttr(lead.id)}" type="date" value="${escapeAttr(lead.lastCall)}" aria-label="Last call">
+              <button class="button" data-action="just-called" data-id="${escapeAttr(lead.id)}" type="button">Just called</button>
+            </div>
+          </td>
+        </tr>
+      `).join('');
+
+      els.cards.innerHTML = filtered.map(lead => `
+        <details class="lead-card" data-id="${escapeAttr(lead.id)}"${expandedLeadIds.has(lead.id) ? ' open' : ''}>
+          <summary>
+            <div class="card-title">
+              <strong>${escapeHtml(lead.company || 'New customer')}</strong>
+              <span>${escapeHtml(lead.phone || 'No phone yet')}</span>
+              <span>${escapeHtml(lead.lastCall ? 'Last call ' + lead.lastCall : 'No calls logged')}</span>
+            </div>
+            <div class="card-meta">
+              <span class="pill ${escapeAttr(statusClass(lead.status))}">${escapeHtml(lead.status || 'New lead')}</span>
+              <span class="pill">${escapeHtml(lead.manager || 'David')}</span>
+            </div>
+          </summary>
+          <div class="card-body">
+            <div class="field">
+              <label>Company</label>
+              <input class="table-input" data-field="company" data-id="${escapeAttr(lead.id)}" value="${escapeAttr(lead.company)}" aria-label="Company">
+            </div>
+            <div class="card-row">
+              <div class="field">
+                <label>Manager</label>
+                ${selectControl('manager', lead.id, lead.manager || 'David', managerOptions)}
+              </div>
+              <div class="field">
+                <label>Status</label>
+                ${selectControl('status', lead.id, lead.status || 'New lead', statusOptions, statusClass(lead.status))}
+              </div>
+            </div>
+            <div class="card-row">
+              <div class="field">
+                <label>Phone</label>
+                <input class="table-input" data-field="phone" data-id="${escapeAttr(lead.id)}" value="${escapeAttr(lead.phone)}" aria-label="Phone">
+              </div>
+              <div class="field">
+                <label>Last call</label>
+                <input class="table-input" data-field="lastCall" data-id="${escapeAttr(lead.id)}" type="date" value="${escapeAttr(lead.lastCall)}" aria-label="Last call">
+              </div>
+            </div>
+            <div class="field">
+              <label>Website</label>
+              <input class="table-input" data-field="website" data-id="${escapeAttr(lead.id)}" value="${escapeAttr(lead.website)}" aria-label="Website" placeholder="Website">
+              ${lead.website ? `<a class="company-link" href="${escapeAttr(lead.website)}" target="_blank" rel="noopener">Open website</a>` : ''}
+            </div>
+            <div class="field">
+              <label>Address</label>
+              <input class="table-input" data-field="address" data-id="${escapeAttr(lead.id)}" value="${escapeAttr(lead.address)}" aria-label="Address">
+            </div>
+            <div class="field">
+              <label>Notes log</label>
+              <div class="note-preview">${escapeHtml(notePreview(lead.notes))}</div>
+            </div>
+            <div class="card-actions" aria-label="Customer actions">
+              <button class="button" data-action="just-called" data-id="${escapeAttr(lead.id)}" type="button">Just called</button>
+              <button class="button icon-button" data-action="notes" data-id="${escapeAttr(lead.id)}" type="button" aria-label="Edit notes log" title="Edit notes log">
+                ${iconSvg('edit')}
+              </button>
+              <button class="button danger icon-button" data-action="delete" data-id="${escapeAttr(lead.id)}" type="button" aria-label="Delete customer" title="Delete customer">
+                ${iconSvg('trash')}
+              </button>
+            </div>
+          </div>
+        </details>
+      `).join('');
+      attachCardToggleHandlers();
+
+      els.empty.hidden = filtered.length > 0;
+      fillForm(leads.find(lead => lead.id === selectedId) || filtered[0] || leads[0]);
+    }
+
+    function attachCardToggleHandlers() {
+      els.cards.querySelectorAll('.lead-card').forEach(card => {
+        card.addEventListener('toggle', () => {
+          if (card.open) {
+            expandedLeadIds.add(card.dataset.id);
+            selectedId = card.dataset.id;
+            fillForm(leads.find(lead => lead.id === selectedId));
+          } else {
+            expandedLeadIds.delete(card.dataset.id);
+          }
+        });
+      });
+    }
+
+    function fillForm(lead) {
+      if (!lead) {
+        els.form.reset();
+        fields.leadId.value = '';
+        els.detailTitle.textContent = 'No customer selected';
+        els.detailSubtitle.textContent = 'Add a customer to begin.';
+        return;
+      }
+      selectedId = lead.id;
+      fields.leadId.value = lead.id;
+      fields.company.value = lead.company || '';
+      fields.address.value = lead.address || '';
+      fields.phone.value = lead.phone || '';
+      fields.website.value = lead.website || '';
+      fields.manager.value = managerOptions.includes(lead.manager) ? lead.manager : 'David';
+      fields.status.value = lead.status || 'New lead';
+      fields.lastCall.value = lead.lastCall || '';
+      fields.notes.value = lead.notes || '';
+      els.detailTitle.textContent = lead.company || 'New customer';
+      els.detailSubtitle.textContent = lead.phone || 'Add contact details.';
+      document.querySelectorAll('tbody tr').forEach(row => row.classList.toggle('selected', row.dataset.id === selectedId));
+    }
+
+    function collectForm() {
+      return {
+        id: fields.leadId.value || makeId(fields.company.value),
+        company: fields.company.value.trim(),
+        address: fields.address.value.trim(),
+        phone: fields.phone.value.trim(),
+        website: fields.website.value.trim(),
+        manager: fields.manager.value,
+        status: fields.status.value,
+        lastCall: fields.lastCall.value,
+        notes: fields.notes.value.trim()
+      };
+    }
+
+    function saveLead() {
+      const lead = collectForm();
+      if (!lead.company) {
+        fields.company.focus();
+        return;
+      }
+      const index = leads.findIndex(item => item.id === lead.id);
+      if (index >= 0) leads[index] = lead;
+      else leads.unshift(lead);
+      selectedId = lead.id;
+      persist();
+      render();
+    }
+
+    function addLead() {
+      const lead = {
+        id: 'lead-' + Date.now(),
+        company: 'New customer',
+        address: '',
+        phone: '',
+        website: '',
+        manager: 'David',
+        status: 'New lead',
+        lastCall: '',
+        notes: ''
+      };
+      leads.unshift(lead);
+      selectedId = lead.id;
+      expandedLeadIds.add(lead.id);
+      persist();
+      render();
+      document.querySelector(`[data-field="company"][data-id="${CSS.escape(lead.id)}"]`)?.focus();
+    }
+
+    function deleteLead() {
+      if (!selectedId) return;
+      expandedLeadIds.delete(selectedId);
+      leads = leads.filter(lead => lead.id !== selectedId);
+      selectedId = leads[0]?.id || '';
+      persist();
+      render();
+    }
+
+    function resetDemo() {
+      expandedLeadIds.clear();
+      leads = [];
+      selectedId = '';
+      persist();
+      render();
+    }
+
+    function updateLeadField(id, field, value) {
+      const lead = leads.find(item => item.id === id);
+      if (!lead || !['company', 'website', 'manager', 'status', 'phone', 'address', 'lastCall'].includes(field)) return;
+      lead[field] = value.trim();
+      if (field === 'status' && lead.status !== 'New lead' && !lead.lastCall) lead.lastCall = localDateStamp();
+      if (field === 'company' && !lead.company) lead.company = 'New customer';
+      selectedId = lead.id;
+      persist();
+      render();
+    }
+
+    function setJustCalled(id) {
+      const lead = leads.find(item => item.id === id);
+      if (!lead) return;
+      lead.lastCall = localDateStamp();
+      if (lead.status === 'New lead') lead.status = 'Contacted';
+      selectedId = lead.id;
+      persist();
+      render();
+    }
+
+    function deleteLeadById(id) {
+      selectedId = id;
+      deleteLead();
+    }
+
+    function openNotes(id) {
+      const lead = leads.find(item => item.id === id);
+      if (!lead) return;
+      notesLeadId = id;
+      els.noteEntry.value = '';
+      els.noteHistory.textContent = lead.notes || 'No notes logged.';
+      els.noteStatus.textContent = 'Editing notes for ' + (lead.company || 'customer') + '.';
+      els.notesModal.classList.add('open');
+      els.noteEntry.focus();
+    }
+
+    function closeNotes() {
+      els.notesModal.classList.remove('open');
+      notesLeadId = '';
+    }
+
+    function saveNote() {
+      const lead = leads.find(item => item.id === notesLeadId);
+      const entry = els.noteEntry.value.trim();
+      if (!lead || !entry) {
+        els.noteStatus.textContent = 'Type a note before adding it.';
+        return;
+      }
+      const stamp = localDateStamp();
+      lead.notes = [lead.notes, `${stamp} - ${entry}`].filter(Boolean).join('\n\n');
+      els.noteEntry.value = '';
+      els.noteHistory.textContent = lead.notes;
+      els.noteStatus.textContent = 'Note added ' + stamp + '.';
+      selectedId = lead.id;
+      persist();
+      render();
+    }
+
+    function exportCsv() {
+      const headers = ['Company', 'Address', 'Phone', 'Website', 'Manager', 'Status', 'Last Call', 'Notes'];
+      const rows = leads.map(lead => [lead.company, lead.address, lead.phone, lead.website, lead.manager, lead.status, lead.lastCall, lead.notes]);
+      const csv = [headers, ...rows].map(row => row.map(value => `"${String(value || '').replaceAll('"', '""')}"`).join(',')).join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'clp-crm-leads.csv';
+      link.click();
+      URL.revokeObjectURL(url);
+    }
+
+    function openTemplates() {
+      els.emailTemplate.value = templates.email;
+      els.phoneTemplate.value = templates.phone;
+      setTemplateTab(activeTemplate);
+      els.templateStatus.textContent = 'Templates save in this browser.';
+      els.templatesModal.classList.add('open');
+    }
+
+    function closeTemplates() {
+      els.templatesModal.classList.remove('open');
+    }
+
+    function setTemplateTab(name) {
+      activeTemplate = name;
+      document.querySelectorAll('[data-template-tab]').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.templateTab === name);
+      });
+      document.querySelector('#emailTemplatePane').classList.toggle('active', name === 'email');
+      document.querySelector('#phoneTemplatePane').classList.toggle('active', name === 'phone');
+    }
+
+    async function copyActiveTemplate() {
+      const text = activeTemplate === 'email' ? els.emailTemplate.value : els.phoneTemplate.value;
+      try {
+        await navigator.clipboard.writeText(text);
+        els.templateStatus.textContent = 'Copied ' + activeTemplate + ' template.';
+      } catch {
+        els.templateStatus.textContent = 'Copy failed. Select the text and copy manually.';
+      }
+    }
+
+    function localDateStamp() {
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+
+    function makeId(value) {
+      return (value || 'lead').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') + '-' + Date.now();
+    }
+
+    function statusClass(status) {
+      if (status === 'Contracted') return 'contracted';
+      if (status === 'Demo requested') return 'hot';
+      if (status === 'Contacted' || status === 'Follow up') return 'active';
+      if (status === 'Not a fit') return 'closed';
+      return '';
+    }
+
+    function selectControl(field, id, value, options, className = '') {
+      return `
+        <select class="table-select ${escapeAttr(className)}" data-field="${escapeAttr(field)}" data-id="${escapeAttr(id)}" aria-label="${escapeAttr(field)}">
+          ${options.map(option => `<option${option === value ? ' selected' : ''}>${escapeHtml(option)}</option>`).join('')}
+        </select>
+      `;
+    }
+
+    function iconSvg(name) {
+      if (name === 'trash') {
+        return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h18"></path><path d="M8 6V4h8v2"></path><path d="M19 6l-1 14H6L5 6"></path><path d="M10 11v5"></path><path d="M14 11v5"></path></svg>';
+      }
+      return '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"></path><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"></path></svg>';
+    }
+
+    function notePreview(value) {
+      const text = String(value || '').trim();
+      if (!text) return 'No notes logged.';
+      return text.length > 118 ? text.slice(0, 118).trim() + '...' : text;
+    }
+
+    function isContacted(lead) {
+      return Boolean(lead.lastCall) || ['Contacted', 'Demo requested', 'Follow up', 'Contracted', 'Not a fit'].includes(lead.status);
+    }
+
+    function isNotContacted(lead) {
+      return !isContacted(lead);
+    }
+
+    function escapeHtml(value) {
+      return String(value || '').replace(/[&<>"']/g, char => ({
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        '"': '&quot;',
+        "'": '&#39;'
+      }[char]));
+    }
+
+    function escapeAttr(value) {
+      return escapeHtml(value || '#');
+    }
+
+    function handleInlineChange(event) {
+      const control = event.target.closest('[data-field][data-id]');
+      if (!control) return;
+      updateLeadField(control.dataset.id, control.dataset.field, control.value);
+    }
+
+    function handleInlineClick(event) {
+      const button = event.target.closest('[data-action][data-id]');
+      if (!button) return;
+      if (button.dataset.action === 'notes') openNotes(button.dataset.id);
+      if (button.dataset.action === 'just-called') setJustCalled(button.dataset.id);
+      if (button.dataset.action === 'delete') deleteLeadById(button.dataset.id);
+    }
+
+    els.rows.addEventListener('change', handleInlineChange);
+    els.cards.addEventListener('change', handleInlineChange);
+    els.rows.addEventListener('click', handleInlineClick);
+    els.cards.addEventListener('click', handleInlineClick);
+    els.saveLead.addEventListener('click', saveLead);
+    els.addLead.addEventListener('click', addLead);
+    els.deleteLead.addEventListener('click', deleteLead);
+    els.openTemplates?.addEventListener('click', openTemplates);
+    els.closeTemplates?.addEventListener('click', closeTemplates);
+    els.closeNotes.addEventListener('click', closeNotes);
+    els.saveNote.addEventListener('click', saveNote);
+    els.saveTemplates?.addEventListener('click', persistTemplates);
+    els.copyTemplate?.addEventListener('click', copyActiveTemplate);
+    els.templatesModal?.addEventListener('click', event => {
+      if (event.target === els.templatesModal) closeTemplates();
+    });
+    els.notesModal.addEventListener('click', event => {
+      if (event.target === els.notesModal) closeNotes();
+    });
+    document.querySelectorAll('[data-template-tab]').forEach(tab => {
+      tab.addEventListener('click', () => setTemplateTab(tab.dataset.templateTab));
+    });
+    els.justCalled.addEventListener('click', () => {
+      fields.lastCall.value = localDateStamp();
+      saveLead();
+    });
+    els.exportCsv?.addEventListener('click', exportCsv);
+    els.resetDemo?.addEventListener('click', resetDemo);
+    els.clearFilters.addEventListener('click', () => {
+      els.search.value = '';
+      els.statusFilter.value = 'all';
+      els.ownerFilter.value = 'all';
+      render();
+    });
+    [els.search, els.statusFilter, els.ownerFilter].forEach(el => el.addEventListener('input', render));
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') {
+        closeTemplates();
+        closeNotes();
+      }
+    });
+
+    render();
+    loadServerData();
+  </script>
+</body>
+</html>
