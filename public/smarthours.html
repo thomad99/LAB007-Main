@@ -117,33 +117,12 @@
       display: flex; justify-content: space-between; gap: 12px;
       padding: 10px 4px; border-bottom: 1px solid rgba(255,255,255,.08); font-weight: 600;
     }
-    .login-gate {
-      min-height: 100vh; display: grid; place-items: center; padding: 24px;
-    }
-    .login-card {
-      width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line);
-      border-radius: 16px; padding: 24px;
-    }
-    .login-card h2 { margin: 0 0 8px; }
-    .login-card p { color: var(--muted); margin: 0 0 16px; }
-    .hidden { display: none !important; }
     .hint { color: var(--muted); font-size: .86rem; line-height: 1.45; margin-top: 10px; }
     .color-row { display: grid; grid-template-columns: 1fr 48px; gap: 8px; align-items: center; }
   </style>
 </head>
 <body>
-  <div id="loginGate" class="login-gate">
-    <form class="login-card" id="loginForm">
-      <h2>SmartHours</h2>
-      <p>Admin portal for customer hours pages and tablet designs.</p>
-      <label for="loginPassword">Password</label>
-      <input id="loginPassword" type="password" autocomplete="current-password" required>
-      <div style="margin-top:14px"><button class="btn" type="submit" style="width:100%">Enter</button></div>
-      <p class="status err" id="loginError" style="margin-top:12px"></p>
-    </form>
-  </div>
-
-  <div id="app" class="wrap hidden">
+  <div id="app" class="wrap">
     <header>
       <div>
         <h1>SmartHours</h1>
@@ -342,7 +321,6 @@
   <script src="/lab007-site-nav.js" defer></script>
   <script>
     (function () {
-      const AUTH_KEY = 'smartHoursPassword';
       const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
       const DAY_LABELS = {
         monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday', thursday:'Thursday',
@@ -350,11 +328,6 @@
       };
       const TABLET = { width: 600, height: 1024 };
 
-      const loginGate = document.getElementById('loginGate');
-      const loginForm = document.getElementById('loginForm');
-      const loginPassword = document.getElementById('loginPassword');
-      const loginError = document.getElementById('loginError');
-      const app = document.getElementById('app');
       const statusEl = document.getElementById('status');
       const customerList = document.getElementById('customerList');
       const editor = document.getElementById('editor');
@@ -367,19 +340,8 @@
       let logoDataUrl = null;
       let dragState = null;
 
-      function authHeaders() {
-        const password = sessionStorage.getItem(AUTH_KEY);
-        if (!password) return {};
-        return {
-          'X-SmartHours-Password': password,
-          Authorization: 'Bearer ' + password
-        };
-      }
-
       function apiFetch(url, options) {
-        const opts = options || {};
-        const headers = Object.assign({}, opts.headers || {}, authHeaders());
-        return fetch(url, Object.assign({}, opts, { headers, credentials: 'omit' }));
+        return fetch(url, Object.assign({ credentials: 'omit' }, options || {}));
       }
 
       function setStatus(msg, isErr) {
@@ -632,11 +594,6 @@
       async function loadCustomers() {
         setStatus('Loading…');
         const res = await apiFetch('/api/smarthours/customers');
-        if (res.status === 401) {
-          sessionStorage.removeItem(AUTH_KEY);
-          showLogin('Session expired.');
-          return;
-        }
         if (!res.ok) throw new Error('Failed to load customers');
         const data = await res.json();
         customers = data.customers || [];
@@ -748,35 +705,6 @@
         await loadCustomers();
         setStatus('Saved. Public URL ready.');
       }
-
-      function showLogin(msg) {
-        loginGate.classList.remove('hidden');
-        app.classList.add('hidden');
-        loginError.textContent = msg || '';
-      }
-
-      function showApp() {
-        loginGate.classList.add('hidden');
-        app.classList.remove('hidden');
-      }
-
-      loginForm.addEventListener('submit', async (event) => {
-        event.preventDefault();
-        loginError.textContent = '';
-        const password = loginPassword.value.trim();
-        const res = await fetch('/api/smarthours/auth/login', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ password })
-        });
-        if (!res.ok) {
-          loginError.textContent = 'Wrong password.';
-          return;
-        }
-        sessionStorage.setItem(AUTH_KEY, password);
-        showApp();
-        loadCustomers().catch((err) => setStatus(err.message, true));
-      });
 
       document.getElementById('newCustomerBtn').addEventListener('click', () => {
         const temp = {
@@ -968,17 +896,7 @@
       window.addEventListener('pointerup', () => { dragState = null; });
       window.addEventListener('resize', scaleTablet);
 
-      const saved = sessionStorage.getItem(AUTH_KEY);
-      if (saved) {
-        showApp();
-        loadCustomers().catch((err) => {
-          sessionStorage.removeItem(AUTH_KEY);
-          showLogin(err.message || 'Login failed');
-        });
-      } else {
-        showLogin('');
-        loginPassword.focus();
-      }
+      loadCustomers().catch((err) => setStatus(err.message, true));
     })();
   </script>
 </body>
