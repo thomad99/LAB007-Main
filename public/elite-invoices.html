@@ -381,7 +381,15 @@
       flex-wrap: wrap;
       gap: 10px;
       align-items: center;
-      justify-content: space-between;
+      justify-content: center;
+    }
+    .week-nav-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
     }
     .week-mode {
       display: flex;
@@ -394,11 +402,12 @@
       color: #fff3c4;
     }
     .week-nav .week-label {
-      font-size: 1.05rem;
+      font-size: 1.15rem;
       font-weight: 800;
       color: var(--cream);
       text-align: center;
-      flex: 1 1 180px;
+      width: 100%;
+      order: -1;
     }
     .week-kpis {
       display: grid;
@@ -740,12 +749,14 @@
           <button type="button" class="btn-secondary active" data-dash-mode="day" id="dashModeDay">Day by day</button>
           <button type="button" class="btn-secondary" data-dash-mode="week" id="dashModeWeek">Week by week</button>
           <button type="button" class="btn-secondary" data-dash-mode="month" id="dashModeMonth">Month by month</button>
-          <button type="button" class="btn" id="weekTodayBtn">Today</button>
         </div>
         <div class="week-nav">
-          <button type="button" class="btn-secondary" id="weekPrevBtn">← Previous</button>
           <div class="week-label" id="weekLabel">Loading…</div>
-          <button type="button" class="btn-secondary" id="weekNextBtn">Next →</button>
+          <div class="week-nav-actions">
+            <button type="button" class="btn-secondary" id="weekPrevBtn">← Previous</button>
+            <button type="button" class="btn" id="weekTodayBtn">Today</button>
+            <button type="button" class="btn-secondary" id="weekNextBtn">Next →</button>
+          </div>
         </div>
         <div class="week-kpis">
           <div class="week-kpi">
@@ -859,6 +870,7 @@
       let weekCursor = null;
       let dashMode = 'day';
       let lastDashBars = [];
+      let dashRequestId = 0;
 
       function authHeaders() {
         const password = sessionStorage.getItem(AUTH_KEY);
@@ -1923,29 +1935,36 @@
       }
 
       function shiftDashCursor(direction) {
-        if (!weekCursor) jumpDashToToday();
-        const d = direction < 0 ? -1 : 1;
+        if (!weekCursor || Number.isNaN(weekCursor.getTime())) jumpDashToToday();
+        const step = direction < 0 ? -1 : 1;
+        const year = weekCursor.getFullYear();
+        const month = weekCursor.getMonth();
+        const day = weekCursor.getDate();
         if (dashMode === 'month') {
-          weekCursor = new Date(weekCursor.getFullYear() + d, 0, 1);
+          weekCursor = new Date(year + step, 0, 1);
         } else if (dashMode === 'week') {
-          weekCursor = new Date(weekCursor.getFullYear(), weekCursor.getMonth() + d, 1);
+          weekCursor = new Date(year, month + step, 1);
         } else {
-          weekCursor = new Date(weekCursor.getFullYear(), weekCursor.getMonth(), weekCursor.getDate() + d * 7);
+          weekCursor = new Date(year, month, day + step * 7);
         }
+        weekCursor = normalizeDashCursor(weekCursor);
       }
 
       async function loadWeeklyDashboard() {
-        if (!weekCursor) jumpDashToToday();
+        if (!weekCursor || Number.isNaN(weekCursor.getTime())) jumpDashToToday();
         else weekCursor = normalizeDashCursor(weekCursor);
         syncDashModeUi();
         const cursor = formatLocalDateKey(weekCursor);
+        const requestId = ++dashRequestId;
+        const requestedMode = dashMode;
         setStatus('Loading dashboard...');
         const res = await apiFetch(
           '/api/elite-invoices/dashboard/weekly?mode=' +
-            encodeURIComponent(dashMode) +
+            encodeURIComponent(requestedMode) +
             '&weekStart=' +
             encodeURIComponent(cursor)
         );
+        if (requestId !== dashRequestId) return;
         if (res.status === 401) {
           sessionStorage.removeItem(AUTH_KEY);
           showLogin('Session expired. Enter password again.');
@@ -1953,9 +1972,8 @@
         }
         if (!res.ok) throw new Error('Failed to load dashboard');
         const data = await res.json();
-        if (data.cursor) {
-          weekCursor = normalizeDashCursor(parseLocalDateKey(data.cursor));
-        }
+        if (requestId !== dashRequestId) return;
+        // Keep the client cursor authoritative so stale responses cannot rewind navigation.
         weekLabel.textContent = data.label || 'Period';
         weekTotal.textContent = formatMoney(data.total || 0);
         weekCount.textContent = String(data.invoiceCount || 0);
