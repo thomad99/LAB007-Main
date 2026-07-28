@@ -163,6 +163,7 @@
         <div class="tabs">
           <button type="button" class="btn-secondary active" data-tab="details">Details & Hours</button>
           <button type="button" class="btn-secondary" data-tab="design">Design Canvas</button>
+          <button type="button" class="btn-secondary" data-tab="esp32">ESP32 / E-ink</button>
         </div>
 
         <div class="tab-panel active" id="tab-details">
@@ -277,6 +278,62 @@
               <div class="tablet-frame" id="tabletFrame"></div>
             </div>
           </div>
+        </div>
+
+        <div class="tab-panel" id="tab-esp32">
+          <p class="hint">
+            The server renders a <strong>static 1-bit BMP</strong> of this customer’s hours for ESP32 + e-ink
+            (no browser on device). The device checks a small JSON meta file for changes, then downloads the
+            image only when the version changes. Default poll is <strong>12 hours</strong> to save battery;
+            you can set it lower for testing. Changing the poll here updates the device on its next check-in
+            (no reflash required).
+          </p>
+          <div class="form-grid" style="margin-top:12px;">
+            <div>
+              <label for="einkPoll">Poll interval (minutes)</label>
+              <input id="einkPoll" type="number" min="1" max="20160" value="720">
+              <p class="hint">720 = 12 hours · try 5–15 while testing</p>
+            </div>
+            <div>
+              <label for="einkWidth">E-ink width (px)</label>
+              <input id="einkWidth" type="number" min="200" max="1200" value="800">
+            </div>
+            <div>
+              <label for="einkHeight">E-ink height (px)</label>
+              <input id="einkHeight" type="number" min="120" max="1200" value="480">
+            </div>
+            <div>
+              <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);margin-top:22px;">
+                <input id="einkInverted" type="checkbox"> Invert colors
+              </label>
+            </div>
+          </div>
+          <div class="form-grid" style="margin-top:12px;">
+            <div>
+              <label for="espWifiSsid">WiFi SSID (for generated code)</label>
+              <input id="espWifiSsid" type="text" placeholder="ShopWiFi" autocomplete="off">
+            </div>
+            <div>
+              <label for="espWifiPass">WiFi password (for generated code)</label>
+              <input id="espWifiPass" type="text" placeholder="••••••••" autocomplete="off">
+            </div>
+            <div>
+              <label for="espBaseUrl">Server base URL</label>
+              <input id="espBaseUrl" type="url" placeholder="https://your-host">
+            </div>
+          </div>
+          <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn" id="saveEinkBtn">Save E-ink Settings</button>
+            <button type="button" class="btn-secondary" id="previewEinkBtn">Refresh Preview</button>
+            <button type="button" class="btn-secondary" id="downloadSketchBtn">Download ESP32 .ino</button>
+            <button type="button" class="btn-secondary" id="copySketchBtn">Copy Code</button>
+          </div>
+          <div class="url-box" id="einkUrlBox" style="margin-top:14px;"></div>
+          <div style="margin-top:14px;background:#0a1020;border:1px solid var(--line);border-radius:12px;padding:12px;overflow:auto;">
+            <img id="einkPreview" alt="E-ink preview" style="max-width:100%;height:auto;background:#fff;image-rendering:pixelated;">
+          </div>
+          <label for="espSketch" style="margin-top:14px;">Generated Arduino / ESP32 sketch</label>
+          <textarea id="espSketch" rows="18" style="font-family:Consolas,monospace;font-size:.8rem;" readonly></textarea>
         </div>
       </section>
     </div>
@@ -559,6 +616,7 @@
         document.getElementById('fieldManual').checked = !!customer.useManualHours;
         renderHoursForm(customer.hours);
         writeDesignToForm(customer.design);
+        writeEinkToForm(customer.eink);
         logoDataUrl = null;
         document.getElementById('logoFile').value = '';
         const url = publicUrl(customer.slug);
@@ -606,10 +664,60 @@
           googleMapsUrl: document.getElementById('fieldMapsUrl').value.trim(),
           useManualHours: document.getElementById('fieldManual').checked,
           hours: readHoursFromForm(),
-          design
+          design,
+          eink: {
+            enabled: true,
+            pollIntervalMinutes: Number(document.getElementById('einkPoll').value) || 720,
+            width: Number(document.getElementById('einkWidth').value) || 800,
+            height: Number(document.getElementById('einkHeight').value) || 480,
+            inverted: document.getElementById('einkInverted').checked
+          }
         };
         if (logoDataUrl) payload.logoDataUrl = logoDataUrl;
         return payload;
+      }
+
+      function writeEinkToForm(eink) {
+        const e = eink || {};
+        document.getElementById('einkPoll').value = e.pollIntervalMinutes || 720;
+        document.getElementById('einkWidth').value = e.width || 800;
+        document.getElementById('einkHeight').value = e.height || 480;
+        document.getElementById('einkInverted').checked = !!e.inverted;
+        if (!document.getElementById('espBaseUrl').value) {
+          document.getElementById('espBaseUrl').value = location.origin;
+        }
+      }
+
+      function refreshEinkPanel() {
+        const c = selected();
+        if (!c || String(c.id).startsWith('tmp-')) {
+          document.getElementById('einkUrlBox').textContent = 'Save the customer first to enable e-ink URLs and code.';
+          document.getElementById('einkPreview').removeAttribute('src');
+          document.getElementById('espSketch').value = '';
+          return;
+        }
+        const base = (document.getElementById('espBaseUrl').value || location.origin).replace(/\/$/, '');
+        const metaUrl = `${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/eink.json`;
+        const bmpUrl = `${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/eink.bmp?t=${Date.now()}`;
+        document.getElementById('einkUrlBox').innerHTML =
+          `<div><strong>Meta (check for changes):</strong> <a href="${metaUrl}" target="_blank" rel="noopener">${metaUrl}</a></div>` +
+          `<div style="margin-top:6px"><strong>Image (BMP):</strong> <a href="${bmpUrl}" target="_blank" rel="noopener">${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/eink.bmp</a></div>`;
+        document.getElementById('einkPreview').src = bmpUrl;
+        loadEspSketch().catch((err) => setStatus(err.message, true));
+      }
+
+      async function loadEspSketch() {
+        const c = selected();
+        if (!c || String(c.id).startsWith('tmp-')) return;
+        const params = new URLSearchParams({
+          baseUrl: (document.getElementById('espBaseUrl').value || location.origin).replace(/\/$/, ''),
+          wifiSsid: document.getElementById('espWifiSsid').value || 'YOUR_WIFI_SSID',
+          wifiPass: document.getElementById('espWifiPass').value || 'YOUR_WIFI_PASSWORD',
+          pollIntervalMinutes: String(document.getElementById('einkPoll').value || 720)
+        });
+        const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(c.id) + '/esp32-sketch?' + params.toString());
+        if (!res.ok) throw new Error('Failed to generate ESP32 sketch');
+        document.getElementById('espSketch').value = await res.text();
       }
 
       async function saveCustomer() {
@@ -714,6 +822,7 @@
             renderCanvas();
             scaleTablet();
           }
+          if (btn.dataset.tab === 'esp32') refreshEinkPanel();
         });
       });
 
@@ -723,6 +832,50 @@
       document.getElementById('saveDesignBtn').addEventListener('click', () => {
         saveCustomer().catch((err) => setStatus(err.message, true));
       });
+      document.getElementById('saveEinkBtn').addEventListener('click', () => {
+        saveCustomer()
+          .then(() => refreshEinkPanel())
+          .catch((err) => setStatus(err.message, true));
+      });
+      document.getElementById('previewEinkBtn').addEventListener('click', () => refreshEinkPanel());
+      document.getElementById('downloadSketchBtn').addEventListener('click', async () => {
+        const c = selected();
+        if (!c || String(c.id).startsWith('tmp-')) {
+          setStatus('Save the customer first.', true);
+          return;
+        }
+        await saveCustomer();
+        const params = new URLSearchParams({
+          baseUrl: (document.getElementById('espBaseUrl').value || location.origin).replace(/\/$/, ''),
+          wifiSsid: document.getElementById('espWifiSsid').value || 'YOUR_WIFI_SSID',
+          wifiPass: document.getElementById('espWifiPass').value || 'YOUR_WIFI_PASSWORD',
+          pollIntervalMinutes: String(document.getElementById('einkPoll').value || 720)
+        });
+        const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(c.id) + '/esp32-sketch?' + params.toString());
+        if (!res.ok) throw new Error('Failed to download sketch');
+        const text = await res.text();
+        const blob = new Blob([text], { type: 'text/plain' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `SmartHours_${c.slug}.ino`;
+        a.click();
+        URL.revokeObjectURL(a.href);
+        setStatus('ESP32 sketch downloaded.');
+      });
+      document.getElementById('copySketchBtn').addEventListener('click', async () => {
+        await loadEspSketch();
+        const text = document.getElementById('espSketch').value;
+        await navigator.clipboard.writeText(text);
+        setStatus('Sketch copied to clipboard.');
+      });
+      ['espBaseUrl', 'espWifiSsid', 'espWifiPass', 'einkPoll'].forEach((id) => {
+        document.getElementById(id).addEventListener('change', () => {
+          if (document.getElementById('tab-esp32').classList.contains('active')) {
+            loadEspSketch().catch(() => {});
+          }
+        });
+      });
+
       document.getElementById('deleteBtn').addEventListener('click', async () => {
         const c = selected();
         if (!c) return;
