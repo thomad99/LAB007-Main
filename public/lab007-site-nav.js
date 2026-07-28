@@ -9,6 +9,7 @@
     ['Elite Cleaning', '/elite-cleaning'],
     ['Elite Invoices', '/Elite-Invoices'],
     ['Clever-CRM', '/Clever-CRM'],
+    ['SmartHours', '/SmartHours'],
     ['Citrix-2-HZ', '/citrix'],
     ['Web-Alerts', '/webalert'],
     ['Contact', '/contact']

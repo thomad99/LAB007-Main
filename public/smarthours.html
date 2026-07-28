@@ -1,0 +1,832 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+  <title>SmartHours Admin | LAB007</title>
+  <style>
+    :root {
+      --bg: #070b14;
+      --panel: #10182a;
+      --line: rgba(118, 244, 197, .22);
+      --text: #f4f7ff;
+      --muted: #9aa7bd;
+      --accent: #76f4c5;
+      --accent-dim: rgba(118, 244, 197, .14);
+      --danger: #ff8f9f;
+      --warn: #f2d27b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Inter, "Segoe UI", Arial, sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(900px 420px at 10% -10%, rgba(118, 244, 197, .12), transparent 55%),
+        radial-gradient(700px 380px at 90% 0%, rgba(90, 140, 255, .14), transparent 50%),
+        linear-gradient(180deg, #05070f, #080c16 40%, #05070f);
+    }
+    .wrap { width: min(1280px, calc(100% - 28px)); margin: 0 auto; padding: 72px 0 48px; }
+    header {
+      display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
+      justify-content: space-between; margin-bottom: 18px;
+    }
+    h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.03em; }
+    .sub { margin: 4px 0 0; color: var(--muted); }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn, .btn-secondary, .btn-danger {
+      appearance: none; border-radius: 10px; border: 1px solid transparent;
+      padding: 10px 14px; font-weight: 700; cursor: pointer; font: inherit;
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn { background: var(--accent); color: #04120e; }
+    .btn-secondary { background: transparent; color: var(--accent); border-color: var(--line); }
+    .btn-danger { background: transparent; color: var(--danger); border-color: rgba(255,143,159,.35); }
+    .btn:disabled, .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
+    .status { min-height: 22px; color: var(--accent); margin-bottom: 10px; font-size: .9rem; }
+    .status.err { color: var(--danger); }
+    .panel {
+      background: rgba(16, 24, 42, .92); border: 1px solid var(--line);
+      border-radius: 16px; padding: 16px; box-shadow: 0 20px 50px rgba(0,0,0,.28);
+    }
+    .grid-main {
+      display: grid; grid-template-columns: 280px 1fr; gap: 16px;
+    }
+    @media (max-width: 960px) { .grid-main { grid-template-columns: 1fr; } }
+    .customer-list { display: grid; gap: 8px; max-height: 70vh; overflow: auto; }
+    .customer-item {
+      text-align: left; width: 100%; border: 1px solid var(--line); background: rgba(255,255,255,.02);
+      color: var(--text); border-radius: 12px; padding: 12px; cursor: pointer; font: inherit;
+    }
+    .customer-item.active, .customer-item:hover { border-color: var(--accent); background: var(--accent-dim); }
+    .customer-item strong { display: block; }
+    .customer-item span { color: var(--muted); font-size: .82rem; }
+    .editor { display: none; }
+    .editor.open { display: grid; gap: 16px; }
+    .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tabs button.active { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+    .tab-panel { display: none; }
+    .tab-panel.active { display: block; }
+    label { display: block; font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
+    input, select, textarea {
+      width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
+      background: #0a1020; color: var(--text); font: inherit;
+    }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
+    .hours-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    .hours-table th, .hours-table td { padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,.06); text-align: left; font-size: .9rem; }
+    .hours-table input[type="time"] { padding: 6px 8px; }
+    .hours-table input[type="checkbox"] { width: auto; }
+    .url-box {
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px;
+      padding: 10px 12px; border-radius: 12px; background: var(--accent-dim); border: 1px solid var(--line);
+    }
+    .url-box a { color: var(--accent); word-break: break-all; }
+    .design-layout {
+      display: grid; grid-template-columns: 280px 1fr; gap: 16px;
+    }
+    @media (max-width: 900px) { .design-layout { grid-template-columns: 1fr; } }
+    .controls { display: grid; gap: 12px; }
+    .canvas-stage {
+      display: flex; justify-content: center; align-items: flex-start;
+      min-height: 520px; overflow: auto; padding: 12px; background: #070b14; border-radius: 12px;
+      border: 1px solid var(--line);
+    }
+    .tablet-frame {
+      width: 600px; height: 1024px; position: relative; border-radius: 28px;
+      overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.45); border: 3px solid #1c2438;
+      transform-origin: top center; flex: 0 0 auto;
+    }
+    .canvas-el {
+      position: absolute; border: 1px dashed transparent; cursor: grab; user-select: none;
+      padding: 6px; overflow: hidden;
+    }
+    .canvas-el:hover, .canvas-el.selected { border-color: var(--accent); }
+    .canvas-el.dragging { cursor: grabbing; opacity: .92; z-index: 5; }
+    .canvas-el .handle {
+      position: absolute; right: 2px; bottom: 2px; width: 14px; height: 14px;
+      background: var(--accent); border-radius: 3px; cursor: nwse-resize;
+    }
+    .preview-logo { max-width: 100%; max-height: 100%; object-fit: contain; display: block; margin: 0 auto; }
+    .preview-title { font-weight: 800; text-align: center; line-height: 1.15; }
+    .preview-status { text-align: center; font-weight: 700; letter-spacing: .04em; }
+    .preview-hours { width: 100%; }
+    .preview-hours .row {
+      display: flex; justify-content: space-between; gap: 12px;
+      padding: 10px 4px; border-bottom: 1px solid rgba(255,255,255,.08); font-weight: 600;
+    }
+    .login-gate {
+      min-height: 100vh; display: grid; place-items: center; padding: 24px;
+    }
+    .login-card {
+      width: min(420px, 100%); background: var(--panel); border: 1px solid var(--line);
+      border-radius: 16px; padding: 24px;
+    }
+    .login-card h2 { margin: 0 0 8px; }
+    .login-card p { color: var(--muted); margin: 0 0 16px; }
+    .hidden { display: none !important; }
+    .hint { color: var(--muted); font-size: .86rem; line-height: 1.45; margin-top: 10px; }
+    .color-row { display: grid; grid-template-columns: 1fr 48px; gap: 8px; align-items: center; }
+  </style>
+</head>
+<body>
+  <div id="loginGate" class="login-gate">
+    <form class="login-card" id="loginForm">
+      <h2>SmartHours</h2>
+      <p>Admin portal for customer hours pages and tablet designs.</p>
+      <label for="loginPassword">Password</label>
+      <input id="loginPassword" type="password" autocomplete="current-password" required>
+      <div style="margin-top:14px"><button class="btn" type="submit" style="width:100%">Enter</button></div>
+      <p class="status err" id="loginError" style="margin-top:12px"></p>
+    </form>
+  </div>
+
+  <div id="app" class="wrap hidden">
+    <header>
+      <div>
+        <h1>SmartHours</h1>
+        <p class="sub">Create customers, sync Google hours, design 7″ tablet screens.</p>
+      </div>
+      <div class="toolbar">
+        <button type="button" class="btn" id="newCustomerBtn">New Customer</button>
+        <button type="button" class="btn-secondary" id="syncAllBtn">Sync All Google</button>
+      </div>
+    </header>
+    <div class="status" id="status"></div>
+    <div class="grid-main">
+      <aside class="panel">
+        <div class="customer-list" id="customerList"></div>
+      </aside>
+      <section class="panel editor" id="editor">
+        <div class="tabs">
+          <button type="button" class="btn-secondary active" data-tab="details">Details & Hours</button>
+          <button type="button" class="btn-secondary" data-tab="design">Design Canvas</button>
+        </div>
+
+        <div class="tab-panel active" id="tab-details">
+          <div class="form-grid">
+            <div>
+              <label for="fieldName">Customer name</label>
+              <input id="fieldName" type="text">
+            </div>
+            <div>
+              <label for="fieldSlug">URL slug</label>
+              <input id="fieldSlug" type="text" placeholder="acme-cafe">
+            </div>
+            <div>
+              <label for="fieldPlaceId">Google Place ID</label>
+              <input id="fieldPlaceId" type="text" placeholder="ChIJ…">
+            </div>
+            <div>
+              <label for="fieldMapsUrl">Google Maps / Business URL</label>
+              <input id="fieldMapsUrl" type="url" placeholder="https://maps.google.com/?cid=…">
+            </div>
+          </div>
+          <div class="url-box" id="publicUrlBox"></div>
+          <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
+            <label style="display:flex; gap:8px; align-items:center; text-transform:none; letter-spacing:0; font-size:.95rem; color:var(--text);">
+              <input id="fieldManual" type="checkbox"> Use manual hours (override Google)
+            </label>
+            <button type="button" class="btn-secondary" id="syncOneBtn">Sync from Google now</button>
+          </div>
+          <p class="hint" id="syncMeta"></p>
+          <table class="hours-table">
+            <thead>
+              <tr>
+                <th>Day</th>
+                <th>Closed</th>
+                <th>Open</th>
+                <th>Close</th>
+                <th>Open 2</th>
+                <th>Close 2</th>
+              </tr>
+            </thead>
+            <tbody id="hoursBody"></tbody>
+          </table>
+          <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn" id="saveBtn">Save Customer</button>
+            <button type="button" class="btn-danger" id="deleteBtn">Delete</button>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tab-design">
+          <div class="design-layout">
+            <div class="controls">
+              <div>
+                <label for="bgColor">Background</label>
+                <div class="color-row">
+                  <input id="bgColor" type="text" value="#0b1020">
+                  <input id="bgColorPick" type="color" value="#0b1020">
+                </div>
+              </div>
+              <div>
+                <label for="textColor">Text color</label>
+                <div class="color-row">
+                  <input id="textColor" type="text" value="#f6f8ff">
+                  <input id="textColorPick" type="color" value="#f6f8ff">
+                </div>
+              </div>
+              <div>
+                <label for="accentColor">Accent color</label>
+                <div class="color-row">
+                  <input id="accentColor" type="text" value="#76f4c5">
+                  <input id="accentColorPick" type="color" value="#76f4c5">
+                </div>
+              </div>
+              <div>
+                <label for="fontFamily">Font style</label>
+                <select id="fontFamily">
+                  <option value='Georgia, "Times New Roman", serif'>Georgia (serif)</option>
+                  <option value='"Palatino Linotype", Palatino, serif'>Palatino</option>
+                  <option value='"Trebuchet MS", sans-serif'>Trebuchet</option>
+                  <option value='"Segoe UI", Arial, sans-serif'>Segoe UI</option>
+                  <option value='Impact, Haettenschweiler, sans-serif'>Impact</option>
+                  <option value='"Courier New", monospace'>Courier</option>
+                </select>
+              </div>
+              <div class="form-grid">
+                <div>
+                  <label for="titleSize">Title size</label>
+                  <input id="titleSize" type="number" min="12" max="72" value="34">
+                </div>
+                <div>
+                  <label for="hoursSize">Hours size</label>
+                  <input id="hoursSize" type="number" min="12" max="48" value="22">
+                </div>
+                <div>
+                  <label for="statusSize">Status size</label>
+                  <input id="statusSize" type="number" min="12" max="48" value="20">
+                </div>
+              </div>
+              <div>
+                <label for="logoFile">Logo image</label>
+                <input id="logoFile" type="file" accept="image/*">
+              </div>
+              <div class="form-grid">
+                <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showLogo" checked> Logo</label>
+                <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showTitle" checked> Title</label>
+                <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showStatus" checked> Open status</label>
+                <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showHours" checked> Hours list</label>
+              </div>
+              <p class="hint">Drag elements on the tablet canvas. Use the green corner to resize. Designed for a 7″ portrait tablet (600×1024).</p>
+              <button type="button" class="btn" id="saveDesignBtn">Save Design</button>
+            </div>
+            <div class="canvas-stage">
+              <div class="tablet-frame" id="tabletFrame"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+  </div>
+
+  <script src="/lab007-site-nav.js" defer></script>
+  <script>
+    (function () {
+      const AUTH_KEY = 'smartHoursPassword';
+      const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+      const DAY_LABELS = {
+        monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday', thursday:'Thursday',
+        friday:'Friday', saturday:'Saturday', sunday:'Sunday'
+      };
+      const TABLET = { width: 600, height: 1024 };
+
+      const loginGate = document.getElementById('loginGate');
+      const loginForm = document.getElementById('loginForm');
+      const loginPassword = document.getElementById('loginPassword');
+      const loginError = document.getElementById('loginError');
+      const app = document.getElementById('app');
+      const statusEl = document.getElementById('status');
+      const customerList = document.getElementById('customerList');
+      const editor = document.getElementById('editor');
+      const hoursBody = document.getElementById('hoursBody');
+      const tabletFrame = document.getElementById('tabletFrame');
+      const publicUrlBox = document.getElementById('publicUrlBox');
+
+      let customers = [];
+      let selectedId = null;
+      let logoDataUrl = null;
+      let dragState = null;
+
+      function authHeaders() {
+        const password = sessionStorage.getItem(AUTH_KEY);
+        if (!password) return {};
+        return {
+          'X-SmartHours-Password': password,
+          Authorization: 'Bearer ' + password
+        };
+      }
+
+      function apiFetch(url, options) {
+        const opts = options || {};
+        const headers = Object.assign({}, opts.headers || {}, authHeaders());
+        return fetch(url, Object.assign({}, opts, { headers, credentials: 'omit' }));
+      }
+
+      function setStatus(msg, isErr) {
+        statusEl.textContent = msg || '';
+        statusEl.classList.toggle('err', !!isErr);
+      }
+
+      function selected() {
+        return customers.find((c) => c.id === selectedId) || null;
+      }
+
+      function emptyDay() {
+        return { closed: true, open: '09:00', close: '17:00', open2: '', close2: '' };
+      }
+
+      function defaultHours() {
+        const hours = {};
+        DAYS.forEach((d) => {
+          hours[d] = emptyDay();
+          if (d !== 'sunday') {
+            hours[d].closed = false;
+            hours[d].open = '09:00';
+            hours[d].close = '17:00';
+          }
+        });
+        return hours;
+      }
+
+      function defaultDesign() {
+        return {
+          backgroundColor: '#0b1020',
+          textColor: '#f6f8ff',
+          accentColor: '#76f4c5',
+          mutedColor: '#9aa7bd',
+          fontFamily: 'Georgia, "Times New Roman", serif',
+          titleFontSize: 34,
+          hoursFontSize: 22,
+          statusFontSize: 20,
+          logoUrl: '',
+          showLogo: true,
+          showTitle: true,
+          showStatus: true,
+          showHours: true,
+          layout: [
+            { id: 'logo', type: 'logo', x: 150, y: 36, w: 300, h: 100 },
+            { id: 'title', type: 'title', x: 40, y: 160, w: 520, h: 70 },
+            { id: 'status', type: 'status', x: 40, y: 240, w: 520, h: 48 },
+            { id: 'hours', type: 'hours', x: 40, y: 310, w: 520, h: 620 }
+          ]
+        };
+      }
+
+      function formatDay(day) {
+        if (!day || day.closed) return 'Closed';
+        const a = day.open && day.close ? `${day.open} – ${day.close}` : '';
+        const b = day.open2 && day.close2 ? `${day.open2} – ${day.close2}` : '';
+        return b ? `${a}, ${b}` : (a || 'Closed');
+      }
+
+      function publicUrl(slug) {
+        return `${location.origin}/SmartHours/v/${encodeURIComponent(slug)}`;
+      }
+
+      function scaleTablet() {
+        const stage = tabletFrame.parentElement;
+        if (!stage) return;
+        const maxW = stage.clientWidth - 24;
+        const maxH = Math.max(420, window.innerHeight - 220);
+        const scale = Math.min(1, maxW / TABLET.width, maxH / TABLET.height);
+        tabletFrame.style.transform = `scale(${scale})`;
+        tabletFrame.style.marginBottom = `${(scale - 1) * TABLET.height}px`;
+      }
+
+      function readHoursFromForm() {
+        const hours = {};
+        DAYS.forEach((day) => {
+          const row = hoursBody.querySelector(`tr[data-day="${day}"]`);
+          hours[day] = {
+            closed: row.querySelector('[data-f="closed"]').checked,
+            open: row.querySelector('[data-f="open"]').value,
+            close: row.querySelector('[data-f="close"]').value,
+            open2: row.querySelector('[data-f="open2"]').value,
+            close2: row.querySelector('[data-f="close2"]').value
+          };
+        });
+        return hours;
+      }
+
+      function renderHoursForm(hours) {
+        const h = hours || defaultHours();
+        hoursBody.innerHTML = DAYS.map((day) => {
+          const d = h[day] || emptyDay();
+          return `<tr data-day="${day}">
+            <td>${DAY_LABELS[day]}</td>
+            <td><input type="checkbox" data-f="closed" ${d.closed ? 'checked' : ''}></td>
+            <td><input type="time" data-f="open" value="${d.open || '09:00'}"></td>
+            <td><input type="time" data-f="close" value="${d.close || '17:00'}"></td>
+            <td><input type="time" data-f="open2" value="${d.open2 || ''}"></td>
+            <td><input type="time" data-f="close2" value="${d.close2 || ''}"></td>
+          </tr>`;
+        }).join('');
+      }
+
+      function readDesignFromForm(base) {
+        const design = Object.assign({}, base || defaultDesign());
+        design.backgroundColor = document.getElementById('bgColor').value.trim() || design.backgroundColor;
+        design.textColor = document.getElementById('textColor').value.trim() || design.textColor;
+        design.accentColor = document.getElementById('accentColor').value.trim() || design.accentColor;
+        design.fontFamily = document.getElementById('fontFamily').value;
+        design.titleFontSize = Number(document.getElementById('titleSize').value) || 34;
+        design.hoursFontSize = Number(document.getElementById('hoursSize').value) || 22;
+        design.statusFontSize = Number(document.getElementById('statusSize').value) || 20;
+        design.showLogo = document.getElementById('showLogo').checked;
+        design.showTitle = document.getElementById('showTitle').checked;
+        design.showStatus = document.getElementById('showStatus').checked;
+        design.showHours = document.getElementById('showHours').checked;
+        return design;
+      }
+
+      function writeDesignToForm(design) {
+        const d = design || defaultDesign();
+        document.getElementById('bgColor').value = d.backgroundColor;
+        document.getElementById('bgColorPick').value = /^#/.test(d.backgroundColor) ? d.backgroundColor : '#0b1020';
+        document.getElementById('textColor').value = d.textColor;
+        document.getElementById('textColorPick').value = /^#/.test(d.textColor) ? d.textColor : '#f6f8ff';
+        document.getElementById('accentColor').value = d.accentColor;
+        document.getElementById('accentColorPick').value = /^#/.test(d.accentColor) ? d.accentColor : '#76f4c5';
+        document.getElementById('fontFamily').value = d.fontFamily;
+        document.getElementById('titleSize').value = d.titleFontSize;
+        document.getElementById('hoursSize').value = d.hoursFontSize;
+        document.getElementById('statusSize').value = d.statusFontSize;
+        document.getElementById('showLogo').checked = d.showLogo !== false;
+        document.getElementById('showTitle').checked = d.showTitle !== false;
+        document.getElementById('showStatus').checked = d.showStatus !== false;
+        document.getElementById('showHours').checked = d.showHours !== false;
+      }
+
+      function bindColorPair(textId, pickId) {
+        const text = document.getElementById(textId);
+        const pick = document.getElementById(pickId);
+        pick.addEventListener('input', () => { text.value = pick.value; renderCanvas(); });
+        text.addEventListener('change', () => {
+          if (/^#[0-9a-fA-F]{6}$/.test(text.value)) pick.value = text.value;
+          renderCanvas();
+        });
+      }
+
+      function renderCanvas() {
+        const c = selected();
+        if (!c) return;
+        const design = readDesignFromForm(c.design);
+        design.layout = (c.design && c.design.layout) || defaultDesign().layout;
+        const hours = c.useManualHours || !c.googleHours ? (c.hours || defaultHours()) : c.googleHours;
+        const logoSrc = logoDataUrl || design.logoUrl || '';
+
+        tabletFrame.style.background = design.backgroundColor;
+        tabletFrame.style.color = design.textColor;
+        tabletFrame.style.fontFamily = design.fontFamily;
+        tabletFrame.innerHTML = '';
+
+        design.layout.forEach((el) => {
+          if (el.type === 'logo' && !design.showLogo) return;
+          if (el.type === 'title' && !design.showTitle) return;
+          if (el.type === 'status' && !design.showStatus) return;
+          if (el.type === 'hours' && !design.showHours) return;
+
+          const node = document.createElement('div');
+          node.className = 'canvas-el';
+          node.dataset.type = el.type;
+          node.style.left = el.x + 'px';
+          node.style.top = el.y + 'px';
+          node.style.width = el.w + 'px';
+          node.style.height = el.h + 'px';
+
+          if (el.type === 'logo') {
+            node.innerHTML = logoSrc
+              ? `<img class="preview-logo" src="${logoSrc}" alt="Logo">`
+              : `<div style="height:100%;display:grid;place-items:center;opacity:.5;border:1px dashed ${design.accentColor}">Logo</div>`;
+          } else if (el.type === 'title') {
+            node.innerHTML = `<div class="preview-title" style="font-size:${design.titleFontSize}px;color:${design.textColor}">${escapeHtml(c.name)}</div>`;
+          } else if (el.type === 'status') {
+            node.innerHTML = `<div class="preview-status" style="font-size:${design.statusFontSize}px;color:${design.accentColor}">OPEN / CLOSED</div>`;
+          } else if (el.type === 'hours') {
+            node.innerHTML = `<div class="preview-hours" style="font-size:${design.hoursFontSize}px">${
+              DAYS.map((day) => `<div class="row"><span>${DAY_LABELS[day]}</span><span style="color:${design.accentColor}">${escapeHtml(formatDay(hours[day]))}</span></div>`).join('')
+            }</div>`;
+          }
+
+          const handle = document.createElement('div');
+          handle.className = 'handle';
+          node.appendChild(handle);
+          tabletFrame.appendChild(node);
+
+          node.addEventListener('pointerdown', (event) => {
+            if (event.target === handle) {
+              dragState = { mode: 'resize', type: el.type, startX: event.clientX, startY: event.clientY, startW: el.w, startH: el.h };
+            } else {
+              dragState = { mode: 'move', type: el.type, startX: event.clientX, startY: event.clientY, startLeft: el.x, startTop: el.y };
+            }
+            node.classList.add('dragging', 'selected');
+            node.setPointerCapture(event.pointerId);
+          });
+        });
+        scaleTablet();
+      }
+
+      function escapeHtml(str) {
+        return String(str || '')
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+
+      function renderList() {
+        if (!customers.length) {
+          customerList.innerHTML = '<p class="hint">No customers yet. Click New Customer.</p>';
+          return;
+        }
+        customerList.innerHTML = customers.map((c) => `
+          <button type="button" class="customer-item ${c.id === selectedId ? 'active' : ''}" data-id="${escapeHtml(c.id)}">
+            <strong>${escapeHtml(c.name)}</strong>
+            <span>/SmartHours/v/${escapeHtml(c.slug)}</span>
+          </button>
+        `).join('');
+      }
+
+      function fillEditor(customer) {
+        editor.classList.add('open');
+        document.getElementById('fieldName').value = customer.name || '';
+        document.getElementById('fieldSlug').value = customer.slug || '';
+        document.getElementById('fieldPlaceId').value = customer.googlePlaceId || '';
+        document.getElementById('fieldMapsUrl').value = customer.googleMapsUrl || '';
+        document.getElementById('fieldManual').checked = !!customer.useManualHours;
+        renderHoursForm(customer.hours);
+        writeDesignToForm(customer.design);
+        logoDataUrl = null;
+        document.getElementById('logoFile').value = '';
+        const url = publicUrl(customer.slug);
+        publicUrlBox.innerHTML = `<strong>Public page:</strong> <a href="${url}" target="_blank" rel="noopener">${url}</a>`;
+        const syncMeta = [];
+        if (customer.lastSyncedAt) syncMeta.push('Last Google sync: ' + new Date(customer.lastSyncedAt).toLocaleString());
+        if (customer.lastSyncError) syncMeta.push('Last sync error: ' + customer.lastSyncError);
+        if (customer.googleDisplayName) syncMeta.push('Google name: ' + customer.googleDisplayName);
+        document.getElementById('syncMeta').textContent = syncMeta.join(' · ');
+        renderCanvas();
+      }
+
+      async function loadCustomers() {
+        setStatus('Loading…');
+        const res = await apiFetch('/api/smarthours/customers');
+        if (res.status === 401) {
+          sessionStorage.removeItem(AUTH_KEY);
+          showLogin('Session expired.');
+          return;
+        }
+        if (!res.ok) throw new Error('Failed to load customers');
+        const data = await res.json();
+        customers = data.customers || [];
+        renderList();
+        if (selectedId) {
+          const c = selected();
+          if (c) fillEditor(c);
+          else {
+            selectedId = null;
+            editor.classList.remove('open');
+          }
+        }
+        setStatus(data.googleConfigured ? '' : 'Google Places API key not set — manual hours still work. Add GOOGLE_PLACES_API_KEY on the server for sync.');
+      }
+
+      function collectPayload() {
+        const c = selected();
+        const design = readDesignFromForm(c ? c.design : defaultDesign());
+        if (c && c.design && c.design.layout) design.layout = c.design.layout;
+        if (c && c.design && c.design.logoUrl && !logoDataUrl) design.logoUrl = c.design.logoUrl;
+        const payload = {
+          name: document.getElementById('fieldName').value.trim(),
+          slug: document.getElementById('fieldSlug').value.trim(),
+          googlePlaceId: document.getElementById('fieldPlaceId').value.trim(),
+          googleMapsUrl: document.getElementById('fieldMapsUrl').value.trim(),
+          useManualHours: document.getElementById('fieldManual').checked,
+          hours: readHoursFromForm(),
+          design
+        };
+        if (logoDataUrl) payload.logoDataUrl = logoDataUrl;
+        return payload;
+      }
+
+      async function saveCustomer() {
+        const payload = collectPayload();
+        if (!payload.name) {
+          setStatus('Customer name is required.', true);
+          return;
+        }
+        setStatus('Saving…');
+        let res;
+        if (selectedId && !String(selectedId).startsWith('tmp-')) {
+          res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(selectedId), {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        } else {
+          res = await apiFetch('/api/smarthours/customers', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+        }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Save failed');
+        selectedId = data.id;
+        logoDataUrl = null;
+        await loadCustomers();
+        setStatus('Saved. Public URL ready.');
+      }
+
+      function showLogin(msg) {
+        loginGate.classList.remove('hidden');
+        app.classList.add('hidden');
+        loginError.textContent = msg || '';
+      }
+
+      function showApp() {
+        loginGate.classList.add('hidden');
+        app.classList.remove('hidden');
+      }
+
+      loginForm.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        loginError.textContent = '';
+        const password = loginPassword.value.trim();
+        const res = await fetch('/api/smarthours/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ password })
+        });
+        if (!res.ok) {
+          loginError.textContent = 'Wrong password.';
+          return;
+        }
+        sessionStorage.setItem(AUTH_KEY, password);
+        showApp();
+        loadCustomers().catch((err) => setStatus(err.message, true));
+      });
+
+      document.getElementById('newCustomerBtn').addEventListener('click', () => {
+        const temp = {
+          id: 'tmp-' + Date.now(),
+          name: 'New Customer',
+          slug: 'new-customer',
+          googlePlaceId: '',
+          googleMapsUrl: '',
+          useManualHours: true,
+          hours: defaultHours(),
+          design: defaultDesign(),
+          lastSyncedAt: null
+        };
+        customers.unshift(temp);
+        selectedId = temp.id;
+        renderList();
+        fillEditor(temp);
+        setStatus('Fill details, then Save Customer.');
+      });
+
+      customerList.addEventListener('click', (event) => {
+        const btn = event.target.closest('[data-id]');
+        if (!btn) return;
+        const c = selected();
+        if (c && String(selectedId).startsWith('tmp-')) {
+          // keep unsaved edits only if still selected
+        }
+        selectedId = btn.dataset.id;
+        const customer = selected();
+        if (customer) {
+          renderList();
+          fillEditor(customer);
+        }
+      });
+
+      document.querySelectorAll('.tabs [data-tab]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          document.querySelectorAll('.tabs [data-tab]').forEach((b) => b.classList.remove('active'));
+          document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+          btn.classList.add('active');
+          document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+          if (btn.dataset.tab === 'design') {
+            renderCanvas();
+            scaleTablet();
+          }
+        });
+      });
+
+      document.getElementById('saveBtn').addEventListener('click', () => {
+        saveCustomer().catch((err) => setStatus(err.message, true));
+      });
+      document.getElementById('saveDesignBtn').addEventListener('click', () => {
+        saveCustomer().catch((err) => setStatus(err.message, true));
+      });
+      document.getElementById('deleteBtn').addEventListener('click', async () => {
+        const c = selected();
+        if (!c) return;
+        if (String(c.id).startsWith('tmp-')) {
+          customers = customers.filter((x) => x.id !== c.id);
+          selectedId = null;
+          editor.classList.remove('open');
+          renderList();
+          return;
+        }
+        if (!confirm('Delete this customer and their public page?')) return;
+        const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(c.id), { method: 'DELETE' });
+        if (!res.ok) {
+          setStatus('Delete failed', true);
+          return;
+        }
+        selectedId = null;
+        editor.classList.remove('open');
+        await loadCustomers();
+        setStatus('Deleted.');
+      });
+
+      document.getElementById('syncOneBtn').addEventListener('click', async () => {
+        const c = selected();
+        if (!c || String(c.id).startsWith('tmp-')) {
+          setStatus('Save the customer first, then sync.', true);
+          return;
+        }
+        await saveCustomer();
+        setStatus('Syncing Google hours…');
+        const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(c.id) + '/sync', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Sync failed');
+        await loadCustomers();
+        setStatus(data.changed ? 'Google hours updated.' : 'Synced — no hour changes.');
+      });
+
+      document.getElementById('syncAllBtn').addEventListener('click', async () => {
+        setStatus('Syncing all customers…');
+        const res = await apiFetch('/api/smarthours/sync-all', { method: 'POST' });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Sync failed');
+        await loadCustomers();
+        setStatus(`Synced ${data.synced || 0} · changed ${data.changed || 0} · errors ${data.errors || 0}`);
+      });
+
+      document.getElementById('logoFile').addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => {
+          logoDataUrl = String(reader.result || '');
+          renderCanvas();
+        };
+        reader.readAsDataURL(file);
+      });
+
+      ['titleSize','hoursSize','statusSize','fontFamily','showLogo','showTitle','showStatus','showHours','fieldName'].forEach((id) => {
+        const el = document.getElementById(id);
+        el.addEventListener('input', () => {
+          const c = selected();
+          if (c && id === 'fieldName') c.name = el.value;
+          renderCanvas();
+        });
+        el.addEventListener('change', () => renderCanvas());
+      });
+
+      bindColorPair('bgColor', 'bgColorPick');
+      bindColorPair('textColor', 'textColorPick');
+      bindColorPair('accentColor', 'accentColorPick');
+
+      window.addEventListener('pointermove', (event) => {
+        if (!dragState) return;
+        const c = selected();
+        if (!c || !c.design || !c.design.layout) return;
+        const el = c.design.layout.find((x) => x.type === dragState.type);
+        if (!el) return;
+        const scale = Number((tabletFrame.style.transform.match(/scale\(([^)]+)\)/) || [])[1] || 1);
+        const dx = (event.clientX - dragState.startX) / scale;
+        const dy = (event.clientY - dragState.startY) / scale;
+        if (dragState.mode === 'move') {
+          el.x = Math.max(0, Math.min(TABLET.width - el.w, Math.round(dragState.startLeft + dx)));
+          el.y = Math.max(0, Math.min(TABLET.height - el.h, Math.round(dragState.startTop + dy)));
+        } else {
+          el.w = Math.max(60, Math.min(TABLET.width - el.x, Math.round(dragState.startW + dx)));
+          el.h = Math.max(40, Math.min(TABLET.height - el.y, Math.round(dragState.startH + dy)));
+        }
+        renderCanvas();
+      });
+      window.addEventListener('pointerup', () => { dragState = null; });
+      window.addEventListener('resize', scaleTablet);
+
+      const saved = sessionStorage.getItem(AUTH_KEY);
+      if (saved) {
+        showApp();
+        loadCustomers().catch((err) => {
+          sessionStorage.removeItem(AUTH_KEY);
+          showLogin(err.message || 'Login failed');
+        });
+      } else {
+        showLogin('');
+        loginPassword.focus();
+      }
+    })();
+  </script>
+</body>
+</html>
