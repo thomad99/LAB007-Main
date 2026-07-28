@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
   <title>SmartHours Admin | LAB007</title>
+  <link rel="icon" type="image/png" href="/smarthours-assets/smarthours-logo.png">
+  <link rel="apple-touch-icon" href="/smarthours-assets/smarthours-logo.png">
   <style>
     :root {
       --bg: #070b14;
@@ -34,6 +36,14 @@
       justify-content: space-between; margin-bottom: 18px;
     }
     h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.03em; }
+    .brand {
+      display: flex; align-items: center; gap: 14px; min-width: 0;
+    }
+    .brand-logo {
+      width: 52px; height: 52px; border-radius: 14px; flex: 0 0 auto;
+      box-shadow: 0 10px 28px rgba(37, 99, 235, .28);
+    }
+    .brand-text { min-width: 0; }
     .sub { margin: 4px 0 0; color: var(--muted); }
     .toolbar { display: flex; gap: 8px; flex-wrap: wrap; }
     .btn, .btn-secondary, .btn-danger {
@@ -133,14 +143,25 @@
     .preview-slide {
       width: 100%; height: 100%; object-fit: cover; border-radius: 12px; background: #000; display: block;
     }
+    .el-props { margin-top: 10px; display: grid; gap: 8px; }
+    .hidden-block { display: none !important; }
+    .canvas-el .del-x {
+      position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; border: 0;
+      border-radius: 6px; background: rgba(255,80,100,.9); color: #fff; font-weight: 800;
+      cursor: pointer; line-height: 1; z-index: 3;
+    }
+    .canvas-el.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   </style>
 </head>
 <body>
   <div id="app" class="wrap">
     <header>
-      <div>
-        <h1>SmartHours</h1>
-        <p class="sub">Create customers, sync Google hours, design 7″ tablet screens.</p>
+      <div class="brand">
+        <img class="brand-logo" src="/smarthours-assets/smarthours-logo.png" width="52" height="52" alt="SmartHours">
+        <div class="brand-text">
+          <h1>SmartHours</h1>
+          <p class="sub">Create customers, sync Google hours, design 7″ tablet screens.</p>
+        </div>
       </div>
       <div class="toolbar">
         <button type="button" class="btn" id="newCustomerBtn">New Customer</button>
@@ -185,7 +206,7 @@
             </label>
             <button type="button" class="btn-secondary" id="syncOneBtn">Sync from Google now</button>
           </div>
-          <p class="hint">Paste a <strong>share.google</strong> link, Maps place URL, or Place ID. Uncheck manual override before syncing so Google hours fill the table. Requires <code>GOOGLE_PLACES_API_KEY</code> on the server (Places API New + Text Search).</p>
+          <p class="hint">Paste a <strong>share.google</strong> link (example: <code>https://share.google/…</code>), a Maps place URL, or a Place ID. Uncheck “Use manual hours” before syncing so Google hours fill the table. Sync runs daily and on demand — no API key required for share/Maps links (optional <code>GOOGLE_PLACES_API_KEY</code> makes Places API sync more reliable).</p>
           <p class="hint" id="syncMeta"></p>
           <table class="hours-table">
             <thead>
@@ -278,6 +299,49 @@
                 </div>
               </div>
               <div class="form-grid">
+                <button type="button" class="btn-secondary" id="addTextBtn">+ Text</button>
+                <button type="button" class="btn-secondary" id="addImageBtn">+ Image</button>
+                <button type="button" class="btn-secondary" id="addHoursBtn">+ Hours</button>
+                <button type="button" class="btn-secondary" id="addStatusBtn">+ OPEN/CLOSED</button>
+                <button type="button" class="btn-secondary" id="addLogoBtn">+ Logo</button>
+                <button type="button" class="btn-secondary" id="addTitleBtn">+ Title</button>
+                <button type="button" class="btn-secondary" id="addSlideshowBtn">+ Slideshow</button>
+                <button type="button" class="btn-danger" id="deleteElBtn">Delete selected</button>
+              </div>
+              <div id="elProps" class="el-props hidden-block">
+                <div id="elTextProps">
+                  <label for="elText">Selected text</label>
+                  <textarea id="elText" rows="2" placeholder="Text content"></textarea>
+                  <div class="form-grid">
+                    <div>
+                      <label for="elFontSize">Text size</label>
+                      <input id="elFontSize" type="number" min="10" max="120" value="28">
+                    </div>
+                    <div>
+                      <label for="elAlign">Align</label>
+                      <select id="elAlign">
+                        <option value="left">Left</option>
+                        <option value="center">Center</option>
+                        <option value="right">Right</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label for="elColor">Text color</label>
+                      <input id="elColor" type="color" value="#f6f8ff">
+                    </div>
+                  </div>
+                </div>
+                <div id="elImageProps" class="hidden-block">
+                  <label for="elMediaSelect">Image from gallery</label>
+                  <select id="elMediaSelect"></select>
+                  <label for="elFit">Fit</label>
+                  <select id="elFit">
+                    <option value="cover">Cover</option>
+                    <option value="contain">Contain</option>
+                  </select>
+                </div>
+              </div>
+              <div class="form-grid">
                 <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showLogo" checked> Logo</label>
                 <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showTitle" checked> Title</label>
                 <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showStatus" checked> Open status</label>
@@ -296,6 +360,13 @@
               </div>
               <p class="hint">Drag elements on the tablet canvas. Use the green corner to resize. Designed for a 7″ portrait tablet (600×1024).</p>
               <button type="button" class="btn" id="saveDesignBtn">Save Design</button>
+              <div id="designEinkPreviewWrap" class="hidden-block" style="margin-top:14px;">
+                <p class="hint" style="margin-top:0;">ESP32 / e-ink static preview (1-bit BMP — same file the device downloads)</p>
+                <div style="background:#0a1020;border:1px solid var(--line);border-radius:12px;padding:12px;overflow:auto;">
+                  <img id="designEinkPreview" alt="ESP32 design preview" style="max-width:100%;height:auto;background:#fff;image-rendering:pixelated;">
+                </div>
+                <p class="hint">Tip: set e-ink size to <strong>600×1024</strong> under ESP32 / E-ink for a 1:1 match. PNG logos/gallery images dither best.</p>
+              </div>
             </div>
             <div class="canvas-stage">
               <div class="tablet-frame" id="tabletFrame"></div>
@@ -305,11 +376,11 @@
 
         <div class="tab-panel" id="tab-esp32">
           <p class="hint">
-            The server renders a <strong>static 1-bit BMP</strong> of this customer’s hours for ESP32 + e-ink
-            (no browser on device). The device checks a small JSON meta file for changes, then downloads the
-            image only when the version changes. Default poll is <strong>12 hours</strong> to save battery;
-            you can set it lower for testing. Changing the poll here updates the device on its next check-in
-            (no reflash required).
+            The server renders a <strong>static 1-bit BMP of your Design canvas</strong> for ESP32 + e-ink
+            (no browser on device). <strong>Download ESP32 .ino</strong> embeds that BMP in firmware
+            (<code>DESIGN_BMP[]</code>) so the panel can show your design offline, then keeps syncing
+            newer designs/hours from the server when the version changes. Prefer e-ink size
+            <strong>600×1024</strong> to match the tablet canvas (or set it to your panel resolution).
           </p>
           <div class="form-grid" style="margin-top:12px;">
             <div>
@@ -319,11 +390,11 @@
             </div>
             <div>
               <label for="einkWidth">E-ink width (px)</label>
-              <input id="einkWidth" type="number" min="200" max="1200" value="800">
+              <input id="einkWidth" type="number" min="200" max="1200" value="600">
             </div>
             <div>
               <label for="einkHeight">E-ink height (px)</label>
-              <input id="einkHeight" type="number" min="120" max="1200" value="480">
+              <input id="einkHeight" type="number" min="120" max="1200" value="1024">
             </div>
             <div>
               <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);margin-top:22px;">
@@ -348,9 +419,10 @@
           <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
             <button type="button" class="btn" id="saveEinkBtn">Save E-ink Settings</button>
             <button type="button" class="btn-secondary" id="previewEinkBtn">Refresh Preview</button>
-            <button type="button" class="btn-secondary" id="downloadSketchBtn">Download ESP32 .ino</button>
+            <button type="button" class="btn" id="downloadSketchBtn">Download ESP32 .ino (with design)</button>
             <button type="button" class="btn-secondary" id="copySketchBtn">Copy Code</button>
           </div>
+          <p class="hint" id="sketchMeta" style="margin-top:8px;"></p>
           <div class="url-box" id="einkUrlBox" style="margin-top:14px;"></div>
           <div style="margin-top:14px;background:#0a1020;border:1px solid var(--line);border-radius:12px;padding:12px;overflow:auto;">
             <img id="einkPreview" alt="E-ink preview" style="max-width:100%;height:auto;background:#fff;image-rendering:pixelated;">
@@ -381,8 +453,10 @@
 
       let customers = [];
       let selectedId = null;
+      let selectedElId = null;
       let logoDataUrl = null;
       let dragState = null;
+      let suppressPropsSync = false;
 
       function apiFetch(url, options) {
         return fetch(url, Object.assign({ credentials: 'omit' }, options || {}));
@@ -439,7 +513,6 @@
             { id: 'logo', type: 'logo', x: 150, y: 28, w: 300, h: 90 },
             { id: 'title', type: 'title', x: 40, y: 130, w: 520, h: 60 },
             { id: 'status', type: 'status', x: 40, y: 200, w: 520, h: 120 },
-            { id: 'slideshow', type: 'slideshow', x: 40, y: 340, w: 520, h: 280 },
             { id: 'hours', type: 'hours', x: 40, y: 640, w: 520, h: 340 }
           ]
         };
@@ -547,17 +620,27 @@
         design.titleFontSize = Number(document.getElementById('titleSize').value) || 34;
         design.hoursFontSize = Number(document.getElementById('hoursSize').value) || 22;
         design.statusFontSize = Number(document.getElementById('statusSize').value) || 48;
-        design.showLogo = document.getElementById('showLogo').checked;
-        design.showTitle = document.getElementById('showTitle').checked;
-        design.showStatus = document.getElementById('showStatus').checked;
-        design.showHours = document.getElementById('showHours').checked;
-        design.showSlideshow = document.getElementById('showSlideshow').checked;
         design.statusMode = document.getElementById('statusMode').value || 'badge';
         design.openMediaId = document.getElementById('openMediaSelect').value || '';
         design.closedMediaId = document.getElementById('closedMediaSelect').value || '';
         design.slideshowIntervalSec = Number(document.getElementById('slideshowInterval').value) || 8;
         design.slideshowMediaIds = selectedSlideshowIds();
+        const layout = Array.isArray(design.layout) ? design.layout : [];
+        design.showLogo = layout.some((e) => e.type === 'logo');
+        design.showTitle = layout.some((e) => e.type === 'title');
+        design.showStatus = layout.some((e) => e.type === 'status');
+        design.showHours = layout.some((e) => e.type === 'hours');
+        design.showSlideshow = layout.some((e) => e.type === 'slideshow');
         return design;
+      }
+
+      function syncShowCheckboxes(design) {
+        const layout = (design && design.layout) || [];
+        document.getElementById('showLogo').checked = layout.some((e) => e.type === 'logo');
+        document.getElementById('showTitle').checked = layout.some((e) => e.type === 'title');
+        document.getElementById('showStatus').checked = layout.some((e) => e.type === 'status');
+        document.getElementById('showHours').checked = layout.some((e) => e.type === 'hours');
+        document.getElementById('showSlideshow').checked = layout.some((e) => e.type === 'slideshow');
       }
 
       function writeDesignToForm(design) {
@@ -572,13 +655,126 @@
         document.getElementById('titleSize').value = d.titleFontSize;
         document.getElementById('hoursSize').value = d.hoursFontSize;
         document.getElementById('statusSize').value = d.statusFontSize || 48;
-        document.getElementById('showLogo').checked = d.showLogo !== false;
-        document.getElementById('showTitle').checked = d.showTitle !== false;
-        document.getElementById('showStatus').checked = d.showStatus !== false;
-        document.getElementById('showHours').checked = d.showHours !== false;
-        document.getElementById('showSlideshow').checked = !!d.showSlideshow;
         document.getElementById('statusMode').value = d.statusMode || 'badge';
         document.getElementById('slideshowInterval').value = d.slideshowIntervalSec || 8;
+        syncShowCheckboxes(d);
+      }
+
+      function newElId(type) {
+        return type + '-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 6);
+      }
+
+      function defaultSlot(type) {
+        const map = {
+          logo: { x: 150, y: 28, w: 300, h: 90 },
+          title: { x: 40, y: 130, w: 520, h: 60 },
+          status: { x: 40, y: 200, w: 520, h: 120 },
+          slideshow: { x: 40, y: 340, w: 520, h: 280 },
+          hours: { x: 40, y: 640, w: 520, h: 340 },
+          text: { x: 60, y: 80, w: 480, h: 56, text: 'New text', fontSize: 28, color: '', align: 'center', bold: true },
+          image: { x: 80, y: 300, w: 440, h: 260, mediaId: '', fit: 'cover' }
+        };
+        const base = map[type] || map.text;
+        return Object.assign({ id: newElId(type), type }, base);
+      }
+
+      function ensureLayout(c) {
+        if (!c.design) c.design = defaultDesign();
+        if (!Array.isArray(c.design.layout)) c.design.layout = defaultDesign().layout.slice();
+        return c.design.layout;
+      }
+
+      function addLayoutElement(type, extras) {
+        const c = selected();
+        if (!c) return;
+        const layout = ensureLayout(c);
+        const singleton = ['logo', 'title', 'status', 'hours', 'slideshow'].includes(type);
+        if (singleton) {
+          const existing = layout.find((e) => e.type === type);
+          if (existing) {
+            selectedElId = existing.id;
+            syncShowCheckboxes(c.design);
+            renderCanvas();
+            return;
+          }
+        }
+        const el = Object.assign(defaultSlot(type), extras || {});
+        if (type === 'image' && !el.mediaId) {
+          const first = (c.media || [])[0];
+          if (first) el.mediaId = first.id;
+        }
+        layout.push(el);
+        selectedElId = el.id;
+        syncShowCheckboxes(c.design);
+        renderCanvas();
+      }
+
+      function removeLayoutType(type) {
+        const c = selected();
+        if (!c) return;
+        const layout = ensureLayout(c);
+        c.design.layout = layout.filter((e) => e.type !== type);
+        if (selectedElId && !c.design.layout.some((e) => e.id === selectedElId)) selectedElId = null;
+        syncShowCheckboxes(c.design);
+        renderCanvas();
+      }
+
+      function deleteSelectedElement() {
+        const c = selected();
+        if (!c || !selectedElId) {
+          setStatus('Select an element on the canvas first.', true);
+          return;
+        }
+        const layout = ensureLayout(c);
+        c.design.layout = layout.filter((e) => e.id !== selectedElId);
+        selectedElId = null;
+        syncShowCheckboxes(c.design);
+        renderCanvas();
+        setStatus('Element deleted. Save to keep the change.');
+      }
+
+      function selectedLayoutEl() {
+        const c = selected();
+        if (!c || !selectedElId) return null;
+        return (c.design.layout || []).find((e) => e.id === selectedElId) || null;
+      }
+
+      function fillElMediaSelect(customer, selectedMediaId) {
+        const sel = document.getElementById('elMediaSelect');
+        const media = (customer && customer.media) || [];
+        sel.innerHTML = ['<option value="">— pick gallery image —</option>']
+          .concat(media.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name || m.id)}</option>`))
+          .join('');
+        sel.value = selectedMediaId || '';
+      }
+
+      function syncElPropsPanel() {
+        const props = document.getElementById('elProps');
+        const textProps = document.getElementById('elTextProps');
+        const imgProps = document.getElementById('elImageProps');
+        const el = selectedLayoutEl();
+        const c = selected();
+        if (!el || (el.type !== 'text' && el.type !== 'image')) {
+          props.classList.add('hidden-block');
+          return;
+        }
+        props.classList.remove('hidden-block');
+        suppressPropsSync = true;
+        if (el.type === 'text') {
+          textProps.classList.remove('hidden-block');
+          imgProps.classList.add('hidden-block');
+          document.getElementById('elText').value = el.text || '';
+          document.getElementById('elFontSize').value = el.fontSize || 28;
+          document.getElementById('elAlign').value = el.align || 'center';
+          const color = el.color || (c && c.design && c.design.textColor) || '#f6f8ff';
+          document.getElementById('elColor').value = /^#/.test(color) ? color : '#f6f8ff';
+        } else {
+          textProps.classList.add('hidden-block');
+          imgProps.classList.remove('hidden-block');
+          fillElMediaSelect(c, el.mediaId || '');
+          document.getElementById('elFit').value = el.fit === 'contain' ? 'contain' : 'cover';
+        }
+        suppressPropsSync = false;
       }
 
       function bindColorPair(textId, pickId) {
@@ -594,16 +790,21 @@
       function renderCanvas() {
         const c = selected();
         if (!c) return;
-        if (!c.design) c.design = defaultDesign();
-        if (!Array.isArray(c.design.layout) || !c.design.layout.some((x) => x.type === 'slideshow')) {
-          c.design.layout = defaultDesign().layout.map((slot) => {
-            const hit = (c.design.layout || []).find((x) => x.type === slot.type);
-            return hit || slot;
-          });
+        ensureLayout(c);
+        // Migrate legacy: hide via show* by removing from layout once when loading older saves
+        if (c.design._legacyShowApplied !== true && typeof c.design.showSlideshow === 'boolean') {
+          const d = c.design;
+          if (d.showLogo === false) d.layout = d.layout.filter((e) => e.type !== 'logo');
+          if (d.showTitle === false) d.layout = d.layout.filter((e) => e.type !== 'title');
+          if (d.showStatus === false) d.layout = d.layout.filter((e) => e.type !== 'status');
+          if (d.showHours === false) d.layout = d.layout.filter((e) => e.type !== 'hours');
+          if (d.showSlideshow === false) d.layout = d.layout.filter((e) => e.type !== 'slideshow');
+          d._legacyShowApplied = true;
         }
         const design = readDesignFromForm(c.design);
         design.layout = c.design.layout;
         c.design = Object.assign(c.design, design);
+        syncShowCheckboxes(c.design);
         const hours = c.useManualHours || !c.googleHours ? (c.hours || defaultHours()) : c.googleHours;
         const logoSrc = logoDataUrl || design.logoUrl || '';
         const mediaById = new Map((c.media || []).map((m) => [m.id, m]));
@@ -617,15 +818,10 @@
         tabletFrame.innerHTML = '';
 
         design.layout.forEach((el) => {
-          if (el.type === 'logo' && !design.showLogo) return;
-          if (el.type === 'title' && !design.showTitle) return;
-          if (el.type === 'status' && !design.showStatus) return;
-          if (el.type === 'hours' && !design.showHours) return;
-          if (el.type === 'slideshow' && !design.showSlideshow) return;
-
           const node = document.createElement('div');
-          node.className = 'canvas-el';
+          node.className = 'canvas-el' + (el.id === selectedElId ? ' selected' : '');
           node.dataset.type = el.type;
+          node.dataset.id = el.id;
           node.style.left = el.x + 'px';
           node.style.top = el.y + 'px';
           node.style.width = el.w + 'px';
@@ -656,7 +852,30 @@
             node.innerHTML = `<div class="preview-hours" style="font-size:${design.hoursFontSize}px">${
               DAYS.map((day) => `<div class="row"><span>${DAY_LABELS[day]}</span><span style="color:${design.accentColor}">${escapeHtml(formatDay(hours[day]))}</span></div>`).join('')
             }</div>`;
+          } else if (el.type === 'text') {
+            const color = el.color || design.textColor;
+            node.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:${el.align === 'left' ? 'flex-start' : el.align === 'right' ? 'flex-end' : 'center'};font-size:${el.fontSize || 28}px;color:${color};font-weight:${el.bold === false ? 400 : 700};text-align:${el.align || 'center'};line-height:1.2;padding:4px;overflow:hidden;white-space:pre-wrap;word-break:break-word;">${escapeHtml(el.text || 'Text')}</div>`;
+          } else if (el.type === 'image') {
+            const media = el.mediaId ? mediaById.get(el.mediaId) : null;
+            if (media) {
+              node.innerHTML = `<img class="preview-slide" style="object-fit:${el.fit === 'contain' ? 'contain' : 'cover'}" src="${escapeHtml(mediaUrl(c, media))}" alt="">`;
+            } else {
+              node.innerHTML = `<div style="height:100%;display:grid;place-items:center;opacity:.55;border:1px dashed ${design.accentColor}">Pick image</div>`;
+            }
           }
+
+          const del = document.createElement('button');
+          del.type = 'button';
+          del.className = 'del-x';
+          del.title = 'Delete';
+          del.textContent = '×';
+          del.addEventListener('pointerdown', (event) => {
+            event.stopPropagation();
+            event.preventDefault();
+            selectedElId = el.id;
+            deleteSelectedElement();
+          });
+          node.appendChild(del);
 
           const handle = document.createElement('div');
           handle.className = 'handle';
@@ -664,15 +883,19 @@
           tabletFrame.appendChild(node);
 
           node.addEventListener('pointerdown', (event) => {
+            if (event.target === del || event.target.closest('.del-x')) return;
+            selectedElId = el.id;
             if (event.target === handle) {
-              dragState = { mode: 'resize', type: el.type, startX: event.clientX, startY: event.clientY, startW: el.w, startH: el.h };
+              dragState = { mode: 'resize', id: el.id, startX: event.clientX, startY: event.clientY, startW: el.w, startH: el.h };
             } else {
-              dragState = { mode: 'move', type: el.type, startX: event.clientX, startY: event.clientY, startLeft: el.x, startTop: el.y };
+              dragState = { mode: 'move', id: el.id, startX: event.clientX, startY: event.clientY, startLeft: el.x, startTop: el.y };
             }
             node.classList.add('dragging', 'selected');
+            syncElPropsPanel();
             node.setPointerCapture(event.pointerId);
           });
         });
+        syncElPropsPanel();
         scaleTablet();
       }
 
@@ -699,6 +922,7 @@
 
       function fillEditor(customer) {
         editor.classList.add('open');
+        selectedElId = null;
         document.getElementById('fieldName').value = customer.name || '';
         document.getElementById('fieldSlug').value = customer.slug || '';
         document.getElementById('fieldPlaceId').value = customer.googlePlaceId || '';
@@ -718,6 +942,8 @@
         if (customer.googleDisplayName) syncMeta.push('Google name: ' + customer.googleDisplayName);
         document.getElementById('syncMeta').textContent = syncMeta.join(' · ');
         renderCanvas();
+        if (customer && !String(customer.id).startsWith('tmp-')) showDesignEinkPreview(customer);
+        else showDesignEinkPreview(null);
       }
 
       async function loadCustomers() {
@@ -735,7 +961,11 @@
             editor.classList.remove('open');
           }
         }
-        setStatus(data.googleConfigured ? '' : 'Google Places API key not set — manual hours still work. Add GOOGLE_PLACES_API_KEY on the server for sync.');
+        setStatus(
+          data.googlePlacesApiConfigured
+            ? ''
+            : 'Sync works with share.google / Maps links (no API key required). Optional: set GOOGLE_PLACES_API_KEY for more reliable Places API sync.'
+        );
       }
 
       function collectPayload() {
@@ -743,6 +973,7 @@
         const design = readDesignFromForm(c ? c.design : defaultDesign());
         if (c && c.design && c.design.layout) design.layout = c.design.layout;
         if (c && c.design && c.design.logoUrl && !logoDataUrl) design.logoUrl = c.design.logoUrl;
+        delete design._legacyShowApplied;
         const payload = {
           name: document.getElementById('fieldName').value.trim(),
           slug: document.getElementById('fieldSlug').value.trim(),
@@ -754,8 +985,8 @@
           eink: {
             enabled: true,
             pollIntervalMinutes: Number(document.getElementById('einkPoll').value) || 720,
-            width: Number(document.getElementById('einkWidth').value) || 800,
-            height: Number(document.getElementById('einkHeight').value) || 480,
+            width: Number(document.getElementById('einkWidth').value) || 600,
+            height: Number(document.getElementById('einkHeight').value) || 1024,
             inverted: document.getElementById('einkInverted').checked
           }
         };
@@ -766,12 +997,29 @@
       function writeEinkToForm(eink) {
         const e = eink || {};
         document.getElementById('einkPoll').value = e.pollIntervalMinutes || 720;
-        document.getElementById('einkWidth').value = e.width || 800;
-        document.getElementById('einkHeight').value = e.height || 480;
+        document.getElementById('einkWidth').value = e.width || 600;
+        document.getElementById('einkHeight').value = e.height || 1024;
         document.getElementById('einkInverted').checked = !!e.inverted;
         if (!document.getElementById('espBaseUrl').value) {
           document.getElementById('espBaseUrl').value = location.origin;
         }
+      }
+
+      function einkBmpUrl(customer, bust) {
+        const base = (document.getElementById('espBaseUrl').value || location.origin).replace(/\/$/, '');
+        return `${base}/api/smarthours/public/${encodeURIComponent(customer.slug)}/eink.bmp?t=${bust || Date.now()}`;
+      }
+
+      function showDesignEinkPreview(customer) {
+        const wrap = document.getElementById('designEinkPreviewWrap');
+        const img = document.getElementById('designEinkPreview');
+        if (!customer || String(customer.id).startsWith('tmp-')) {
+          wrap.classList.add('hidden-block');
+          img.removeAttribute('src');
+          return;
+        }
+        wrap.classList.remove('hidden-block');
+        img.src = einkBmpUrl(customer);
       }
 
       function refreshEinkPanel() {
@@ -780,15 +1028,17 @@
           document.getElementById('einkUrlBox').textContent = 'Save the customer first to enable e-ink URLs and code.';
           document.getElementById('einkPreview').removeAttribute('src');
           document.getElementById('espSketch').value = '';
+          showDesignEinkPreview(null);
           return;
         }
         const base = (document.getElementById('espBaseUrl').value || location.origin).replace(/\/$/, '');
         const metaUrl = `${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/eink.json`;
-        const bmpUrl = `${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/eink.bmp?t=${Date.now()}`;
+        const bmpUrl = einkBmpUrl(c);
         document.getElementById('einkUrlBox').innerHTML =
           `<div><strong>Meta (check for changes):</strong> <a href="${metaUrl}" target="_blank" rel="noopener">${metaUrl}</a></div>` +
           `<div style="margin-top:6px"><strong>Image (BMP):</strong> <a href="${bmpUrl}" target="_blank" rel="noopener">${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/eink.bmp</a></div>`;
         document.getElementById('einkPreview').src = bmpUrl;
+        showDesignEinkPreview(c);
         loadEspSketch().catch((err) => setStatus(err.message, true));
       }
 
@@ -803,7 +1053,15 @@
         });
         const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(c.id) + '/esp32-sketch?' + params.toString());
         if (!res.ok) throw new Error('Failed to generate ESP32 sketch');
+        const ver = res.headers.get('X-SmartHours-Version') || '';
+        const bytes = res.headers.get('X-SmartHours-Bmp-Bytes') || '';
         document.getElementById('espSketch').value = await res.text();
+        const meta = document.getElementById('sketchMeta');
+        if (meta) {
+          meta.textContent = ver
+            ? `Sketch includes embedded Design BMP · version ${ver}${bytes ? ` · ${bytes} bytes` : ''}`
+            : '';
+        }
       }
 
       async function saveCustomer() {
@@ -833,6 +1091,7 @@
         logoDataUrl = null;
         await loadCustomers();
         setStatus('Saved. Public URL ready.');
+        return selected();
       }
 
       document.getElementById('newCustomerBtn').addEventListener('click', () => {
@@ -887,11 +1146,20 @@
         saveCustomer().catch((err) => setStatus(err.message, true));
       });
       document.getElementById('saveDesignBtn').addEventListener('click', () => {
-        saveCustomer().catch((err) => setStatus(err.message, true));
+        saveCustomer()
+          .then((c) => {
+            if (!c) return;
+            showDesignEinkPreview(c);
+            setStatus('Design saved. ESP32 static preview updated below.');
+          })
+          .catch((err) => setStatus(err.message, true));
       });
       document.getElementById('saveEinkBtn').addEventListener('click', () => {
         saveCustomer()
-          .then(() => refreshEinkPanel())
+          .then(() => {
+            refreshEinkPanel();
+            setStatus('E-ink settings saved. Preview refreshed.');
+          })
           .catch((err) => setStatus(err.message, true));
       });
       document.getElementById('previewEinkBtn').addEventListener('click', () => refreshEinkPanel());
@@ -910,14 +1178,19 @@
         });
         const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(c.id) + '/esp32-sketch?' + params.toString());
         if (!res.ok) throw new Error('Failed to download sketch');
+        const ver = res.headers.get('X-SmartHours-Version') || '';
         const text = await res.text();
+        document.getElementById('espSketch').value = text;
         const blob = new Blob([text], { type: 'text/plain' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = `SmartHours_${c.slug}.ino`;
         a.click();
         URL.revokeObjectURL(a.href);
-        setStatus('ESP32 sketch downloaded.');
+        setStatus(ver
+          ? `ESP32 sketch downloaded with Design canvas embedded (v${ver}).`
+          : 'ESP32 sketch downloaded.');
+        refreshEinkPanel();
       });
       document.getElementById('copySketchBtn').addEventListener('click', async () => {
         await loadEspSketch();
@@ -1072,7 +1345,62 @@
 
       document.getElementById('galleryList').addEventListener('change', () => renderCanvas());
 
-      ['titleSize','hoursSize','statusSize','fontFamily','showLogo','showTitle','showStatus','showHours','showSlideshow','fieldName','statusMode','openMediaSelect','closedMediaSelect','slideshowInterval'].forEach((id) => {
+      document.getElementById('addTextBtn').addEventListener('click', () => addLayoutElement('text'));
+      document.getElementById('addImageBtn').addEventListener('click', () => {
+        const c = selected();
+        if (!c) return;
+        if (!(c.media || []).length) {
+          setStatus('Upload a gallery image first, then add it to the canvas.', true);
+          return;
+        }
+        addLayoutElement('image');
+      });
+      document.getElementById('addHoursBtn').addEventListener('click', () => addLayoutElement('hours'));
+      document.getElementById('addStatusBtn').addEventListener('click', () => addLayoutElement('status'));
+      document.getElementById('addLogoBtn').addEventListener('click', () => addLayoutElement('logo'));
+      document.getElementById('addTitleBtn').addEventListener('click', () => addLayoutElement('title'));
+      document.getElementById('addSlideshowBtn').addEventListener('click', () => addLayoutElement('slideshow'));
+      document.getElementById('deleteElBtn').addEventListener('click', () => deleteSelectedElement());
+
+      ['elText', 'elFontSize', 'elAlign', 'elColor', 'elMediaSelect', 'elFit'].forEach((id) => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        const handler = () => {
+          if (suppressPropsSync) return;
+          const el = selectedLayoutEl();
+          if (!el) return;
+          if (el.type === 'text') {
+            el.text = document.getElementById('elText').value.slice(0, 500);
+            el.fontSize = Math.max(10, Math.min(120, Number(document.getElementById('elFontSize').value) || 28));
+            el.align = document.getElementById('elAlign').value || 'center';
+            el.color = document.getElementById('elColor').value || '';
+          } else if (el.type === 'image') {
+            el.mediaId = document.getElementById('elMediaSelect').value || '';
+            el.fit = document.getElementById('elFit').value === 'contain' ? 'contain' : 'cover';
+          }
+          renderCanvas();
+        };
+        input.addEventListener('input', handler);
+        input.addEventListener('change', handler);
+      });
+
+      const showTypeMap = {
+        showLogo: 'logo',
+        showTitle: 'title',
+        showStatus: 'status',
+        showHours: 'hours',
+        showSlideshow: 'slideshow'
+      };
+      Object.keys(showTypeMap).forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('change', () => {
+          if (el.checked) addLayoutElement(showTypeMap[id]);
+          else removeLayoutType(showTypeMap[id]);
+        });
+      });
+
+      ['titleSize','hoursSize','statusSize','fontFamily','fieldName','statusMode','openMediaSelect','closedMediaSelect','slideshowInterval'].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('input', () => {
@@ -1091,7 +1419,7 @@
         if (!dragState) return;
         const c = selected();
         if (!c || !c.design || !c.design.layout) return;
-        const el = c.design.layout.find((x) => x.type === dragState.type);
+        const el = c.design.layout.find((x) => x.id === dragState.id);
         if (!el) return;
         const scale = Number((tabletFrame.style.transform.match(/scale\(([^)]+)\)/) || [])[1] || 1);
         const dx = (event.clientX - dragState.startX) / scale;
@@ -1100,12 +1428,20 @@
           el.x = Math.max(0, Math.min(TABLET.width - el.w, Math.round(dragState.startLeft + dx)));
           el.y = Math.max(0, Math.min(TABLET.height - el.h, Math.round(dragState.startTop + dy)));
         } else {
-          el.w = Math.max(60, Math.min(TABLET.width - el.x, Math.round(dragState.startW + dx)));
-          el.h = Math.max(40, Math.min(TABLET.height - el.y, Math.round(dragState.startH + dy)));
+          el.w = Math.max(40, Math.min(TABLET.width - el.x, Math.round(dragState.startW + dx)));
+          el.h = Math.max(24, Math.min(TABLET.height - el.y, Math.round(dragState.startH + dy)));
         }
         renderCanvas();
       });
       window.addEventListener('pointerup', () => { dragState = null; });
+      window.addEventListener('keydown', (event) => {
+        if ((event.key === 'Delete' || event.key === 'Backspace') && selectedElId) {
+          const tag = (event.target && event.target.tagName) || '';
+          if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+          event.preventDefault();
+          deleteSelectedElement();
+        }
+      });
       window.addEventListener('resize', scaleTablet);
 
       loadCustomers().catch((err) => setStatus(err.message, true));

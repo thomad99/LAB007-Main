@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
   <title>Opening Hours</title>
+  <link rel="icon" type="image/png" href="/smarthours-assets/smarthours-logo.png">
+  <link rel="apple-touch-icon" href="/smarthours-assets/smarthours-logo.png">
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -31,6 +33,24 @@
     .el { position: absolute; overflow: hidden; }
     .logo { max-width: 100%; max-height: 100%; object-fit: contain; display: block; margin: 0 auto; }
     .title { font-weight: 800; text-align: center; line-height: 1.15; width: 100%; }
+    .custom-text {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      line-height: 1.2;
+      padding: 4px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      overflow: hidden;
+    }
+    .custom-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 8px;
+    }
     .status-text {
       text-align: center;
       font-weight: 800;
@@ -153,12 +173,6 @@
         slideIndex = 0;
 
         (design.layout || []).forEach((el) => {
-          if (el.type === 'logo' && design.showLogo === false) return;
-          if (el.type === 'title' && design.showTitle === false) return;
-          if (el.type === 'status' && design.showStatus === false) return;
-          if (el.type === 'hours' && design.showHours === false) return;
-          if (el.type === 'slideshow' && !design.showSlideshow) return;
-
           const node = document.createElement('div');
           node.className = 'el';
           node.style.left = el.x + 'px';
@@ -178,6 +192,14 @@
             node.innerHTML = `<div class="hours" style="font-size:${design.hoursFontSize || 22}px">${
               days.map((day) => `<div class="row"><span>${escapeHtml(labels[day] || day)}</span><span style="color:${design.accentColor || '#76f4c5'}">${escapeHtml(formatDay(hours[day]))}</span></div>`).join('')
             }</div>`;
+          } else if (el.type === 'text') {
+            const align = el.align === 'left' || el.align === 'right' ? el.align : 'center';
+            const justify = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
+            const color = el.color || design.textColor || '#f6f8ff';
+            node.innerHTML = `<div class="custom-text" style="justify-content:${justify};text-align:${align};font-size:${el.fontSize || 28}px;color:${escapeHtml(color)};font-weight:${el.bold === false ? 400 : 700}">${escapeHtml(el.text || '')}</div>`;
+          } else if (el.type === 'image' && el.imageUrl) {
+            const fit = el.fit === 'contain' ? 'contain' : 'cover';
+            node.innerHTML = `<img class="custom-img" style="object-fit:${fit}" src="${escapeHtml(el.imageUrl)}" alt="">`;
           }
           tablet.appendChild(node);
         });
