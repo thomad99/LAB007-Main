@@ -740,6 +740,7 @@
           <button type="button" class="btn-secondary active" data-dash-mode="day" id="dashModeDay">Day by day</button>
           <button type="button" class="btn-secondary" data-dash-mode="week" id="dashModeWeek">Week by week</button>
           <button type="button" class="btn-secondary" data-dash-mode="month" id="dashModeMonth">Month by month</button>
+          <button type="button" class="btn" id="weekTodayBtn">Today</button>
         </div>
         <div class="week-nav">
           <button type="button" class="btn-secondary" id="weekPrevBtn">← Previous</button>
@@ -842,6 +843,7 @@
       const weekHint = document.getElementById('weekHint');
       const weekPrevBtn = document.getElementById('weekPrevBtn');
       const weekNextBtn = document.getElementById('weekNextBtn');
+      const weekTodayBtn = document.getElementById('weekTodayBtn');
       const clientsTableHead = document.querySelector('#clientsTable thead');
       let clients = [];
       let invoices = [];
@@ -991,7 +993,10 @@
         addClientBtn.style.display = isClients ? '' : 'none';
         if (isInvoices) loadInvoices().catch((err) => setStatus(err.message, true));
         if (isClientFull) loadClientFull().catch((err) => setStatus(err.message, true));
-        if (isWeekly) loadWeeklyDashboard().catch((err) => setStatus(err.message, true));
+        if (isWeekly) {
+          weekCursor = normalizeDashCursor(new Date());
+          loadWeeklyDashboard().catch((err) => setStatus(err.message, true));
+        }
       }
 
       function addClient() {
@@ -1883,18 +1888,42 @@
         }
       }
 
+      function formatLocalDateKey(date = new Date()) {
+        const d = date instanceof Date ? date : new Date(date);
+        if (Number.isNaN(d.getTime())) {
+          const now = new Date();
+          return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+        }
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      }
+
+      function parseLocalDateKey(value) {
+        const raw = String(value || '').trim();
+        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        if (match) {
+          return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+        }
+        const parsed = new Date(raw);
+        return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+      }
+
       function normalizeDashCursor(date = new Date()) {
+        const safe = date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date();
         if (dashMode === 'month') {
-          return new Date(date.getFullYear(), 0, 1);
+          return new Date(safe.getFullYear(), 0, 1);
         }
         if (dashMode === 'week') {
-          return new Date(date.getFullYear(), date.getMonth(), 1);
+          return new Date(safe.getFullYear(), safe.getMonth(), 1);
         }
-        return startOfWeekMonday(date);
+        return startOfWeekMonday(safe);
+      }
+
+      function jumpDashToToday() {
+        weekCursor = normalizeDashCursor(new Date());
       }
 
       function shiftDashCursor(direction) {
-        if (!weekCursor) weekCursor = normalizeDashCursor(new Date());
+        if (!weekCursor) jumpDashToToday();
         const d = direction < 0 ? -1 : 1;
         if (dashMode === 'month') {
           weekCursor = new Date(weekCursor.getFullYear() + d, 0, 1);
@@ -1906,10 +1935,10 @@
       }
 
       async function loadWeeklyDashboard() {
-        if (!weekCursor) weekCursor = normalizeDashCursor(new Date());
+        if (!weekCursor) jumpDashToToday();
         else weekCursor = normalizeDashCursor(weekCursor);
         syncDashModeUi();
-        const cursor = weekCursor.toISOString();
+        const cursor = formatLocalDateKey(weekCursor);
         setStatus('Loading dashboard...');
         const res = await apiFetch(
           '/api/elite-invoices/dashboard/weekly?mode=' +
@@ -1925,8 +1954,7 @@
         if (!res.ok) throw new Error('Failed to load dashboard');
         const data = await res.json();
         if (data.cursor) {
-          const parsed = new Date(data.cursor);
-          if (!Number.isNaN(parsed.getTime())) weekCursor = parsed;
+          weekCursor = normalizeDashCursor(parseLocalDateKey(data.cursor));
         }
         weekLabel.textContent = data.label || 'Period';
         weekTotal.textContent = formatMoney(data.total || 0);
@@ -2020,9 +2048,13 @@
           const next = btn.dataset.dashMode;
           if (!['day', 'week', 'month'].includes(next) || next === dashMode) return;
           dashMode = next;
-          weekCursor = normalizeDashCursor(weekCursor || new Date());
+          jumpDashToToday();
           loadWeeklyDashboard().catch((err) => setStatus(err.message, true));
         });
+      });
+      weekTodayBtn.addEventListener('click', () => {
+        jumpDashToToday();
+        loadWeeklyDashboard().catch((err) => setStatus(err.message, true));
       });
       weekPrevBtn.addEventListener('click', () => {
         shiftDashCursor(-1);
