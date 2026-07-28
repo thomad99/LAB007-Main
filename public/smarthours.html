@@ -174,8 +174,8 @@
               <input id="fieldPlaceId" type="text" placeholder="ChIJ…">
             </div>
             <div>
-              <label for="fieldMapsUrl">Google Maps / Business URL</label>
-              <input id="fieldMapsUrl" type="url" placeholder="https://maps.google.com/?cid=…">
+              <label for="fieldMapsUrl">Google Maps / share.google URL</label>
+              <input id="fieldMapsUrl" type="url" placeholder="https://share.google/… or Maps place link">
             </div>
           </div>
           <div class="url-box" id="publicUrlBox"></div>
@@ -185,6 +185,7 @@
             </label>
             <button type="button" class="btn-secondary" id="syncOneBtn">Sync from Google now</button>
           </div>
+          <p class="hint">Paste a <strong>share.google</strong> link, Maps place URL, or Place ID. Uncheck manual override before syncing so Google hours fill the table. Requires <code>GOOGLE_PLACES_API_KEY</code> on the server (Places API New + Text Search).</p>
           <p class="hint" id="syncMeta"></p>
           <table class="hours-table">
             <thead>
@@ -960,13 +961,29 @@
           setStatus('Save the customer first, then sync.', true);
           return;
         }
-        await saveCustomer();
-        setStatus('Syncing Google hours…');
-        const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(c.id) + '/sync', { method: 'POST' });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'Sync failed');
-        await loadCustomers();
-        setStatus(data.changed ? 'Google hours updated.' : 'Synced — no hour changes.');
+        try {
+          if (document.getElementById('fieldManual').checked) {
+            if (!confirm('Manual override is ON. Sync will still pull Google hours into storage, but the table stays manual until you uncheck override. Continue?')) {
+              return;
+            }
+          }
+          await saveCustomer();
+          setStatus('Syncing Google hours…');
+          const id = selectedId;
+          const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(id) + '/sync', { method: 'POST' });
+          const data = await res.json().catch(() => ({}));
+          await loadCustomers();
+          if (!res.ok) throw new Error(data.error || data.customer?.lastSyncError || 'Sync failed');
+          const name = data.displayName || data.customer?.googleDisplayName || '';
+          setStatus(
+            (data.changed ? 'Google hours updated' : 'Synced — no hour changes') +
+              (name ? ` (${name})` : '') +
+              '.'
+          );
+          if (selected()) fillEditor(selected());
+        } catch (err) {
+          setStatus(err.message || 'Sync failed', true);
+        }
       });
 
       document.getElementById('syncAllBtn').addEventListener('click', async () => {
