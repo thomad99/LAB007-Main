@@ -26,6 +26,8 @@ const {
   eliteInvoicesSeedPath,
   normalizeClient,
   normalizeInvoice,
+  normalizeLineItems,
+  sumLineItems,
   normalizePrefix,
   loadClients: loadEliteInvoiceClients,
   saveClients: saveEliteInvoiceClients,
@@ -38,7 +40,8 @@ const {
   formatInvoiceDate,
   parseServiceDate,
   buildInvoicePdf,
-  isValidClientEmail
+  isValidClientEmail,
+  weeklyInvoiceStats
 } = require('./lib/elite-invoices');
 registerCursorAiTelegramHandlers(registerTelegramInboundHandler);
 registerCronTelegramHandlers(registerTelegramInboundHandler);
@@ -6161,7 +6164,12 @@ async function createEliteInvoiceForClient(clientId, inlineClient) {
 
   const sequence = Math.max(0, Math.min(9999, merged.nextSequence || 0));
   const invoiceNumber = formatInvoiceNumber(merged.invoicePrefix, sequence);
-  const amount = Math.max(0, Number(merged.defaultAmount) || 0);
+  const lineItems = normalizeLineItems(
+    (inlineClient && inlineClient.lineItems) || merged.lineItems || []
+  );
+  const amount = lineItems.length
+    ? sumLineItems(lineItems)
+    : Math.max(0, Number(merged.defaultAmount) || 0);
   const serviceDate = parseServiceDate(inlineClient && inlineClient.serviceDate);
 
   const invoice = {
@@ -6170,7 +6178,8 @@ async function createEliteInvoiceForClient(clientId, inlineClient) {
     serviceDate,
     billToName: merged.billToName,
     billToLines: merged.billToLines,
-    amount
+    amount,
+    lineItems
   };
 
   const pdfBuffer = await buildInvoicePdf(invoice);
@@ -6183,6 +6192,7 @@ async function createEliteInvoiceForClient(clientId, inlineClient) {
     billToName: merged.billToName,
     billToLines: merged.billToLines,
     amount,
+    lineItems,
     date: invoice.date,
     serviceDate,
     createdAt: new Date().toISOString(),
@@ -6559,6 +6569,33 @@ app.put('/api/elite-invoices/clients', (req, res) => {
     res.json({ ok: true, clients });
   } catch (err) {
     console.error('[EliteInvoices] PUT clients error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/elite-invoices/clients/:id', (req, res) => {
+  try {
+    const clientId = String(req.params.id || '').trim();
+    if (!clientId) return res.status(400).json({ error: 'Client id is required.' });
+    const clients = readEliteInvoiceClients();
+    const index = clients.findIndex((c) => c.id === clientId);
+    if (index < 0) return res.status(404).json({ error: 'Client not found.' });
+    const [removed] = clients.splice(index, 1);
+    writeEliteInvoiceClients(clients);
+    res.json({ ok: true, clientId: removed.id, displayName: removed.displayName });
+  } catch (err) {
+    console.error('[EliteInvoices] DELETE client error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/elite-invoices/dashboard/weekly', (req, res) => {
+  try {
+    const weekStart = String(req.query?.weekStart || '').trim() || undefined;
+    const stats = weeklyInvoiceStats(readEliteInvoiceHistory(), weekStart);
+    res.json(stats);
+  } catch (err) {
+    console.error('[EliteInvoices] weekly dashboard error:', err);
     res.status(500).json({ error: err.message });
   }
 });
