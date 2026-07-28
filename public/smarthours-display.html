@@ -31,12 +31,29 @@
     .el { position: absolute; overflow: hidden; }
     .logo { max-width: 100%; max-height: 100%; object-fit: contain; display: block; margin: 0 auto; }
     .title { font-weight: 800; text-align: center; line-height: 1.15; width: 100%; }
-    .status {
+    .status-text {
       text-align: center;
       font-weight: 800;
       letter-spacing: .08em;
       text-transform: uppercase;
       width: 100%;
+    }
+    .status-badge {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      place-items: center;
+      border-radius: 18px;
+      font-weight: 900;
+      letter-spacing: .1em;
+      text-transform: uppercase;
+    }
+    .status-img, .slide-img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      border-radius: 12px;
     }
     .hours { width: 100%; }
     .hours .row {
@@ -65,6 +82,9 @@
       const stage = document.getElementById('stage');
       const parts = location.pathname.split('/').filter(Boolean);
       const slug = decodeURIComponent(parts[parts.length - 1] || '');
+      let slideTimer = null;
+      let slideIndex = 0;
+      let slideUrls = [];
 
       function escapeHtml(str) {
         return String(str || '')
@@ -86,6 +106,28 @@
         tablet.style.transform = `scale(${scale})`;
       }
 
+      function renderStatus(design, open) {
+        const mode = design.statusMode || 'badge';
+        if (mode === 'image') {
+          const url = open ? design.openImageUrl : design.closedImageUrl;
+          if (url) return `<img class="status-img" src="${escapeHtml(url)}" alt="${open ? 'Open' : 'Closed'}">`;
+        }
+        if (mode === 'text') {
+          return `<div class="status-text" style="font-size:${Math.min(design.statusFontSize || 28, 36)}px;color:${open ? (design.accentColor || '#76f4c5') : '#ff8f9f'}">${open ? 'Open Now' : 'Closed Now'}</div>`;
+        }
+        return `<div class="status-badge" style="font-size:${design.statusFontSize || 48}px;background:${open ? (design.accentColor || '#76f4c5') : '#ff8f9f'};color:#04120e">${open ? 'OPEN' : 'CLOSED'}</div>`;
+      }
+
+      function startSlideshow(intervalSec) {
+        if (slideTimer) clearInterval(slideTimer);
+        if (slideUrls.length < 2) return;
+        slideTimer = setInterval(() => {
+          slideIndex = (slideIndex + 1) % slideUrls.length;
+          const img = tablet.querySelector('[data-slideshow-img]');
+          if (img) img.src = slideUrls[slideIndex];
+        }, Math.max(2, intervalSec || 8) * 1000);
+      }
+
       async function load() {
         if (!slug) {
           tablet.innerHTML = '<div class="err">Missing customer.</div>';
@@ -101,17 +143,21 @@
         const hours = data.hours || {};
         const days = data.days || ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
         const labels = data.dayLabels || {};
+        const open = !!data.openNow;
         document.title = (data.name || 'Hours') + ' · SmartHours';
         tablet.style.background = design.backgroundColor || '#0b1020';
         tablet.style.color = design.textColor || '#fff';
         tablet.style.fontFamily = design.fontFamily || 'Georgia, serif';
         tablet.innerHTML = '';
+        slideUrls = Array.isArray(design.slideshowUrls) ? design.slideshowUrls.slice() : [];
+        slideIndex = 0;
 
         (design.layout || []).forEach((el) => {
           if (el.type === 'logo' && design.showLogo === false) return;
           if (el.type === 'title' && design.showTitle === false) return;
           if (el.type === 'status' && design.showStatus === false) return;
           if (el.type === 'hours' && design.showHours === false) return;
+          if (el.type === 'slideshow' && !design.showSlideshow) return;
 
           const node = document.createElement('div');
           node.className = 'el';
@@ -125,8 +171,9 @@
           } else if (el.type === 'title') {
             node.innerHTML = `<div class="title" style="font-size:${design.titleFontSize || 34}px">${escapeHtml(data.name)}</div>`;
           } else if (el.type === 'status') {
-            const open = !!data.openNow;
-            node.innerHTML = `<div class="status" style="font-size:${design.statusFontSize || 20}px;color:${open ? (design.accentColor || '#76f4c5') : '#ff8f9f'}">${open ? 'Open Now' : 'Closed Now'}</div>`;
+            node.innerHTML = renderStatus(design, open);
+          } else if (el.type === 'slideshow' && slideUrls.length) {
+            node.innerHTML = `<img class="slide-img" data-slideshow-img src="${escapeHtml(slideUrls[0])}" alt="">`;
           } else if (el.type === 'hours') {
             node.innerHTML = `<div class="hours" style="font-size:${design.hoursFontSize || 22}px">${
               days.map((day) => `<div class="row"><span>${escapeHtml(labels[day] || day)}</span><span style="color:${design.accentColor || '#76f4c5'}">${escapeHtml(formatDay(hours[day]))}</span></div>`).join('')
@@ -135,6 +182,7 @@
           tablet.appendChild(node);
         });
         fit();
+        startSlideshow(design.slideshowIntervalSec);
       }
 
       window.addEventListener('resize', fit);

@@ -119,6 +119,20 @@
     }
     .hint { color: var(--muted); font-size: .86rem; line-height: 1.45; margin-top: 10px; }
     .color-row { display: grid; grid-template-columns: 1fr 48px; gap: 8px; align-items: center; }
+    .gallery-list { display: grid; gap: 8px; margin-top: 10px; max-height: 220px; overflow: auto; }
+    .gallery-item {
+      display: grid; grid-template-columns: 56px 1fr auto; gap: 8px; align-items: center;
+      border: 1px solid var(--line); border-radius: 10px; padding: 6px; background: rgba(255,255,255,.02);
+    }
+    .gallery-item img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; background: #000; }
+    .gallery-item label { display: flex; gap: 6px; align-items: center; font-size: .82rem; color: var(--muted); text-transform: none; letter-spacing: 0; margin: 0; }
+    .preview-badge {
+      width: 100%; height: 100%; display: grid; place-items: center; border-radius: 16px;
+      font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
+    }
+    .preview-slide {
+      width: 100%; height: 100%; object-fit: cover; border-radius: 12px; background: #000; display: block;
+    }
   </style>
 </head>
 <body>
@@ -244,11 +258,40 @@
                 <label for="logoFile">Logo image</label>
                 <input id="logoFile" type="file" accept="image/*">
               </div>
+              <div>
+                <label for="statusMode">OPEN / CLOSED style</label>
+                <select id="statusMode">
+                  <option value="badge">Large OPEN / CLOSED badge</option>
+                  <option value="text">Simple text</option>
+                  <option value="image">Custom uploaded images</option>
+                </select>
+              </div>
+              <div class="form-grid">
+                <div>
+                  <label for="openMediaSelect">OPEN image</label>
+                  <select id="openMediaSelect"><option value="">— built-in badge —</option></select>
+                </div>
+                <div>
+                  <label for="closedMediaSelect">CLOSED image</label>
+                  <select id="closedMediaSelect"><option value="">— built-in badge —</option></select>
+                </div>
+              </div>
               <div class="form-grid">
                 <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showLogo" checked> Logo</label>
                 <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showTitle" checked> Title</label>
                 <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showStatus" checked> Open status</label>
                 <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showHours" checked> Hours list</label>
+                <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showSlideshow"> Slideshow</label>
+              </div>
+              <div>
+                <label for="slideshowInterval">Slideshow interval (seconds)</label>
+                <input id="slideshowInterval" type="number" min="2" max="300" value="8">
+              </div>
+              <div>
+                <label for="galleryFile">Upload gallery images</label>
+                <input id="galleryFile" type="file" accept="image/*" multiple>
+                <p class="hint">Upload photos, then tick which ones rotate in the slideshow. You can also pick OPEN/CLOSED images from the gallery.</p>
+                <div id="galleryList" class="gallery-list"></div>
               </div>
               <p class="hint">Drag elements on the tablet canvas. Use the green corner to resize. Designed for a 7″ portrait tablet (600×1024).</p>
               <button type="button" class="btn" id="saveDesignBtn">Save Design</button>
@@ -379,19 +422,68 @@
           fontFamily: 'Georgia, "Times New Roman", serif',
           titleFontSize: 34,
           hoursFontSize: 22,
-          statusFontSize: 20,
+          statusFontSize: 48,
           logoUrl: '',
           showLogo: true,
           showTitle: true,
           showStatus: true,
           showHours: true,
+          showSlideshow: false,
+          statusMode: 'badge',
+          openMediaId: '',
+          closedMediaId: '',
+          slideshowIntervalSec: 8,
+          slideshowMediaIds: [],
           layout: [
-            { id: 'logo', type: 'logo', x: 150, y: 36, w: 300, h: 100 },
-            { id: 'title', type: 'title', x: 40, y: 160, w: 520, h: 70 },
-            { id: 'status', type: 'status', x: 40, y: 240, w: 520, h: 48 },
-            { id: 'hours', type: 'hours', x: 40, y: 310, w: 520, h: 620 }
+            { id: 'logo', type: 'logo', x: 150, y: 28, w: 300, h: 90 },
+            { id: 'title', type: 'title', x: 40, y: 130, w: 520, h: 60 },
+            { id: 'status', type: 'status', x: 40, y: 200, w: 520, h: 120 },
+            { id: 'slideshow', type: 'slideshow', x: 40, y: 340, w: 520, h: 280 },
+            { id: 'hours', type: 'hours', x: 40, y: 640, w: 520, h: 340 }
           ]
         };
+      }
+
+      function mediaUrl(customer, mediaItem) {
+        if (!customer || !mediaItem) return '';
+        if (mediaItem.url) return mediaItem.url;
+        return `/api/smarthours/public/${encodeURIComponent(customer.id)}/media/${encodeURIComponent(mediaItem.id)}`;
+      }
+
+      function selectedSlideshowIds() {
+        return Array.from(document.querySelectorAll('#galleryList [data-slide]:checked')).map((el) => el.value);
+      }
+
+      function renderGallery(customer) {
+        const list = document.getElementById('galleryList');
+        const openSel = document.getElementById('openMediaSelect');
+        const closedSel = document.getElementById('closedMediaSelect');
+        const media = (customer && customer.media) || [];
+        const design = (customer && customer.design) || {};
+        const slideIds = new Set(design.slideshowMediaIds || []);
+
+        const optHtml = ['<option value="">— built-in badge —</option>']
+          .concat(media.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name || m.id)}</option>`))
+          .join('');
+        openSel.innerHTML = optHtml;
+        closedSel.innerHTML = optHtml;
+        openSel.value = design.openMediaId || '';
+        closedSel.value = design.closedMediaId || '';
+
+        if (!media.length) {
+          list.innerHTML = '<p class="hint">No gallery images yet.</p>';
+          return;
+        }
+        list.innerHTML = media.map((m) => `
+          <div class="gallery-item" data-media-id="${escapeHtml(m.id)}">
+            <img src="${escapeHtml(mediaUrl(customer, m))}" alt="">
+            <div>
+              <strong style="font-size:.86rem">${escapeHtml(m.name || m.id)}</strong>
+              <label><input type="checkbox" data-slide value="${escapeHtml(m.id)}" ${slideIds.has(m.id) ? 'checked' : ''}> In slideshow</label>
+            </div>
+            <button type="button" class="btn-danger" style="padding:6px 10px;font-size:.75rem;" data-del-media="${escapeHtml(m.id)}">Delete</button>
+          </div>
+        `).join('');
       }
 
       function formatDay(day) {
@@ -453,11 +545,17 @@
         design.fontFamily = document.getElementById('fontFamily').value;
         design.titleFontSize = Number(document.getElementById('titleSize').value) || 34;
         design.hoursFontSize = Number(document.getElementById('hoursSize').value) || 22;
-        design.statusFontSize = Number(document.getElementById('statusSize').value) || 20;
+        design.statusFontSize = Number(document.getElementById('statusSize').value) || 48;
         design.showLogo = document.getElementById('showLogo').checked;
         design.showTitle = document.getElementById('showTitle').checked;
         design.showStatus = document.getElementById('showStatus').checked;
         design.showHours = document.getElementById('showHours').checked;
+        design.showSlideshow = document.getElementById('showSlideshow').checked;
+        design.statusMode = document.getElementById('statusMode').value || 'badge';
+        design.openMediaId = document.getElementById('openMediaSelect').value || '';
+        design.closedMediaId = document.getElementById('closedMediaSelect').value || '';
+        design.slideshowIntervalSec = Number(document.getElementById('slideshowInterval').value) || 8;
+        design.slideshowMediaIds = selectedSlideshowIds();
         return design;
       }
 
@@ -472,11 +570,14 @@
         document.getElementById('fontFamily').value = d.fontFamily;
         document.getElementById('titleSize').value = d.titleFontSize;
         document.getElementById('hoursSize').value = d.hoursFontSize;
-        document.getElementById('statusSize').value = d.statusFontSize;
+        document.getElementById('statusSize').value = d.statusFontSize || 48;
         document.getElementById('showLogo').checked = d.showLogo !== false;
         document.getElementById('showTitle').checked = d.showTitle !== false;
         document.getElementById('showStatus').checked = d.showStatus !== false;
         document.getElementById('showHours').checked = d.showHours !== false;
+        document.getElementById('showSlideshow').checked = !!d.showSlideshow;
+        document.getElementById('statusMode').value = d.statusMode || 'badge';
+        document.getElementById('slideshowInterval').value = d.slideshowIntervalSec || 8;
       }
 
       function bindColorPair(textId, pickId) {
@@ -492,10 +593,22 @@
       function renderCanvas() {
         const c = selected();
         if (!c) return;
+        if (!c.design) c.design = defaultDesign();
+        if (!Array.isArray(c.design.layout) || !c.design.layout.some((x) => x.type === 'slideshow')) {
+          c.design.layout = defaultDesign().layout.map((slot) => {
+            const hit = (c.design.layout || []).find((x) => x.type === slot.type);
+            return hit || slot;
+          });
+        }
         const design = readDesignFromForm(c.design);
-        design.layout = (c.design && c.design.layout) || defaultDesign().layout;
+        design.layout = c.design.layout;
+        c.design = Object.assign(c.design, design);
         const hours = c.useManualHours || !c.googleHours ? (c.hours || defaultHours()) : c.googleHours;
         const logoSrc = logoDataUrl || design.logoUrl || '';
+        const mediaById = new Map((c.media || []).map((m) => [m.id, m]));
+        const openMedia = design.openMediaId ? mediaById.get(design.openMediaId) : null;
+        const closedMedia = design.closedMediaId ? mediaById.get(design.closedMediaId) : null;
+        const slideItems = (design.slideshowMediaIds || []).map((id) => mediaById.get(id)).filter(Boolean);
 
         tabletFrame.style.background = design.backgroundColor;
         tabletFrame.style.color = design.textColor;
@@ -507,6 +620,7 @@
           if (el.type === 'title' && !design.showTitle) return;
           if (el.type === 'status' && !design.showStatus) return;
           if (el.type === 'hours' && !design.showHours) return;
+          if (el.type === 'slideshow' && !design.showSlideshow) return;
 
           const node = document.createElement('div');
           node.className = 'canvas-el';
@@ -523,7 +637,20 @@
           } else if (el.type === 'title') {
             node.innerHTML = `<div class="preview-title" style="font-size:${design.titleFontSize}px;color:${design.textColor}">${escapeHtml(c.name)}</div>`;
           } else if (el.type === 'status') {
-            node.innerHTML = `<div class="preview-status" style="font-size:${design.statusFontSize}px;color:${design.accentColor}">OPEN / CLOSED</div>`;
+            if (design.statusMode === 'image' && (openMedia || closedMedia)) {
+              const preview = openMedia || closedMedia;
+              node.innerHTML = `<img class="preview-slide" src="${escapeHtml(mediaUrl(c, preview))}" alt="Status">`;
+            } else if (design.statusMode === 'text') {
+              node.innerHTML = `<div class="preview-status" style="font-size:${Math.min(design.statusFontSize, 28)}px;color:${design.accentColor}">OPEN / CLOSED</div>`;
+            } else {
+              node.innerHTML = `<div class="preview-badge" style="font-size:${design.statusFontSize}px;background:${design.accentColor};color:#04120e">OPEN</div>`;
+            }
+          } else if (el.type === 'slideshow') {
+            if (slideItems.length) {
+              node.innerHTML = `<img class="preview-slide" src="${escapeHtml(mediaUrl(c, slideItems[0]))}" alt="Slideshow">`;
+            } else {
+              node.innerHTML = `<div style="height:100%;display:grid;place-items:center;opacity:.55;border:1px dashed ${design.accentColor}">Slideshow images</div>`;
+            }
           } else if (el.type === 'hours') {
             node.innerHTML = `<div class="preview-hours" style="font-size:${design.hoursFontSize}px">${
               DAYS.map((day) => `<div class="row"><span>${DAY_LABELS[day]}</span><span style="color:${design.accentColor}">${escapeHtml(formatDay(hours[day]))}</span></div>`).join('')
@@ -579,6 +706,7 @@
         renderHoursForm(customer.hours);
         writeDesignToForm(customer.design);
         writeEinkToForm(customer.eink);
+        renderGallery(customer);
         logoDataUrl = null;
         document.getElementById('logoFile').value = '';
         const url = publicUrl(customer.slug);
@@ -861,8 +989,75 @@
         reader.readAsDataURL(file);
       });
 
-      ['titleSize','hoursSize','statusSize','fontFamily','showLogo','showTitle','showStatus','showHours','fieldName'].forEach((id) => {
+      async function uploadGalleryFiles(fileList) {
+        const c = selected();
+        if (!c || String(c.id).startsWith('tmp-')) {
+          setStatus('Save the customer first, then upload gallery images.', true);
+          return;
+        }
+        const files = Array.from(fileList || []);
+        if (!files.length) return;
+        setStatus('Uploading images…');
+        for (const file of files) {
+          const dataUrl = await new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+          });
+          const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(c.id) + '/media', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ dataUrl, name: file.name })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Upload failed');
+          c.media = data.media || c.media;
+        }
+        const latest = selected();
+        if (latest) {
+          latest.media = c.media;
+          renderGallery(latest);
+          renderCanvas();
+        }
+        setStatus('Gallery updated.');
+      }
+
+      document.getElementById('galleryFile').addEventListener('change', (event) => {
+        uploadGalleryFiles(event.target.files)
+          .catch((err) => setStatus(err.message, true))
+          .finally(() => { event.target.value = ''; });
+      });
+
+      document.getElementById('galleryList').addEventListener('click', async (event) => {
+        const del = event.target.closest('[data-del-media]');
+        if (!del) return;
+        const c = selected();
+        if (!c || String(c.id).startsWith('tmp-')) return;
+        if (!confirm('Delete this image?')) return;
+        try {
+          const res = await apiFetch(
+            '/api/smarthours/customers/' + encodeURIComponent(c.id) + '/media/' + encodeURIComponent(del.dataset.delMedia),
+            { method: 'DELETE' }
+          );
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Delete failed');
+          if (data.customer) {
+            const idx = customers.findIndex((x) => x.id === c.id);
+            if (idx >= 0) customers[idx] = { ...data.customer, media: data.media || data.customer.media };
+          }
+          fillEditor(selected());
+          setStatus('Image deleted.');
+        } catch (err) {
+          setStatus(err.message || 'Delete failed', true);
+        }
+      });
+
+      document.getElementById('galleryList').addEventListener('change', () => renderCanvas());
+
+      ['titleSize','hoursSize','statusSize','fontFamily','showLogo','showTitle','showStatus','showHours','showSlideshow','fieldName','statusMode','openMediaSelect','closedMediaSelect','slideshowInterval'].forEach((id) => {
         const el = document.getElementById(id);
+        if (!el) return;
         el.addEventListener('input', () => {
           const c = selected();
           if (c && id === 'fieldName') c.name = el.value;
