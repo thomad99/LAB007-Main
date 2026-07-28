@@ -143,7 +143,10 @@
 
             <!-- Summary Cards -->
             <section class="summary-section">
-                <h2>Environment Overview</h2>
+                <div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 10px;">
+                    <h2 style="margin: 0;">Environment Overview</h2>
+                    <button id="aiSummaryBtn" class="btn btn-secondary" style="background:#22d3ee; border-color:#22d3ee; color:#0b1020; font-size: 12px; padding: 8px 14px; min-height: 38px;" onclick="generateAiSummary()">AI Summary</button>
+                </div>
                 <div class="cards-grid">
                     <div class="card">
                         <div class="card-content">
@@ -717,6 +720,16 @@
             <span class="modal-close" onclick="closeUsersModal()">&times;</span>
             <h2>User Connections (30 days)</h2>
             <div id="usersListContent"></div>
+        </div>
+    </div>
+
+    <!-- Modal for AI Summary -->
+    <div id="aiSummaryModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 900px;">
+            <span class="modal-close" onclick="closeAiSummaryModal()">&times;</span>
+            <h2>AI Summary — POC Requirements</h2>
+            <div id="aiSummaryTotals" style="margin-bottom: 14px;"></div>
+            <div id="aiSummaryContent" style="line-height: 1.55;"></div>
         </div>
     </div>
 

@@ -1437,6 +1437,170 @@ function closeMasterImagesModal() {
     document.getElementById('masterImagesModal').style.display = 'none';
 }
 
+// ===== AI Summary (POC requirements) =====
+
+function aiSummaryMasterImages() {
+    const images = (auditData && (auditData.UniqueMasterImages || auditData.MasterImages)) || [];
+    return images.map(image => {
+        const imagePath = image.Path || image.ImageMachineName || image.Name || image.MasterImagePath || '';
+        const parsed = typeof parseImagePath === 'function' ? parseImagePath(imagePath) : {};
+        return {
+            name: (parsed && parsed.vmName && parsed.vmName !== 'N/A') ? parsed.vmName : (image.ImageMachineName || image.Name || imagePath || 'Unknown'),
+            cluster: image.Cluster || image.ClusterName || image.HostingUnitName || undefined,
+            snapshot: image.LatestSnapshotName || undefined,
+            catalogs: image.Catalogs || undefined,
+            numCPU: Number(image.NumCPU) || undefined,
+            memoryGB: Number(image.MemoryGB) || undefined,
+            provisionedSpaceGB: Number(image.ProvisionedSpaceGB) || undefined
+        };
+    });
+}
+
+function aiSummaryLocalTotals() {
+    const images = aiSummaryMasterImages();
+    const totals = {
+        masterImageCount: images.length,
+        imagesWithSpecs: 0,
+        totalImageCPU: 0,
+        totalImageRAM_GB: 0,
+        totalImageDisk_GB: 0
+    };
+    images.forEach(img => {
+        if (img.numCPU || img.memoryGB || img.provisionedSpaceGB) {
+            totals.imagesWithSpecs += 1;
+            totals.totalImageCPU += img.numCPU || 0;
+            totals.totalImageRAM_GB += img.memoryGB || 0;
+            totals.totalImageDisk_GB += img.provisionedSpaceGB || 0;
+        }
+    });
+
+    const servers = (auditData && auditData.Servers) || [];
+    totals.serverCount = servers.length;
+    totals.serversWithSpecs = 0;
+    totals.totalServerCPUCores = 0;
+    totals.totalServerRAM_GB = 0;
+    servers.forEach(s => {
+        const cores = Number(s.CPUCores) || 0;
+        const ram = Number(s.TotalRAM_GB) || 0;
+        if (cores || ram) {
+            totals.serversWithSpecs += 1;
+            totals.totalServerCPUCores += cores;
+            totals.totalServerRAM_GB += ram;
+        }
+    });
+    totals.totalImageRAM_GB = Math.round(totals.totalImageRAM_GB * 10) / 10;
+    totals.totalImageDisk_GB = Math.round(totals.totalImageDisk_GB * 10) / 10;
+    totals.totalServerRAM_GB = Math.round(totals.totalServerRAM_GB * 10) / 10;
+    return totals;
+}
+
+function buildAiSummaryPayload() {
+    const s = (auditData && (auditData.summary || auditData)) || {};
+    return {
+        siteName: auditData.SiteName || s.SiteName || 'Unknown',
+        licenseType: auditData.LicenseType || s.LicenseType || 'Unknown',
+        controllers: auditData.ControllerCount || s.ControllerCount || 0,
+        publishedApplications: auditData.TotalPublishedApplications || s.TotalPublishedApplications || 0,
+        publishedDesktops: auditData.TotalPublishedDesktops || s.TotalPublishedDesktops || 0,
+        maxConcurrentUsers30d: auditData.MaxConcurrentUsers_30Days || s.MaxConcurrentUsers_30Days || 0,
+        uniqueUsers30d: auditData.UniqueUserConnections_30Days || s.UniqueUserConnections_30Days || 0,
+        totalServers: auditData.TotalNumberOfServers || s.TotalNumberOfServers || (auditData.Servers || []).length,
+        storefrontStores: auditData.TotalStoreFrontStores || s.TotalStoreFrontStores || 0,
+        catalogs: (auditData.Catalogs || []).map(c => ({
+            name: c.Name,
+            allocationType: c.AllocationType,
+            provisioningType: c.ProvisioningType,
+            sessionSupport: c.SessionSupport,
+            machines: c.TotalCount
+        })),
+        deliveryGroups: (auditData.DeliveryGroups || []).map(g => ({
+            name: g.Name,
+            sessionSupport: g.SessionSupport,
+            totalMachines: g.TotalMachines,
+            applications: g.TotalApplications
+        })),
+        masterImages: aiSummaryMasterImages(),
+        totals: aiSummaryLocalTotals()
+    };
+}
+
+function renderAiSummaryTotals(totals) {
+    const el = document.getElementById('aiSummaryTotals');
+    if (!el) return;
+    const fmt = (n) => (n || 0).toLocaleString();
+    const specNote = totals.imagesWithSpecs
+        ? `${fmt(totals.totalImageCPU)} vCPU / ${fmt(totals.totalImageRAM_GB)} GB RAM / ${fmt(totals.totalImageDisk_GB)} GB disk (${totals.imagesWithSpecs} of ${totals.masterImageCount} images with specs)`
+        : 'No per-image specs available in this audit';
+    const serverNote = totals.serversWithSpecs
+        ? `${fmt(totals.totalServerCPUCores)} CPU cores / ${fmt(totals.totalServerRAM_GB)} GB RAM (${totals.serversWithSpecs} of ${totals.serverCount} servers with specs)`
+        : 'No server specs available in this audit';
+    el.innerHTML = `
+        <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 10px;">
+            <div style="border:1px solid #ddd; border-radius:6px; padding:10px;">
+                <div style="font-size:12px; color:#666; text-transform:uppercase; letter-spacing:.04em;">Master Images Used</div>
+                <div style="font-size:22px; font-weight:700;">${fmt(totals.masterImageCount)}</div>
+            </div>
+            <div style="border:1px solid #ddd; border-radius:6px; padding:10px;">
+                <div style="font-size:12px; color:#666; text-transform:uppercase; letter-spacing:.04em;">Master Image Specs (total)</div>
+                <div style="font-size:14px; font-weight:600;">${specNote}</div>
+            </div>
+            <div style="border:1px solid #ddd; border-radius:6px; padding:10px;">
+                <div style="font-size:12px; color:#666; text-transform:uppercase; letter-spacing:.04em;">Server Specs (total)</div>
+                <div style="font-size:14px; font-weight:600;">${serverNote}</div>
+            </div>
+        </div>`;
+}
+
+function aiSummaryTextToHtml(text) {
+    const escaped = escapeHtml(String(text || ''));
+    return escaped
+        .replace(/^### (.*)$/gm, '<h4 style="margin:14px 0 6px;">$1</h4>')
+        .replace(/^## (.*)$/gm, '<h3 style="margin:16px 0 6px;">$1</h3>')
+        .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+        .replace(/^[-*] (.*)$/gm, '<li>$1</li>')
+        .replace(/(<li>[\s\S]*?<\/li>)(?!\s*<li>)/g, '<ul style="margin:6px 0 10px 20px;">$1</ul>')
+        .replace(/\n{2,}/g, '<br><br>')
+        .replace(/\n/g, '<br>');
+}
+
+async function generateAiSummary() {
+    if (!auditData) {
+        alert('Load or upload a Citrix audit first.');
+        return;
+    }
+    const modal = document.getElementById('aiSummaryModal');
+    const content = document.getElementById('aiSummaryContent');
+    const btn = document.getElementById('aiSummaryBtn');
+
+    const totals = aiSummaryLocalTotals();
+    renderAiSummaryTotals(totals);
+    content.innerHTML = '<p>Generating AI summary of this environment for a POC sizing... this can take up to 30 seconds.</p>';
+    closeAllModals('aiSummaryModal');
+    modal.style.display = 'block';
+    if (btn) { btn.disabled = true; btn.textContent = 'Summarizing...'; }
+
+    try {
+        const res = await fetch('/api/citrix/ai-summary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(buildAiSummaryPayload())
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            throw new Error(data.error || `AI request failed (${res.status})`);
+        }
+        content.innerHTML = aiSummaryTextToHtml(data.result || 'No summary returned.');
+    } catch (err) {
+        content.innerHTML = `<p style="color:#c0392b;">${escapeHtml(err.message || 'AI summary failed.')}</p>`;
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = 'AI Summary'; }
+    }
+}
+
+function closeAiSummaryModal() {
+    document.getElementById('aiSummaryModal').style.display = 'none';
+}
+
 // Horizon Environment Tasks Functions
 function loadConfigIntoModal() {
     try {
@@ -1555,7 +1719,8 @@ function closeAllModals(exceptId) {
         'catalogModal',
         'masterImagesModal',
         'storeFrontStoresModal',
-        'appModal'
+        'appModal',
+        'aiSummaryModal'
     ];
     ids.forEach(id => {
         if (id !== exceptId) {
