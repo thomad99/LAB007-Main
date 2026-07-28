@@ -80,8 +80,11 @@
       font-size: .92rem;
     }
     .btn-small {
-      padding: 7px 12px;
+      padding: 0 12px;
       font-size: .82rem;
+      height: 34px;
+      min-height: 34px;
+      line-height: 1;
     }
     .btn {
       background: var(--gold);
@@ -184,11 +187,30 @@
       flex-wrap: nowrap;
       align-items: center;
       gap: 6px;
-      height: 38px;
+      height: auto;
+      min-height: 34px;
+    }
+    #clientsTable .actions .btn,
+    #clientsTable .actions .btn-secondary,
+    #clientsTable .actions .icon-btn {
+      height: 34px;
+      min-height: 34px;
+      max-height: 34px;
+      box-sizing: border-box;
+      margin: 0;
+      vertical-align: middle;
+    }
+    #clientsTable .actions .btn {
+      border: 1px solid transparent;
+    }
+    #clientsTable .actions .icon-btn {
+      width: 34px;
+      min-width: 34px;
+      padding: 0;
     }
     #clientsTable .btn-small {
-      height: 38px;
-      min-height: 38px;
+      height: 34px;
+      min-height: 34px;
       padding: 0 10px;
       font-size: .74rem;
       white-space: nowrap;
@@ -251,10 +273,38 @@
     .prefix { width: 100%; min-width: 0; max-width: none; text-transform: uppercase; }
     .amount { width: 100%; min-width: 0; }
     .cleaning-date { width: 100%; min-width: 0; }
-    .actions { white-space: nowrap; display: flex; gap: 8px; flex-wrap: wrap; }
+    .actions {
+      white-space: nowrap;
+      display: flex;
+      gap: 8px;
+      flex-wrap: nowrap;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .actions .btn,
+    .actions .btn-secondary,
+    .actions .icon-btn {
+      height: 34px;
+      min-height: 34px;
+      box-sizing: border-box;
+      flex: 0 0 auto;
+    }
+    th.sortable {
+      cursor: pointer;
+      user-select: none;
+      white-space: nowrap;
+    }
+    th.sortable:hover { color: #fff3c4; }
+    th.sortable .sort-ind {
+      margin-left: 4px;
+      opacity: .55;
+      font-size: .7em;
+    }
+    th.sortable.is-active .sort-ind { opacity: 1; color: var(--gold); }
     .icon-btn {
       width: 34px;
       height: 34px;
+      min-width: 34px;
       padding: 0;
       border-radius: 8px;
       border: 1px solid var(--line);
@@ -333,10 +383,22 @@
       align-items: center;
       justify-content: space-between;
     }
+    .week-mode {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    .week-mode .btn-secondary.active {
+      background: rgba(215, 173, 75, .16);
+      border-color: var(--gold);
+      color: #fff3c4;
+    }
     .week-nav .week-label {
       font-size: 1.05rem;
       font-weight: 800;
       color: var(--cream);
+      text-align: center;
+      flex: 1 1 180px;
     }
     .week-kpis {
       display: grid;
@@ -363,10 +425,11 @@
       border: 1px solid var(--line);
       border-radius: 12px;
       padding: 14px;
+      overflow: hidden;
     }
     #weekChart {
       width: 100%;
-      height: 220px;
+      height: 260px;
       display: block;
     }
     .hint {
@@ -374,6 +437,10 @@
       color: var(--muted);
       font-size: .86rem;
       line-height: 1.5;
+    }
+    .muted-same {
+      color: var(--muted);
+      opacity: .7;
     }
     .panel-section { display: none; }
     .panel-section.active { display: block; }
@@ -551,9 +618,9 @@
       </div>
       <div class="toolbar">
         <button type="button" class="btn-secondary active" id="clientsTab">Invoices</button>
-        <button type="button" class="btn-secondary" id="clientFullTab">ClientFull</button>
+        <button type="button" class="btn-secondary" id="clientFullTab">Client Database</button>
         <button type="button" class="btn-secondary" id="invoicesTab">View Invoices</button>
-        <button type="button" class="btn-secondary" id="weeklyTab">Weekly Dashboard</button>
+        <button type="button" class="btn-secondary" id="weeklyTab">Billing Totals</button>
         <button type="button" class="btn" id="addClientBtn">Add Client</button>
         <button type="button" class="btn-secondary" id="saveBtn">Save Changes</button>
       </div>
@@ -572,23 +639,14 @@
           autocomplete="off"
         >
         <datalist id="clientSearchList"></datalist>
-        <div class="filters" style="margin:12px 0 0;">
-          <div>
-            <label for="clientSort">Sort by</label>
-            <select id="clientSort">
-              <option value="client">Client</option>
-              <option value="billTo">Bill To Name</option>
-            </select>
-          </div>
-        </div>
         <p class="client-search-meta" id="clientSearchMeta"></p>
       </div>
       <div class="table-wrap">
         <table id="clientsTable">
           <thead>
             <tr>
-              <th>Client</th>
-              <th>Bill To Name</th>
+              <th class="sortable is-active" data-sort="client" title="Sort by Client">Client <span class="sort-ind" aria-hidden="true">▲</span></th>
+              <th class="sortable" data-sort="billTo" title="Sort by Bill To Name">Bill To Name <span class="sort-ind" aria-hidden="true"></span></th>
               <th>Email</th>
               <th>Address Lines</th>
               <th>Amount ($)</th>
@@ -659,7 +717,8 @@
               <th>Invoice #</th>
               <th>Client</th>
               <th>Bill To</th>
-              <th>Date</th>
+              <th>Invoice Date</th>
+              <th>Cleaning Date</th>
               <th>Amount</th>
               <th>Status</th>
               <th>Actions</th>
@@ -677,14 +736,19 @@
 
     <section class="panel-section" id="weeklyPanel">
       <div class="week-dash">
+        <div class="week-mode" role="group" aria-label="Report period">
+          <button type="button" class="btn-secondary active" data-dash-mode="day" id="dashModeDay">Day by day</button>
+          <button type="button" class="btn-secondary" data-dash-mode="week" id="dashModeWeek">Week by week</button>
+          <button type="button" class="btn-secondary" data-dash-mode="month" id="dashModeMonth">Month by month</button>
+        </div>
         <div class="week-nav">
-          <button type="button" class="btn-secondary" id="weekPrevBtn">← Previous week</button>
+          <button type="button" class="btn-secondary" id="weekPrevBtn">← Previous</button>
           <div class="week-label" id="weekLabel">Loading…</div>
-          <button type="button" class="btn-secondary" id="weekNextBtn">Next week →</button>
+          <button type="button" class="btn-secondary" id="weekNextBtn">Next →</button>
         </div>
         <div class="week-kpis">
           <div class="week-kpi">
-            <label>Week total</label>
+            <label id="weekTotalLabel">Period total</label>
             <strong id="weekTotal">$0</strong>
           </div>
           <div class="week-kpi">
@@ -693,9 +757,9 @@
           </div>
         </div>
         <div class="week-chart-wrap">
-          <canvas id="weekChart" width="900" height="220" aria-label="Weekly invoice totals chart"></canvas>
+          <canvas id="weekChart" aria-label="Invoice totals chart"></canvas>
         </div>
-        <p class="hint">Totals are grouped Monday through Sunday by cleaning/service date.</p>
+        <p class="hint" id="weekHint">Totals are grouped Monday through Sunday by cleaning/service date.</p>
       </div>
     </section>
   </div>
@@ -759,7 +823,6 @@
       const filterSearch = document.getElementById('filterSearch');
       const refreshInvoicesBtn = document.getElementById('refreshInvoicesBtn');
       const clientSearch = document.getElementById('clientSearch');
-      const clientSort = document.getElementById('clientSort');
       const clientSearchList = document.getElementById('clientSearchList');
       const clientSearchMeta = document.getElementById('clientSearchMeta');
       const clientFullSearch = document.getElementById('clientFullSearch');
@@ -773,21 +836,27 @@
       const lineItemsSubtitle = document.getElementById('lineItemsSubtitle');
       const weekLabel = document.getElementById('weekLabel');
       const weekTotal = document.getElementById('weekTotal');
+      const weekTotalLabel = document.getElementById('weekTotalLabel');
       const weekCount = document.getElementById('weekCount');
       const weekChart = document.getElementById('weekChart');
+      const weekHint = document.getElementById('weekHint');
       const weekPrevBtn = document.getElementById('weekPrevBtn');
       const weekNextBtn = document.getElementById('weekNextBtn');
+      const clientsTableHead = document.querySelector('#clientsTable thead');
       let clients = [];
       let invoices = [];
       let invoiceGrandTotal = 0;
       let clientFull = { columns: [], rows: [] };
       let clientSearchQuery = '';
       let clientSortMode = 'client';
+      let clientSortDir = 'asc';
       let clientFullSearchQuery = '';
       let clientFullLoaded = false;
       let clientFullEditingIndex = null;
       let lineItemsEditClientId = null;
       let weekCursor = null;
+      let dashMode = 'day';
+      let lastDashBars = [];
 
       function authHeaders() {
         const password = sessionStorage.getItem(AUTH_KEY);
@@ -1108,14 +1177,14 @@
           renderClientFullRows();
           return;
         }
-        setStatus('Loading ClientFull list...');
+        setStatus('Loading Client Database...');
         const res = await apiFetch('/api/elite-invoices/client-full');
         if (res.status === 401) {
           sessionStorage.removeItem(AUTH_KEY);
           showLogin('Session expired. Enter password again.');
           return;
         }
-        if (!res.ok) throw new Error('Failed to load ClientFull list');
+        if (!res.ok) throw new Error('Failed to load Client Database');
         clientFull = await res.json();
         clientFullLoaded = true;
         clientFullEditingIndex = null;
@@ -1168,6 +1237,17 @@
         filterClient.value = current;
       }
 
+      function updateSortHeaders() {
+        if (!clientsTableHead) return;
+        clientsTableHead.querySelectorAll('th.sortable').forEach((th) => {
+          const key = th.dataset.sort;
+          const active = key === clientSortMode;
+          th.classList.toggle('is-active', active);
+          const ind = th.querySelector('.sort-ind');
+          if (ind) ind.textContent = active ? (clientSortDir === 'asc' ? '▲' : '▼') : '';
+        });
+      }
+
       function renderClientRows() {
         const existingDates = new Map(
           Array.from(rowsEl.querySelectorAll('tr[data-id]')).map((row) => {
@@ -1176,15 +1256,18 @@
           })
         );
         const sortKey = clientSortMode === 'billTo' ? 'billToName' : 'displayName';
+        const dir = clientSortDir === 'desc' ? -1 : 1;
         const visibleClients = clients
           .filter((client) => clientMatchesSearch(client, clientSearchQuery))
           .slice()
           .sort((a, b) =>
+            dir *
             String(a[sortKey] || '')
               .localeCompare(String(b[sortKey] || ''), undefined, { sensitivity: 'base' })
           );
         updateClientSearchMeta(visibleClients.length);
         renderClientSearchOptions();
+        updateSortHeaders();
 
         if (!visibleClients.length) {
           rowsEl.innerHTML = `<tr><td colspan="9" class="empty">${clientSearchQuery.trim() ? 'No clients match your search.' : 'No clients yet. Click Add Client.'}</td></tr>`;
@@ -1255,16 +1338,21 @@
 
       function renderInvoiceRows() {
         if (!invoices.length) {
-          invoiceRowsEl.innerHTML = '<tr><td colspan="7" class="empty">No invoices match your filters.</td></tr>';
+          invoiceRowsEl.innerHTML = '<tr><td colspan="8" class="empty">No invoices match your filters.</td></tr>';
           renderInvoiceTotals();
           return;
         }
-        invoiceRowsEl.innerHTML = invoices.map((invoice) => `
+        invoiceRowsEl.innerHTML = invoices.map((invoice) => {
+          const invoiceDate = String(invoice.date || '').trim();
+          const cleanDate = String(invoice.serviceDate || '').trim();
+          const cleanDiffers = cleanDate && cleanDate !== invoiceDate;
+          return `
           <tr data-id="${escapeHtml(invoice.id)}">
             <td><strong>${escapeHtml(invoice.invoiceNumber)}</strong></td>
             <td>${escapeHtml(invoice.clientDisplayName)}</td>
             <td>${escapeHtml(invoice.billToName)}</td>
-            <td>${escapeHtml(invoice.date)}</td>
+            <td>${escapeHtml(invoiceDate)}</td>
+            <td>${cleanDiffers ? escapeHtml(cleanDate) : '<span class="muted-same">—</span>'}</td>
             <td>${formatMoney(invoice.amount)}</td>
             <td>
               <span class="badge ${invoice.paid ? 'paid' : 'unpaid'}">${invoice.paid ? 'Paid' : 'Unpaid'}</span>
@@ -1278,7 +1366,8 @@
               <button type="button" class="btn-danger btn-small" data-action="delete">Delete</button>
             </td>
           </tr>
-        `).join('');
+        `;
+        }).join('');
         renderInvoiceTotals();
       }
 
@@ -1711,65 +1800,138 @@
         }
       }
 
+      function sizeWeekChart() {
+        if (!weekChart) return { width: 0, height: 0, dpr: 1 };
+        const wrap = weekChart.parentElement;
+        const cssW = Math.max(320, Math.floor((wrap && wrap.clientWidth) || weekChart.clientWidth || 900));
+        const cssH = 260;
+        const dpr = Math.min(window.devicePixelRatio || 1, 3);
+        weekChart.style.width = cssW + 'px';
+        weekChart.style.height = cssH + 'px';
+        weekChart.width = Math.round(cssW * dpr);
+        weekChart.height = Math.round(cssH * dpr);
+        const ctx = weekChart.getContext('2d');
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        return { width: cssW, height: cssH, dpr };
+      }
+
       function drawWeekChart(days) {
         if (!weekChart) return;
+        lastDashBars = Array.isArray(days) ? days : [];
+        const { width, height } = sizeWeekChart();
         const ctx = weekChart.getContext('2d');
-        const width = weekChart.width;
-        const height = weekChart.height;
         ctx.clearRect(0, 0, width, height);
-        const max = Math.max(1, ...days.map((d) => Number(d.total || 0)));
-        const padL = 36;
+        if (!lastDashBars.length) return;
+
+        const max = Math.max(1, ...lastDashBars.map((d) => Number(d.total || 0)));
+        const padL = 40;
         const padR = 16;
-        const padT = 18;
-        const padB = 36;
+        const padT = 28;
+        const padB = 40;
         const chartW = width - padL - padR;
         const chartH = height - padT - padB;
-        const barW = chartW / Math.max(days.length, 1);
+        const barW = chartW / Math.max(lastDashBars.length, 1);
 
-        ctx.strokeStyle = 'rgba(215,173,75,.25)';
+        ctx.strokeStyle = 'rgba(215,173,75,.28)';
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.moveTo(padL, padT);
-        ctx.lineTo(padL, height - padB);
-        ctx.lineTo(width - padR, height - padB);
+        ctx.moveTo(padL + 0.5, padT + 0.5);
+        ctx.lineTo(padL + 0.5, height - padB + 0.5);
+        ctx.lineTo(width - padR + 0.5, height - padB + 0.5);
         ctx.stroke();
 
-        days.forEach((day, i) => {
+        lastDashBars.forEach((day, i) => {
           const value = Number(day.total || 0);
           const h = (value / max) * chartH;
           const x = padL + i * barW + barW * 0.18;
           const y = height - padB - h;
-          const w = barW * 0.64;
+          const w = Math.max(4, barW * 0.64);
           ctx.fillStyle = value > 0 ? '#d7ad4b' : 'rgba(215,173,75,.18)';
-          ctx.fillRect(x, y, w, Math.max(h, 2));
+          ctx.fillRect(Math.round(x), Math.round(y), Math.round(w), Math.max(Math.round(h), 2));
           ctx.fillStyle = '#ded6c7';
-          ctx.font = '12px Segoe UI, Arial, sans-serif';
+          ctx.font = '600 12px Segoe UI, Arial, sans-serif';
           ctx.textAlign = 'center';
-          ctx.fillText(day.label || '', padL + i * barW + barW / 2, height - 16);
+          ctx.textBaseline = 'top';
+          ctx.fillText(day.label || '', padL + i * barW + barW / 2, height - padB + 10);
           if (value > 0) {
             ctx.fillStyle = '#fff8e8';
-            ctx.fillText(formatMoney(value), padL + i * barW + barW / 2, y - 6);
+            ctx.textBaseline = 'bottom';
+            ctx.fillText(formatMoney(value), padL + i * barW + barW / 2, Math.round(y) - 4);
           }
         });
       }
 
+      function syncDashModeUi() {
+        document.querySelectorAll('[data-dash-mode]').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.dashMode === dashMode);
+        });
+        if (dashMode === 'week') {
+          weekPrevBtn.textContent = '← Previous month';
+          weekNextBtn.textContent = 'Next month →';
+          weekTotalLabel.textContent = 'Month total';
+          weekHint.textContent = 'Bars are weeks within the selected month (Mon–Sun weeks, clipped to the month).';
+        } else if (dashMode === 'month') {
+          weekPrevBtn.textContent = '← Previous year';
+          weekNextBtn.textContent = 'Next year →';
+          weekTotalLabel.textContent = 'Year total';
+          weekHint.textContent = 'Bars are months within the selected year by cleaning/service date.';
+        } else {
+          weekPrevBtn.textContent = '← Previous week';
+          weekNextBtn.textContent = 'Next week →';
+          weekTotalLabel.textContent = 'Week total';
+          weekHint.textContent = 'Totals are grouped Monday through Sunday by cleaning/service date.';
+        }
+      }
+
+      function normalizeDashCursor(date = new Date()) {
+        if (dashMode === 'month') {
+          return new Date(date.getFullYear(), 0, 1);
+        }
+        if (dashMode === 'week') {
+          return new Date(date.getFullYear(), date.getMonth(), 1);
+        }
+        return startOfWeekMonday(date);
+      }
+
+      function shiftDashCursor(direction) {
+        if (!weekCursor) weekCursor = normalizeDashCursor(new Date());
+        const d = direction < 0 ? -1 : 1;
+        if (dashMode === 'month') {
+          weekCursor = new Date(weekCursor.getFullYear() + d, 0, 1);
+        } else if (dashMode === 'week') {
+          weekCursor = new Date(weekCursor.getFullYear(), weekCursor.getMonth() + d, 1);
+        } else {
+          weekCursor = new Date(weekCursor.getFullYear(), weekCursor.getMonth(), weekCursor.getDate() + d * 7);
+        }
+      }
+
       async function loadWeeklyDashboard() {
-        if (!weekCursor) weekCursor = startOfWeekMonday(new Date());
-        const weekStart = weekCursor.toISOString();
-        setStatus('Loading weekly totals...');
+        if (!weekCursor) weekCursor = normalizeDashCursor(new Date());
+        else weekCursor = normalizeDashCursor(weekCursor);
+        syncDashModeUi();
+        const cursor = weekCursor.toISOString();
+        setStatus('Loading dashboard...');
         const res = await apiFetch(
-          '/api/elite-invoices/dashboard/weekly?weekStart=' + encodeURIComponent(weekStart)
+          '/api/elite-invoices/dashboard/weekly?mode=' +
+            encodeURIComponent(dashMode) +
+            '&weekStart=' +
+            encodeURIComponent(cursor)
         );
         if (res.status === 401) {
           sessionStorage.removeItem(AUTH_KEY);
           showLogin('Session expired. Enter password again.');
           return;
         }
-        if (!res.ok) throw new Error('Failed to load weekly dashboard');
+        if (!res.ok) throw new Error('Failed to load dashboard');
         const data = await res.json();
-        weekLabel.textContent = data.label || 'Week';
+        if (data.cursor) {
+          const parsed = new Date(data.cursor);
+          if (!Number.isNaN(parsed.getTime())) weekCursor = parsed;
+        }
+        weekLabel.textContent = data.label || 'Period';
         weekTotal.textContent = formatMoney(data.total || 0);
         weekCount.textContent = String(data.invoiceCount || 0);
-        drawWeekChart(data.days || []);
+        drawWeekChart(data.bars || data.days || []);
         setStatus('');
       }
 
@@ -1839,19 +2001,41 @@
         clientSearchQuery = clientSearch.value;
         renderClientRows();
       });
-      clientSort.addEventListener('change', () => {
-        clientSortMode = clientSort.value === 'billTo' ? 'billTo' : 'client';
-        renderClientRows();
+      if (clientsTableHead) {
+        clientsTableHead.addEventListener('click', (event) => {
+          const th = event.target.closest('th.sortable[data-sort]');
+          if (!th) return;
+          const next = th.dataset.sort === 'billTo' ? 'billTo' : 'client';
+          if (clientSortMode === next) {
+            clientSortDir = clientSortDir === 'asc' ? 'desc' : 'asc';
+          } else {
+            clientSortMode = next;
+            clientSortDir = 'asc';
+          }
+          renderClientRows();
+        });
+      }
+      document.querySelectorAll('[data-dash-mode]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const next = btn.dataset.dashMode;
+          if (!['day', 'week', 'month'].includes(next) || next === dashMode) return;
+          dashMode = next;
+          weekCursor = normalizeDashCursor(weekCursor || new Date());
+          loadWeeklyDashboard().catch((err) => setStatus(err.message, true));
+        });
       });
       weekPrevBtn.addEventListener('click', () => {
-        if (!weekCursor) weekCursor = startOfWeekMonday(new Date());
-        weekCursor = new Date(weekCursor.getFullYear(), weekCursor.getMonth(), weekCursor.getDate() - 7);
+        shiftDashCursor(-1);
         loadWeeklyDashboard().catch((err) => setStatus(err.message, true));
       });
       weekNextBtn.addEventListener('click', () => {
-        if (!weekCursor) weekCursor = startOfWeekMonday(new Date());
-        weekCursor = new Date(weekCursor.getFullYear(), weekCursor.getMonth(), weekCursor.getDate() + 7);
+        shiftDashCursor(1);
         loadWeeklyDashboard().catch((err) => setStatus(err.message, true));
+      });
+      window.addEventListener('resize', () => {
+        if (weeklyPanel.classList.contains('active') && lastDashBars.length) {
+          drawWeekChart(lastDashBars);
+        }
       });
       document.getElementById('addLineItemBtn').addEventListener('click', () => {
         const items = readLineItemEditor();

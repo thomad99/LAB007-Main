@@ -41,7 +41,8 @@ const {
   parseServiceDate,
   buildInvoicePdf,
   isValidClientEmail,
-  weeklyInvoiceStats
+  weeklyInvoiceStats,
+  invoiceDashboardStats
 } = require('./lib/elite-invoices');
 registerCursorAiTelegramHandlers(registerTelegramInboundHandler);
 registerCronTelegramHandlers(registerTelegramInboundHandler);
@@ -6591,8 +6592,9 @@ app.delete('/api/elite-invoices/clients/:id', (req, res) => {
 
 app.get('/api/elite-invoices/dashboard/weekly', (req, res) => {
   try {
-    const weekStart = String(req.query?.weekStart || '').trim() || undefined;
-    const stats = weeklyInvoiceStats(readEliteInvoiceHistory(), weekStart);
+    const weekStart = String(req.query?.weekStart || req.query?.cursor || '').trim() || undefined;
+    const mode = String(req.query?.mode || 'day').trim().toLowerCase();
+    const stats = invoiceDashboardStats(readEliteInvoiceHistory(), { mode, cursor: weekStart });
     res.json(stats);
   } catch (err) {
     console.error('[EliteInvoices] weekly dashboard error:', err);
