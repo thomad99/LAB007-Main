@@ -254,7 +254,7 @@
               <input id="fieldManual" type="checkbox"> Manual hours
             </label>
           </div>
-          <p class="hint">Paste a share.google or Maps link, then sync.</p>
+          <p class="hint">Best: paste a <strong>share.google</strong> or Maps link for one business, then sync. Search “near me” links are less reliable.</p>
           <p class="hint" id="syncMeta"></p>
           <table class="hours-table">
             <thead>
@@ -1121,8 +1121,10 @@
         }
       }
 
-      async function saveCustomer() {
+      async function saveCustomer(options) {
+        const opts = options || {};
         const payload = collectPayload();
+        if (opts.omitHours) delete payload.hours;
         if (!payload.name) {
           setStatus('Customer name is required.', true);
           return;
@@ -1148,11 +1150,13 @@
         logoDataUrl = null;
         await loadCustomers();
         const hasGoogle = !!(payload.googleMapsUrl || payload.googlePlaceId);
-        setStatus(
-          hasGoogle && !payload.useManualHours
-            ? 'Saved. Click Sync Google hours to pull opening times.'
-            : 'Saved. Public URL ready.'
-        );
+        if (!opts.silent) {
+          setStatus(
+            hasGoogle && !payload.useManualHours
+              ? 'Saved. Click Sync Google hours to pull opening times.'
+              : 'Saved. Public URL ready.'
+          );
+        }
         return selected();
       }
 
@@ -1308,7 +1312,7 @@
               return;
             }
           }
-          await saveCustomer();
+          await saveCustomer({ omitHours: true, silent: true });
           setStatus('Syncing Google hours…');
           const id = selectedId;
           const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(id) + '/sync', { method: 'POST' });
