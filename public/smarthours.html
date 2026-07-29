@@ -953,6 +953,7 @@
         const syncMeta = [];
         if (customer.lastSyncedAt) syncMeta.push('Last Google sync: ' + new Date(customer.lastSyncedAt).toLocaleString());
         if (customer.lastSyncError) syncMeta.push('Last sync error: ' + customer.lastSyncError);
+        if (customer.lastSyncNote) syncMeta.push(customer.lastSyncNote);
         if (customer.googleDisplayName) syncMeta.push('Google name: ' + customer.googleDisplayName);
         document.getElementById('syncMeta').textContent = syncMeta.join(' · ');
         renderCanvas();
@@ -1270,10 +1271,11 @@
           await loadCustomers();
           if (!res.ok) throw new Error(data.error || data.customer?.lastSyncError || 'Sync failed');
           const name = data.displayName || data.customer?.googleDisplayName || '';
+          const note = data.syncNote || data.customer?.lastSyncNote || '';
           setStatus(
             (data.changed ? 'Google hours updated' : 'Synced — no hour changes') +
               (name ? ` (${name})` : '') +
-              '.'
+              (note ? `. ${note}` : '.')
           );
           if (selected()) fillEditor(selected());
         } catch (err) {
