@@ -1147,7 +1147,12 @@
         selectedId = data.id;
         logoDataUrl = null;
         await loadCustomers();
-        setStatus('Saved. Public URL ready.');
+        const hasGoogle = !!(payload.googleMapsUrl || payload.googlePlaceId);
+        setStatus(
+          hasGoogle && !payload.useManualHours
+            ? 'Saved. Click Sync Google hours to pull opening times.'
+            : 'Saved. Public URL ready.'
+        );
         return selected();
       }
 
