@@ -254,7 +254,6 @@
               <input id="fieldManual" type="checkbox"> Manual hours
             </label>
           </div>
-          <p class="hint">Best: paste a <strong>share.google</strong> or Maps link for one business, then sync. Search “near me” links are less reliable.</p>
           <p class="hint" id="syncMeta"></p>
           <table class="hours-table">
             <thead>
@@ -990,12 +989,14 @@
         document.getElementById('logoFile').value = '';
         const url = publicUrl(customer.slug);
         publicUrlBox.innerHTML = `<strong>Public page:</strong> <a href="${url}" target="_blank" rel="noopener">${url}</a>`;
-        const syncMeta = [];
-        if (customer.lastSyncedAt) syncMeta.push('Last Google sync: ' + new Date(customer.lastSyncedAt).toLocaleString());
-        if (customer.lastSyncError) syncMeta.push('Last sync error: ' + customer.lastSyncError);
-        if (customer.lastSyncNote) syncMeta.push(customer.lastSyncNote);
-        if (customer.googleDisplayName) syncMeta.push('Google name: ' + customer.googleDisplayName);
-        document.getElementById('syncMeta').textContent = syncMeta.join(' · ');
+        if (customer.lastSyncedAt) {
+          document.getElementById('syncMeta').textContent =
+            'Last sync: ' + new Date(customer.lastSyncedAt).toLocaleString();
+        } else if (customer.lastSyncError) {
+          document.getElementById('syncMeta').textContent = 'Last sync failed';
+        } else {
+          document.getElementById('syncMeta').textContent = '';
+        }
         renderCanvas();
         if (customer && !String(customer.id).startsWith('tmp-')) showDesignEinkPreview(customer);
         else showDesignEinkPreview(null);
@@ -1320,11 +1321,10 @@
           await loadCustomers();
           if (!res.ok) throw new Error(data.error || data.customer?.lastSyncError || 'Sync failed');
           const name = data.displayName || data.customer?.googleDisplayName || '';
-          const note = data.syncNote || data.customer?.lastSyncNote || '';
           setStatus(
             (data.changed ? 'Google hours updated' : 'Synced — no hour changes') +
               (name ? ` (${name})` : '') +
-              (note ? `. ${note}` : '.')
+              '.'
           );
           if (selected()) fillEditor(selected());
         } catch (err) {
