@@ -101,7 +101,19 @@
     }
     .hours-table tr.is-closed .hours-times { display: none; }
     .hours-table tr.is-closed .closed-label { display: inline; }
-    .hours-table .hours-times { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .hours-table .hours-times {
+      display: grid;
+      grid-template-columns: auto 1fr auto 1fr;
+      gap: 6px 8px;
+      align-items: center;
+      max-width: 320px;
+    }
+    .hours-table .hours-times .time-label {
+      font-size: .72rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
     .form-grid .full { grid-column: 1 / -1; }
     .url-box {
       display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px;
@@ -618,7 +630,9 @@
             <td>
               <span class="closed-label">Closed</span>
               <span class="hours-times">
+                <span class="time-label">Open</span>
                 <input type="time" data-f="open" value="${d.open || '09:00'}" aria-label="${DAY_LABELS[day]} open">
+                <span class="time-label">Close</span>
                 <input type="time" data-f="close" value="${d.close || '17:00'}" aria-label="${DAY_LABELS[day]} close">
               </span>
             </td>
