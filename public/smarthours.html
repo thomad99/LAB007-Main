@@ -114,7 +114,33 @@
       text-transform: uppercase;
       color: var(--muted);
     }
-    .form-grid .full { grid-column: 1 / -1; }
+    .btn-sync {
+      background: linear-gradient(135deg, #5eead4, #34d399);
+      color: #042f2e;
+      border: none;
+      box-shadow: 0 8px 22px rgba(52, 211, 153, .28);
+      min-width: 168px;
+    }
+    .btn-sync:hover { filter: brightness(1.05); }
+    .hours-toolbar {
+      margin-top: 14px;
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .hours-toolbar .manual-opt {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      text-transform: none;
+      letter-spacing: 0;
+      font-size: .9rem;
+      color: var(--muted);
+      font-weight: 500;
+    }
+    .hours-toolbar .manual-opt input { width: auto; margin: 0; }
     .url-box {
       display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px;
       padding: 10px 12px; border-radius: 12px; background: var(--accent-dim); border: 1px solid var(--line);
@@ -222,13 +248,13 @@
             </div>
           </div>
           <div class="url-box" id="publicUrlBox"></div>
-          <div style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap; align-items:center;">
-            <label style="display:flex; gap:8px; align-items:center; text-transform:none; letter-spacing:0; font-size:.95rem; color:var(--text);">
-              <input id="fieldManual" type="checkbox"> Use manual hours (override Google)
+          <div class="hours-toolbar">
+            <button type="button" class="btn btn-sync" id="syncOneBtn">Sync Google hours</button>
+            <label class="manual-opt">
+              <input id="fieldManual" type="checkbox"> Manual hours
             </label>
-            <button type="button" class="btn-secondary" id="syncOneBtn">Sync from Google now</button>
           </div>
-          <p class="hint">Paste one <strong>share.google</strong> / Maps / hours link. Sync expands the Hours dropdown and reads each day + open/close time (no API key). Uncheck “Use manual hours” before syncing.</p>
+          <p class="hint">Paste a share.google or Maps link, then sync.</p>
           <p class="hint" id="syncMeta"></p>
           <table class="hours-table">
             <thead>
@@ -1138,7 +1164,7 @@
           slug: 'new-customer',
           googlePlaceId: '',
           googleMapsUrl: '',
-          useManualHours: true,
+          useManualHours: false,
           hours: defaultHours(),
           design: defaultDesign(),
           lastSyncedAt: null
@@ -1273,7 +1299,7 @@
         }
         try {
           if (document.getElementById('fieldManual').checked) {
-            if (!confirm('Manual override is ON. Sync will still pull Google hours into storage, but the table stays manual until you uncheck override. Continue?')) {
+            if (!confirm('Manual hours is on. Sync will still update stored Google hours, but the table stays manual until you uncheck it. Continue?')) {
               return;
             }
           }
