@@ -89,6 +89,20 @@
     .hours-table th, .hours-table td { padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,.06); text-align: left; font-size: .9rem; }
     .hours-table input[type="time"] { padding: 6px 8px; }
     .hours-table input[type="checkbox"] { width: auto; }
+    .hours-table tr.is-closed { opacity: .55; }
+    .hours-table tr.is-closed td { color: var(--muted); }
+    .hours-table .closed-label {
+      display: none;
+      font-weight: 600;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      font-size: .82rem;
+      color: var(--muted);
+    }
+    .hours-table tr.is-closed .hours-times { display: none; }
+    .hours-table tr.is-closed .closed-label { display: inline; }
+    .hours-table .hours-times { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .form-grid .full { grid-column: 1 / -1; }
     .url-box {
       display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px;
       padding: 10px 12px; border-radius: 12px; background: var(--accent-dim); border: 1px solid var(--line);
@@ -190,13 +204,9 @@
               <label for="fieldSlug">URL slug</label>
               <input id="fieldSlug" type="text" placeholder="acme-cafe">
             </div>
-            <div>
-              <label for="fieldPlaceId">Google Place ID</label>
-              <input id="fieldPlaceId" type="text" placeholder="ChIJ…">
-            </div>
-            <div>
-              <label for="fieldMapsUrl">Google Maps / share.google URL</label>
-              <input id="fieldMapsUrl" type="url" placeholder="https://share.google/… or Maps place link">
+            <div class="full">
+              <label for="fieldMapsUrl">Google business link</label>
+              <input id="fieldMapsUrl" type="text" placeholder="https://share.google/… or Maps / hours link">
             </div>
           </div>
           <div class="url-box" id="publicUrlBox"></div>
@@ -206,17 +216,14 @@
             </label>
             <button type="button" class="btn-secondary" id="syncOneBtn">Sync from Google now</button>
           </div>
-          <p class="hint">Paste a <strong>share.google</strong> / Maps / Google hours link. SmartHours opens the listing and <strong>reads day names + open/close times from the page</strong> (no Google API key required). Uncheck “Use manual hours” before syncing. Make sure the Business Profile shows public weekly hours.</p>
+          <p class="hint">Paste one <strong>share.google</strong> / Maps / hours link. Sync expands the Hours dropdown and reads each day + open/close time (no API key). Uncheck “Use manual hours” before syncing.</p>
           <p class="hint" id="syncMeta"></p>
           <table class="hours-table">
             <thead>
               <tr>
                 <th>Day</th>
                 <th>Closed</th>
-                <th>Open</th>
-                <th>Close</th>
-                <th>Open 2</th>
-                <th>Close 2</th>
+                <th>Hours</th>
               </tr>
             </thead>
             <tbody id="hoursBody"></tbody>
@@ -563,8 +570,7 @@
       function formatDay(day) {
         if (!day || day.closed) return 'Closed';
         const a = day.open && day.close ? `${day.open} – ${day.close}` : '';
-        const b = day.open2 && day.close2 ? `${day.open2} – ${day.close2}` : '';
-        return b ? `${a}, ${b}` : (a || 'Closed');
+        return a || 'Closed';
       }
 
       function publicUrl(slug) {
@@ -581,6 +587,12 @@
         tabletFrame.style.marginBottom = `${(scale - 1) * TABLET.height}px`;
       }
 
+      function syncHoursRowState(row) {
+        if (!row) return;
+        const closed = row.querySelector('[data-f="closed"]').checked;
+        row.classList.toggle('is-closed', closed);
+      }
+
       function readHoursFromForm() {
         const hours = {};
         DAYS.forEach((day) => {
@@ -589,8 +601,8 @@
             closed: row.querySelector('[data-f="closed"]').checked,
             open: row.querySelector('[data-f="open"]').value,
             close: row.querySelector('[data-f="close"]').value,
-            open2: row.querySelector('[data-f="open2"]').value,
-            close2: row.querySelector('[data-f="close2"]').value
+            open2: '',
+            close2: ''
           };
         });
         return hours;
@@ -600,13 +612,16 @@
         const h = hours || defaultHours();
         hoursBody.innerHTML = DAYS.map((day) => {
           const d = h[day] || emptyDay();
-          return `<tr data-day="${day}">
+          return `<tr data-day="${day}" class="${d.closed ? 'is-closed' : ''}">
             <td>${DAY_LABELS[day]}</td>
             <td><input type="checkbox" data-f="closed" ${d.closed ? 'checked' : ''}></td>
-            <td><input type="time" data-f="open" value="${d.open || '09:00'}"></td>
-            <td><input type="time" data-f="close" value="${d.close || '17:00'}"></td>
-            <td><input type="time" data-f="open2" value="${d.open2 || ''}"></td>
-            <td><input type="time" data-f="close2" value="${d.close2 || ''}"></td>
+            <td>
+              <span class="closed-label">Closed</span>
+              <span class="hours-times">
+                <input type="time" data-f="open" value="${d.open || '09:00'}" aria-label="${DAY_LABELS[day]} open">
+                <input type="time" data-f="close" value="${d.close || '17:00'}" aria-label="${DAY_LABELS[day]} close">
+              </span>
+            </td>
           </tr>`;
         }).join('');
       }
@@ -925,8 +940,7 @@
         selectedElId = null;
         document.getElementById('fieldName').value = customer.name || '';
         document.getElementById('fieldSlug').value = customer.slug || '';
-        document.getElementById('fieldPlaceId').value = customer.googlePlaceId || '';
-        document.getElementById('fieldMapsUrl').value = customer.googleMapsUrl || '';
+        document.getElementById('fieldMapsUrl').value = customer.googleMapsUrl || customer.googlePlaceId || '';
         document.getElementById('fieldManual').checked = !!customer.useManualHours;
         renderHoursForm(customer.hours);
         writeDesignToForm(customer.design);
@@ -974,11 +988,13 @@
         if (c && c.design && c.design.layout) design.layout = c.design.layout;
         if (c && c.design && c.design.logoUrl && !logoDataUrl) design.logoUrl = c.design.logoUrl;
         delete design._legacyShowApplied;
+        const googleRef = document.getElementById('fieldMapsUrl').value.trim();
+        const looksLikePlaceId = /^ChIJ[\w-]+$/i.test(googleRef) || /^places\/ChIJ/i.test(googleRef);
         const payload = {
           name: document.getElementById('fieldName').value.trim(),
           slug: document.getElementById('fieldSlug').value.trim(),
-          googlePlaceId: document.getElementById('fieldPlaceId').value.trim(),
-          googleMapsUrl: document.getElementById('fieldMapsUrl').value.trim(),
+          googlePlaceId: looksLikePlaceId ? googleRef.replace(/^places\//i, '') : (c && c.googlePlaceId) || '',
+          googleMapsUrl: looksLikePlaceId ? '' : googleRef,
           useManualHours: document.getElementById('fieldManual').checked,
           hours: readHoursFromForm(),
           design,
@@ -1093,6 +1109,12 @@
         setStatus('Saved. Public URL ready.');
         return selected();
       }
+
+      hoursBody.addEventListener('change', (event) => {
+        const row = event.target.closest('tr[data-day]');
+        if (!row || !event.target.matches('[data-f="closed"]')) return;
+        syncHoursRowState(row);
+      });
 
       document.getElementById('newCustomerBtn').addEventListener('click', () => {
         const temp = {
