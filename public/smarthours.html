@@ -168,7 +168,7 @@
       flex: 0 0 auto;
     }
     .auto-sync-bar {
-      margin-top: 14px;
+      margin-top: 0;
       padding: 12px 14px;
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -322,11 +322,15 @@
               <input id="fieldSlug" type="text" placeholder="acme-cafe">
             </div>
             <div class="full">
-              <div class="url-box" id="publicUrlBox"></div>
-            </div>
-            <div class="full">
               <label for="fieldMapsUrl">Google business link</label>
               <input id="fieldMapsUrl" type="text" placeholder="Google Maps / place URL">
+            </div>
+            <div class="full auto-sync-bar">
+              <div>
+                <label for="autoSyncHours">Auto Google sync (hours)</label>
+                <input id="autoSyncHours" type="number" min="0" max="168" step="1" value="24" title="0 disables auto sync">
+              </div>
+              <button type="button" class="btn-secondary" id="saveAutoSyncBtn">Save interval</button>
             </div>
           </div>
           <div class="hours-toolbar">
@@ -334,13 +338,6 @@
             <label class="manual-opt">
               <input id="fieldManual" type="checkbox"> Manual hours
             </label>
-          </div>
-          <div class="auto-sync-bar">
-            <div>
-              <label for="autoSyncHours">Auto Google sync (hours)</label>
-              <input id="autoSyncHours" type="number" min="0" max="168" step="1" value="24" title="0 disables auto sync">
-            </div>
-            <button type="button" class="btn-secondary" id="saveAutoSyncBtn">Save interval</button>
           </div>
           <p class="hint" id="syncMeta"></p>
           <table class="hours-table">
@@ -623,7 +620,6 @@
       const editor = document.getElementById('editor');
       const hoursBody = document.getElementById('hoursBody');
       const tabletFrame = document.getElementById('tabletFrame');
-      const publicUrlBox = document.getElementById('publicUrlBox');
 
       let customers = [];
       let selectedId = null;
@@ -1275,8 +1271,6 @@
         renderGallery(customer);
         logoDataUrl = null;
         document.getElementById('logoFile').value = '';
-        const url = publicUrl(customer.slug);
-        publicUrlBox.innerHTML = `<strong>Public page:</strong> <a href="${url}" target="_blank" rel="noopener">${url}</a>`;
         if (customer.lastSyncedAt) {
           document.getElementById('syncMeta').textContent =
             'Last sync: ' + new Date(customer.lastSyncedAt).toLocaleString() +
