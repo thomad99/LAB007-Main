@@ -120,8 +120,77 @@
       border: none;
       box-shadow: 0 8px 22px rgba(52, 211, 153, .28);
       min-width: 168px;
+      position: relative;
     }
     .btn-sync:hover { filter: brightness(1.05); }
+    .btn-sync:disabled,
+    .btn:disabled,
+    .btn-secondary:disabled {
+      opacity: .72;
+      cursor: wait;
+      filter: none;
+    }
+    .btn-sync.is-busy,
+    .btn-secondary.is-busy {
+      position: relative;
+      padding-left: 2.4rem;
+    }
+    .btn-sync.is-busy::before,
+    .btn-secondary.is-busy::before {
+      content: '';
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      width: 14px;
+      height: 14px;
+      margin-top: -7px;
+      border: 2px solid currentColor;
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: sh-spin .7s linear infinite;
+    }
+    @keyframes sh-spin {
+      to { transform: rotate(360deg); }
+    }
+    .status.is-busy {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status.is-busy::before {
+      content: '';
+      width: 12px;
+      height: 12px;
+      border: 2px solid var(--accent);
+      border-right-color: transparent;
+      border-radius: 50%;
+      animation: sh-spin .7s linear infinite;
+      flex: 0 0 auto;
+    }
+    .auto-sync-bar {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.03);
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px 16px;
+      align-items: end;
+    }
+    .auto-sync-bar label {
+      margin: 0;
+      display: block;
+      font-size: .72rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .auto-sync-bar input {
+      width: 88px;
+      margin-top: 4px;
+    }
+    .auto-sync-bar .hint { margin: 0; flex: 1 1 180px; }
     .hours-toolbar {
       margin-top: 14px;
       display: flex;
@@ -254,7 +323,8 @@
             </div>
             <div class="full">
               <label for="fieldMapsUrl">Google business link</label>
-              <input id="fieldMapsUrl" type="text" placeholder="https://share.google/… or Maps / hours link">
+              <input id="fieldMapsUrl" type="text" placeholder="Paste full Maps place URL (preferred) or share.google link">
+              <p class="hint">Prefer a full <strong>Google Maps place</strong> URL (<code>/maps/place/…</code>). Short <code>share.google</code> links can open a different business with a similar name.</p>
             </div>
           </div>
           <div class="url-box" id="publicUrlBox"></div>
@@ -263,6 +333,14 @@
             <label class="manual-opt">
               <input id="fieldManual" type="checkbox"> Manual hours
             </label>
+          </div>
+          <div class="auto-sync-bar">
+            <div>
+              <label for="autoSyncHours">Auto Google sync (hours)</label>
+              <input id="autoSyncHours" type="number" min="0" max="168" step="1" value="24" title="0 disables auto sync">
+            </div>
+            <button type="button" class="btn-secondary" id="saveAutoSyncBtn">Save interval</button>
+            <p class="hint">Default 24. Applies to all customers. Set 0 to turn off automatic sync.</p>
           </div>
           <p class="hint" id="syncMeta"></p>
           <table class="hours-table">
@@ -458,7 +536,6 @@
         <div class="tab-panel" id="tab-esp32">
           <p class="hint">
             Screens are designed as <strong>HTML</strong> (live page) and a matching <strong>high-res PNG</strong>.
-            ESP32 / e-ink firmware can still download a separate 1-bit BMP if you need it.
             Default panel size is <strong>800×480</strong>.
           </p>
           <div class="form-grid" style="margin-top:12px;">
@@ -555,6 +632,27 @@
       let dragState = null;
       let suppressPropsSync = false;
       let syncingScreenFields = false;
+      let settings = { autoSyncIntervalHours: 24 };
+
+      function setBusy(btn, busy, busyLabel) {
+        if (!btn) return;
+        if (busy) {
+          if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+          btn.disabled = true;
+          btn.classList.add('is-busy');
+          if (busyLabel) btn.textContent = busyLabel;
+        } else {
+          btn.disabled = false;
+          btn.classList.remove('is-busy');
+          if (btn.dataset.label) btn.textContent = btn.dataset.label;
+        }
+      }
+
+      function setStatus(msg, isErr, isBusy) {
+        statusEl.textContent = msg || '';
+        statusEl.classList.toggle('err', !!isErr);
+        statusEl.classList.toggle('is-busy', !!isBusy && !isErr);
+      }
 
       function currentColorMode() {
         return document.getElementById('screenColorMode').value === 'grayscale' ? 'grayscale' : '4color';
@@ -662,11 +760,6 @@
 
       function apiFetch(url, options) {
         return fetch(url, Object.assign({ credentials: 'omit' }, options || {}));
-      }
-
-      function setStatus(msg, isErr) {
-        statusEl.textContent = msg || '';
-        statusEl.classList.toggle('err', !!isErr);
       }
 
       function selected() {
@@ -1135,8 +1228,8 @@
         }
         customerList.innerHTML = customers.map((c) => `
           <button type="button" class="customer-item ${c.id === selectedId ? 'active' : ''}" data-id="${escapeHtml(c.id)}">
-            <strong>${escapeHtml(c.name)}</strong>
-            <span>/SmartHours/v/${escapeHtml(c.slug)}</span>
+            <strong>${escapeHtml(c.name || 'Untitled')}</strong>
+            <span>/SmartHours/v/${escapeHtml(c.slug || '…')}</span>
           </button>
         `).join('');
       }
@@ -1146,9 +1239,16 @@
         selectedElId = null;
         document.getElementById('fieldName').value = customer.name || '';
         document.getElementById('fieldSlug').value = customer.slug || '';
+        const slugEl = document.getElementById('fieldSlug');
+        if (customer.slug) slugEl.dataset.touched = '1';
+        else delete slugEl.dataset.touched;
         document.getElementById('fieldMapsUrl').value = customer.googleMapsUrl || customer.googlePlaceId || '';
         document.getElementById('fieldManual').checked = !!customer.useManualHours;
-        renderHoursForm(customer.hours);
+        const hoursForForm =
+          customer.useManualHours || !customer.googleHours
+            ? customer.hours || defaultHours()
+            : customer.googleHours;
+        renderHoursForm(hoursForForm);
         writeDesignToForm(customer.design);
         writeEinkToForm(customer.eink);
         renderGallery(customer);
@@ -1158,9 +1258,11 @@
         publicUrlBox.innerHTML = `<strong>Public page:</strong> <a href="${url}" target="_blank" rel="noopener">${url}</a>`;
         if (customer.lastSyncedAt) {
           document.getElementById('syncMeta').textContent =
-            'Last sync: ' + new Date(customer.lastSyncedAt).toLocaleString();
+            'Last sync: ' + new Date(customer.lastSyncedAt).toLocaleString() +
+            (customer.googleDisplayName ? ` · Google: ${customer.googleDisplayName}` : '') +
+            (customer.lastSyncNote ? ` · ${customer.lastSyncNote}` : '');
         } else if (customer.lastSyncError) {
-          document.getElementById('syncMeta').textContent = 'Last sync failed';
+          document.getElementById('syncMeta').textContent = 'Last sync failed: ' + customer.lastSyncError;
         } else {
           document.getElementById('syncMeta').textContent = '';
         }
@@ -1170,11 +1272,14 @@
       }
 
       async function loadCustomers() {
-        setStatus('Loading…');
+        setStatus('Loading…', false, true);
         const res = await apiFetch('/api/smarthours/customers');
         if (!res.ok) throw new Error('Failed to load customers');
         const data = await res.json();
         customers = data.customers || [];
+        settings = data.settings || settings;
+        const autoEl = document.getElementById('autoSyncHours');
+        if (autoEl) autoEl.value = String(settings.autoSyncIntervalHours ?? 24);
         renderList();
         if (selectedId) {
           const c = selected();
@@ -1264,11 +1369,9 @@
         const base = (document.getElementById('espBaseUrl').value || location.origin).replace(/\/$/, '');
         const htmlUrl = `${base}/SmartHours/v/${encodeURIComponent(c.slug)}`;
         const pngUrl = displayPngUrl(c);
-        const bmpUrl = `${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/eink.bmp`;
         document.getElementById('einkUrlBox').innerHTML =
           `<div><strong>HTML display:</strong> <a href="${htmlUrl}" target="_blank" rel="noopener">${htmlUrl}</a></div>` +
-          `<div style="margin-top:6px"><strong>PNG image:</strong> <a href="${pngUrl}" target="_blank" rel="noopener">${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/display.png</a></div>` +
-          `<div style="margin-top:6px"><strong>Legacy BMP (ESP32):</strong> <a href="${bmpUrl}" target="_blank" rel="noopener">${bmpUrl}</a></div>`;
+          `<div style="margin-top:6px"><strong>PNG image:</strong> <a href="${pngUrl}" target="_blank" rel="noopener">${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/display.png</a></div>`;
         document.getElementById('einkPreview').src = pngUrl;
         showDesignEinkPreview(c);
         loadEspSketch().catch((err) => setStatus(err.message, true));
@@ -1344,8 +1447,8 @@
       document.getElementById('newCustomerBtn').addEventListener('click', () => {
         const temp = {
           id: 'tmp-' + Date.now(),
-          name: 'New Customer',
-          slug: 'new-customer',
+          name: '',
+          slug: '',
           googlePlaceId: '',
           googleMapsUrl: '',
           useManualHours: false,
@@ -1357,7 +1460,8 @@
         selectedId = temp.id;
         renderList();
         fillEditor(temp);
-        setStatus('Fill details, then Save Customer.');
+        document.getElementById('fieldName').focus();
+        setStatus('Enter a customer name, paste a Maps place URL, then Save.');
       });
 
       customerList.addEventListener('click', (event) => {
@@ -1477,6 +1581,7 @@
 
       document.getElementById('syncOneBtn').addEventListener('click', async () => {
         const c = selected();
+        const btn = document.getElementById('syncOneBtn');
         if (!c || String(c.id).startsWith('tmp-')) {
           setStatus('Save the customer first, then sync.', true);
           return;
@@ -1487,32 +1592,71 @@
               return;
             }
           }
+          setBusy(btn, true, 'Syncing…');
+          setStatus('Syncing Google hours…', false, true);
           await saveCustomer({ omitHours: true, silent: true });
-          setStatus('Syncing Google hours…');
           const id = selectedId;
           const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(id) + '/sync', { method: 'POST' });
           const data = await res.json().catch(() => ({}));
           await loadCustomers();
           if (!res.ok) throw new Error(data.error || data.customer?.lastSyncError || 'Sync failed');
           const name = data.displayName || data.customer?.googleDisplayName || '';
+          const note = data.syncNote || data.customer?.lastSyncNote || '';
           setStatus(
             (data.changed ? 'Google hours updated' : 'Synced — no hour changes') +
               (name ? ` (${name})` : '') +
+              (note ? ` — ${note}` : '') +
               '.'
           );
           if (selected()) fillEditor(selected());
         } catch (err) {
           setStatus(err.message || 'Sync failed', true);
+        } finally {
+          setBusy(btn, false);
         }
       });
 
       document.getElementById('syncAllBtn').addEventListener('click', async () => {
-        setStatus('Syncing all customers…');
-        const res = await apiFetch('/api/smarthours/sync-all', { method: 'POST' });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'Sync failed');
-        await loadCustomers();
-        setStatus(`Synced ${data.synced || 0} · changed ${data.changed || 0} · errors ${data.errors || 0}`);
+        const btn = document.getElementById('syncAllBtn');
+        try {
+          setBusy(btn, true, 'Syncing…');
+          setStatus('Syncing all customers…', false, true);
+          const res = await apiFetch('/api/smarthours/sync-all', { method: 'POST' });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Sync failed');
+          await loadCustomers();
+          setStatus(`Synced ${data.synced || 0} · changed ${data.changed || 0} · errors ${data.errors || 0}`);
+        } catch (err) {
+          setStatus(err.message || 'Sync failed', true);
+        } finally {
+          setBusy(btn, false);
+        }
+      });
+
+      document.getElementById('saveAutoSyncBtn').addEventListener('click', async () => {
+        const btn = document.getElementById('saveAutoSyncBtn');
+        try {
+          const hours = Number(document.getElementById('autoSyncHours').value);
+          setBusy(btn, true, 'Saving…');
+          const res = await apiFetch('/api/smarthours/settings', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ autoSyncIntervalHours: hours })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Failed to save sync interval');
+          settings = data.settings || settings;
+          document.getElementById('autoSyncHours').value = String(settings.autoSyncIntervalHours ?? 24);
+          setStatus(
+            settings.autoSyncIntervalHours > 0
+              ? `Auto Google sync set to every ${settings.autoSyncIntervalHours} hour(s).`
+              : 'Auto Google sync turned off.'
+          );
+        } catch (err) {
+          setStatus(err.message || 'Failed to save sync interval', true);
+        } finally {
+          setBusy(btn, false);
+        }
       });
 
       document.getElementById('logoFile').addEventListener('change', (event) => {
@@ -1652,10 +1796,31 @@
         if (!el) return;
         el.addEventListener('input', () => {
           const c = selected();
-          if (c && id === 'fieldName') c.name = el.value;
+          if (c && id === 'fieldName') {
+            c.name = el.value;
+            const slugEl = document.getElementById('fieldSlug');
+            if (slugEl && !slugEl.dataset.touched) {
+              const slug = String(el.value || '')
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+                .slice(0, 64);
+              slugEl.value = slug;
+              c.slug = slug;
+            }
+            renderList();
+          }
           renderCanvas();
         });
         el.addEventListener('change', () => renderCanvas());
+      });
+
+      document.getElementById('fieldSlug').addEventListener('input', () => {
+        document.getElementById('fieldSlug').dataset.touched = '1';
+        const c = selected();
+        if (c) c.slug = document.getElementById('fieldSlug').value.trim();
+        renderList();
       });
 
       bindColorPair('bgColor', 'bgColorPick');
