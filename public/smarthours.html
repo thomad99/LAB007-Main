@@ -879,10 +879,6 @@
         return inSlot(day.open, day.close) || inSlot(day.open2, day.close2);
       }
 
-      function publicUrl(slug) {
-        return `${location.origin}/SmartHours/v/${encodeURIComponent(slug)}`;
-      }
-
       function scaleTablet() {
         const stage = tabletFrame.parentElement;
         if (!stage) return;
