@@ -216,37 +216,81 @@
     .form-grid .url-box { margin-top: 0; }
     .url-box a { color: var(--accent); word-break: break-all; }
     .design-layout {
-      display: grid; grid-template-columns: 280px 1fr; gap: 16px;
+      display: grid; grid-template-columns: 260px 1fr; gap: 12px;
     }
     @media (max-width: 900px) { .design-layout { grid-template-columns: 1fr; } }
-    .controls { display: grid; gap: 12px; }
+    .controls {
+      display: grid; gap: 8px; align-content: start;
+      max-height: min(78vh, 900px); overflow: auto; padding-right: 4px;
+    }
+    .controls label {
+      margin-bottom: 2px; font-size: .68rem;
+    }
+    .controls input, .controls select, .controls textarea {
+      padding: 7px 8px; font-size: .85rem;
+    }
+    .controls .btn, .controls .btn-secondary, .controls .btn-danger {
+      padding: 7px 9px; font-size: .78rem; border-radius: 8px;
+    }
+    .controls .hint { margin-top: 4px; font-size: .78rem; }
+    .ctrl-block {
+      padding: 8px; border: 1px solid var(--line); border-radius: 10px;
+      background: rgba(255,255,255,.02); display: grid; gap: 6px;
+    }
+    .ctrl-block > .block-title {
+      margin: 0; font-size: .68rem; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--muted); font-weight: 700;
+    }
+    .add-row {
+      display: flex; flex-wrap: wrap; gap: 5px;
+    }
+    .add-row .btn-secondary.active,
+    .add-row .btn-secondary.active:hover {
+      background: var(--accent-dim);
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .toggle-row {
+      display: flex; flex-wrap: wrap; gap: 6px 10px;
+    }
+    .toggle-row label {
+      display: inline-flex; gap: 5px; align-items: center;
+      text-transform: none; letter-spacing: 0; font-size: .78rem;
+      color: var(--text); margin: 0; font-weight: 500;
+    }
+    .toggle-row input { width: auto; margin: 0; }
     .canvas-stage {
       display: flex; justify-content: center; align-items: flex-start;
-      min-height: 520px; overflow: auto; padding: 12px; background: #070b14; border-radius: 12px;
+      min-height: 480px; overflow: auto; padding: 10px; background: #070b14; border-radius: 12px;
       border: 1px solid var(--line);
     }
     .tablet-frame {
-      width: 800px; height: 480px; position: relative; border-radius: 18px;
-      overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.45); background: #111;
+      width: 800px; height: 480px; position: relative; border-radius: 14px;
+      overflow: hidden; box-shadow: 0 16px 48px rgba(0,0,0,.45); background: #111;
       flex-shrink: 0;
     }
-    .palette-swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .palette-swatches { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
     .palette-swatch {
-      width: 28px; height: 28px; border-radius: 6px; border: 2px solid rgba(255,255,255,.25);
+      width: 22px; height: 22px; border-radius: 5px; border: 2px solid rgba(255,255,255,.25);
       cursor: pointer; padding: 0;
     }
     .palette-swatch.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
     .screen-settings {
-      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
-      padding-bottom: 14px; border-bottom: 1px solid var(--line);
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 0;
+      padding-bottom: 0; border-bottom: 0;
     }
     @media (max-width: 700px) { .screen-settings { grid-template-columns: 1fr; } }
+    .color-triple {
+      display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
+    }
+    .color-triple .color-row { grid-template-columns: 1fr 32px; gap: 4px; }
     .canvas-el {
       position: absolute; border: 1px dashed transparent; cursor: grab; user-select: none;
       padding: 0; overflow: hidden; box-sizing: border-box;
     }
     .canvas-el:hover, .canvas-el.selected { border-color: var(--accent); }
     .canvas-el.dragging { cursor: grabbing; opacity: .92; z-index: 5; }
+    .canvas-el.sketching { cursor: crosshair; }
     .canvas-el .handle {
       position: absolute; right: 0; bottom: 0; width: 14px; height: 14px;
       background: var(--accent); border-radius: 3px 0 0 0; cursor: nwse-resize;
@@ -259,15 +303,23 @@
       display: flex; justify-content: space-between; gap: 12px;
       padding: 10px 4px; border-bottom: 1px solid rgba(255,255,255,.08); font-weight: 600;
     }
+    .preview-sketch {
+      width: 100%; height: 100%; object-fit: contain; display: block; background: transparent;
+      pointer-events: none;
+    }
+    .preview-sketch-empty {
+      width: 100%; height: 100%; display: grid; place-items: center;
+      opacity: .5; font-size: .75rem; border: 1px dashed currentColor; color: inherit;
+    }
     .hint { color: var(--muted); font-size: .86rem; line-height: 1.45; margin-top: 10px; }
     .color-row { display: grid; grid-template-columns: 1fr 48px; gap: 8px; align-items: center; }
-    .gallery-list { display: grid; gap: 8px; margin-top: 10px; max-height: 220px; overflow: auto; }
+    .gallery-list { display: grid; gap: 6px; margin-top: 6px; max-height: 140px; overflow: auto; }
     .gallery-item {
-      display: grid; grid-template-columns: 56px 1fr auto; gap: 8px; align-items: center;
-      border: 1px solid var(--line); border-radius: 10px; padding: 6px; background: rgba(255,255,255,.02);
+      display: grid; grid-template-columns: 44px 1fr auto; gap: 6px; align-items: center;
+      border: 1px solid var(--line); border-radius: 8px; padding: 4px; background: rgba(255,255,255,.02);
     }
-    .gallery-item img { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; background: #000; }
-    .gallery-item label { display: flex; gap: 6px; align-items: center; font-size: .82rem; color: var(--muted); text-transform: none; letter-spacing: 0; margin: 0; }
+    .gallery-item img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; background: #000; }
+    .gallery-item label { display: flex; gap: 6px; align-items: center; font-size: .75rem; color: var(--muted); text-transform: none; letter-spacing: 0; margin: 0; }
     .preview-badge {
       width: 100%; height: 100%; display: grid; place-items: center; border-radius: 16px;
       font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
@@ -275,7 +327,7 @@
     .preview-slide {
       width: 100%; height: 100%; object-fit: cover; border-radius: 12px; background: #000; display: block;
     }
-    .el-props { margin-top: 10px; display: grid; gap: 8px; }
+    .el-props { margin-top: 0; display: grid; gap: 6px; }
     .hidden-block { display: none !important; }
     .canvas-el .del-x {
       position: absolute; top: 2px; right: 2px; width: 22px; height: 22px; border: 0;
@@ -359,169 +411,206 @@
         <div class="tab-panel" id="tab-design">
           <div class="design-layout">
             <div class="controls">
-              <div class="screen-settings">
-                <div>
-                  <label for="screenOrientation">Orientation</label>
-                  <select id="screenOrientation">
-                    <option value="landscape">Landscape</option>
-                    <option value="portrait">Portrait</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="screenColorMode">Display colors</label>
-                  <select id="screenColorMode">
-                    <option value="4color">4-color (B / W / R / Y)</option>
-                    <option value="grayscale">Grayscale</option>
-                  </select>
-                </div>
-                <div>
-                  <label for="einkWidthDesign">Width (px)</label>
-                  <input id="einkWidthDesign" type="number" min="200" max="1200" value="800">
-                </div>
-                <div>
-                  <label for="einkHeightDesign">Height (px)</label>
-                  <input id="einkHeightDesign" type="number" min="120" max="1200" value="480">
-                </div>
-              </div>
-              <div>
-                <label for="bgColor">Background</label>
-                <div class="color-row">
-                  <input id="bgColor" type="text" value="#FFFFFF">
-                  <input id="bgColorPick" type="color" value="#FFFFFF">
-                </div>
-                <div class="palette-swatches" data-palette-for="bg"></div>
-              </div>
-              <div>
-                <label for="textColor">Text color</label>
-                <div class="color-row">
-                  <input id="textColor" type="text" value="#000000">
-                  <input id="textColorPick" type="color" value="#000000">
-                </div>
-                <div class="palette-swatches" data-palette-for="text"></div>
-              </div>
-              <div>
-                <label for="accentColor">Accent color</label>
-                <div class="color-row">
-                  <input id="accentColor" type="text" value="#FF0000">
-                  <input id="accentColorPick" type="color" value="#FF0000">
-                </div>
-                <div class="palette-swatches" data-palette-for="accent"></div>
-              </div>
-              <div>
-                <label for="fontFamily">Font style</label>
-                <select id="fontFamily">
-                  <option value='Georgia, "Times New Roman", serif'>Georgia (serif)</option>
-                  <option value='"Palatino Linotype", Palatino, serif'>Palatino</option>
-                  <option value='"Trebuchet MS", sans-serif'>Trebuchet</option>
-                  <option value='"Segoe UI", Arial, sans-serif'>Segoe UI</option>
-                  <option value='Impact, Haettenschweiler, sans-serif'>Impact</option>
-                  <option value='"Courier New", monospace'>Courier</option>
-                </select>
-              </div>
-              <div class="form-grid">
-                <div>
-                  <label for="titleSize">Title size</label>
-                  <input id="titleSize" type="number" min="12" max="72" value="34">
-                </div>
-                <div>
-                  <label for="hoursSize">Hours size</label>
-                  <input id="hoursSize" type="number" min="12" max="48" value="22">
-                </div>
-                <div>
-                  <label for="statusSize">Status size</label>
-                  <input id="statusSize" type="number" min="12" max="48" value="20">
-                </div>
-              </div>
-              <div>
-                <label for="logoFile">Logo image</label>
-                <input id="logoFile" type="file" accept="image/*">
-              </div>
-              <div>
-                <label for="statusMode">OPEN / CLOSED style</label>
-                <select id="statusMode">
-                  <option value="badge">Large OPEN / CLOSED badge</option>
-                  <option value="text">Simple text</option>
-                  <option value="image">Custom uploaded images</option>
-                </select>
-              </div>
-              <div class="form-grid">
-                <div>
-                  <label for="openMediaSelect">OPEN image</label>
-                  <select id="openMediaSelect"><option value="">— built-in badge —</option></select>
-                </div>
-                <div>
-                  <label for="closedMediaSelect">CLOSED image</label>
-                  <select id="closedMediaSelect"><option value="">— built-in badge —</option></select>
-                </div>
-              </div>
-              <div class="form-grid">
-                <button type="button" class="btn-secondary" id="addTextBtn">+ Text</button>
-                <button type="button" class="btn-secondary" id="addImageBtn">+ Image</button>
-                <button type="button" class="btn-secondary" id="addHoursBtn">+ Hours</button>
-                <button type="button" class="btn-secondary" id="addStatusBtn">+ OPEN/CLOSED</button>
-                <button type="button" class="btn-secondary" id="addLogoBtn">+ Logo</button>
-                <button type="button" class="btn-secondary" id="addTitleBtn">+ Title</button>
-                <button type="button" class="btn-secondary" id="addSlideshowBtn">+ Slideshow</button>
-                <button type="button" class="btn-danger" id="deleteElBtn">Delete selected</button>
-              </div>
-              <div id="elProps" class="el-props hidden-block">
-                <div id="elTextProps">
-                  <label for="elText">Selected text</label>
-                  <textarea id="elText" rows="2" placeholder="Text content"></textarea>
-                  <div class="form-grid">
-                    <div>
-                      <label for="elFontSize">Text size</label>
-                      <input id="elFontSize" type="number" min="10" max="120" value="28">
-                    </div>
-                    <div>
-                      <label for="elAlign">Align</label>
-                      <select id="elAlign">
-                        <option value="left">Left</option>
-                        <option value="center">Center</option>
-                        <option value="right">Right</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label for="elColor">Text color</label>
-                      <input id="elColor" type="color" value="#f6f8ff">
-                    </div>
+              <div class="ctrl-block">
+                <p class="block-title">Screen</p>
+                <div class="screen-settings">
+                  <div>
+                    <label for="screenOrientation">Orientation</label>
+                    <select id="screenOrientation">
+                      <option value="landscape">Landscape</option>
+                      <option value="portrait">Portrait</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="screenColorMode">Colors</label>
+                    <select id="screenColorMode">
+                      <option value="4color">4-color</option>
+                      <option value="grayscale">Grayscale</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="einkWidthDesign">W</label>
+                    <input id="einkWidthDesign" type="number" min="200" max="1200" value="800">
+                  </div>
+                  <div>
+                    <label for="einkHeightDesign">H</label>
+                    <input id="einkHeightDesign" type="number" min="120" max="1200" value="480">
                   </div>
                 </div>
-                <div id="elImageProps" class="hidden-block">
-                  <label for="elMediaSelect">Image from gallery</label>
-                  <select id="elMediaSelect"></select>
-                  <label for="elFit">Fit</label>
-                  <select id="elFit">
-                    <option value="cover">Cover</option>
-                    <option value="contain">Contain</option>
-                  </select>
+              </div>
+
+              <div class="ctrl-block">
+                <p class="block-title">Look</p>
+                <div class="color-triple">
+                  <div>
+                    <label for="bgColor">BG</label>
+                    <div class="color-row">
+                      <input id="bgColor" type="text" value="#FFFFFF">
+                      <input id="bgColorPick" type="color" value="#FFFFFF">
+                    </div>
+                    <div class="palette-swatches" data-palette-for="bg"></div>
+                  </div>
+                  <div>
+                    <label for="textColor">Text</label>
+                    <div class="color-row">
+                      <input id="textColor" type="text" value="#000000">
+                      <input id="textColorPick" type="color" value="#000000">
+                    </div>
+                    <div class="palette-swatches" data-palette-for="text"></div>
+                  </div>
+                  <div>
+                    <label for="accentColor">Accent</label>
+                    <div class="color-row">
+                      <input id="accentColor" type="text" value="#FF0000">
+                      <input id="accentColorPick" type="color" value="#FF0000">
+                    </div>
+                    <div class="palette-swatches" data-palette-for="accent"></div>
+                  </div>
+                </div>
+                <div class="form-grid" style="grid-template-columns:1.4fr .7fr .7fr .7fr;gap:6px;">
+                  <div>
+                    <label for="fontFamily">Font</label>
+                    <select id="fontFamily">
+                      <option value='Georgia, "Times New Roman", serif'>Georgia</option>
+                      <option value='"Palatino Linotype", Palatino, serif'>Palatino</option>
+                      <option value='"Trebuchet MS", sans-serif'>Trebuchet</option>
+                      <option value='"Segoe UI", Arial, sans-serif'>Segoe UI</option>
+                      <option value='Impact, Haettenschweiler, sans-serif'>Impact</option>
+                      <option value='"Courier New", monospace'>Courier</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label for="titleSize">Title</label>
+                    <input id="titleSize" type="number" min="12" max="72" value="34">
+                  </div>
+                  <div>
+                    <label for="hoursSize">Hours</label>
+                    <input id="hoursSize" type="number" min="12" max="48" value="22">
+                  </div>
+                  <div>
+                    <label for="statusSize">Status</label>
+                    <input id="statusSize" type="number" min="12" max="48" value="20">
+                  </div>
+                </div>
+                <div class="form-grid" style="gap:6px;">
+                  <div>
+                    <label for="logoFile">Logo</label>
+                    <input id="logoFile" type="file" accept="image/*">
+                  </div>
+                  <div>
+                    <label for="statusMode">OPEN style</label>
+                    <select id="statusMode">
+                      <option value="badge">Badge</option>
+                      <option value="text">Text</option>
+                      <option value="image">Images</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-grid" style="gap:6px;">
+                  <div>
+                    <label for="openMediaSelect">OPEN img</label>
+                    <select id="openMediaSelect"><option value="">— badge —</option></select>
+                  </div>
+                  <div>
+                    <label for="closedMediaSelect">CLOSED img</label>
+                    <select id="closedMediaSelect"><option value="">— badge —</option></select>
+                  </div>
                 </div>
               </div>
-              <div class="form-grid">
-                <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showLogo" checked> Logo</label>
-                <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showTitle" checked> Title</label>
-                <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showStatus" checked> Open status</label>
-                <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showHours" checked> Hours list</label>
-                <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);"><input type="checkbox" id="showSlideshow"> Slideshow</label>
+
+              <div class="ctrl-block">
+                <p class="block-title">Elements</p>
+                <div class="add-row">
+                  <button type="button" class="btn-secondary" id="addTextBtn">+ Text</button>
+                  <button type="button" class="btn-secondary" id="addSketchBtn">+ Sketch</button>
+                  <button type="button" class="btn-secondary" id="addImageBtn">+ Image</button>
+                  <button type="button" class="btn-secondary" id="addHoursBtn">+ Hours</button>
+                  <button type="button" class="btn-secondary" id="addStatusBtn">+ Status</button>
+                  <button type="button" class="btn-secondary" id="addLogoBtn">+ Logo</button>
+                  <button type="button" class="btn-secondary" id="addTitleBtn">+ Title</button>
+                  <button type="button" class="btn-secondary" id="addSlideshowBtn">+ Slides</button>
+                  <button type="button" class="btn-danger" id="deleteElBtn">Delete</button>
+                </div>
+                <div class="toggle-row">
+                  <label><input type="checkbox" id="showLogo" checked> Logo</label>
+                  <label><input type="checkbox" id="showTitle" checked> Title</label>
+                  <label><input type="checkbox" id="showStatus" checked> Status</label>
+                  <label><input type="checkbox" id="showHours" checked> Hours</label>
+                  <label><input type="checkbox" id="showSlideshow"> Slides</label>
+                </div>
+                <div id="elProps" class="el-props hidden-block">
+                  <div id="elTextProps">
+                    <label for="elText">Text</label>
+                    <textarea id="elText" rows="2" placeholder="Text content"></textarea>
+                    <div class="form-grid" style="gap:6px;">
+                      <div>
+                        <label for="elFontSize">Size</label>
+                        <input id="elFontSize" type="number" min="10" max="120" value="28">
+                      </div>
+                      <div>
+                        <label for="elAlign">Align</label>
+                        <select id="elAlign">
+                          <option value="left">Left</option>
+                          <option value="center">Center</option>
+                          <option value="right">Right</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label for="elColor">Color</label>
+                        <input id="elColor" type="color" value="#f6f8ff">
+                      </div>
+                    </div>
+                  </div>
+                  <div id="elImageProps" class="hidden-block">
+                    <label for="elMediaSelect">Gallery image</label>
+                    <select id="elMediaSelect"></select>
+                    <label for="elFit">Fit</label>
+                    <select id="elFit">
+                      <option value="cover">Cover</option>
+                      <option value="contain">Contain</option>
+                    </select>
+                  </div>
+                  <div id="elSketchProps" class="hidden-block">
+                    <div class="form-grid" style="gap:6px;">
+                      <div>
+                        <label for="sketchPenColor">Pen</label>
+                        <input id="sketchPenColor" type="color" value="#000000">
+                      </div>
+                      <div>
+                        <label for="sketchPenSize">Size</label>
+                        <input id="sketchPenSize" type="number" min="1" max="24" value="3">
+                      </div>
+                    </div>
+                    <div class="add-row" style="margin-top:4px;">
+                      <button type="button" class="btn-secondary" id="sketchDrawBtn">Draw</button>
+                      <button type="button" class="btn-secondary" id="sketchMoveBtn">Move</button>
+                      <button type="button" class="btn-danger" id="sketchClearBtn">Clear</button>
+                    </div>
+                    <p class="hint" style="margin:2px 0 0;">Select Draw, then write on the sketch box.</p>
+                  </div>
+                </div>
               </div>
-              <div>
-                <label for="slideshowInterval">Slideshow interval (seconds)</label>
-                <input id="slideshowInterval" type="number" min="2" max="300" value="8">
-              </div>
-              <div>
-                <label for="galleryFile">Upload gallery images</label>
-                <input id="galleryFile" type="file" accept="image/*" multiple>
-                <p class="hint">Upload photos, then tick which ones rotate in the slideshow. You can also pick OPEN/CLOSED images from the gallery.</p>
+
+              <div class="ctrl-block">
+                <p class="block-title">Gallery</p>
+                <div class="form-grid" style="gap:6px;">
+                  <div>
+                    <label for="slideshowInterval">Slide sec</label>
+                    <input id="slideshowInterval" type="number" min="2" max="300" value="8">
+                  </div>
+                  <div>
+                    <label for="galleryFile">Upload</label>
+                    <input id="galleryFile" type="file" accept="image/*" multiple>
+                  </div>
+                </div>
                 <div id="galleryList" class="gallery-list"></div>
               </div>
-              <p class="hint">Drag elements on the tablet canvas. Use the green corner to resize. Default panel is <strong>800×480</strong> landscape; switch to portrait or change size above.</p>
+
               <button type="button" class="btn" id="saveDesignBtn">Save Design</button>
-              <div id="designEinkPreviewWrap" class="hidden-block" style="margin-top:14px;">
-                <p class="hint" style="margin-top:0;">High-res display image (PNG) — same look as the live HTML page</p>
-                <div style="background:#0a1020;border:1px solid var(--line);border-radius:12px;padding:12px;overflow:auto;">
+              <div id="designEinkPreviewWrap" class="hidden-block">
+                <div style="background:#0a1020;border:1px solid var(--line);border-radius:10px;padding:8px;overflow:auto;">
                   <img id="designEinkPreview" alt="Display preview" style="max-width:100%;height:auto;background:#fff;image-rendering:auto;">
                 </div>
-                <p class="hint">Also available as HTML at the public SmartHours link and as <code>display.png</code>.</p>
               </div>
             </div>
             <div class="canvas-stage">
@@ -626,6 +715,7 @@
       let selectedElId = null;
       let logoDataUrl = null;
       let dragState = null;
+      let sketchMode = 'draw';
       let suppressPropsSync = false;
       let syncingScreenFields = false;
       let settings = { autoSyncIntervalHours: 24 };
@@ -994,7 +1084,16 @@
           slideshow: { x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.round(h * 0.35) },
           hours: { x: 24, y: Math.round(h * 0.48), w: w - 48, h: Math.max(120, h - Math.round(h * 0.48) - 16) },
           text: { x: 40, y: 40, w: Math.min(480, w - 80), h: 56, text: 'New text', fontSize: 28, color: '', align: 'center', bold: true },
-          image: { x: 40, y: Math.round(h * 0.35), w: w - 80, h: Math.round(h * 0.4), mediaId: '', fit: 'cover' }
+          image: { x: 40, y: Math.round(h * 0.35), w: w - 80, h: Math.round(h * 0.4), mediaId: '', fit: 'cover' },
+          sketch: {
+            x: Math.round(w * 0.1),
+            y: Math.round(h * 0.55),
+            w: Math.round(w * 0.8),
+            h: Math.round(h * 0.35),
+            dataUrl: '',
+            penColor: '#000000',
+            penSize: 3
+          }
         };
         const base = map[type] || map.text;
         return Object.assign({ id: newElId(type), type }, base);
@@ -1074,27 +1173,35 @@
         const props = document.getElementById('elProps');
         const textProps = document.getElementById('elTextProps');
         const imgProps = document.getElementById('elImageProps');
+        const sketchProps = document.getElementById('elSketchProps');
         const el = selectedLayoutEl();
         const c = selected();
-        if (!el || (el.type !== 'text' && el.type !== 'image')) {
+        if (!el || (el.type !== 'text' && el.type !== 'image' && el.type !== 'sketch')) {
           props.classList.add('hidden-block');
           return;
         }
         props.classList.remove('hidden-block');
         suppressPropsSync = true;
+        textProps.classList.add('hidden-block');
+        imgProps.classList.add('hidden-block');
+        sketchProps.classList.add('hidden-block');
         if (el.type === 'text') {
           textProps.classList.remove('hidden-block');
-          imgProps.classList.add('hidden-block');
           document.getElementById('elText').value = el.text || '';
           document.getElementById('elFontSize').value = el.fontSize || 28;
           document.getElementById('elAlign').value = el.align || 'center';
           const color = el.color || (c && c.design && c.design.textColor) || '#f6f8ff';
           document.getElementById('elColor').value = /^#/.test(color) ? color : '#f6f8ff';
-        } else {
-          textProps.classList.add('hidden-block');
+        } else if (el.type === 'image') {
           imgProps.classList.remove('hidden-block');
           fillElMediaSelect(c, el.mediaId || '');
           document.getElementById('elFit').value = el.fit === 'contain' ? 'contain' : 'cover';
+        } else if (el.type === 'sketch') {
+          sketchProps.classList.remove('hidden-block');
+          document.getElementById('sketchPenColor').value = nearestPalette(el.penColor || '#000000');
+          document.getElementById('sketchPenSize').value = el.penSize || 3;
+          document.getElementById('sketchDrawBtn').classList.toggle('active', sketchMode === 'draw');
+          document.getElementById('sketchMoveBtn').classList.toggle('active', sketchMode === 'move');
         }
         suppressPropsSync = false;
       }
@@ -1189,6 +1296,13 @@
             } else {
               node.innerHTML = `<div style="height:100%;display:grid;place-items:center;opacity:.55;border:1px dashed ${design.accentColor}">Pick image</div>`;
             }
+          } else if (el.type === 'sketch') {
+            if (el.dataUrl) {
+              node.innerHTML = `<img class="preview-sketch" src="${escapeHtml(el.dataUrl)}" alt="Sketch">`;
+            } else {
+              node.innerHTML = `<div class="preview-sketch-empty">Sketch — tap Draw & write</div>`;
+            }
+            if (el.id === selectedElId && sketchMode === 'draw') node.classList.add('sketching');
           }
 
           const del = document.createElement('button');
@@ -1212,13 +1326,64 @@
           node.addEventListener('pointerdown', (event) => {
             if (event.target === del || event.target.closest('.del-x')) return;
             selectedElId = el.id;
+            syncElPropsPanel();
             if (event.target === handle) {
               dragState = { mode: 'resize', id: el.id, startX: event.clientX, startY: event.clientY, startW: el.w, startH: el.h };
-            } else {
-              dragState = { mode: 'move', id: el.id, startX: event.clientX, startY: event.clientY, startLeft: el.x, startTop: el.y };
+              node.classList.add('dragging', 'selected');
+              node.setPointerCapture(event.pointerId);
+              return;
             }
+            if (el.type === 'sketch' && sketchMode === 'draw') {
+              const rect = node.getBoundingClientRect();
+              const scaleX = el.w / Math.max(1, rect.width);
+              const scaleY = el.h / Math.max(1, rect.height);
+              const x = (event.clientX - rect.left) * scaleX;
+              const y = (event.clientY - rect.top) * scaleY;
+              const penColor = nearestPalette(el.penColor || document.getElementById('sketchPenColor').value || '#000000');
+              const penSize = Math.max(1, Math.min(24, Number(el.penSize || document.getElementById('sketchPenSize').value) || 3));
+              el.penColor = penColor;
+              el.penSize = penSize;
+              dragState = {
+                mode: 'sketch',
+                id: el.id,
+                canvas: document.createElement('canvas'),
+                lastX: x,
+                lastY: y,
+                penColor,
+                penSize
+              };
+              const canvas = dragState.canvas;
+              canvas.width = Math.max(1, Math.round(el.w));
+              canvas.height = Math.max(1, Math.round(el.h));
+              const ctx = canvas.getContext('2d');
+              const finishStart = () => {
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = penColor;
+                ctx.lineWidth = penSize;
+                ctx.beginPath();
+                ctx.moveTo(x, y);
+                ctx.lineTo(x + 0.01, y + 0.01);
+                ctx.stroke();
+                node.classList.add('sketching', 'selected');
+                node.setPointerCapture(event.pointerId);
+              };
+              if (el.dataUrl) {
+                const img = new Image();
+                img.onload = () => {
+                  ctx.clearRect(0, 0, canvas.width, canvas.height);
+                  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                  finishStart();
+                };
+                img.onerror = finishStart;
+                img.src = el.dataUrl;
+              } else {
+                finishStart();
+              }
+              return;
+            }
+            dragState = { mode: 'move', id: el.id, startX: event.clientX, startY: event.clientY, startLeft: el.x, startTop: el.y };
             node.classList.add('dragging', 'selected');
-            syncElPropsPanel();
             node.setPointerCapture(event.pointerId);
           });
         });
@@ -1748,6 +1913,12 @@
       document.getElementById('galleryList').addEventListener('change', () => renderCanvas());
 
       document.getElementById('addTextBtn').addEventListener('click', () => addLayoutElement('text'));
+      document.getElementById('addSketchBtn').addEventListener('click', () => {
+        addLayoutElement('sketch');
+        sketchMode = 'draw';
+        syncElPropsPanel();
+        setStatus('Sketch added — Draw mode on. Write on the box, then Save Design.');
+      });
       document.getElementById('addImageBtn').addEventListener('click', () => {
         const c = selected();
         if (!c) return;
@@ -1763,6 +1934,38 @@
       document.getElementById('addTitleBtn').addEventListener('click', () => addLayoutElement('title'));
       document.getElementById('addSlideshowBtn').addEventListener('click', () => addLayoutElement('slideshow'));
       document.getElementById('deleteElBtn').addEventListener('click', () => deleteSelectedElement());
+
+      document.getElementById('sketchDrawBtn').addEventListener('click', () => {
+        sketchMode = 'draw';
+        syncElPropsPanel();
+        renderCanvas();
+      });
+      document.getElementById('sketchMoveBtn').addEventListener('click', () => {
+        sketchMode = 'move';
+        syncElPropsPanel();
+        renderCanvas();
+      });
+      document.getElementById('sketchClearBtn').addEventListener('click', () => {
+        const el = selectedLayoutEl();
+        if (!el || el.type !== 'sketch') return;
+        el.dataUrl = '';
+        renderCanvas();
+        setStatus('Sketch cleared.');
+      });
+      ['sketchPenColor', 'sketchPenSize'].forEach((id) => {
+        const input = document.getElementById(id);
+        if (!input) return;
+        const apply = () => {
+          if (suppressPropsSync) return;
+          const el = selectedLayoutEl();
+          if (!el || el.type !== 'sketch') return;
+          el.penColor = nearestPalette(document.getElementById('sketchPenColor').value || '#000000');
+          el.penSize = Math.max(1, Math.min(24, Number(document.getElementById('sketchPenSize').value) || 3));
+          document.getElementById('sketchPenColor').value = el.penColor;
+        };
+        input.addEventListener('input', apply);
+        input.addEventListener('change', apply);
+      });
 
       ['elText', 'elFontSize', 'elAlign', 'elColor', 'elMediaSelect', 'elFit'].forEach((id) => {
         const input = document.getElementById(id);
@@ -1898,6 +2101,7 @@
       setInterval(() => {
         if (!selected()) return;
         if (!document.querySelector('.tabs [data-tab="design"].active')) return;
+        if (dragState && dragState.mode === 'sketch') return;
         renderCanvas();
       }, 30 * 1000);
 
@@ -1907,6 +2111,39 @@
         if (!c || !c.design || !c.design.layout) return;
         const el = c.design.layout.find((x) => x.id === dragState.id);
         if (!el) return;
+        if (dragState.mode === 'sketch') {
+          const node = tabletFrame.querySelector('.canvas-el[data-id="' + String(el.id).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]');
+          if (!node || !dragState.canvas) return;
+          const rect = node.getBoundingClientRect();
+          const scaleX = el.w / Math.max(1, rect.width);
+          const scaleY = el.h / Math.max(1, rect.height);
+          const x = (event.clientX - rect.left) * scaleX;
+          const y = (event.clientY - rect.top) * scaleY;
+          const ctx = dragState.canvas.getContext('2d');
+          ctx.lineCap = 'round';
+          ctx.lineJoin = 'round';
+          ctx.strokeStyle = dragState.penColor || '#000000';
+          ctx.lineWidth = dragState.penSize || 3;
+          ctx.beginPath();
+          ctx.moveTo(dragState.lastX, dragState.lastY);
+          ctx.lineTo(x, y);
+          ctx.stroke();
+          dragState.lastX = x;
+          dragState.lastY = y;
+          const img = node.querySelector('img.preview-sketch');
+          const empty = node.querySelector('.preview-sketch-empty');
+          if (empty) empty.remove();
+          if (img) {
+            img.src = dragState.canvas.toDataURL('image/png');
+          } else {
+            const fresh = document.createElement('img');
+            fresh.className = 'preview-sketch';
+            fresh.alt = 'Sketch';
+            fresh.src = dragState.canvas.toDataURL('image/png');
+            node.insertBefore(fresh, node.firstChild);
+          }
+          return;
+        }
         const scale = Number((tabletFrame.style.transform.match(/scale\(([^)]+)\)/) || [])[1] || 1);
         const dx = (event.clientX - dragState.startX) / scale;
         const dy = (event.clientY - dragState.startY) / scale;
@@ -1919,7 +2156,18 @@
         }
         renderCanvas();
       });
-      window.addEventListener('pointerup', () => { dragState = null; });
+      window.addEventListener('pointerup', () => {
+        if (dragState && dragState.mode === 'sketch') {
+          const c = selected();
+          const el = c && c.design && c.design.layout
+            ? c.design.layout.find((x) => x.id === dragState.id)
+            : null;
+          if (el && dragState.canvas) {
+            el.dataUrl = dragState.canvas.toDataURL('image/png');
+          }
+        }
+        dragState = null;
+      });
       window.addEventListener('keydown', (event) => {
         if ((event.key === 'Delete' || event.key === 'Backspace') && selectedElId) {
           const tag = (event.target && event.target.tagName) || '';

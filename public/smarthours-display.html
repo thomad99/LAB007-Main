@@ -224,6 +224,8 @@
           } else if (el.type === 'image' && el.imageUrl) {
             const fitMode = el.fit === 'contain' ? 'contain' : 'cover';
             node.innerHTML = `<img class="custom-img" style="object-fit:${fitMode}" src="${escapeHtml(el.imageUrl)}" alt="">`;
+          } else if (el.type === 'sketch' && el.dataUrl) {
+            node.innerHTML = `<img class="custom-img" style="object-fit:contain;background:transparent" src="${escapeHtml(el.dataUrl)}" alt="Sketch">`;
           }
           tablet.appendChild(node);
         });
