@@ -442,11 +442,11 @@
               <p class="hint">Drag elements on the tablet canvas. Use the green corner to resize. Default panel is <strong>800×480</strong> landscape; switch to portrait or change size above.</p>
               <button type="button" class="btn" id="saveDesignBtn">Save Design</button>
               <div id="designEinkPreviewWrap" class="hidden-block" style="margin-top:14px;">
-                <p class="hint" style="margin-top:0;">ESP32 / e-ink static preview (1-bit BMP — same file the device downloads)</p>
+                <p class="hint" style="margin-top:0;">High-res display image (PNG) — same look as the live HTML page</p>
                 <div style="background:#0a1020;border:1px solid var(--line);border-radius:12px;padding:12px;overflow:auto;">
-                  <img id="designEinkPreview" alt="ESP32 design preview" style="max-width:100%;height:auto;background:#fff;image-rendering:pixelated;">
+                  <img id="designEinkPreview" alt="Display preview" style="max-width:100%;height:auto;background:#fff;image-rendering:auto;">
                 </div>
-                <p class="hint">Tip: match e-ink size to the Design canvas (default <strong>800×480</strong>). PNG logos/gallery images dither best.</p>
+                <p class="hint">Also available as HTML at the public SmartHours link and as <code>display.png</code>.</p>
               </div>
             </div>
             <div class="canvas-stage">
@@ -457,10 +457,9 @@
 
         <div class="tab-panel" id="tab-esp32">
           <p class="hint">
-            The server renders a <strong>static 1-bit BMP of your Design canvas</strong> for ESP32 + e-ink
-            (no browser on device). <strong>Download ESP32 .ino</strong> embeds that BMP in firmware
-            (<code>DESIGN_BMP[]</code>) so the panel can show your design offline, then keeps syncing
-            newer designs/hours from the server when the version changes.             Prefer e-ink size matching the Design canvas (default <strong>800×480</strong>).
+            Screens are designed as <strong>HTML</strong> (live page) and a matching <strong>high-res PNG</strong>.
+            ESP32 / e-ink firmware can still download a separate 1-bit BMP if you need it.
+            Default panel size is <strong>800×480</strong>.
           </p>
           <div class="form-grid" style="margin-top:12px;">
             <div>
@@ -511,15 +510,15 @@
             </div>
           </div>
           <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="btn" id="saveEinkBtn">Save E-ink Settings</button>
-            <button type="button" class="btn-secondary" id="previewEinkBtn">Refresh Preview</button>
-            <button type="button" class="btn" id="downloadSketchBtn">Download ESP32 .ino (with design)</button>
+            <button type="button" class="btn" id="saveEinkBtn">Save Display Settings</button>
+            <button type="button" class="btn-secondary" id="previewEinkBtn">Refresh PNG Preview</button>
+            <button type="button" class="btn" id="downloadSketchBtn">Download ESP32 .ino (legacy BMP)</button>
             <button type="button" class="btn-secondary" id="copySketchBtn">Copy Code</button>
           </div>
           <p class="hint" id="sketchMeta" style="margin-top:8px;"></p>
           <div class="url-box" id="einkUrlBox" style="margin-top:14px;"></div>
           <div style="margin-top:14px;background:#0a1020;border:1px solid var(--line);border-radius:12px;padding:12px;overflow:auto;">
-            <img id="einkPreview" alt="E-ink preview" style="max-width:100%;height:auto;background:#fff;image-rendering:pixelated;">
+            <img id="einkPreview" alt="Display PNG preview" style="max-width:100%;height:auto;background:#fff;image-rendering:auto;">
           </div>
           <label for="espSketch" style="margin-top:14px;">Generated Arduino / ESP32 sketch</label>
           <textarea id="espSketch" rows="18" style="font-family:Consolas,monospace;font-size:.8rem;" readonly></textarea>
@@ -1236,9 +1235,9 @@
         }
       }
 
-      function einkBmpUrl(customer, bust) {
+      function displayPngUrl(customer, bust) {
         const base = (document.getElementById('espBaseUrl').value || location.origin).replace(/\/$/, '');
-        return `${base}/api/smarthours/public/${encodeURIComponent(customer.slug)}/eink.bmp?t=${bust || Date.now()}`;
+        return `${base}/api/smarthours/public/${encodeURIComponent(customer.slug)}/display.png?t=${bust || Date.now()}`;
       }
 
       function showDesignEinkPreview(customer) {
@@ -1250,25 +1249,27 @@
           return;
         }
         wrap.classList.remove('hidden-block');
-        img.src = einkBmpUrl(customer);
+        img.src = displayPngUrl(customer);
       }
 
       function refreshEinkPanel() {
         const c = selected();
         if (!c || String(c.id).startsWith('tmp-')) {
-          document.getElementById('einkUrlBox').textContent = 'Save the customer first to enable e-ink URLs and code.';
+          document.getElementById('einkUrlBox').textContent = 'Save the customer first to enable display URLs.';
           document.getElementById('einkPreview').removeAttribute('src');
           document.getElementById('espSketch').value = '';
           showDesignEinkPreview(null);
           return;
         }
         const base = (document.getElementById('espBaseUrl').value || location.origin).replace(/\/$/, '');
-        const metaUrl = `${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/eink.json`;
-        const bmpUrl = einkBmpUrl(c);
+        const htmlUrl = `${base}/SmartHours/v/${encodeURIComponent(c.slug)}`;
+        const pngUrl = displayPngUrl(c);
+        const bmpUrl = `${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/eink.bmp`;
         document.getElementById('einkUrlBox').innerHTML =
-          `<div><strong>Meta (check for changes):</strong> <a href="${metaUrl}" target="_blank" rel="noopener">${metaUrl}</a></div>` +
-          `<div style="margin-top:6px"><strong>Image (BMP):</strong> <a href="${bmpUrl}" target="_blank" rel="noopener">${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/eink.bmp</a></div>`;
-        document.getElementById('einkPreview').src = bmpUrl;
+          `<div><strong>HTML display:</strong> <a href="${htmlUrl}" target="_blank" rel="noopener">${htmlUrl}</a></div>` +
+          `<div style="margin-top:6px"><strong>PNG image:</strong> <a href="${pngUrl}" target="_blank" rel="noopener">${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/display.png</a></div>` +
+          `<div style="margin-top:6px"><strong>Legacy BMP (ESP32):</strong> <a href="${bmpUrl}" target="_blank" rel="noopener">${bmpUrl}</a></div>`;
+        document.getElementById('einkPreview').src = pngUrl;
         showDesignEinkPreview(c);
         loadEspSketch().catch((err) => setStatus(err.message, true));
       }
@@ -1396,7 +1397,7 @@
           .then((c) => {
             if (!c) return;
             showDesignEinkPreview(c);
-            setStatus('Design saved. ESP32 static preview updated below.');
+            setStatus('Design saved. High-res PNG preview updated below.');
           })
           .catch((err) => setStatus(err.message, true));
       });
