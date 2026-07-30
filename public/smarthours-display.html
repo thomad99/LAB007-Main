@@ -25,8 +25,8 @@
     }
     #tablet {
       position: relative;
-      width: 600px;
-      height: 1024px;
+      width: 800px;
+      height: 480px;
       overflow: hidden;
       transform-origin: center center;
     }
@@ -81,7 +81,7 @@
       justify-content: space-between;
       gap: 12px;
       padding: 10px 2px;
-      border-bottom: 1px solid rgba(255,255,255,.1);
+      border-bottom: 1px solid rgba(0,0,0,.12);
       font-weight: 600;
     }
     .err {
@@ -105,6 +105,8 @@
       let slideTimer = null;
       let slideIndex = 0;
       let slideUrls = [];
+      let screenW = 800;
+      let screenH = 480;
 
       function escapeHtml(str) {
         return String(str || '')
@@ -122,7 +124,7 @@
       }
 
       function fit() {
-        const scale = Math.min(stage.clientWidth / 600, stage.clientHeight / 1024);
+        const scale = Math.min(stage.clientWidth / screenW, stage.clientHeight / screenH);
         tablet.style.transform = `scale(${scale})`;
       }
 
@@ -133,9 +135,9 @@
           if (url) return `<img class="status-img" src="${escapeHtml(url)}" alt="${open ? 'Open' : 'Closed'}">`;
         }
         if (mode === 'text') {
-          return `<div class="status-text" style="font-size:${Math.min(design.statusFontSize || 28, 36)}px;color:${open ? (design.accentColor || '#76f4c5') : '#ff8f9f'}">${open ? 'Open Now' : 'Closed Now'}</div>`;
+          return `<div class="status-text" style="font-size:${Math.min(design.statusFontSize || 28, 36)}px;color:${open ? (design.accentColor || '#FF0000') : '#000000'}">${open ? 'Open Now' : 'Closed Now'}</div>`;
         }
-        return `<div class="status-badge" style="font-size:${design.statusFontSize || 48}px;background:${open ? (design.accentColor || '#76f4c5') : '#ff8f9f'};color:#04120e">${open ? 'OPEN' : 'CLOSED'}</div>`;
+        return `<div class="status-badge" style="font-size:${design.statusFontSize || 36}px;background:${open ? (design.accentColor || '#FF0000') : '#000000'};color:${design.backgroundColor || '#FFFFFF'}">${open ? 'OPEN' : 'CLOSED'}</div>`;
       }
 
       function startSlideshow(intervalSec) {
@@ -164,9 +166,14 @@
         const days = data.days || ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
         const labels = data.dayLabels || {};
         const open = !!data.openNow;
+        const tabletInfo = data.tablet || data.eink || {};
+        screenW = Math.max(200, Number(tabletInfo.width) || 800);
+        screenH = Math.max(120, Number(tabletInfo.height) || 480);
+        tablet.style.width = screenW + 'px';
+        tablet.style.height = screenH + 'px';
         document.title = (data.name || 'Hours') + ' · SmartHours';
-        tablet.style.background = design.backgroundColor || '#0b1020';
-        tablet.style.color = design.textColor || '#fff';
+        tablet.style.background = design.backgroundColor || '#FFFFFF';
+        tablet.style.color = design.textColor || '#000000';
         tablet.style.fontFamily = design.fontFamily || 'Georgia, serif';
         tablet.innerHTML = '';
         slideUrls = Array.isArray(design.slideshowUrls) ? design.slideshowUrls.slice() : [];
@@ -183,23 +190,23 @@
           if (el.type === 'logo' && design.logoUrl) {
             node.innerHTML = `<img class="logo" src="${escapeHtml(design.logoUrl)}" alt="">`;
           } else if (el.type === 'title') {
-            node.innerHTML = `<div class="title" style="font-size:${design.titleFontSize || 34}px">${escapeHtml(data.name)}</div>`;
+            node.innerHTML = `<div class="title" style="font-size:${design.titleFontSize || 28}px">${escapeHtml(data.name)}</div>`;
           } else if (el.type === 'status') {
             node.innerHTML = renderStatus(design, open);
           } else if (el.type === 'slideshow' && slideUrls.length) {
             node.innerHTML = `<img class="slide-img" data-slideshow-img src="${escapeHtml(slideUrls[0])}" alt="">`;
           } else if (el.type === 'hours') {
-            node.innerHTML = `<div class="hours" style="font-size:${design.hoursFontSize || 22}px">${
-              days.map((day) => `<div class="row"><span>${escapeHtml(labels[day] || day)}</span><span style="color:${design.accentColor || '#76f4c5'}">${escapeHtml(formatDay(hours[day]))}</span></div>`).join('')
+            node.innerHTML = `<div class="hours" style="font-size:${design.hoursFontSize || 18}px">${
+              days.map((day) => `<div class="row"><span>${escapeHtml(labels[day] || day)}</span><span style="color:${design.accentColor || '#FF0000'}">${escapeHtml(formatDay(hours[day]))}</span></div>`).join('')
             }</div>`;
           } else if (el.type === 'text') {
             const align = el.align === 'left' || el.align === 'right' ? el.align : 'center';
             const justify = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
-            const color = el.color || design.textColor || '#f6f8ff';
+            const color = el.color || design.textColor || '#000000';
             node.innerHTML = `<div class="custom-text" style="justify-content:${justify};text-align:${align};font-size:${el.fontSize || 28}px;color:${escapeHtml(color)};font-weight:${el.bold === false ? 400 : 700}">${escapeHtml(el.text || '')}</div>`;
           } else if (el.type === 'image' && el.imageUrl) {
-            const fit = el.fit === 'contain' ? 'contain' : 'cover';
-            node.innerHTML = `<img class="custom-img" style="object-fit:${fit}" src="${escapeHtml(el.imageUrl)}" alt="">`;
+            const fitMode = el.fit === 'contain' ? 'contain' : 'cover';
+            node.innerHTML = `<img class="custom-img" style="object-fit:${fitMode}" src="${escapeHtml(el.imageUrl)}" alt="">`;
           }
           tablet.appendChild(node);
         });

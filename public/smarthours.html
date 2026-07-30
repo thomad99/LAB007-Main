@@ -157,10 +157,21 @@
       border: 1px solid var(--line);
     }
     .tablet-frame {
-      width: 600px; height: 1024px; position: relative; border-radius: 28px;
-      overflow: hidden; box-shadow: 0 24px 60px rgba(0,0,0,.45); border: 3px solid #1c2438;
-      transform-origin: top center; flex: 0 0 auto;
+      width: 800px; height: 480px; position: relative; border-radius: 18px;
+      overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,.45); background: #111;
+      flex-shrink: 0;
     }
+    .palette-swatches { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+    .palette-swatch {
+      width: 28px; height: 28px; border-radius: 6px; border: 2px solid rgba(255,255,255,.25);
+      cursor: pointer; padding: 0;
+    }
+    .palette-swatch.active { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-dim); }
+    .screen-settings {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px;
+      padding-bottom: 14px; border-bottom: 1px solid var(--line);
+    }
+    @media (max-width: 700px) { .screen-settings { grid-template-columns: 1fr; } }
     .canvas-el {
       position: absolute; border: 1px dashed transparent; cursor: grab; user-select: none;
       padding: 6px; overflow: hidden;
@@ -273,26 +284,53 @@
         <div class="tab-panel" id="tab-design">
           <div class="design-layout">
             <div class="controls">
+              <div class="screen-settings">
+                <div>
+                  <label for="screenOrientation">Orientation</label>
+                  <select id="screenOrientation">
+                    <option value="landscape">Landscape</option>
+                    <option value="portrait">Portrait</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="screenColorMode">Display colors</label>
+                  <select id="screenColorMode">
+                    <option value="4color">4-color (B / W / R / Y)</option>
+                    <option value="grayscale">Grayscale</option>
+                  </select>
+                </div>
+                <div>
+                  <label for="einkWidthDesign">Width (px)</label>
+                  <input id="einkWidthDesign" type="number" min="200" max="1200" value="800">
+                </div>
+                <div>
+                  <label for="einkHeightDesign">Height (px)</label>
+                  <input id="einkHeightDesign" type="number" min="120" max="1200" value="480">
+                </div>
+              </div>
               <div>
                 <label for="bgColor">Background</label>
                 <div class="color-row">
-                  <input id="bgColor" type="text" value="#0b1020">
-                  <input id="bgColorPick" type="color" value="#0b1020">
+                  <input id="bgColor" type="text" value="#FFFFFF">
+                  <input id="bgColorPick" type="color" value="#FFFFFF">
                 </div>
+                <div class="palette-swatches" data-palette-for="bg"></div>
               </div>
               <div>
                 <label for="textColor">Text color</label>
                 <div class="color-row">
-                  <input id="textColor" type="text" value="#f6f8ff">
-                  <input id="textColorPick" type="color" value="#f6f8ff">
+                  <input id="textColor" type="text" value="#000000">
+                  <input id="textColorPick" type="color" value="#000000">
                 </div>
+                <div class="palette-swatches" data-palette-for="text"></div>
               </div>
               <div>
                 <label for="accentColor">Accent color</label>
                 <div class="color-row">
-                  <input id="accentColor" type="text" value="#76f4c5">
-                  <input id="accentColorPick" type="color" value="#76f4c5">
+                  <input id="accentColor" type="text" value="#FF0000">
+                  <input id="accentColorPick" type="color" value="#FF0000">
                 </div>
+                <div class="palette-swatches" data-palette-for="accent"></div>
               </div>
               <div>
                 <label for="fontFamily">Font style</label>
@@ -401,14 +439,14 @@
                 <p class="hint">Upload photos, then tick which ones rotate in the slideshow. You can also pick OPEN/CLOSED images from the gallery.</p>
                 <div id="galleryList" class="gallery-list"></div>
               </div>
-              <p class="hint">Drag elements on the tablet canvas. Use the green corner to resize. Designed for a 7″ portrait tablet (600×1024).</p>
+              <p class="hint">Drag elements on the tablet canvas. Use the green corner to resize. Default panel is <strong>800×480</strong> landscape; switch to portrait or change size above.</p>
               <button type="button" class="btn" id="saveDesignBtn">Save Design</button>
               <div id="designEinkPreviewWrap" class="hidden-block" style="margin-top:14px;">
                 <p class="hint" style="margin-top:0;">ESP32 / e-ink static preview (1-bit BMP — same file the device downloads)</p>
                 <div style="background:#0a1020;border:1px solid var(--line);border-radius:12px;padding:12px;overflow:auto;">
                   <img id="designEinkPreview" alt="ESP32 design preview" style="max-width:100%;height:auto;background:#fff;image-rendering:pixelated;">
                 </div>
-                <p class="hint">Tip: set e-ink size to <strong>600×1024</strong> under ESP32 / E-ink for a 1:1 match. PNG logos/gallery images dither best.</p>
+                <p class="hint">Tip: match e-ink size to the Design canvas (default <strong>800×480</strong>). PNG logos/gallery images dither best.</p>
               </div>
             </div>
             <div class="canvas-stage">
@@ -422,8 +460,7 @@
             The server renders a <strong>static 1-bit BMP of your Design canvas</strong> for ESP32 + e-ink
             (no browser on device). <strong>Download ESP32 .ino</strong> embeds that BMP in firmware
             (<code>DESIGN_BMP[]</code>) so the panel can show your design offline, then keeps syncing
-            newer designs/hours from the server when the version changes. Prefer e-ink size
-            <strong>600×1024</strong> to match the tablet canvas (or set it to your panel resolution).
+            newer designs/hours from the server when the version changes.             Prefer e-ink size matching the Design canvas (default <strong>800×480</strong>).
           </p>
           <div class="form-grid" style="margin-top:12px;">
             <div>
@@ -433,11 +470,25 @@
             </div>
             <div>
               <label for="einkWidth">E-ink width (px)</label>
-              <input id="einkWidth" type="number" min="200" max="1200" value="600">
+              <input id="einkWidth" type="number" min="200" max="1200" value="800">
             </div>
             <div>
               <label for="einkHeight">E-ink height (px)</label>
-              <input id="einkHeight" type="number" min="120" max="1200" value="1024">
+              <input id="einkHeight" type="number" min="120" max="1200" value="480">
+            </div>
+            <div>
+              <label for="einkOrientation">Orientation</label>
+              <select id="einkOrientation">
+                <option value="landscape">Landscape</option>
+                <option value="portrait">Portrait</option>
+              </select>
+            </div>
+            <div>
+              <label for="einkColorMode">Color mode</label>
+              <select id="einkColorMode">
+                <option value="4color">4-color</option>
+                <option value="grayscale">Grayscale</option>
+              </select>
             </div>
             <div>
               <label style="display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-size:.9rem;color:var(--text);margin-top:22px;">
@@ -485,7 +536,11 @@
         monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday', thursday:'Thursday',
         friday:'Friday', saturday:'Saturday', sunday:'Sunday'
       };
-      const TABLET = { width: 600, height: 1024 };
+      const TABLET = { width: 800, height: 480 };
+      const COLOR_PALETTES = {
+        '4color': ['#000000', '#FFFFFF', '#FF0000', '#FFFF00'],
+        grayscale: ['#000000', '#555555', '#AAAAAA', '#FFFFFF']
+      };
 
       const statusEl = document.getElementById('status');
       const customerList = document.getElementById('customerList');
@@ -500,6 +555,111 @@
       let logoDataUrl = null;
       let dragState = null;
       let suppressPropsSync = false;
+      let syncingScreenFields = false;
+
+      function currentColorMode() {
+        return document.getElementById('screenColorMode').value === 'grayscale' ? 'grayscale' : '4color';
+      }
+
+      function paletteColors() {
+        return COLOR_PALETTES[currentColorMode()].slice();
+      }
+
+      function nearestPalette(hex) {
+        const colors = paletteColors();
+        const parse = (h) => {
+          const m = String(h || '').trim().match(/^#?([0-9a-f]{6})$/i);
+          if (!m) return [128, 128, 128];
+          const n = parseInt(m[1], 16);
+          return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
+        };
+        const [r, g, b] = parse(hex);
+        let best = colors[0];
+        let bestD = Infinity;
+        colors.forEach((c) => {
+          const [cr, cg, cb] = parse(c);
+          const d = (cr - r) ** 2 + (cg - g) ** 2 + (cb - b) ** 2;
+          if (d < bestD) {
+            bestD = d;
+            best = c;
+          }
+        });
+        return best;
+      }
+
+      function setColorField(which, hex) {
+        const snapped = nearestPalette(hex);
+        if (which === 'bg') {
+          document.getElementById('bgColor').value = snapped;
+          document.getElementById('bgColorPick').value = snapped;
+        } else if (which === 'text') {
+          document.getElementById('textColor').value = snapped;
+          document.getElementById('textColorPick').value = snapped;
+        } else if (which === 'accent') {
+          document.getElementById('accentColor').value = snapped;
+          document.getElementById('accentColorPick').value = snapped;
+        }
+        renderPaletteSwatches();
+      }
+
+      function renderPaletteSwatches() {
+        const colors = paletteColors();
+        document.querySelectorAll('[data-palette-for]').forEach((wrap) => {
+          const which = wrap.getAttribute('data-palette-for');
+          const current =
+            which === 'bg'
+              ? document.getElementById('bgColor').value
+              : which === 'text'
+                ? document.getElementById('textColor').value
+                : document.getElementById('accentColor').value;
+          wrap.innerHTML = colors
+            .map(
+              (c) =>
+                `<button type="button" class="palette-swatch${c.toLowerCase() === String(current).toLowerCase() ? ' active' : ''}" data-which="${which}" data-color="${c}" style="background:${c}" title="${c}" aria-label="${c}"></button>`
+            )
+            .join('');
+        });
+      }
+
+      function applyTabletSize(width, height) {
+        TABLET.width = Math.max(200, Number(width) || 800);
+        TABLET.height = Math.max(120, Number(height) || 480);
+        tabletFrame.style.width = TABLET.width + 'px';
+        tabletFrame.style.height = TABLET.height + 'px';
+        scaleTablet();
+      }
+
+      function syncScreenFields(fromDesign) {
+        if (syncingScreenFields) return;
+        syncingScreenFields = true;
+        try {
+          if (fromDesign) {
+            document.getElementById('einkOrientation').value = document.getElementById('screenOrientation').value;
+            document.getElementById('einkColorMode').value = document.getElementById('screenColorMode').value;
+            document.getElementById('einkWidth').value = document.getElementById('einkWidthDesign').value;
+            document.getElementById('einkHeight').value = document.getElementById('einkHeightDesign').value;
+          } else {
+            document.getElementById('screenOrientation').value = document.getElementById('einkOrientation').value;
+            document.getElementById('screenColorMode').value = document.getElementById('einkColorMode').value;
+            document.getElementById('einkWidthDesign').value = document.getElementById('einkWidth').value;
+            document.getElementById('einkHeightDesign').value = document.getElementById('einkHeight').value;
+          }
+          applyTabletSize(
+            document.getElementById('einkWidthDesign').value,
+            document.getElementById('einkHeightDesign').value
+          );
+          renderPaletteSwatches();
+        } finally {
+          syncingScreenFields = false;
+        }
+      }
+
+      function applyOrientationDefaults(orient) {
+        const landscape = orient !== 'portrait';
+        document.getElementById('einkWidthDesign').value = landscape ? 800 : 480;
+        document.getElementById('einkHeightDesign').value = landscape ? 480 : 800;
+        syncScreenFields(true);
+      }
 
       function apiFetch(url, options) {
         return fetch(url, Object.assign({ credentials: 'omit' }, options || {}));
@@ -532,15 +692,17 @@
       }
 
       function defaultDesign() {
+        const w = TABLET.width;
+        const h = TABLET.height;
         return {
-          backgroundColor: '#0b1020',
-          textColor: '#f6f8ff',
-          accentColor: '#76f4c5',
-          mutedColor: '#9aa7bd',
+          backgroundColor: '#FFFFFF',
+          textColor: '#000000',
+          accentColor: '#FF0000',
+          mutedColor: '#555555',
           fontFamily: 'Georgia, "Times New Roman", serif',
-          titleFontSize: 34,
-          hoursFontSize: 22,
-          statusFontSize: 48,
+          titleFontSize: 28,
+          hoursFontSize: 18,
+          statusFontSize: 36,
           logoUrl: '',
           showLogo: true,
           showTitle: true,
@@ -553,10 +715,10 @@
           slideshowIntervalSec: 8,
           slideshowMediaIds: [],
           layout: [
-            { id: 'logo', type: 'logo', x: 150, y: 28, w: 300, h: 90 },
-            { id: 'title', type: 'title', x: 40, y: 130, w: 520, h: 60 },
-            { id: 'status', type: 'status', x: 40, y: 200, w: 520, h: 120 },
-            { id: 'hours', type: 'hours', x: 40, y: 640, w: 520, h: 340 }
+            { id: 'logo', type: 'logo', x: Math.round(w * 0.25), y: 12, w: Math.round(w * 0.5), h: Math.max(48, Math.round(h * 0.12)) },
+            { id: 'title', type: 'title', x: 24, y: Math.round(h * 0.16), w: w - 48, h: Math.max(36, Math.round(h * 0.1)) },
+            { id: 'status', type: 'status', x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.max(56, Math.round(h * 0.16)) },
+            { id: 'hours', type: 'hours', x: 24, y: Math.round(h * 0.48), w: w - 48, h: Math.max(120, h - Math.round(h * 0.48) - 16) }
           ]
         };
       }
@@ -698,19 +860,20 @@
 
       function writeDesignToForm(design) {
         const d = design || defaultDesign();
-        document.getElementById('bgColor').value = d.backgroundColor;
-        document.getElementById('bgColorPick').value = /^#/.test(d.backgroundColor) ? d.backgroundColor : '#0b1020';
-        document.getElementById('textColor').value = d.textColor;
-        document.getElementById('textColorPick').value = /^#/.test(d.textColor) ? d.textColor : '#f6f8ff';
-        document.getElementById('accentColor').value = d.accentColor;
-        document.getElementById('accentColorPick').value = /^#/.test(d.accentColor) ? d.accentColor : '#76f4c5';
+        document.getElementById('bgColor').value = nearestPalette(d.backgroundColor);
+        document.getElementById('bgColorPick').value = nearestPalette(d.backgroundColor);
+        document.getElementById('textColor').value = nearestPalette(d.textColor);
+        document.getElementById('textColorPick').value = nearestPalette(d.textColor);
+        document.getElementById('accentColor').value = nearestPalette(d.accentColor);
+        document.getElementById('accentColorPick').value = nearestPalette(d.accentColor);
         document.getElementById('fontFamily').value = d.fontFamily;
         document.getElementById('titleSize').value = d.titleFontSize;
         document.getElementById('hoursSize').value = d.hoursFontSize;
-        document.getElementById('statusSize').value = d.statusFontSize || 48;
+        document.getElementById('statusSize').value = d.statusFontSize || 36;
         document.getElementById('statusMode').value = d.statusMode || 'badge';
         document.getElementById('slideshowInterval').value = d.slideshowIntervalSec || 8;
         syncShowCheckboxes(d);
+        renderPaletteSwatches();
       }
 
       function newElId(type) {
@@ -718,14 +881,16 @@
       }
 
       function defaultSlot(type) {
+        const w = TABLET.width;
+        const h = TABLET.height;
         const map = {
-          logo: { x: 150, y: 28, w: 300, h: 90 },
-          title: { x: 40, y: 130, w: 520, h: 60 },
-          status: { x: 40, y: 200, w: 520, h: 120 },
-          slideshow: { x: 40, y: 340, w: 520, h: 280 },
-          hours: { x: 40, y: 640, w: 520, h: 340 },
-          text: { x: 60, y: 80, w: 480, h: 56, text: 'New text', fontSize: 28, color: '', align: 'center', bold: true },
-          image: { x: 80, y: 300, w: 440, h: 260, mediaId: '', fit: 'cover' }
+          logo: { x: Math.round(w * 0.25), y: 12, w: Math.round(w * 0.5), h: Math.max(48, Math.round(h * 0.12)) },
+          title: { x: 24, y: Math.round(h * 0.16), w: w - 48, h: Math.max(36, Math.round(h * 0.1)) },
+          status: { x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.max(56, Math.round(h * 0.16)) },
+          slideshow: { x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.round(h * 0.35) },
+          hours: { x: 24, y: Math.round(h * 0.48), w: w - 48, h: Math.max(120, h - Math.round(h * 0.48) - 16) },
+          text: { x: 40, y: 40, w: Math.min(480, w - 80), h: 56, text: 'New text', fontSize: 28, color: '', align: 'center', bold: true },
+          image: { x: 40, y: Math.round(h * 0.35), w: w - 80, h: Math.round(h * 0.4), mediaId: '', fit: 'cover' }
         };
         const base = map[type] || map.text;
         return Object.assign({ id: newElId(type), type }, base);
@@ -833,9 +998,13 @@
       function bindColorPair(textId, pickId) {
         const text = document.getElementById(textId);
         const pick = document.getElementById(pickId);
-        pick.addEventListener('input', () => { text.value = pick.value; renderCanvas(); });
+        const which = textId === 'bgColor' ? 'bg' : textId === 'textColor' ? 'text' : 'accent';
+        pick.addEventListener('input', () => {
+          setColorField(which, pick.value);
+          renderCanvas();
+        });
         text.addEventListener('change', () => {
-          if (/^#[0-9a-fA-F]{6}$/.test(text.value)) pick.value = text.value;
+          setColorField(which, text.value);
           renderCanvas();
         });
       }
@@ -1042,8 +1211,10 @@
           eink: {
             enabled: true,
             pollIntervalMinutes: Number(document.getElementById('einkPoll').value) || 720,
-            width: Number(document.getElementById('einkWidth').value) || 600,
-            height: Number(document.getElementById('einkHeight').value) || 1024,
+            width: Number(document.getElementById('einkWidth').value) || 800,
+            height: Number(document.getElementById('einkHeight').value) || 480,
+            orientation: document.getElementById('einkOrientation').value === 'portrait' ? 'portrait' : 'landscape',
+            colorMode: document.getElementById('einkColorMode').value === 'grayscale' ? 'grayscale' : '4color',
             inverted: document.getElementById('einkInverted').checked
           }
         };
@@ -1054,9 +1225,12 @@
       function writeEinkToForm(eink) {
         const e = eink || {};
         document.getElementById('einkPoll').value = e.pollIntervalMinutes || 720;
-        document.getElementById('einkWidth').value = e.width || 600;
-        document.getElementById('einkHeight').value = e.height || 1024;
+        document.getElementById('einkWidth').value = e.width || 800;
+        document.getElementById('einkHeight').value = e.height || 480;
+        document.getElementById('einkOrientation').value = e.orientation === 'portrait' ? 'portrait' : 'landscape';
+        document.getElementById('einkColorMode').value = e.colorMode === 'grayscale' ? 'grayscale' : '4color';
         document.getElementById('einkInverted').checked = !!e.inverted;
+        syncScreenFields(false);
         if (!document.getElementById('espBaseUrl').value) {
           document.getElementById('espBaseUrl').value = location.origin;
         }
@@ -1486,6 +1660,62 @@
       bindColorPair('bgColor', 'bgColorPick');
       bindColorPair('textColor', 'textColorPick');
       bindColorPair('accentColor', 'accentColorPick');
+
+      document.querySelectorAll('[data-palette-for]').forEach((wrap) => {
+        wrap.addEventListener('click', (event) => {
+          const btn = event.target.closest('.palette-swatch');
+          if (!btn) return;
+          setColorField(btn.getAttribute('data-which'), btn.getAttribute('data-color'));
+          renderCanvas();
+        });
+      });
+
+      document.getElementById('screenOrientation').addEventListener('change', () => {
+        applyOrientationDefaults(document.getElementById('screenOrientation').value);
+        renderCanvas();
+      });
+      document.getElementById('einkOrientation').addEventListener('change', () => {
+        document.getElementById('screenOrientation').value = document.getElementById('einkOrientation').value;
+        applyOrientationDefaults(document.getElementById('einkOrientation').value);
+        renderCanvas();
+      });
+      document.getElementById('screenColorMode').addEventListener('change', () => {
+        syncScreenFields(true);
+        setColorField('bg', document.getElementById('bgColor').value);
+        setColorField('text', document.getElementById('textColor').value);
+        setColorField('accent', document.getElementById('accentColor').value);
+        renderCanvas();
+      });
+      document.getElementById('einkColorMode').addEventListener('change', () => {
+        syncScreenFields(false);
+        setColorField('bg', document.getElementById('bgColor').value);
+        setColorField('text', document.getElementById('textColor').value);
+        setColorField('accent', document.getElementById('accentColor').value);
+        renderCanvas();
+      });
+      ['einkWidthDesign', 'einkHeightDesign'].forEach((id) => {
+        document.getElementById(id).addEventListener('change', () => {
+          syncScreenFields(true);
+          renderCanvas();
+        });
+      });
+      ['einkWidth', 'einkHeight'].forEach((id) => {
+        document.getElementById(id).addEventListener('change', () => {
+          syncScreenFields(false);
+          renderCanvas();
+        });
+      });
+
+      // Snap free color typing to the active palette
+      ['bgColor', 'textColor', 'accentColor'].forEach((id) => {
+        const which = id === 'bgColor' ? 'bg' : id === 'textColor' ? 'text' : 'accent';
+        document.getElementById(id).addEventListener('change', () => {
+          setColorField(which, document.getElementById(id).value);
+          renderCanvas();
+        });
+      });
+      renderPaletteSwatches();
+      applyTabletSize(800, 480);
 
       window.addEventListener('pointermove', (event) => {
         if (!dragState) return;
