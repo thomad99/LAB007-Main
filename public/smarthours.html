@@ -863,6 +863,26 @@
         return a || 'Closed';
       }
 
+      function isOpenNow(hours, date) {
+        const now = date || new Date();
+        const dayKey = DAYS[(now.getDay() + 6) % 7];
+        const day = hours && hours[dayKey];
+        if (!day || day.closed) return false;
+        const mins = now.getHours() * 60 + now.getMinutes();
+        const inSlot = (open, close) => {
+          if (!open || !close) return false;
+          const [oh, om] = String(open).split(':').map(Number);
+          const [ch, cm] = String(close).split(':').map(Number);
+          if (![oh, om, ch, cm].every(Number.isFinite)) return false;
+          const start = oh * 60 + om;
+          let end = ch * 60 + cm;
+          if (end <= start) end += 24 * 60;
+          const cur = mins < start && end > 24 * 60 ? mins + 24 * 60 : mins;
+          return cur >= start && cur < end;
+        };
+        return inSlot(day.open, day.close) || inSlot(day.open2, day.close2);
+      }
+
       function publicUrl(slug) {
         return `${location.origin}/SmartHours/v/${encodeURIComponent(slug)}`;
       }
@@ -1148,13 +1168,14 @@
           } else if (el.type === 'title') {
             node.innerHTML = `<div class="preview-title" style="font-size:${design.titleFontSize}px;color:${design.textColor}">${escapeHtml(c.name)}</div>`;
           } else if (el.type === 'status') {
+            const openNow = isOpenNow(hours);
             if (design.statusMode === 'image' && (openMedia || closedMedia)) {
-              const preview = openMedia || closedMedia;
-              node.innerHTML = `<img class="preview-slide" src="${escapeHtml(mediaUrl(c, preview))}" alt="Status">`;
+              const preview = openNow ? (openMedia || closedMedia) : (closedMedia || openMedia);
+              node.innerHTML = `<img class="preview-slide" src="${escapeHtml(mediaUrl(c, preview))}" alt="${openNow ? 'Open' : 'Closed'}">`;
             } else if (design.statusMode === 'text') {
-              node.innerHTML = `<div class="preview-status" style="font-size:${Math.min(design.statusFontSize, 28)}px;color:${design.accentColor}">OPEN / CLOSED</div>`;
+              node.innerHTML = `<div class="preview-status" style="font-size:${Math.min(design.statusFontSize, 28)}px;color:${openNow ? design.accentColor : design.textColor}">${openNow ? 'Open Now' : 'Closed Now'}</div>`;
             } else {
-              node.innerHTML = `<div class="preview-badge" style="font-size:${design.statusFontSize}px;background:${design.accentColor};color:#04120e">OPEN</div>`;
+              node.innerHTML = `<div class="preview-badge" style="font-size:${design.statusFontSize}px;background:${openNow ? design.accentColor : '#000000'};color:${openNow ? '#04120e' : '#FFFFFF'}">${openNow ? 'OPEN' : 'CLOSED'}</div>`;
             }
           } else if (el.type === 'slideshow') {
             if (slideItems.length) {
@@ -1882,6 +1903,13 @@
       });
       renderPaletteSwatches();
       applyTabletSize(800, 480);
+
+      // Keep canvas OPEN/CLOSED badge in sync with the clock
+      setInterval(() => {
+        if (!selected()) return;
+        if (!document.querySelector('.tabs [data-tab="design"].active')) return;
+        renderCanvas();
+      }, 30 * 1000);
 
       window.addEventListener('pointermove', (event) => {
         if (!dragState) return;

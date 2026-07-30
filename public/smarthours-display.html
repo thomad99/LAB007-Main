@@ -5,8 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
   <title>Opening Hours</title>
-  <link rel="icon" type="image/png" href="/smarthours-assets/smarthours-logo.png">
-  <link rel="apple-touch-icon" href="/smarthours-assets/smarthours-logo.png">
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -32,81 +30,67 @@
     }
     .el { position: absolute; overflow: hidden; }
     .logo { max-width: 100%; max-height: 100%; object-fit: contain; display: block; margin: 0 auto; }
-    .title { font-weight: 800; text-align: center; line-height: 1.15; width: 100%; }
-    .custom-text {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      align-items: center;
-      line-height: 1.2;
-      padding: 4px;
-      white-space: pre-wrap;
-      word-break: break-word;
-      overflow: hidden;
-    }
-    .custom-img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
-      border-radius: 8px;
+    .title {
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; font-weight: 700; line-height: 1.15;
+      padding: 4px 8px;
     }
     .status-text {
-      text-align: center;
-      font-weight: 800;
-      letter-spacing: .08em;
-      text-transform: uppercase;
-      width: 100%;
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; font-weight: 800; letter-spacing: .04em;
     }
     .status-badge {
-      width: 100%;
-      height: 100%;
-      display: grid;
-      place-items: center;
-      border-radius: 18px;
-      font-weight: 900;
-      letter-spacing: .1em;
-      text-transform: uppercase;
-    }
-    .status-img, .slide-img {
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-      display: block;
+      width: 100%; height: 100%;
+      display: flex; align-items: center; justify-content: center;
+      text-align: center; font-weight: 900; letter-spacing: .08em;
       border-radius: 12px;
     }
-    .hours { width: 100%; }
+    .status-img, .slide-img {
+      width: 100%; height: 100%; object-fit: cover; display: block;
+    }
+    .custom-img {
+      width: 100%; height: 100%; display: block;
+    }
+    .custom-text {
+      width: 100%; height: 100%;
+      display: flex; align-items: center;
+      line-height: 1.2; padding: 4px 8px;
+      white-space: pre-wrap; word-break: break-word;
+    }
+    .hours {
+      width: 100%; height: 100%;
+      display: flex; flex-direction: column; justify-content: center;
+      gap: 4px; padding: 4px 8px; overflow: hidden;
+    }
     .hours .row {
-      display: flex;
-      justify-content: space-between;
-      gap: 12px;
-      padding: 10px 2px;
-      border-bottom: 1px solid rgba(0,0,0,.12);
-      font-weight: 600;
+      display: flex; justify-content: space-between; gap: 12px;
+      font-weight: 600; line-height: 1.25;
     }
     .err {
-      color: #ffb4b4;
-      font-family: Segoe UI, Arial, sans-serif;
-      padding: 24px;
-      text-align: center;
+      color: #fff; font: 16px/1.4 system-ui, sans-serif;
+      padding: 24px; text-align: center;
     }
   </style>
 </head>
 <body>
-  <div id="stage">
-    <div id="tablet"></div>
-  </div>
+  <div id="stage"><div id="tablet"></div></div>
   <script>
     (function () {
+      const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
       const tablet = document.getElementById('tablet');
       const stage = document.getElementById('stage');
       const parts = location.pathname.split('/').filter(Boolean);
       const slug = decodeURIComponent(parts[parts.length - 1] || '');
       let slideTimer = null;
+      let statusTimer = null;
       let slideIndex = 0;
       let slideUrls = [];
       let screenW = 800;
       let screenH = 480;
+      let liveDesign = null;
+      let liveHours = null;
 
       function escapeHtml(str) {
         return String(str || '')
@@ -121,6 +105,27 @@
         const a = day.open && day.close ? `${day.open} – ${day.close}` : '';
         const b = day.open2 && day.close2 ? `${day.open2} – ${day.close2}` : '';
         return b ? `${a}, ${b}` : (a || 'Closed');
+      }
+
+      /** Open/closed from store hours vs the tablet's current local date/time. */
+      function isOpenNow(hours, date) {
+        const now = date || new Date();
+        const dayKey = DAYS[(now.getDay() + 6) % 7];
+        const day = hours && hours[dayKey];
+        if (!day || day.closed) return false;
+        const mins = now.getHours() * 60 + now.getMinutes();
+        const inSlot = (open, close) => {
+          if (!open || !close) return false;
+          const [oh, om] = String(open).split(':').map(Number);
+          const [ch, cm] = String(close).split(':').map(Number);
+          if (![oh, om, ch, cm].every(Number.isFinite)) return false;
+          const start = oh * 60 + om;
+          let end = ch * 60 + cm;
+          if (end <= start) end += 24 * 60;
+          const cur = mins < start && end > 24 * 60 ? mins + 24 * 60 : mins;
+          return cur >= start && cur < end;
+        };
+        return inSlot(day.open, day.close) || inSlot(day.open2, day.close2);
       }
 
       function fit() {
@@ -140,6 +145,15 @@
         return `<div class="status-badge" style="font-size:${design.statusFontSize || 36}px;background:${open ? (design.accentColor || '#FF0000') : '#000000'};color:${design.backgroundColor || '#FFFFFF'}">${open ? 'OPEN' : 'CLOSED'}</div>`;
       }
 
+      function refreshStatus() {
+        if (!liveDesign || !liveHours) return;
+        const open = isOpenNow(liveHours);
+        tablet.querySelectorAll('[data-status]').forEach((node) => {
+          node.innerHTML = renderStatus(liveDesign, open);
+          node.dataset.open = open ? '1' : '0';
+        });
+      }
+
       function startSlideshow(intervalSec) {
         if (slideTimer) clearInterval(slideTimer);
         if (slideUrls.length < 2) return;
@@ -155,7 +169,7 @@
           tablet.innerHTML = '<div class="err">Missing customer.</div>';
           return;
         }
-        const res = await fetch('/api/smarthours/public/' + encodeURIComponent(slug));
+        const res = await fetch('/api/smarthours/public/' + encodeURIComponent(slug) + '?t=' + Date.now());
         if (!res.ok) {
           tablet.innerHTML = '<div class="err">Hours page not found.</div>';
           return;
@@ -163,9 +177,9 @@
         const data = await res.json();
         const design = data.design || {};
         const hours = data.hours || {};
-        const days = data.days || ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+        const days = data.days || DAYS;
         const labels = data.dayLabels || {};
-        const open = !!data.openNow;
+        const open = isOpenNow(hours);
         const tabletInfo = data.tablet || data.eink || {};
         screenW = Math.max(200, Number(tabletInfo.width) || 800);
         screenH = Math.max(120, Number(tabletInfo.height) || 480);
@@ -178,6 +192,8 @@
         tablet.innerHTML = '';
         slideUrls = Array.isArray(design.slideshowUrls) ? design.slideshowUrls.slice() : [];
         slideIndex = 0;
+        liveDesign = design;
+        liveHours = hours;
 
         (design.layout || []).forEach((el) => {
           const node = document.createElement('div');
@@ -192,6 +208,7 @@
           } else if (el.type === 'title') {
             node.innerHTML = `<div class="title" style="font-size:${design.titleFontSize || 28}px">${escapeHtml(data.name)}</div>`;
           } else if (el.type === 'status') {
+            node.dataset.status = '1';
             node.innerHTML = renderStatus(design, open);
           } else if (el.type === 'slideshow' && slideUrls.length) {
             node.innerHTML = `<img class="slide-img" data-slideshow-img src="${escapeHtml(slideUrls[0])}" alt="">`;
@@ -212,12 +229,15 @@
         });
         fit();
         startSlideshow(design.slideshowIntervalSec);
+        if (statusTimer) clearInterval(statusTimer);
+        statusTimer = setInterval(refreshStatus, 30 * 1000);
       }
 
       window.addEventListener('resize', fit);
       load().catch(() => {
         tablet.innerHTML = '<div class="err">Could not load hours.</div>';
       });
+      // Refresh hours data periodically; status also ticks every 30s from local clock
       setInterval(() => { load().catch(() => {}); }, 5 * 60 * 1000);
     })();
   </script>
