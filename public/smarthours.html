@@ -190,7 +190,6 @@
       width: 88px;
       margin-top: 4px;
     }
-    .auto-sync-bar .hint { margin: 0; flex: 1 1 180px; }
     .hours-toolbar {
       margin-top: 14px;
       display: flex;
@@ -214,6 +213,7 @@
       display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px;
       padding: 10px 12px; border-radius: 12px; background: var(--accent-dim); border: 1px solid var(--line);
     }
+    .form-grid .url-box { margin-top: 0; }
     .url-box a { color: var(--accent); word-break: break-all; }
     .design-layout {
       display: grid; grid-template-columns: 280px 1fr; gap: 16px;
@@ -322,12 +322,13 @@
               <input id="fieldSlug" type="text" placeholder="acme-cafe">
             </div>
             <div class="full">
+              <div class="url-box" id="publicUrlBox"></div>
+            </div>
+            <div class="full">
               <label for="fieldMapsUrl">Google business link</label>
-              <input id="fieldMapsUrl" type="text" placeholder="Paste full Maps place URL (preferred) or share.google link">
-              <p class="hint">Prefer a full <strong>Google Maps place</strong> URL (<code>/maps/place/…</code>). Short <code>share.google</code> links can open a different business with a similar name.</p>
+              <input id="fieldMapsUrl" type="text" placeholder="Google Maps / place URL">
             </div>
           </div>
-          <div class="url-box" id="publicUrlBox"></div>
           <div class="hours-toolbar">
             <button type="button" class="btn btn-sync" id="syncOneBtn">Sync Google hours</button>
             <label class="manual-opt">
@@ -340,7 +341,6 @@
               <input id="autoSyncHours" type="number" min="0" max="168" step="1" value="24" title="0 disables auto sync">
             </div>
             <button type="button" class="btn-secondary" id="saveAutoSyncBtn">Save interval</button>
-            <p class="hint">Default 24. Applies to all customers. Set 0 to turn off automatic sync.</p>
           </div>
           <p class="hint" id="syncMeta"></p>
           <table class="hours-table">
