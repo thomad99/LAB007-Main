@@ -50,6 +50,7 @@
       appearance: none; border-radius: 10px; border: 1px solid transparent;
       padding: 10px 14px; font-weight: 700; cursor: pointer; font: inherit;
       display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+      text-decoration: none;
     }
     .btn { background: var(--accent); color: #04120e; }
     .btn-secondary { background: transparent; color: var(--accent); border-color: var(--line); }
@@ -347,6 +348,7 @@
         </div>
       </div>
       <div class="toolbar">
+        <a class="btn-secondary" href="/SmartHours/about">About</a>
         <button type="button" class="btn" id="newCustomerBtn">New Customer</button>
         <button type="button" class="btn-secondary" id="syncAllBtn">Sync All Google</button>
       </div>
@@ -424,6 +426,7 @@
                   <div>
                     <label for="screenColorMode">Colors</label>
                     <select id="screenColorMode">
+                      <option value="6color">6-color</option>
                       <option value="4color">4-color</option>
                       <option value="grayscale">Grayscale</option>
                     </select>
@@ -648,6 +651,7 @@
             <div>
               <label for="einkColorMode">Color mode</label>
               <select id="einkColorMode">
+                <option value="6color">6-color</option>
                 <option value="4color">4-color</option>
                 <option value="grayscale">Grayscale</option>
               </select>
@@ -700,6 +704,7 @@
       };
       const TABLET = { width: 800, height: 480 };
       const COLOR_PALETTES = {
+        '6color': ['#000000', '#FFFFFF', '#FF0000', '#FFFF00', '#0000FF', '#00FF00'],
         '4color': ['#000000', '#FFFFFF', '#FF0000', '#FFFF00'],
         grayscale: ['#000000', '#555555', '#AAAAAA', '#FFFFFF']
       };
@@ -740,8 +745,12 @@
         statusEl.classList.toggle('is-busy', !!isBusy && !isErr);
       }
 
+      function resolveColorMode(mode) {
+        return COLOR_PALETTES[mode] ? mode : '6color';
+      }
+
       function currentColorMode() {
-        return document.getElementById('screenColorMode').value === 'grayscale' ? 'grayscale' : '4color';
+        return resolveColorMode(document.getElementById('screenColorMode').value);
       }
 
       function paletteColors() {
@@ -1494,7 +1503,7 @@
             width: Number(document.getElementById('einkWidth').value) || 800,
             height: Number(document.getElementById('einkHeight').value) || 480,
             orientation: document.getElementById('einkOrientation').value === 'portrait' ? 'portrait' : 'landscape',
-            colorMode: document.getElementById('einkColorMode').value === 'grayscale' ? 'grayscale' : '4color',
+            colorMode: resolveColorMode(document.getElementById('einkColorMode').value),
             inverted: document.getElementById('einkInverted').checked
           }
         };
@@ -1508,7 +1517,7 @@
         document.getElementById('einkWidth').value = e.width || 800;
         document.getElementById('einkHeight').value = e.height || 480;
         document.getElementById('einkOrientation').value = e.orientation === 'portrait' ? 'portrait' : 'landscape';
-        document.getElementById('einkColorMode').value = e.colorMode === 'grayscale' ? 'grayscale' : '4color';
+        document.getElementById('einkColorMode').value = resolveColorMode(e.colorMode);
         document.getElementById('einkInverted').checked = !!e.inverted;
         syncScreenFields(false);
         if (!document.getElementById('espBaseUrl').value) {

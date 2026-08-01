@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>About SmartHours | The smarter way to display opening hours</title>
+  <meta name="description" content="SmartHours is a window-mounted e-ink display that keeps opening hours accurate — sync from Google, customise your look, and update from your phone.">
+  <link rel="icon" type="image/png" href="/smarthours-assets/smarthours-logo.png">
+  <link rel="apple-touch-icon" href="/smarthours-assets/smarthours-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #f7f9fc;
+      --surface: #ffffff;
+      --ink: #0f172a;
+      --muted: #475569;
+      --blue: #2563eb;
+      --blue-deep: #1d4ed8;
+      --line: rgba(15, 23, 42, .08);
+      --shadow: 0 18px 48px rgba(15, 23, 42, .08);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: Manrope, "Segoe UI", sans-serif;
+      background:
+        radial-gradient(900px 420px at 8% -8%, rgba(37, 99, 235, .10), transparent 55%),
+        radial-gradient(700px 380px at 96% 0%, rgba(37, 99, 235, .06), transparent 50%),
+        linear-gradient(180deg, #ffffff 0%, var(--bg) 42%, #eef3fb 100%);
+    }
+    a { color: var(--blue); }
+    .top {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, .86);
+      border-bottom: 1px solid var(--line);
+    }
+    .top-inner {
+      width: min(1120px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 12px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+      text-decoration: none;
+      color: inherit;
+    }
+    .brand img {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      box-shadow: 0 8px 22px rgba(37, 99, 235, .22);
+    }
+    .brand strong {
+      font-size: 1.2rem;
+      letter-spacing: -.03em;
+      color: var(--blue);
+    }
+    .brand span {
+      display: block;
+      font-size: .78rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .nav {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      justify-content: flex-end;
+    }
+    .nav a {
+      text-decoration: none;
+      font-weight: 700;
+      font-size: .92rem;
+      padding: 9px 14px;
+      border-radius: 999px;
+      border: 1px solid transparent;
+    }
+    .nav a.ghost {
+      color: var(--ink);
+      border-color: var(--line);
+      background: var(--surface);
+    }
+    .nav a.primary {
+      color: #fff;
+      background: var(--blue);
+    }
+    .nav a.primary:hover { background: var(--blue-deep); }
+    .wrap {
+      width: min(1120px, calc(100% - 28px));
+      margin: 0 auto;
+      padding: 28px 0 64px;
+    }
+    .intro {
+      max-width: 42rem;
+      margin: 0 0 22px;
+    }
+    .intro h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.8rem, 4.2vw, 2.7rem);
+      letter-spacing: -.04em;
+      line-height: 1.1;
+    }
+    .intro h1 em {
+      font-style: normal;
+      color: var(--blue);
+    }
+    .intro p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 1.05rem;
+      line-height: 1.55;
+    }
+    .flyer {
+      margin: 0 0 28px;
+      border-radius: 18px;
+      overflow: hidden;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      border: 1px solid var(--line);
+    }
+    .flyer img {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    .section-label {
+      margin: 0 0 12px;
+      font-size: .78rem;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .slides {
+      display: flex;
+      flex-wrap: nowrap;
+      gap: 14px;
+      overflow-x: auto;
+      padding: 4px 2px 18px;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+    }
+    .slides::-webkit-scrollbar { height: 8px; }
+    .slides::-webkit-scrollbar-thumb {
+      background: rgba(37, 99, 235, .35);
+      border-radius: 999px;
+    }
+    .slides figure {
+      margin: 0;
+      flex: 0 0 min(520px, 86vw);
+      scroll-snap-align: start;
+      border-radius: 16px;
+      overflow: hidden;
+      background: var(--surface);
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+    }
+    .slides img {
+      display: block;
+      width: 100%;
+      height: auto;
+      vertical-align: middle;
+    }
+    .slides figcaption {
+      padding: 10px 12px 12px;
+      font-size: .86rem;
+      color: var(--muted);
+      font-weight: 600;
+    }
+    .hint {
+      margin: -6px 0 28px;
+      color: var(--muted);
+      font-size: .86rem;
+    }
+    @media (min-width: 900px) {
+      .slides {
+        flex-wrap: wrap;
+        overflow: visible;
+        scroll-snap-type: none;
+        padding-bottom: 0;
+      }
+      .slides figure {
+        flex: 1 1 calc(50% - 14px);
+        max-width: calc(50% - 7px);
+      }
+    }
+    @media (min-width: 1200px) {
+      .slides figure {
+        flex: 1 1 calc(33.333% - 14px);
+        max-width: calc(33.333% - 10px);
+      }
+    }
+    .cta {
+      margin-top: 36px;
+      padding: 22px 20px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, #1d4ed8, #2563eb 55%, #3b82f6);
+      color: #fff;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 20px 40px rgba(37, 99, 235, .28);
+    }
+    .cta h2 {
+      margin: 0 0 4px;
+      font-size: 1.25rem;
+      letter-spacing: -.02em;
+    }
+    .cta p { margin: 0; opacity: .92; }
+    .cta a {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 18px;
+      border-radius: 999px;
+      background: #fff;
+      color: var(--blue-deep);
+      font-weight: 800;
+      text-decoration: none;
+      white-space: nowrap;
+    }
+    footer {
+      margin-top: 28px;
+      color: var(--muted);
+      font-size: .88rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <div class="top-inner">
+      <a class="brand" href="/SmartHours/about" aria-label="SmartHours About">
+        <img src="/smarthours-assets/smarthours-logo.png" width="44" height="44" alt="SmartHours">
+        <div>
+          <strong>SmartHours</strong>
+          <span>About the product</span>
+        </div>
+      </a>
+      <nav class="nav" aria-label="SmartHours">
+        <a class="ghost" href="/SmartHours">Admin</a>
+        <a class="primary" href="https://www.SmartHours.app" target="_blank" rel="noopener">www.SmartHours.app</a>
+      </nav>
+    </div>
+  </div>
+
+  <main class="wrap">
+    <div class="intro">
+      <h1>The <em>smarter</em> way to display opening hours</h1>
+      <p>Window-mounted e-ink that stays accurate — auto-updates from Google, custom looks, and control from your phone or browser.</p>
+    </div>
+
+    <figure class="flyer">
+      <img
+        src="/smarthours-assets/about/flyer.png"
+        alt="SmartHours flyer: always accurate, always professional opening hours display"
+        width="1200"
+        height="800"
+        decoding="async"
+        fetchpriority="high"
+      >
+    </figure>
+
+    <p class="section-label">Product gallery</p>
+    <p class="hint">Swipe sideways on mobile · gallery wraps on larger screens</p>
+    <div class="slides" role="list">
+      <figure role="listitem">
+        <img src="/smarthours-assets/about/slide-01.png" alt="The smarter way to display opening hours" width="800" height="500" loading="lazy" decoding="async">
+        <figcaption>Brand overview</figcaption>
+      </figure>
+      <figure role="listitem">
+        <img src="/smarthours-assets/about/slide-02.png" alt="Perfect for any business" width="800" height="500" loading="lazy" decoding="async">
+        <figcaption>Perfect for any business</figcaption>
+      </figure>
+      <figure role="listitem">
+        <img src="/smarthours-assets/about/slide-03.png" alt="Different businesses, one smart solution" width="800" height="500" loading="lazy" decoding="async">
+        <figcaption>One solution, many storefronts</figcaption>
+      </figure>
+      <figure role="listitem">
+        <img src="/smarthours-assets/about/slide-04.png" alt="Update in seconds from your phone" width="800" height="500" loading="lazy" decoding="async">
+        <figcaption>Update in seconds</figcaption>
+      </figure>
+      <figure role="listitem">
+        <img src="/smarthours-assets/about/slide-05-google.png" alt="Auto-updates from Google Business Profile" width="800" height="500" loading="lazy" decoding="async">
+        <figcaption>Auto-updates from Google</figcaption>
+      </figure>
+      <figure role="listitem">
+        <img src="/smarthours-assets/about/slide-06-battery.png" alt="Up to 1 month battery life" width="800" height="500" loading="lazy" decoding="async">
+        <figcaption>Up to 1 month battery</figcaption>
+      </figure>
+      <figure role="listitem">
+        <img src="/smarthours-assets/about/slide-10-openclosed.png" alt="Automatically shows open or closed status" width="800" height="500" loading="lazy" decoding="async">
+        <figcaption>Always know open or closed</figcaption>
+      </figure>
+      <figure role="listitem">
+        <img src="/smarthours-assets/about/slide-08-uptodate.png" alt="Always clear and up to date closed message" width="800" height="500" loading="lazy" decoding="async">
+        <figcaption>Always clear, always up to date</figcaption>
+      </figure>
+      <figure role="listitem">
+        <img src="/smarthours-assets/about/slide-11-install.png" alt="Easy to install on glass with no drilling" width="800" height="500" loading="lazy" decoding="async">
+        <figcaption>Easy to install</figcaption>
+      </figure>
+      <figure role="listitem">
+        <img src="/smarthours-assets/about/slide-07-seasonal.png" alt="Seasonal styles for holidays and special occasions" width="800" height="500" loading="lazy" decoding="async">
+        <figcaption>Seasonal styles</figcaption>
+      </figure>
+      <figure role="listitem">
+        <img src="/smarthours-assets/about/slide-09-phone.png" alt="Control SmartHours from your smartphone" width="800" height="500" loading="lazy" decoding="async">
+        <figcaption>Control from your smartphone</figcaption>
+      </figure>
+    </div>
+
+    <section class="cta" aria-label="Learn more">
+      <div>
+        <h2>Ready to learn more?</h2>
+        <p>Visit www.SmartHours.app or open the admin to manage displays.</p>
+      </div>
+      <a href="https://www.SmartHours.app" target="_blank" rel="noopener">www.SmartHours.app</a>
+    </section>
+
+    <footer>
+      <a href="/SmartHours">← Back to SmartHours Admin</a>
+    </footer>
+  </main>
+</body>
+</html>
