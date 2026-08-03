@@ -8304,13 +8304,39 @@ function displayCloneMasterImages() {
 }
 
 function farmImageExcludeKey(row) {
-    const raw = String((row && (row.VmMasterImage || row.HzBaseImage)) || '').trim();
-    if (!raw) return String((row && row.HzFarm) || '').trim();
+    return farmExactImageName(row) || String((row && row.HzFarm) || '').trim();
+}
+
+/** Exact image basename for this farm (Horizon base image preferred over fuzzy VMware match). */
+function farmExactImageName(row) {
+    const raw = String((row && (row.HzBaseImage || row.VmMasterImage)) || '').trim();
+    if (!raw) return '';
     return raw.replace(/^.*\//, '').trim() || raw;
 }
 
+function farmExactSnapshotLabel(row) {
+    const rawSnap = String((row && (row.HzSnapshot || row.VmMasterSnapshot)) || '').trim();
+    const snapName = rawSnap.replace(/^.*\//, '').trim() || rawSnap;
+    const ts = String((row && row.VmSnapshotTimestamp) || '').trim();
+    if (snapName && ts) return `${snapName} @ ${ts}`;
+    return snapName || ts || '';
+}
+
+/**
+ * Selection groups farms by exact image basename only (case-sensitive).
+ * Do not use VmMasterImage alone — Horizon→VMware fuzzy matching can collapse similar names.
+ */
 function farmRowSelectionKey(row) {
-    return String((row && (row.VmMasterImage || row.HzBaseImage || row.HzFarm)) || '').trim();
+    const image = farmExactImageName(row);
+    if (image) return image;
+    return String((row && row.HzFarm) || '').trim();
+}
+
+/** VMware master name to clone (may differ from Horizon base image display name). */
+function farmCloneMasterName(row) {
+    const raw = String((row && (row.VmMasterImage || row.HzBaseImage)) || '').trim();
+    if (!raw) return '';
+    return raw.replace(/^.*\//, '').trim() || raw;
 }
 
 function toggleShowExcludedFarmImages(checked) {
@@ -8403,11 +8429,25 @@ async function renderGoldenSunFarmReport() {
 
     let html = '';
     if (visibleRows.length) {
-        html = `<p style="margin-bottom: 15px; color: #666;">Found ${automatedRows.length} automated pool(s)`;
+        html = `<p style="margin-bottom: 10px; color: #666;">Found ${automatedRows.length} automated pool(s)`;
         if (hiddenCount > 0 && !showExcludedFarmImages) {
             html += ` · <strong>${hiddenCount} hidden</strong> (excluded)`;
         }
-        html += `</p>`;
+        html += `. Selecting a row selects all farms that use that <strong>exact</strong> image name.</p>`;
+        html += `
+        <table style="width:100%;border-collapse:collapse;font-size:12px;">
+            <thead>
+                <tr style="background:#f0f0f0;border-bottom:2px solid #ccc;">
+                    <th style="width:28px;padding:6px 4px;"></th>
+                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Farm / Pool</th>
+                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Type</th>
+                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Image</th>
+                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Snapshot / Date</th>
+                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">State</th>
+                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Filter</th>
+                </tr>
+            </thead>
+            <tbody>`;
 
         visibleRows.forEach((row) => {
             const key = farmRowSelectionKey(row);
@@ -8423,40 +8463,33 @@ async function renderGoldenSunFarmReport() {
             const typeBadge = isDesktop
                 ? '<span style="font-size:10px;background:#e3f0ff;color:#1a5fa8;border-radius:3px;padding:1px 5px;font-weight:600;">VDI</span>'
                 : '<span style="font-size:10px;background:#e8f5e9;color:#2e7d32;border-radius:3px;padding:1px 5px;font-weight:600;">RDS</span>';
-            const rawImage = row.VmMasterImage || row.HzBaseImage || '';
-            const imageName = escapeHtml(String(rawImage).replace(/^.*\//, ''));
-            const rawSnap = row.HzSnapshot || row.VmMasterSnapshot || '';
-            const snapName = escapeHtml(String(rawSnap).replace(/^.*\//, '') + (row.VmSnapshotTimestamp ? ' @ ' + row.VmSnapshotTimestamp : ''));
+            const imageName = escapeHtml(farmExactImageName(row) || '(none)');
+            const snapName = escapeHtml(farmExactSnapshotLabel(row) || '(none)');
             const cloneState = escapeHtml(row.CloneState || 'Not cloned');
-            const border = isExcluded ? '#f0c2c2' : '#ddd';
-            const bg = isExcluded ? '#fff7f7' : '#fff';
+            const stateStyle = row.CloneState ? 'color:#0a7f2e;font-weight:600;' : 'color:#999;';
+            const rowBg = isExcluded ? '#fff7f7' : (checked ? '#eef6ff' : '');
 
             html += `
-                <div style="border: 1px solid ${border}; border-radius: 4px; padding: 10px; margin-bottom: 10px; background:${bg};">
-                    <div style="display: flex; align-items: flex-start; gap: 10px;">
-                        <label style="display: flex; align-items: flex-start; cursor: ${isExcluded ? 'default' : 'pointer'}; flex: 1; margin: 0;">
-                            <input type="checkbox" style="margin-right: 10px; margin-top: 2px;" ${checked} ${isExcluded ? 'disabled' : ''}
-                                   onchange="toggleFarmMasterSelection('${safeKey}')">
-                            <div style="flex: 1;">
-                                <strong>${farmName}</strong> ${typeBadge}
-                                ${isExcluded ? ' <span style="color:#b00020;font-size:12px;font-weight:600;">(excluded)</span>' : ''}
-                                <div style="font-size: 12px; color: #666; margin-top: 2px;">
-                                    Image: ${imageName || '(none)'} | Snapshot: ${snapName || '(none)'}
-                                </div>
-                                <div style="font-size: 11px; color: #888; margin-top: 2px;">
-                                    State: ${cloneState}
-                                </div>
-                            </div>
-                        </label>
-                        <div style="flex: 0 0 auto;">
-                            ${isExcluded
-                                ? `<button type="button" class="btn btn-sm" onclick="includeFarmImage('${safeImageKey}')">Include</button>`
-                                : `<button type="button" class="btn btn-sm btn-secondary" onclick="excludeFarmImage('${safeImageKey}')">Exclude</button>`
-                            }
-                        </div>
-                    </div>
-                </div>`;
+                <tr style="border-bottom:1px solid #eee;background:${rowBg};"
+                    onmouseover="this.style.background='#f0f6ff'" onmouseout="this.style.background='${rowBg}'">
+                    <td style="padding:8px 4px;text-align:center;">
+                        <input type="checkbox" ${checked} ${isExcluded ? 'disabled' : ''} onchange="toggleFarmMasterSelection('${safeKey}')">
+                    </td>
+                    <td style="padding:8px 10px;font-weight:600;white-space:nowrap;">${farmName}</td>
+                    <td style="padding:8px 10px;">${typeBadge}</td>
+                    <td style="padding:8px 10px;font-family:Consolas,monospace;white-space:nowrap;">${imageName}${isExcluded ? ' <span style="color:#b00020;font-size:11px;font-weight:600;">(excluded)</span>' : ''}</td>
+                    <td style="padding:8px 10px;font-family:Consolas,monospace;color:#333;white-space:nowrap;">${snapName}</td>
+                    <td style="padding:8px 10px;${stateStyle}">${cloneState}</td>
+                    <td style="padding:8px 10px;white-space:nowrap;">
+                        ${isExcluded
+                            ? `<button type="button" class="btn btn-sm" onclick="includeFarmImage('${safeImageKey}')">Include</button>`
+                            : `<button type="button" class="btn btn-sm btn-secondary" onclick="excludeFarmImage('${safeImageKey}')">Exclude</button>`
+                        }
+                    </td>
+                </tr>`;
         });
+
+        html += '</tbody></table>';
     } else if (automatedRows.length && hiddenCount > 0 && !showExcludedFarmImages) {
         html = `<p style="color:#666;">All ${hiddenCount} automated pool(s) are excluded. Turn on <strong>Show excluded</strong> to restore any you still need.</p>`;
     } else {
@@ -8636,16 +8669,19 @@ function generateFarmCloneScriptFromReport() {
     const selectedImages = [];
     const seenKeys = new Set();
     farmReportRows.forEach(row => {
-        const key = row.VmMasterImage || row.HzBaseImage || row.HzFarm || '';
-        if (key && farmSelectedMasters.has(key) && !seenKeys.has(key)) {
-            seenKeys.add(key);
-            selectedImages.push({
-                Name: key,
-                Cluster: row.Cluster || 'Unknown',
-                Host: row.Host || 'Unknown',
-                Datastore: row.Datastore || 'Unknown'
-            });
-        }
+        const selectKey = farmRowSelectionKey(row);
+        if (!selectKey || !farmSelectedMasters.has(selectKey)) return;
+        // Only include this row when its Horizon image name exactly matches the selection key
+        if (farmExactImageName(row) !== selectKey && selectKey !== String(row.HzFarm || '').trim()) return;
+        const cloneName = farmCloneMasterName(row) || selectKey;
+        if (!cloneName || seenKeys.has(cloneName)) return;
+        seenKeys.add(cloneName);
+        selectedImages.push({
+            Name: cloneName,
+            Cluster: row.Cluster || 'Unknown',
+            Host: row.Host || 'Unknown',
+            Datastore: row.Datastore || 'Unknown'
+        });
     });
     if (!selectedImages.length) {
         alert('No valid VMware master images found for selection.');
