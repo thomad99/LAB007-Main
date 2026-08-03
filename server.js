@@ -6015,21 +6015,9 @@ app.get('/sportsplus', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'sportsplus.html'));
 });
 
-// Elite Cleaning Services
-app.get('/elite-cleaning', (req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'elite-cleaning.html'));
-});
-app.get('/elite-cleaning.html', (req, res) => {
-  res.redirect(301, '/elite-cleaning');
-});
-app.get('/elite-cleaners-2', (req, res) => {
-  res.redirect(301, '/elite-cleaning');
-});
-app.get('/Elite-Cleaners-2', (req, res) => {
-  res.redirect(301, '/elite-cleaning');
-});
-app.get('/elite-cleaners-2.html', (req, res) => {
-  res.redirect(301, '/elite-cleaning');
+// Elite Cleaning public marketing page removed — keep old URLs from resolving
+app.get(['/elite-cleaning', '/elite-cleaning.html', '/elite-cleaners-2', '/Elite-Cleaners-2', '/elite-cleaners-2.html'], (req, res) => {
+  res.status(404).type('html').send('<!doctype html><title>Not found</title><h1>Page removed</h1><p>The Elite Cleaning marketing page is no longer published on LAB007.</p><p><a href="/">Home</a></p>');
 });
 
 // Elite Invoices — cleaning client invoice generator

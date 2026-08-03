@@ -6,7 +6,6 @@
     ['CursorAI', '/cursorai'],
     ['BUCK', 'https://buck-lab007.onrender.com/'],
     ['007Trade', '/007trade'],
-    ['Elite Cleaning', '/elite-cleaning'],
     ['Elite Invoices', '/Elite-Invoices'],
     ['Clever-CRM', '/Clever-CRM'],
     ['SmartHours', '/SmartHours'],
@@ -34,9 +33,9 @@
   const menu = document.createElement('nav');
   menu.className = 'lab007Menu';
   menu.setAttribute('aria-label', 'LAB007 navigation');
-  const current = location.pathname.replace(/\/index\.html$/, '/').replace(/\/elite-cleaning\.html$/, '/elite-cleaning').replace(/\/elite-cleaners-2\.html$/, '/elite-cleaning') || '/';
+  const current = location.pathname.replace(/\/index\.html$/, '/') || '/';
   menu.innerHTML = links.map(([label, href, icon]) => {
-    const isActive = href === current || (href === '/elite-cleaning' && (current.startsWith('/elite-cleaning') || current.startsWith('/elite-cleaners-2')));
+    const isActive = href === current;
     return `<a href="${href}"${isActive ? ' class="active"' : ''}${href.startsWith('http') ? ' target="_blank" rel="noopener noreferrer"' : ''}>${icon ? `<img class="lab007MenuIcon" src="${icon}" alt="" loading="lazy">` : ''}<span>${label}</span></a>`;
   }).join('');
   button.addEventListener('click', (event) => { event.stopPropagation(); menu.classList.toggle('open'); });
