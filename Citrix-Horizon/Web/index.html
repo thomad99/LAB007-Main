@@ -829,12 +829,12 @@
                 <!-- Clone Master Image Task -->
                 <div id="cloneMasterImageTask" class="horizon-task-panel active">
                     <h3>Clone Master Image</h3>
-                    <p>First load a master images JSON file from the Master Image Search tab, then select which images to clone.</p>
+                    <p>Load a master-images JSON from Master Image Search, or a <code>FarmData.json</code> from Horizon Admin Image Dates, then select which images to clone.</p>
 
                     <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
                         <h4 style="margin-bottom: 10px;">Load Master Images List</h4>
-                        <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Load master images from a JSON file created by the discovery script to select which ones to clone.</p>
-                        <button id="loadCloneMasterImagesBtn" class="btn btn-secondary" onclick="loadCloneMasterImagesFile()">Load Master Images JSON</button>
+                        <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Accepts discovery <code>*-Master-Images.json</code> or <code>FarmData.json</code>. Use <strong>Exclude</strong> on images you don’t want listed.</p>
+                        <button id="loadCloneMasterImagesBtn" class="btn btn-secondary" onclick="loadCloneMasterImagesFile()">Load Master Images / FarmData JSON</button>
                         <input type="file" id="cloneMasterImagesFileInput" accept=".json" style="display: none;">
                         <span id="cloneMasterImagesFileName" style="margin-left: 15px; color: #666;"></span>
                     </div>
@@ -1289,28 +1289,39 @@
             <div id="goldenSunFarmPanel" class="horizon-task-panel active" style="display: block;">
                 <h3>Clone Images</h3>
                 <p style="color:#666;">Uses the Horizon Admin Image Dates script output (FarmData.html / FarmData.json) to show HZ farms and mapped VMware masters, and to build clone scripts from selected masters.</p>
-                <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;">
+
+                <div style="margin: 20px 0; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
+                    <h4 style="margin-bottom: 10px;">Load Farm Report</h4>
+                    <p style="margin-bottom: 15px; color: #666; font-size: 14px;">Load a <code>FarmData.json</code> file produced by the Horizon Admin Image Dates script, then select VMware masters below to build a clone script.</p>
                     <button class="btn btn-secondary" onclick="openFarmFileDialog()">Load FarmData.json (file)</button>
                     <input type="file" id="goldenSunFarmFilePicker" accept=".json,application/json" style="display:none;">
-                    <span id="goldenSunFarmStatus" style="color:#666;"></span>
-                    <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
-                        <button class="btn btn-sm" onclick="goldenSunFarmSelectAll()">Select All</button>
-                        <button class="btn btn-sm" onclick="goldenSunFarmDeselectAll()">Deselect All</button>
-                    </div>
+                    <span id="goldenSunFarmStatus" style="margin-left: 15px; color:#666;"></span>
                 </div>
-                <div style="margin-top:8px;">
-                    <div id="goldenSunFarmFramePlaceholder" style="padding:10px; color:#666;">
-                        Load a <code>FarmData.json</code> file produced by the Horizon Admin Image Dates script, then select VMware masters below to build a clone script.
+
+                <div id="goldenSunFarmMasterPanel" style="margin: 20px 0; display:none;">
+                    <h4 style="margin-bottom: 10px;">Master Images:</h4>
+                    <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px;">
+                        <button type="button" class="btn btn-sm" onclick="goldenSunFarmSelectAll()">Select All</button>
+                        <button type="button" class="btn btn-sm" onclick="goldenSunFarmDeselectAll()">Deselect All</button>
+                        <label style="display:inline-flex; align-items:center; gap:6px; margin-left:8px; font-size:13px; color:#444;">
+                            <input type="checkbox" id="showExcludedFarmImages" onchange="toggleShowExcludedFarmImages(this.checked)">
+                            Show excluded
+                        </label>
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="clearAllCloneImageExclusions()" title="Restore all hidden images">Clear exclusions</button>
+                        <span id="farmImageExclusionStatus" style="color:#666; font-size:13px;"></span>
                     </div>
-                    <div id="goldenSunFarmMasterPanel" style="margin-top:8px; display:none;">
-                        <div id="goldenSunFarmList" style="max-height:360px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:8px; background:#f8f9fa;"></div>
-                        <div style="margin-top:10px; text-align:right;">
-                            <button class="btn btn-primary" onclick="generateFarmCloneScriptFromReport()">Generate Clone Script</button>
-                        </div>
+                    <p style="margin:0 0 10px; color:#666; font-size:13px;">
+                        Use <strong>Exclude</strong> on images you don’t want listed. Exclusions are saved persistently and stay hidden on the next load.
+                    </p>
+                    <div id="goldenSunFarmList" style="max-height:400px; overflow-y:auto; border:1px solid #ddd; border-radius:4px; padding:10px; background-color:#f8f9fa;"></div>
+                    <div style="margin-top:10px; text-align:right;">
+                        <button class="btn btn-primary" onclick="generateFarmCloneScriptFromReport()">Generate Clone Script</button>
                     </div>
                 </div>
 
-                <div style="margin: 20px 0;">
+                <div id="goldenSunFarmFramePlaceholder" style="padding:10px; color:#666; display:none;"></div>
+
+                <div id="goldenSunCloneDestSection" style="margin: 20px 0; display:none;">
                     <h4 style="margin-bottom: 15px;">Clone Destination Configuration</h4>
 
                     <div style="margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;">
@@ -1714,7 +1725,7 @@
         </div>
     </footer>
 
-    <script src="dashboard.js"></script>
+    <script src="dashboard.js?v=farm-exclude-3"></script>
     <script>
     // UAG modal + parser (lightweight inline to avoid extra page)
     mermaid.initialize({ startOnLoad: false, theme: 'dark' });

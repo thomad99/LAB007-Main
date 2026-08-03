@@ -27,6 +27,10 @@ let goldenSunFileOptions = [];
 // Farm report (Horizon + VMware master images)
 let farmReportRows = [];
 let farmSelectedMasters = new Set();
+let showExcludedFarmImages = false;
+let selectedCloneImages = new Set();
+let cloneImageExclusions = new Set();
+let showExcludedCloneImages = false;
 const GOLDEN_SUN_DEFAULT_VCENTER = 'shcvcsacx01v.ccr.cchcs.org';
 const HZ_ADMIN_DEFAULT_BASE = 'https://shchrznconap04v.ccr.cchcs.org';
 /** Power Automate manual trigger URL for HZ Teams adaptive-card notifications */
@@ -3025,7 +3029,11 @@ function showGoldenSunModal() {
 
     goldenSunActiveTab = 'farm';
     showGoldenSunTab(goldenSunActiveTab);
-    renderGoldenSunFarmReport();
+    loadCloneImageExclusions().then(() => {
+        if (farmReportRows && farmReportRows.length) {
+            renderGoldenSunFarmReport();
+        }
+    }).catch(() => {});
 }
 
 function closeGoldenSunModal() {
@@ -8166,7 +8174,9 @@ function handleCloneMasterImagesFile(event) {
     const reader = new FileReader();
     reader.onload = async function(e) {
         try {
-            cloneMasterImagesData = JSON.parse(e.target.result);
+            const rawText = String(e.target.result || '').replace(/^\uFEFF/, '');
+            const parsed = JSON.parse(rawText || '{}');
+            cloneMasterImagesData = coerceCloneMasterImagesPayload(parsed, file.name);
             document.getElementById('cloneMasterImagesFileName').textContent = `Loaded: ${file.name}`;
 
             // Show the hidden sections after successful file load
@@ -8184,6 +8194,48 @@ function handleCloneMasterImagesFile(event) {
         }
     };
     reader.readAsText(file);
+    event.target.value = '';
+}
+
+/** Accept MasterImages JSON or FarmData.json and normalize to { MasterImages: [...] }. */
+function coerceCloneMasterImagesPayload(parsed, fileName) {
+    if (!parsed) return { MasterImages: [], vCenterServer: 'Unknown' };
+
+    if (Array.isArray(parsed.MasterImages)) {
+        return parsed;
+    }
+    if (Array.isArray(parsed) && parsed.length && parsed[0] && parsed[0].Name && !parsed[0].HzFarm) {
+        return { MasterImages: parsed, vCenterServer: 'Imported list' };
+    }
+
+    const farmRows = normalizeFarmDataRows(parsed);
+    if (farmRows.length) {
+        const byName = new Map();
+        farmRows.forEach((row) => {
+            const name = farmImageExcludeKey(row);
+            if (!name || name === '(Manual farm)') return;
+            if (byName.has(name)) return;
+            const snap = String(row.VmMasterSnapshot || row.HzSnapshot || '').replace(/^.*\//, '').trim();
+            byName.set(name, {
+                Name: name,
+                Version: snap || 'Unknown',
+                Cluster: row.HzFarm || row.FarmName || '',
+                Host: row.HzSourceType || '',
+                NumCPU: 0,
+                MemoryGB: 0,
+                ProvisionedSpaceGB: 0,
+                Snapshot: snap || '',
+                SnapshotTimestamp: row.VmSnapshotTimestamp || ''
+            });
+        });
+        return {
+            MasterImages: [...byName.values()],
+            vCenterServer: `From FarmData (${fileName || 'import'})`,
+            Source: 'FarmData'
+        };
+    }
+
+    return { MasterImages: [], vCenterServer: 'Unknown' };
 }
 
 function displayCloneMasterImages() {
@@ -8251,24 +8303,68 @@ function displayCloneMasterImages() {
     syncCloneImageExclusionStatus();
 }
 
+function farmImageExcludeKey(row) {
+    const raw = String((row && (row.VmMasterImage || row.HzBaseImage)) || '').trim();
+    if (!raw) return String((row && row.HzFarm) || '').trim();
+    return raw.replace(/^.*\//, '').trim() || raw;
+}
+
+function farmRowSelectionKey(row) {
+    return String((row && (row.VmMasterImage || row.HzBaseImage || row.HzFarm)) || '').trim();
+}
+
+function toggleShowExcludedFarmImages(checked) {
+    showExcludedFarmImages = !!checked;
+    renderGoldenSunFarmReport();
+}
+
+async function excludeFarmImage(imageKey) {
+    const name = String(imageKey || '').trim();
+    if (!name) return;
+    cloneImageExclusions.add(name);
+    // Drop any selected masters that use this image
+    farmReportRows.forEach((row) => {
+        if (farmImageExcludeKey(row) === name) {
+            const key = farmRowSelectionKey(row);
+            if (key) farmSelectedMasters.delete(key);
+        }
+    });
+    selectedCloneImages.delete(name);
+    await persistCloneImageExclusions();
+    renderGoldenSunFarmReport();
+    if (typeof displayCloneMasterImages === 'function' && cloneMasterImagesData && cloneMasterImagesData.MasterImages) {
+        displayCloneMasterImages();
+    }
+}
+
+async function includeFarmImage(imageKey) {
+    const name = String(imageKey || '').trim();
+    if (!name) return;
+    cloneImageExclusions.delete(name);
+    await persistCloneImageExclusions();
+    renderGoldenSunFarmReport();
+    if (typeof displayCloneMasterImages === 'function' && cloneMasterImagesData && cloneMasterImagesData.MasterImages) {
+        displayCloneMasterImages();
+    }
+}
+
 async function renderGoldenSunFarmReport() {
     const status = document.getElementById('goldenSunFarmStatus');
     const list = document.getElementById('goldenSunFarmList');
     const framePlaceholder = document.getElementById('goldenSunFarmFramePlaceholder');
     const masterPanel = document.getElementById('goldenSunFarmMasterPanel');
+    const destSection = document.getElementById('goldenSunCloneDestSection');
     if (!list) return;
 
     if (!farmReportRows.length) {
         // Try loading FarmData.json from possible base paths (server mode)
         const candidates = ['/citrix/Reports/FarmData.json', '/Reports/FarmData.json', '/citrix/FarmData.json', '/FarmData.json'];
         let data = null;
-        let basePath = null;
         for (const url of candidates) {
             try {
                 const res = await fetch(url, { cache: 'no-cache' });
                 if (res.ok) {
                     data = await res.json();
-                    basePath = url.replace(/FarmData\.json$/i, '');
                     break;
                 }
             } catch (e) {
@@ -8276,86 +8372,93 @@ async function renderGoldenSunFarmReport() {
             }
         }
         if (!data) {
-            list.innerHTML = '<p style="color:#666;">FarmData.json not found via HTTP. You can either run the Horizon Admin Image Dates script on this server, or load a local JSON file with the \"Load FarmData.json (file)\" button.</p>';
             if (status) status.textContent = '';
-            if (framePlaceholder) framePlaceholder.style.display = 'block';
             if (masterPanel) masterPanel.style.display = 'none';
+            if (destSection) destSection.style.display = 'none';
             return;
         }
-        // Normalize to array
-        farmReportRows = Array.isArray(data) ? data : (data.rows || data.Farms || []);
-        if (!Array.isArray(farmReportRows)) {
-            farmReportRows = [];
-        }
-        // When loading via HTTP, just hide the placeholder once data exists
-        if (framePlaceholder) framePlaceholder.style.display = 'none';
+        farmReportRows = normalizeFarmDataRows(data);
+        await loadCloneImageExclusions();
     }
 
     if (!farmReportRows.length) {
         list.innerHTML = '<p style="color:#666;">No farm rows found in FarmData.json.</p>';
         if (status) status.textContent = '';
-        if (framePlaceholder) framePlaceholder.style.display = 'block';
         if (masterPanel) masterPanel.style.display = 'none';
+        if (destSection) destSection.style.display = 'none';
         return;
     }
 
-    // Filter to automated farms only; exclude MANUAL type and "(Manual farm)" placeholder images
-    const visibleRows = farmReportRows.filter(r => {
-        if (r.HzFarmType && r.HzFarmType.toUpperCase() !== 'AUTOMATED') return false;
-        if ((r.HzBaseImage || '').trim() === '(Manual farm)') return false;
-        return r.VmMasterImage || r.HzBaseImage || r.HzFarm;
+    // Prefer automated / cloneable pools; keep rows that have an image even if type is missing
+    const automatedRows = farmReportRows.filter(isCloneableFarmRow);
+
+    const visibleRows = automatedRows.filter((row) => {
+        const imageKey = farmImageExcludeKey(row);
+        return showExcludedFarmImages || !cloneImageExclusions.has(imageKey);
     });
+    const hiddenCount = automatedRows.length - visibleRows.length;
+
+    const showToggle = document.getElementById('showExcludedFarmImages');
+    if (showToggle) showToggle.checked = showExcludedFarmImages;
 
     let html = '';
     if (visibleRows.length) {
-        html = `
-        <table style="width:100%;border-collapse:collapse;font-size:12px;">
-            <thead>
-                <tr style="background:#f0f0f0;border-bottom:2px solid #ccc;">
-                    <th style="width:28px;padding:6px 4px;"></th>
-                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Farm / Pool</th>
-                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Type</th>
-                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Image</th>
-                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">Snapshot</th>
-                    <th style="padding:6px 10px;text-align:left;font-weight:600;white-space:nowrap;">State</th>
-                </tr>
-            </thead>
-            <tbody>`;
+        html = `<p style="margin-bottom: 15px; color: #666;">Found ${automatedRows.length} automated pool(s)`;
+        if (hiddenCount > 0 && !showExcludedFarmImages) {
+            html += ` · <strong>${hiddenCount} hidden</strong> (excluded)`;
+        }
+        html += `</p>`;
 
         visibleRows.forEach((row) => {
-            const key = row.VmMasterImage || row.HzBaseImage || row.HzFarm || '';
+            const key = farmRowSelectionKey(row);
             if (!key) return;
-            const checked = farmSelectedMasters.has(key) ? 'checked' : '';
-            const safeKey = String(key).replace(/'/g, "\\'");
+            const imageKey = farmImageExcludeKey(row);
+            const isExcluded = cloneImageExclusions.has(imageKey);
+            const checked = !isExcluded && farmSelectedMasters.has(key) ? 'checked' : '';
+            const safeKey = escapeCloneImageAttr(key);
+            const safeImageKey = escapeCloneImageAttr(imageKey);
 
             const farmName = escapeHtml(row.HzFarm || '');
             const isDesktop = (row.HzSourceType || '').toLowerCase() === 'desktop';
             const typeBadge = isDesktop
                 ? '<span style="font-size:10px;background:#e3f0ff;color:#1a5fa8;border-radius:3px;padding:1px 5px;font-weight:600;">VDI</span>'
                 : '<span style="font-size:10px;background:#e8f5e9;color:#2e7d32;border-radius:3px;padding:1px 5px;font-weight:600;">RDS</span>';
-            // Strip folder path — keep only the segment after the last /
             const rawImage = row.VmMasterImage || row.HzBaseImage || '';
-            const imageName = escapeHtml(rawImage.replace(/^.*\//, ''));
+            const imageName = escapeHtml(String(rawImage).replace(/^.*\//, ''));
             const rawSnap = row.HzSnapshot || row.VmMasterSnapshot || '';
-            const snapName = escapeHtml(rawSnap.replace(/^.*\//, '') + (row.VmSnapshotTimestamp ? ' @ ' + row.VmSnapshotTimestamp : ''));
+            const snapName = escapeHtml(String(rawSnap).replace(/^.*\//, '') + (row.VmSnapshotTimestamp ? ' @ ' + row.VmSnapshotTimestamp : ''));
             const cloneState = escapeHtml(row.CloneState || 'Not cloned');
-            const stateStyle = row.CloneState ? 'color:#0a7f2e;font-weight:600;' : 'color:#999;';
+            const border = isExcluded ? '#f0c2c2' : '#ddd';
+            const bg = isExcluded ? '#fff7f7' : '#fff';
 
             html += `
-                <tr style="border-bottom:1px solid #eee;cursor:pointer;"
-                    onmouseover="this.style.background='#f0f6ff'" onmouseout="this.style.background=''">
-                    <td style="padding:8px 4px;text-align:center;">
-                        <input type="checkbox" ${checked} onchange="toggleFarmMasterSelection('${safeKey}')">
-                    </td>
-                    <td style="padding:8px 10px;font-weight:600;">${farmName}</td>
-                    <td style="padding:8px 10px;">${typeBadge}</td>
-                    <td style="padding:8px 10px;">${imageName}</td>
-                    <td style="padding:8px 10px;color:#555;">${snapName}</td>
-                    <td style="padding:8px 10px;${stateStyle}">${cloneState}</td>
-                </tr>`;
+                <div style="border: 1px solid ${border}; border-radius: 4px; padding: 10px; margin-bottom: 10px; background:${bg};">
+                    <div style="display: flex; align-items: flex-start; gap: 10px;">
+                        <label style="display: flex; align-items: flex-start; cursor: ${isExcluded ? 'default' : 'pointer'}; flex: 1; margin: 0;">
+                            <input type="checkbox" style="margin-right: 10px; margin-top: 2px;" ${checked} ${isExcluded ? 'disabled' : ''}
+                                   onchange="toggleFarmMasterSelection('${safeKey}')">
+                            <div style="flex: 1;">
+                                <strong>${farmName}</strong> ${typeBadge}
+                                ${isExcluded ? ' <span style="color:#b00020;font-size:12px;font-weight:600;">(excluded)</span>' : ''}
+                                <div style="font-size: 12px; color: #666; margin-top: 2px;">
+                                    Image: ${imageName || '(none)'} | Snapshot: ${snapName || '(none)'}
+                                </div>
+                                <div style="font-size: 11px; color: #888; margin-top: 2px;">
+                                    State: ${cloneState}
+                                </div>
+                            </div>
+                        </label>
+                        <div style="flex: 0 0 auto;">
+                            ${isExcluded
+                                ? `<button type="button" class="btn btn-sm" onclick="includeFarmImage('${safeImageKey}')">Include</button>`
+                                : `<button type="button" class="btn btn-sm btn-secondary" onclick="excludeFarmImage('${safeImageKey}')">Exclude</button>`
+                            }
+                        </div>
+                    </div>
+                </div>`;
         });
-
-        html += '</tbody></table>';
+    } else if (automatedRows.length && hiddenCount > 0 && !showExcludedFarmImages) {
+        html = `<p style="color:#666;">All ${hiddenCount} automated pool(s) are excluded. Turn on <strong>Show excluded</strong> to restore any you still need.</p>`;
     } else {
         html = '<p style="color:#666;">No automated farm rows found in FarmData.json.</p>';
     }
@@ -8364,36 +8467,105 @@ async function renderGoldenSunFarmReport() {
     if (status) {
         const farmCount = visibleRows.filter(r => (r.HzSourceType || '').toLowerCase() !== 'desktop').length;
         const desktopCount = visibleRows.filter(r => (r.HzSourceType || '').toLowerCase() === 'desktop').length;
-        status.textContent = `${visibleRows.length} automated pool(s): ${farmCount} RDS farm(s), ${desktopCount} VDI desktop pool(s). Selected: ${farmSelectedMasters.size}.`;
+        const hideNote = hiddenCount && !showExcludedFarmImages ? ` · ${hiddenCount} excluded hidden` : '';
+        status.textContent = `${visibleRows.length} automated pool(s): ${farmCount} RDS farm(s), ${desktopCount} VDI desktop pool(s). Selected: ${farmSelectedMasters.size}.${hideNote}`;
     }
-    if (masterPanel) {
-        masterPanel.style.display = visibleRows.length ? 'block' : 'none';
+    if (masterPanel) masterPanel.style.display = 'block';
+    if (destSection) destSection.style.display = 'block';
+    if (framePlaceholder) framePlaceholder.style.display = 'none';
+
+    const exclStatus = document.getElementById('farmImageExclusionStatus');
+    if (exclStatus) {
+        exclStatus.textContent = cloneImageExclusions.size
+            ? `${cloneImageExclusions.size} excluded · showing ${visibleRows.length} of ${automatedRows.length}`
+            : `Showing all ${automatedRows.length}`;
     }
+}
+
+function normalizeFarmDataRows(data) {
+    if (!data) return [];
+    let rows = [];
+    if (Array.isArray(data)) rows = data;
+    else if (Array.isArray(data.rows)) rows = data.rows;
+    else if (Array.isArray(data.Farms)) rows = data.Farms;
+    else if (Array.isArray(data.value)) rows = data.value;
+    else if (Array.isArray(data.MasterImages)) {
+        // Accidental MasterImages JSON — map into farm-like rows so GoldenSun still lists them
+        rows = data.MasterImages.map((img) => ({
+            HzFarm: img.Cluster || img.Name || '',
+            HzFarmType: 'AUTOMATED',
+            HzSourceType: 'Desktop',
+            HzBaseImage: img.Name || '',
+            HzSnapshot: img.Snapshot || img.Version || '',
+            VmMasterImage: img.Name || '',
+            VmMasterSnapshot: img.Snapshot || '',
+            VmSnapshotTimestamp: img.SnapshotTimestamp || '',
+            CloneState: null
+        }));
+    } else if (typeof data === 'object') {
+        const keys = Object.keys(data);
+        // PowerShell sometimes emits { "0": {...}, "1": {...} } instead of a JSON array
+        if (keys.length && keys.every((k) => /^\d+$/.test(k))) {
+            rows = keys.sort((a, b) => Number(a) - Number(b)).map((k) => data[k]);
+        } else if (data.HzFarm || data.VmMasterImage || data.HzBaseImage || data.FarmName || data.GoldenImage) {
+            // PowerShell ConvertTo-Json collapses a 1-item array to a single object
+            rows = [data];
+        }
+    }
+
+    return rows.map(normalizeFarmDataRow).filter((r) => r.HzFarm || r.VmMasterImage || r.HzBaseImage);
+}
+
+function normalizeFarmDataRow(row) {
+    if (!row || typeof row !== 'object') return {};
+    const hzFarm = row.HzFarm || row.FarmName || row.Name || row.display_name || '';
+    const hzBase = row.HzBaseImage || row.GoldenImage || row.parent_vm_path || '';
+    const vmImage = row.VmMasterImage || row.GoldenImage || hzBase || '';
+    const snap = row.HzSnapshot || row.Snapshot || row.VmMasterSnapshot || row.snapshot_path || '';
+    return {
+        ...row,
+        HzFarm: hzFarm,
+        HzFarmType: row.HzFarmType || row.type || row.Type || '',
+        HzSourceType: row.HzSourceType || row.SourceType || '',
+        HzBaseImage: hzBase,
+        HzSnapshot: snap,
+        VmMasterImage: vmImage,
+        VmMasterSnapshot: row.VmMasterSnapshot || snap,
+        VmSnapshotTimestamp: row.VmSnapshotTimestamp || row.SnapshotTimestamp || '',
+        CloneState: row.CloneState || row.CloneStatus || null
+    };
+}
+
+function isCloneableFarmRow(r) {
+    if (!r) return false;
+    const base = String(r.HzBaseImage || '').trim();
+    if (base === '(Manual farm)') return false;
+    const type = String(r.HzFarmType || '').trim().toUpperCase();
+    // Horizon types vary: AUTOMATED, AUTOMATED_FARM, INSTANT_CLONE, FULL_CLONES, etc.
+    if (type) {
+        const manual = type === 'MANUAL' || type.includes('MANUAL');
+        if (manual) return false;
+    }
+    return !!(r.VmMasterImage || r.HzBaseImage || r.HzFarm);
 }
 
 function handleGoldenSunFarmFilePick(event) {
     const file = event.target.files && event.target.files[0];
     if (!file) return;
     const lower = file.name.toLowerCase();
-    if (lower !== 'farmdata.json') {
+    if (!lower.endsWith('.json')) {
         const status = document.getElementById('goldenSunFarmStatus');
-        if (status) {
-            status.textContent = 'Please select farmdata.json.';
-        }
-        alert('Please select the file named farmdata.json');
+        if (status) status.textContent = 'Please select a .json file.';
+        alert('Please select a FarmData JSON file.');
         return;
     }
 
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
         try {
-            const text = String(e.target?.result || '');
+            const text = String(e.target?.result || '').replace(/^\uFEFF/, '');
             const obj = JSON.parse(text || '{}');
-            let rows = Array.isArray(obj) ? obj : (obj.rows || obj.Farms || []);
-            if (!Array.isArray(rows)) {
-                rows = [];
-            }
-            farmReportRows = rows;
+            farmReportRows = normalizeFarmDataRows(obj);
             farmSelectedMasters.clear();
 
             const status = document.getElementById('goldenSunFarmStatus');
@@ -8401,24 +8573,33 @@ function handleGoldenSunFarmFilePick(event) {
                 status.textContent = `Loaded ${farmReportRows.length} rows from ${file.name} (local file).`;
             }
 
-            // When loading from file we don't have HTML; show placeholder instead of iframe
-            const frame = document.getElementById('goldenSunFarmFrame');
-            const framePlaceholder = document.getElementById('goldenSunFarmFramePlaceholder');
             const masterPanel = document.getElementById('goldenSunFarmMasterPanel');
-            if (frame) frame.style.display = 'none';
-            if (framePlaceholder) framePlaceholder.style.display = 'block';
+            const destSection = document.getElementById('goldenSunCloneDestSection');
             if (masterPanel) masterPanel.style.display = farmReportRows.length ? 'block' : 'none';
+            if (destSection) destSection.style.display = farmReportRows.length ? 'block' : 'none';
 
+            await loadCloneImageExclusions();
+            [...farmSelectedMasters].forEach((key) => {
+                const row = farmReportRows.find((r) => farmRowSelectionKey(r) === key);
+                if (row && cloneImageExclusions.has(farmImageExcludeKey(row))) {
+                    farmSelectedMasters.delete(key);
+                }
+            });
             renderGoldenSunFarmReport();
+            if (masterPanel) masterPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         } catch (err) {
             console.error('Failed to parse FarmData.json from file:', err);
             const list = document.getElementById('goldenSunFarmList');
+            const masterPanel = document.getElementById('goldenSunFarmMasterPanel');
+            if (masterPanel) masterPanel.style.display = 'block';
             if (list) {
                 list.innerHTML = '<p style="color:#b00020;">Failed to parse JSON file. Ensure it is a valid FarmData.json.</p>';
             }
         }
     };
     reader.readAsText(file, 'utf-8');
+    // Allow re-selecting the same file
+    event.target.value = '';
 }
 
 function toggleFarmMasterSelection(name) {
@@ -8434,9 +8615,9 @@ function toggleFarmMasterSelection(name) {
 function goldenSunFarmSelectAll() {
     farmSelectedMasters.clear();
     farmReportRows.forEach(row => {
-        if (row.HzFarmType && row.HzFarmType.toUpperCase() !== 'AUTOMATED') return;
-        if ((row.HzBaseImage || '').trim() === '(Manual farm)') return;
-        const key = row.VmMasterImage || row.HzBaseImage || row.HzFarm || '';
+        if (!isCloneableFarmRow(row)) return;
+        if (cloneImageExclusions.has(farmImageExcludeKey(row))) return;
+        const key = farmRowSelectionKey(row);
         if (key) farmSelectedMasters.add(key);
     });
     renderGoldenSunFarmReport();
@@ -8505,9 +8686,6 @@ function generateFarmCloneScriptFromReport() {
     }
 }
 
-let selectedCloneImages = new Set();
-let cloneImageExclusions = new Set();
-let showExcludedCloneImages = false;
 const CLONE_IMAGE_EXCLUSIONS_LS_KEY = 'lab007CloneImageExclusions';
 
 function cloneImageExclusionsApiUrls() {
@@ -8608,8 +8786,15 @@ async function excludeCloneImage(imageName) {
     if (!name) return;
     cloneImageExclusions.add(name);
     selectedCloneImages.delete(name);
+    farmReportRows.forEach((row) => {
+        if (farmImageExcludeKey(row) === name) {
+            const key = farmRowSelectionKey(row);
+            if (key) farmSelectedMasters.delete(key);
+        }
+    });
     const saved = await persistCloneImageExclusions();
     displayCloneMasterImages();
+    if (farmReportRows && farmReportRows.length) renderGoldenSunFarmReport();
     if (!saved) {
         console.warn('Clone image exclusion saved in this browser only (server persist unavailable).');
     }
@@ -8621,6 +8806,7 @@ async function includeCloneImage(imageName) {
     cloneImageExclusions.delete(name);
     await persistCloneImageExclusions();
     displayCloneMasterImages();
+    if (farmReportRows && farmReportRows.length) renderGoldenSunFarmReport();
 }
 
 async function clearAllCloneImageExclusions() {
@@ -8629,6 +8815,9 @@ async function clearAllCloneImageExclusions() {
     cloneImageExclusions.clear();
     await persistCloneImageExclusions();
     displayCloneMasterImages();
+    if (farmReportRows && farmReportRows.length) {
+        renderGoldenSunFarmReport();
+    }
 }
 
 function toggleCloneImageSelection(imageName) {
