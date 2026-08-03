@@ -842,6 +842,19 @@
 
                     <div id="cloneImagesSection" style="margin: 20px 0; display: none;">
                         <h4 style="margin-bottom: 10px;">Master Images:</h4>
+                        <div style="display:flex; flex-wrap:wrap; gap:10px; align-items:center; margin-bottom:10px;">
+                            <button type="button" class="btn btn-sm" onclick="selectAllCloneImages()">Select All</button>
+                            <button type="button" class="btn btn-sm" onclick="deselectAllCloneImages()">Deselect All</button>
+                            <label style="display:inline-flex; align-items:center; gap:6px; margin-left:8px; font-size:13px; color:#444;">
+                                <input type="checkbox" id="showExcludedCloneImages" onchange="toggleShowExcludedCloneImages(this.checked)">
+                                Show excluded
+                            </label>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="clearAllCloneImageExclusions()" title="Restore all hidden images">Clear exclusions</button>
+                            <span id="cloneImageExclusionStatus" style="color:#666; font-size:13px;"></span>
+                        </div>
+                        <p style="margin:0 0 10px; color:#666; font-size:13px;">
+                            Use <strong>Exclude</strong> on images you don’t want listed. Exclusions are saved persistently and stay hidden on the next load.
+                        </p>
                         <div id="masterImagesCloneList" style="max-height: 400px; overflow-y: auto; border: 1px solid #ddd; border-radius: 4px; padding: 10px; background-color: #f8f9fa;">
                             <p>Loading master images...</p>
                         </div>

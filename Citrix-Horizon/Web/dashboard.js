@@ -231,6 +231,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (cloneMasterImagesFileInput) {
         cloneMasterImagesFileInput.addEventListener('change', handleCloneMasterImagesFile);
     }
+    loadCloneImageExclusions().catch(() => {});
 
     // VMware folders file input
     const vmwareFoldersFileInput = document.getElementById('vmwareFoldersFileInput');
@@ -8135,6 +8136,14 @@ async function loadCloneMasterImages() {
         if (response.ok) {
             cloneMasterImagesData = await response.json();
             document.getElementById('cloneMasterImagesFileName').textContent = 'Loaded: goldensun-master-images.json';
+            const section = document.getElementById('cloneImagesSection');
+            const scriptSection = document.getElementById('cloneScriptSection');
+            if (section) section.style.display = 'block';
+            if (scriptSection) scriptSection.style.display = 'block';
+            await loadCloneImageExclusions();
+            [...selectedCloneImages].forEach((name) => {
+                if (cloneImageExclusions.has(name)) selectedCloneImages.delete(name);
+            });
             displayCloneMasterImages();
         } else {
             document.getElementById('masterImagesCloneList').innerHTML = '<p style="color: #666;">No master images loaded. Click "Load Master Images JSON" to select a file.</p>';
@@ -8155,7 +8164,7 @@ function handleCloneMasterImagesFile(event) {
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = async function(e) {
         try {
             cloneMasterImagesData = JSON.parse(e.target.result);
             document.getElementById('cloneMasterImagesFileName').textContent = `Loaded: ${file.name}`;
@@ -8164,6 +8173,11 @@ function handleCloneMasterImagesFile(event) {
             document.getElementById('cloneImagesSection').style.display = 'block';
             document.getElementById('cloneScriptSection').style.display = 'block';
 
+            await loadCloneImageExclusions();
+            // Drop selections for images that are excluded
+            [...selectedCloneImages].forEach((name) => {
+                if (cloneImageExclusions.has(name)) selectedCloneImages.delete(name);
+            });
             displayCloneMasterImages();
         } catch (error) {
             alert(`Error parsing JSON file: ${error.message}`);
@@ -8177,38 +8191,64 @@ function displayCloneMasterImages() {
 
     if (!cloneMasterImagesData || !cloneMasterImagesData.MasterImages || cloneMasterImagesData.MasterImages.length === 0) {
         container.innerHTML = '<p style="color: #666;">No master images found in the loaded file.</p>';
+        syncCloneImageExclusionStatus();
         return;
     }
 
-    let html = `<p style="margin-bottom: 15px; color: #666;">Found ${cloneMasterImagesData.MasterImages.length} master image(s) from ${cloneMasterImagesData.vCenterServer || 'Unknown Server'}</p>`;
+    const allImages = cloneMasterImagesData.MasterImages;
+    const visibleImages = allImages.filter((image) => showExcludedCloneImages || !cloneImageExclusions.has(image.Name));
+    const hiddenCount = allImages.length - visibleImages.length;
 
-    html += `<button type="button" class="btn btn-sm" onclick="selectAllCloneImages()">Select All</button> `;
-    html += `<button type="button" class="btn btn-sm" onclick="deselectAllCloneImages()">Deselect All</button>`;
-    html += `<hr style="margin: 10px 0;">`;
+    let html = `<p style="margin-bottom: 15px; color: #666;">Found ${allImages.length} master image(s) from ${cloneMasterImagesData.vCenterServer || 'Unknown Server'}`;
+    if (hiddenCount > 0 && !showExcludedCloneImages) {
+        html += ` · <strong>${hiddenCount} hidden</strong> (excluded)`;
+    }
+    html += `</p>`;
 
-    cloneMasterImagesData.MasterImages.forEach((image, index) => {
-        const isChecked = selectedCloneImages.has(image.Name) ? 'checked' : '';
+    if (!visibleImages.length) {
+        html += '<p style="color:#666;">All images are excluded. Turn on <strong>Show excluded</strong> to restore any you still need.</p>';
+        container.innerHTML = html;
+        syncCloneImageExclusionStatus();
+        return;
+    }
+
+    visibleImages.forEach((image) => {
+        const isExcluded = cloneImageExclusions.has(image.Name);
+        const isChecked = !isExcluded && selectedCloneImages.has(image.Name) ? 'checked' : '';
+        const safeName = escapeCloneImageAttr(image.Name);
+        const border = isExcluded ? '#f0c2c2' : '#ddd';
+        const bg = isExcluded ? '#fff7f7' : '#fff';
 
         html += `
-            <div style="border: 1px solid #ddd; border-radius: 4px; padding: 10px; margin-bottom: 10px;">
-                <label style="display: flex; align-items: flex-start; cursor: pointer;">
-                    <input type="checkbox" style="margin-right: 10px; margin-top: 2px;" ${isChecked}
-                           onchange="toggleCloneImageSelection('${image.Name.replace(/'/g, "\\'")}')">
-                    <div style="flex: 1;">
-                        <strong>${image.Name}</strong>
-                        <div style="font-size: 12px; color: #666; margin-top: 2px;">
-                            Version: ${image.Version || 'Unknown'} | Cluster: ${image.Cluster || 'Unknown'} | Host: ${image.Host || 'Unknown'}
+            <div style="border: 1px solid ${border}; border-radius: 4px; padding: 10px; margin-bottom: 10px; background:${bg};">
+                <div style="display: flex; align-items: flex-start; gap: 10px;">
+                    <label style="display: flex; align-items: flex-start; cursor: ${isExcluded ? 'default' : 'pointer'}; flex: 1; margin: 0;">
+                        <input type="checkbox" style="margin-right: 10px; margin-top: 2px;" ${isChecked} ${isExcluded ? 'disabled' : ''}
+                               onchange="toggleCloneImageSelection('${safeName}')">
+                        <div style="flex: 1;">
+                            <strong>${escapeHtml(image.Name)}</strong>
+                            ${isExcluded ? ' <span style="color:#b00020;font-size:12px;font-weight:600;">(excluded)</span>' : ''}
+                            <div style="font-size: 12px; color: #666; margin-top: 2px;">
+                                Version: ${escapeHtml(image.Version || 'Unknown')} | Cluster: ${escapeHtml(image.Cluster || 'Unknown')} | Host: ${escapeHtml(image.Host || 'Unknown')}
+                            </div>
+                            <div style="font-size: 11px; color: #888; margin-top: 2px;">
+                                CPU: ${image.NumCPU || 0} | RAM: ${image.MemoryGB || 0}GB | Disk: ${image.ProvisionedSpaceGB || 0}GB
+                            </div>
                         </div>
-                        <div style="font-size: 11px; color: #888; margin-top: 2px;">
-                            CPU: ${image.NumCPU || 0} | RAM: ${image.MemoryGB || 0}GB | Disk: ${image.ProvisionedSpaceGB || 0}GB
-                        </div>
+                    </label>
+                    <div style="flex: 0 0 auto;">
+                        ${isExcluded
+                            ? `<button type="button" class="btn btn-sm" onclick="includeCloneImage('${safeName}')">Include</button>`
+                            : `<button type="button" class="btn btn-sm btn-secondary" onclick="excludeCloneImage('${safeName}')">Exclude</button>`
+                        }
                     </div>
-                </label>
+                </div>
             </div>
         `;
     });
 
     container.innerHTML = html;
+    syncCloneImageExclusionStatus();
 }
 
 async function renderGoldenSunFarmReport() {
@@ -8466,6 +8506,130 @@ function generateFarmCloneScriptFromReport() {
 }
 
 let selectedCloneImages = new Set();
+let cloneImageExclusions = new Set();
+let showExcludedCloneImages = false;
+const CLONE_IMAGE_EXCLUSIONS_LS_KEY = 'lab007CloneImageExclusions';
+
+function cloneImageExclusionsApiUrls() {
+    // Main LAB007 mounts Citrix at /citrix; standalone Citrix server uses /api
+    return ['/citrix/api/clone-image-exclusions', '/api/clone-image-exclusions'];
+}
+
+function syncCloneImageExclusionStatus() {
+    const el = document.getElementById('cloneImageExclusionStatus');
+    if (!el) return;
+    const total = cloneMasterImagesData && Array.isArray(cloneMasterImagesData.MasterImages)
+        ? cloneMasterImagesData.MasterImages.length
+        : 0;
+    const excludedCount = cloneImageExclusions.size;
+    const visible = total
+        ? cloneMasterImagesData.MasterImages.filter((img) => showExcludedCloneImages || !cloneImageExclusions.has(img.Name)).length
+        : 0;
+    el.textContent = excludedCount
+        ? `${excludedCount} excluded · showing ${visible}${total ? ` of ${total}` : ''}`
+        : (total ? `Showing all ${total}` : '');
+}
+
+async function loadCloneImageExclusions() {
+    let loaded = null;
+    for (const url of cloneImageExclusionsApiUrls()) {
+        try {
+            const res = await fetch(url, { cache: 'no-store' });
+            if (!res.ok) continue;
+            const data = await res.json();
+            if (data && Array.isArray(data.excluded)) {
+                loaded = data.excluded;
+                break;
+            }
+        } catch (_) {
+            /* try next */
+        }
+    }
+    if (!loaded) {
+        try {
+            const raw = localStorage.getItem(CLONE_IMAGE_EXCLUSIONS_LS_KEY);
+            const parsed = raw ? JSON.parse(raw) : null;
+            if (parsed && Array.isArray(parsed.excluded)) loaded = parsed.excluded;
+        } catch (_) {
+            loaded = [];
+        }
+    }
+    cloneImageExclusions = new Set((loaded || []).map((n) => String(n || '').trim()).filter(Boolean));
+    try {
+        localStorage.setItem(
+            CLONE_IMAGE_EXCLUSIONS_LS_KEY,
+            JSON.stringify({ excluded: [...cloneImageExclusions], updatedAt: new Date().toISOString() })
+        );
+    } catch (_) {
+        /* ignore */
+    }
+    const showToggle = document.getElementById('showExcludedCloneImages');
+    if (showToggle) showToggle.checked = showExcludedCloneImages;
+    syncCloneImageExclusionStatus();
+}
+
+async function persistCloneImageExclusions() {
+    const payload = {
+        excluded: [...cloneImageExclusions].sort((a, b) => a.localeCompare(b)),
+        updatedAt: new Date().toISOString()
+    };
+    try {
+        localStorage.setItem(CLONE_IMAGE_EXCLUSIONS_LS_KEY, JSON.stringify(payload));
+    } catch (_) {
+        /* ignore */
+    }
+    let saved = false;
+    for (const url of cloneImageExclusionsApiUrls()) {
+        try {
+            const res = await fetch(url, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (res.ok) {
+                saved = true;
+                break;
+            }
+        } catch (_) {
+            /* try next */
+        }
+    }
+    syncCloneImageExclusionStatus();
+    return saved;
+}
+
+function toggleShowExcludedCloneImages(checked) {
+    showExcludedCloneImages = !!checked;
+    displayCloneMasterImages();
+}
+
+async function excludeCloneImage(imageName) {
+    const name = String(imageName || '').trim();
+    if (!name) return;
+    cloneImageExclusions.add(name);
+    selectedCloneImages.delete(name);
+    const saved = await persistCloneImageExclusions();
+    displayCloneMasterImages();
+    if (!saved) {
+        console.warn('Clone image exclusion saved in this browser only (server persist unavailable).');
+    }
+}
+
+async function includeCloneImage(imageName) {
+    const name = String(imageName || '').trim();
+    if (!name) return;
+    cloneImageExclusions.delete(name);
+    await persistCloneImageExclusions();
+    displayCloneMasterImages();
+}
+
+async function clearAllCloneImageExclusions() {
+    if (!cloneImageExclusions.size) return;
+    if (!confirm(`Restore ${cloneImageExclusions.size} excluded image(s) to the list?`)) return;
+    cloneImageExclusions.clear();
+    await persistCloneImageExclusions();
+    displayCloneMasterImages();
+}
 
 function toggleCloneImageSelection(imageName) {
     if (selectedCloneImages.has(imageName)) {
@@ -8478,8 +8642,10 @@ function toggleCloneImageSelection(imageName) {
 function selectAllCloneImages() {
     if (!cloneMasterImagesData || !cloneMasterImagesData.MasterImages) return;
 
-    cloneMasterImagesData.MasterImages.forEach(image => {
-        selectedCloneImages.add(image.Name);
+    cloneMasterImagesData.MasterImages.forEach((image) => {
+        if (!cloneImageExclusions.has(image.Name)) {
+            selectedCloneImages.add(image.Name);
+        }
     });
     displayCloneMasterImages();
 }
@@ -8487,6 +8653,13 @@ function selectAllCloneImages() {
 function deselectAllCloneImages() {
     selectedCloneImages.clear();
     displayCloneMasterImages();
+}
+
+function escapeCloneImageAttr(value) {
+    return String(value || '')
+        .replace(/\\/g, '\\\\')
+        .replace(/'/g, "\\'")
+        .replace(/"/g, '&quot;');
 }
 
 // Function to save config to JSON file for PowerShell scripts

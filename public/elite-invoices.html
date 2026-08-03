@@ -219,6 +219,35 @@
     #clientFullTable {
       min-width: 1680px;
     }
+    #clientFullTable th.photos-col,
+    #clientFullTable td.photos-col {
+      position: sticky;
+      left: 0;
+      z-index: 2;
+      min-width: 108px;
+      width: 108px;
+      background: #151515;
+      box-shadow: 4px 0 10px rgba(0, 0, 0, .28);
+      vertical-align: middle;
+    }
+    #clientFullTable thead th.photos-col {
+      z-index: 3;
+      background: #1a1a1a;
+    }
+    #clientFullTable th.actions-col,
+    #clientFullTable td.actions {
+      position: sticky;
+      right: 0;
+      z-index: 2;
+      min-width: 96px;
+      background: #151515;
+      box-shadow: -4px 0 10px rgba(0, 0, 0, .28);
+      vertical-align: middle;
+    }
+    #clientFullTable thead th.actions-col {
+      z-index: 3;
+      background: #1a1a1a;
+    }
     #clientFullTable td.notes-cell {
       min-width: 180px;
       max-width: 260px;
@@ -255,6 +284,8 @@
     }
     #clientFullTable .btn-photos {
       position: relative;
+      width: 100%;
+      justify-content: center;
     }
     #clientFullTable .photo-count {
       display: inline-block;
@@ -278,16 +309,18 @@
       margin-bottom: 14px;
     }
     .photos-toolbar .file-btn {
-      position: relative;
-      overflow: hidden;
       cursor: pointer;
     }
-    .photos-toolbar .file-btn input[type="file"] {
+    .photos-file-input {
       position: absolute;
-      inset: 0;
-      opacity: 0;
-      cursor: pointer;
-      font-size: 48px;
+      width: 1px;
+      height: 1px;
+      padding: 0;
+      margin: -1px;
+      overflow: hidden;
+      clip: rect(0, 0, 0, 0);
+      white-space: nowrap;
+      border: 0;
     }
     .photos-grid {
       display: grid;
@@ -828,8 +861,8 @@
         </table>
       </div>
       <p class="hint">
-        Full client list from <strong>Client List NEW</strong>. Use <strong>Edit</strong> to change any field or add Notes, then <strong>Save</strong>.
-        Use <strong>Images</strong> to upload property photos from your phone or computer (view or delete anytime). Data is private, password protected, and not indexed by search engines.
+        Full client list from <strong>Client List NEW</strong>. Use <strong>Images</strong> (first column) to view or upload property photos from phone or PC.
+        Use <strong>Edit</strong> to change any field or add Notes, then <strong>Save</strong>. Data is private, password protected, and not indexed by search engines.
       </p>
     </section>
 
@@ -951,15 +984,14 @@
       <h2 id="clientPhotosTitle">Property photos</h2>
       <p class="modal-sub" id="clientPhotosSubtitle">Upload photos of this property from your phone or computer.</p>
       <div class="photos-toolbar">
-        <label class="btn file-btn">
-          Add photos
-          <input
-            id="clientPhotosFileInput"
-            type="file"
-            accept="image/*"
-            multiple
-          >
-        </label>
+        <input
+          id="clientPhotosFileInput"
+          class="photos-file-input"
+          type="file"
+          accept="image/*,.jpg,.jpeg,.png,.gif,.webp,.bmp,.heic,.heif"
+          multiple
+        >
+        <button type="button" class="btn file-btn" id="clientPhotosPickBtn">Add photos</button>
         <button type="button" class="btn-secondary" id="closeClientPhotosBtn">Close</button>
       </div>
       <div id="clientPhotosGrid" class="photos-grid"></div>
@@ -1012,6 +1044,7 @@
       const clientPhotosSubtitle = document.getElementById('clientPhotosSubtitle');
       const clientPhotosGrid = document.getElementById('clientPhotosGrid');
       const clientPhotosFileInput = document.getElementById('clientPhotosFileInput');
+      const clientPhotosPickBtn = document.getElementById('clientPhotosPickBtn');
       const closeClientPhotosBtn = document.getElementById('closeClientPhotosBtn');
       const clientPhotoLightbox = document.getElementById('clientPhotoLightbox');
       const clientPhotoLightboxImg = document.getElementById('clientPhotoLightboxImg');
@@ -1400,12 +1433,18 @@
         });
       }
 
+      function isImageFile(file) {
+        if (!file) return false;
+        if (/^image\//i.test(String(file.type || ''))) return true;
+        return /\.(jpe?g|png|gif|webp|bmp|heic|heif)$/i.test(String(file.name || ''));
+      }
+
       async function uploadClientPhotos(fileList) {
         const clientId = clientPhotosState.clientId;
         if (!clientId) return;
-        const files = Array.from(fileList || []).filter((f) => f && /^image\//i.test(f.type || ''));
+        const files = Array.from(fileList || []).filter(isImageFile);
         if (!files.length) {
-          setStatus('Choose image files to upload.', true);
+          setStatus('Choose image files to upload (JPG, PNG, WEBP, etc).', true);
           return;
         }
         setStatus('Uploading photos...');
@@ -1415,6 +1454,9 @@
               throw new Error((file.name || 'Image') + ' is over 8MB.');
             }
             const dataUrl = await readFileAsDataUrl(file);
+            if (!/^data:image\//i.test(String(dataUrl || ''))) {
+              throw new Error((file.name || 'File') + ' is not a supported image.');
+            }
             const res = await apiFetch('/api/elite-invoices/client-full/' + encodeURIComponent(clientId) + '/photos', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -1507,7 +1549,7 @@
           return;
         }
 
-        clientFullHead.innerHTML = `<tr>${columns.map((col) => `<th>${escapeHtml(col)}</th>`).join('')}<th></th></tr>`;
+        clientFullHead.innerHTML = `<tr><th class="photos-col">Photos</th>${columns.map((col) => `<th>${escapeHtml(col)}</th>`).join('')}<th class="actions-col"></th></tr>`;
         const visibleRows = clientFull.rows
           .map((row, index) => ({ row, index }))
           .filter(({ row }) => rowMatchesSearch(row, clientFullSearchQuery));
@@ -1515,7 +1557,7 @@
         renderClientFullSearchOptions();
 
         if (!visibleRows.length) {
-          clientFullRows.innerHTML = `<tr><td colspan="${columns.length + 1}" class="empty">${clientFullSearchQuery.trim() ? 'No clients match your search.' : 'No clients in list.'}</td></tr>`;
+          clientFullRows.innerHTML = `<tr><td colspan="${columns.length + 2}" class="empty">${clientFullSearchQuery.trim() ? 'No clients match your search.' : 'No clients in list.'}</td></tr>`;
           return;
         }
 
@@ -1524,14 +1566,15 @@
           const clientId = clientFullRowId(row);
           const photoCount = clientFullPhotoCount(clientId);
           const photosBtn = clientId
-            ? `<button type="button" class="btn-secondary btn-small btn-photos" data-action="client-photos">Images${photoCount ? `<span class="photo-count">${photoCount}</span>` : ''}</button>`
-            : '';
+            ? `<button type="button" class="btn-secondary btn-small btn-photos" data-action="client-photos" title="View or upload property photos">Images${photoCount ? `<span class="photo-count">${photoCount}</span>` : ''}</button>`
+            : `<span class="empty">—</span>`;
           const actions = isEditing
             ? `<button type="button" class="btn btn-small" data-action="save-client-full">Save</button>
                <button type="button" class="btn-secondary btn-small" data-action="cancel-client-full">Cancel</button>`
-            : `${photosBtn}<button type="button" class="btn-secondary btn-small" data-action="edit-client-full">Edit</button>`;
+            : `<button type="button" class="btn-secondary btn-small" data-action="edit-client-full">Edit</button>`;
           return `
             <tr data-index="${index}" data-client-id="${escapeHtml(clientId)}" class="${isEditing ? 'editing' : ''}">
+              <td class="photos-col">${photosBtn}</td>
               ${columns.map((col) => renderClientFullCell(row, col, isEditing)).join('')}
               <td class="actions">${actions}</td>
             </tr>
@@ -2441,6 +2484,13 @@
         if (saveBtn) saveClientFullRow(index, saveBtn);
       });
 
+      clientPhotosPickBtn.addEventListener('click', () => {
+        if (!clientPhotosState.clientId) {
+          setStatus('Open a client first.', true);
+          return;
+        }
+        clientPhotosFileInput.click();
+      });
       clientPhotosFileInput.addEventListener('change', () => {
         uploadClientPhotos(clientPhotosFileInput.files);
       });

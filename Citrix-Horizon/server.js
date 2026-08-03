@@ -583,6 +583,69 @@ app.get('/api/health', (req, res) => {
     });
 });
 
+// Persistent clone-image exclusions (images the user does not want to see)
+function resolveCitrixDataDir() {
+    const explicit = String(process.env.CITRIX_HORIZON_DATA_DIR || '').trim();
+    if (explicit) return path.resolve(explicit);
+    const diskRoot = String(process.env.LAB007_DATA_DIR || process.env.LAB007_DISK_ROOT || '').trim();
+    if (diskRoot) return path.join(path.resolve(diskRoot), 'citrix-horizon');
+    return path.join(__dirname, 'Data');
+}
+
+function cloneImageExclusionsPath() {
+    return path.join(resolveCitrixDataDir(), 'clone-image-exclusions.json');
+}
+
+function readCloneImageExclusions() {
+    const filePath = cloneImageExclusionsPath();
+    if (!fs.existsSync(filePath)) return { excluded: [], updatedAt: null };
+    try {
+        const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+        const excluded = Array.isArray(raw.excluded)
+            ? raw.excluded.map((n) => String(n || '').trim()).filter(Boolean)
+            : [];
+        return {
+            excluded: [...new Set(excluded)].sort((a, b) => a.localeCompare(b)),
+            updatedAt: raw.updatedAt || null
+        };
+    } catch (err) {
+        console.warn('[Citrix] Failed to read clone-image exclusions:', err.message);
+        return { excluded: [], updatedAt: null };
+    }
+}
+
+function writeCloneImageExclusions(excluded) {
+    const dir = resolveCitrixDataDir();
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    const list = Array.isArray(excluded)
+        ? [...new Set(excluded.map((n) => String(n || '').trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b))
+        : [];
+    const payload = { excluded: list, updatedAt: new Date().toISOString() };
+    fs.writeFileSync(cloneImageExclusionsPath(), JSON.stringify(payload, null, 2), 'utf8');
+    return payload;
+}
+
+app.get('/api/clone-image-exclusions', (req, res) => {
+    try {
+        res.set('Cache-Control', 'no-store');
+        res.json(readCloneImageExclusions());
+    } catch (err) {
+        console.error('[Citrix] GET clone-image-exclusions error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
+app.put('/api/clone-image-exclusions', (req, res) => {
+    try {
+        const body = req.body && typeof req.body === 'object' ? req.body : {};
+        const saved = writeCloneImageExclusions(body.excluded);
+        res.json(saved);
+    } catch (err) {
+        console.error('[Citrix] PUT clone-image-exclusions error:', err);
+        res.status(500).json({ error: err.message });
+    }
+});
+
 // Start server only if run directly (not when required as a sub-app)
 if (require.main === module) {
     app.listen(PORT, () => {
