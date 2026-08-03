@@ -43,7 +43,12 @@ const {
   buildInvoicePdf,
   isValidClientEmail,
   weeklyInvoiceStats,
-  invoiceDashboardStats
+  invoiceDashboardStats,
+  listClientPhotos,
+  saveClientPhoto,
+  readClientPhoto,
+  deleteClientPhoto,
+  clientPhotoCounts
 } = require('./lib/elite-invoices');
 registerCursorAiTelegramHandlers(registerTelegramInboundHandler);
 registerCronTelegramHandlers(registerTelegramInboundHandler);
@@ -6520,10 +6525,79 @@ app.post('/api/clp-crm', (req, res) => {
 
 app.get('/api/elite-invoices/client-full', (req, res) => {
   try {
-    res.json(readEliteClientFull());
+    const data = readEliteClientFull();
+    res.json({
+      ...data,
+      photoCounts: clientPhotoCounts(eliteInvoicesDataDir)
+    });
   } catch (err) {
     console.error('[EliteInvoices] GET client-full error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/elite-invoices/client-full/:clientId/photos', (req, res) => {
+  try {
+    const clientId = String(req.params.clientId || '').trim();
+    if (!clientId) return res.status(400).json({ error: 'Client ID is required.' });
+    res.json({ clientId, photos: listClientPhotos(eliteInvoicesDataDir, clientId) });
+  } catch (err) {
+    console.error('[EliteInvoices] GET client photos error:', err);
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+app.post('/api/elite-invoices/client-full/:clientId/photos', (req, res) => {
+  try {
+    const clientId = String(req.params.clientId || '').trim();
+    if (!clientId) return res.status(400).json({ error: 'Client ID is required.' });
+    const body = req.body && typeof req.body === 'object' ? req.body : {};
+    const photo = saveClientPhoto(
+      eliteInvoicesDataDir,
+      clientId,
+      body.dataUrl || body.dataURL || '',
+      body.name || body.fileName || ''
+    );
+    res.status(201).json({
+      photo,
+      photos: listClientPhotos(eliteInvoicesDataDir, clientId),
+      photoCounts: clientPhotoCounts(eliteInvoicesDataDir)
+    });
+  } catch (err) {
+    console.error('[EliteInvoices] POST client photo error:', err);
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+app.get('/api/elite-invoices/client-full/:clientId/photos/:photoId', (req, res) => {
+  try {
+    const clientId = String(req.params.clientId || '').trim();
+    const photoId = String(req.params.photoId || '').trim();
+    const file = readClientPhoto(eliteInvoicesDataDir, clientId, photoId);
+    if (!file) return res.status(404).json({ error: 'Photo not found.' });
+    res.setHeader('Content-Type', file.type);
+    res.setHeader('Cache-Control', 'private, max-age=3600');
+    res.setHeader('Content-Disposition', `inline; filename="${file.fileName}"`);
+    res.send(file.buffer);
+  } catch (err) {
+    console.error('[EliteInvoices] GET client photo file error:', err);
+    res.status(err.status || 500).json({ error: err.message });
+  }
+});
+
+app.delete('/api/elite-invoices/client-full/:clientId/photos/:photoId', (req, res) => {
+  try {
+    const clientId = String(req.params.clientId || '').trim();
+    const photoId = String(req.params.photoId || '').trim();
+    const photos = deleteClientPhoto(eliteInvoicesDataDir, clientId, photoId);
+    res.json({
+      clientId,
+      photos,
+      photoCounts: clientPhotoCounts(eliteInvoicesDataDir)
+    });
+  } catch (err) {
+    console.error('[EliteInvoices] DELETE client photo error:', err);
+    res.status(err.status || 500).json({ error: err.message });
   }
 });
 

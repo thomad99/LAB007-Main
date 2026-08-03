@@ -246,6 +246,144 @@
     #clientFullTable tr.editing td {
       vertical-align: top;
     }
+    #clientFullTable .actions {
+      white-space: nowrap;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      align-items: center;
+    }
+    #clientFullTable .btn-photos {
+      position: relative;
+    }
+    #clientFullTable .photo-count {
+      display: inline-block;
+      min-width: 1.1em;
+      margin-left: 4px;
+      padding: 0 5px;
+      border-radius: 999px;
+      background: rgba(215, 173, 75, .22);
+      color: var(--soft-gold);
+      font-size: .72rem;
+      font-weight: 700;
+    }
+    .photos-modal-card {
+      width: min(920px, 100%);
+    }
+    .photos-toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      align-items: center;
+      margin-bottom: 14px;
+    }
+    .photos-toolbar .file-btn {
+      position: relative;
+      overflow: hidden;
+      cursor: pointer;
+    }
+    .photos-toolbar .file-btn input[type="file"] {
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      cursor: pointer;
+      font-size: 48px;
+    }
+    .photos-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .photo-card {
+      background: #0d0d0d;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+    .photo-card .thumb-wrap {
+      aspect-ratio: 1;
+      background: #080808;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-in;
+    }
+    .photo-card img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .photo-card .photo-meta {
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .photo-card .photo-name {
+      font-size: .78rem;
+      color: var(--muted);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .photo-card .photo-actions {
+      display: flex;
+      gap: 6px;
+    }
+    .photo-card .photo-actions .btn,
+    .photo-card .photo-actions .btn-secondary,
+    .photo-card .photo-actions .btn-danger {
+      flex: 1;
+      padding: 8px 6px;
+      font-size: .72rem;
+    }
+    .photos-empty {
+      padding: 28px 12px;
+      text-align: center;
+      color: var(--muted);
+      border: 1px dashed var(--line);
+      border-radius: 10px;
+      grid-column: 1 / -1;
+    }
+    .photo-lightbox {
+      position: fixed;
+      inset: 0;
+      z-index: 13000;
+      background: rgba(0, 0, 0, .88);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .photo-lightbox.open { display: flex; }
+    .photo-lightbox img {
+      max-width: min(96vw, 1100px);
+      max-height: 88vh;
+      width: auto;
+      height: auto;
+      border-radius: 8px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.5);
+    }
+    .photo-lightbox .lightbox-close {
+      position: absolute;
+      top: 14px;
+      right: 14px;
+    }
+    @media (max-width: 640px) {
+      .photos-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+      .photos-toolbar .btn,
+      .photos-toolbar .btn-secondary {
+        width: 100%;
+        justify-content: center;
+      }
+    }
     th, td {
       padding: 12px 10px;
       border-bottom: 1px solid var(--line);
@@ -690,7 +828,8 @@
         </table>
       </div>
       <p class="hint">
-        Full client list from <strong>Client List NEW</strong>. Use <strong>Edit</strong> to change any field or add Notes, then <strong>Save</strong>. Data is private, password protected, and not indexed by search engines.
+        Full client list from <strong>Client List NEW</strong>. Use <strong>Edit</strong> to change any field or add Notes, then <strong>Save</strong>.
+        Use <strong>Images</strong> to upload property photos from your phone or computer (view or delete anytime). Data is private, password protected, and not indexed by search engines.
       </p>
     </section>
 
@@ -807,6 +946,32 @@
     </div>
   </div>
 
+  <div class="modal-backdrop" id="clientPhotosModal" aria-hidden="true">
+    <div class="modal-card photos-modal-card" role="dialog" aria-modal="true" aria-labelledby="clientPhotosTitle">
+      <h2 id="clientPhotosTitle">Property photos</h2>
+      <p class="modal-sub" id="clientPhotosSubtitle">Upload photos of this property from your phone or computer.</p>
+      <div class="photos-toolbar">
+        <label class="btn file-btn">
+          Add photos
+          <input
+            id="clientPhotosFileInput"
+            type="file"
+            accept="image/*"
+            multiple
+          >
+        </label>
+        <button type="button" class="btn-secondary" id="closeClientPhotosBtn">Close</button>
+      </div>
+      <div id="clientPhotosGrid" class="photos-grid"></div>
+      <p class="hint" id="clientPhotosHint">Tip: on a phone, choose photos from your camera roll or take a new one.</p>
+    </div>
+  </div>
+
+  <div class="photo-lightbox" id="clientPhotoLightbox" aria-hidden="true">
+    <button type="button" class="btn-secondary lightbox-close" id="closePhotoLightboxBtn">Close</button>
+    <img id="clientPhotoLightboxImg" alt="Property photo">
+  </div>
+
   <script src="/lab007-site-nav.js" defer></script>
   <script>
     (function () {
@@ -842,6 +1007,15 @@
       const clientFullSearchMeta = document.getElementById('clientFullSearchMeta');
       const clientFullHead = document.getElementById('clientFullHead');
       const clientFullRows = document.getElementById('clientFullRows');
+      const clientPhotosModal = document.getElementById('clientPhotosModal');
+      const clientPhotosTitle = document.getElementById('clientPhotosTitle');
+      const clientPhotosSubtitle = document.getElementById('clientPhotosSubtitle');
+      const clientPhotosGrid = document.getElementById('clientPhotosGrid');
+      const clientPhotosFileInput = document.getElementById('clientPhotosFileInput');
+      const closeClientPhotosBtn = document.getElementById('closeClientPhotosBtn');
+      const clientPhotoLightbox = document.getElementById('clientPhotoLightbox');
+      const clientPhotoLightboxImg = document.getElementById('clientPhotoLightboxImg');
+      const closePhotoLightboxBtn = document.getElementById('closePhotoLightboxBtn');
       const lineItemsModal = document.getElementById('lineItemsModal');
       const lineItemRows = document.getElementById('lineItemRows');
       const lineItemsTotal = document.getElementById('lineItemsTotal');
@@ -859,13 +1033,19 @@
       let clients = [];
       let invoices = [];
       let invoiceGrandTotal = 0;
-      let clientFull = { columns: [], rows: [] };
+      let clientFull = { columns: [], rows: [], photoCounts: {} };
       let clientSearchQuery = '';
       let clientSortMode = 'client';
       let clientSortDir = 'asc';
       let clientFullSearchQuery = '';
       let clientFullLoaded = false;
       let clientFullEditingIndex = null;
+      let clientPhotosState = {
+        clientId: '',
+        clientName: '',
+        photos: [],
+        blobUrls: []
+      };
       let lineItemsEditClientId = null;
       let weekCursor = null;
       let dashMode = 'day';
@@ -1084,6 +1264,216 @@
         }).join('');
       }
 
+      function clientFullRowId(row) {
+        return String((row && (row['Client ID'] || row.ClientID || row.id)) || '').trim();
+      }
+
+      function clientFullPhotoCount(clientId) {
+        const counts = clientFull.photoCounts || {};
+        return Number(counts[clientId] || 0) || 0;
+      }
+
+      function revokeClientPhotoBlobs() {
+        (clientPhotosState.blobUrls || []).forEach((url) => {
+          try { URL.revokeObjectURL(url); } catch (_) { /* ignore */ }
+        });
+        clientPhotosState.blobUrls = [];
+      }
+
+      async function fetchClientPhotoBlobUrl(photoUrl) {
+        const res = await apiFetch(photoUrl);
+        if (res.status === 401) {
+          sessionStorage.removeItem(AUTH_KEY);
+          showLogin('Session expired. Enter password again.');
+          throw new Error('Session expired');
+        }
+        if (!res.ok) throw new Error('Failed to load photo');
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        clientPhotosState.blobUrls.push(url);
+        return url;
+      }
+
+      function closeClientPhotosModal() {
+        clientPhotosModal.classList.remove('open');
+        clientPhotosModal.setAttribute('aria-hidden', 'true');
+        closePhotoLightbox();
+        revokeClientPhotoBlobs();
+        clientPhotosState.clientId = '';
+        clientPhotosState.clientName = '';
+        clientPhotosState.photos = [];
+        if (clientPhotosFileInput) clientPhotosFileInput.value = '';
+      }
+
+      function closePhotoLightbox() {
+        clientPhotoLightbox.classList.remove('open');
+        clientPhotoLightbox.setAttribute('aria-hidden', 'true');
+        clientPhotoLightboxImg.removeAttribute('src');
+      }
+
+      async function openPhotoLightbox(photoUrl) {
+        try {
+          setStatus('Opening photo...');
+          const blobUrl = await fetchClientPhotoBlobUrl(photoUrl);
+          clientPhotoLightboxImg.src = blobUrl;
+          clientPhotoLightbox.classList.add('open');
+          clientPhotoLightbox.setAttribute('aria-hidden', 'false');
+          setStatus('');
+        } catch (err) {
+          if (err.message !== 'Session expired') setStatus(err.message || 'Failed to open photo', true);
+        }
+      }
+
+      async function renderClientPhotosGrid() {
+        revokeClientPhotoBlobs();
+        const photos = clientPhotosState.photos || [];
+        if (!photos.length) {
+          clientPhotosGrid.innerHTML = '<div class="photos-empty">No property photos yet. Tap <strong>Add photos</strong> to upload from your phone or computer.</div>';
+          return;
+        }
+        clientPhotosGrid.innerHTML = photos.map((photo) => `
+          <article class="photo-card" data-photo-id="${escapeHtml(photo.id)}">
+            <div class="thumb-wrap" data-action="view-photo" title="View">
+              <img alt="${escapeHtml(photo.name || 'Property photo')}" data-src="${escapeHtml(photo.url)}">
+            </div>
+            <div class="photo-meta">
+              <div class="photo-name" title="${escapeHtml(photo.name || '')}">${escapeHtml(photo.name || 'Photo')}</div>
+              <div class="photo-actions">
+                <button type="button" class="btn-secondary" data-action="view-photo">View</button>
+                <button type="button" class="btn-danger" data-action="delete-photo">Delete</button>
+              </div>
+            </div>
+          </article>
+        `).join('');
+
+        const imgs = Array.from(clientPhotosGrid.querySelectorAll('img[data-src]'));
+        for (const img of imgs) {
+          try {
+            img.src = await fetchClientPhotoBlobUrl(img.getAttribute('data-src'));
+          } catch (_) {
+            img.alt = 'Failed to load';
+          }
+        }
+      }
+
+      async function openClientPhotosModal(row) {
+        const clientId = clientFullRowId(row);
+        if (!clientId) {
+          setStatus('This row needs a Client ID before photos can be saved.', true);
+          return;
+        }
+        const name = String((row && row.Name) || '').trim();
+        clientPhotosState.clientId = clientId;
+        clientPhotosState.clientName = name;
+        clientPhotosTitle.textContent = name ? `Photos · ${name}` : 'Property photos';
+        clientPhotosSubtitle.textContent = `Client ${clientId}${name ? ` · ${name}` : ''}. Upload from your phone camera roll or computer.`;
+        clientPhotosModal.classList.add('open');
+        clientPhotosModal.setAttribute('aria-hidden', 'false');
+        clientPhotosGrid.innerHTML = '<div class="photos-empty">Loading photos…</div>';
+        try {
+          const res = await apiFetch('/api/elite-invoices/client-full/' + encodeURIComponent(clientId) + '/photos');
+          if (res.status === 401) {
+            sessionStorage.removeItem(AUTH_KEY);
+            showLogin('Session expired. Enter password again.');
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Failed to load photos');
+          clientPhotosState.photos = Array.isArray(data.photos) ? data.photos : [];
+          clientFull.photoCounts = Object.assign({}, clientFull.photoCounts, {
+            [clientId]: clientPhotosState.photos.length
+          });
+          await renderClientPhotosGrid();
+          setStatus('');
+        } catch (err) {
+          clientPhotosGrid.innerHTML = `<div class="photos-empty">${escapeHtml(err.message || 'Failed to load photos')}</div>`;
+          setStatus(err.message || 'Failed to load photos', true);
+        }
+      }
+
+      function readFileAsDataUrl(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = () => reject(new Error('Could not read ' + (file.name || 'image')));
+          reader.readAsDataURL(file);
+        });
+      }
+
+      async function uploadClientPhotos(fileList) {
+        const clientId = clientPhotosState.clientId;
+        if (!clientId) return;
+        const files = Array.from(fileList || []).filter((f) => f && /^image\//i.test(f.type || ''));
+        if (!files.length) {
+          setStatus('Choose image files to upload.', true);
+          return;
+        }
+        setStatus('Uploading photos...');
+        try {
+          for (const file of files) {
+            if (file.size > 8 * 1024 * 1024) {
+              throw new Error((file.name || 'Image') + ' is over 8MB.');
+            }
+            const dataUrl = await readFileAsDataUrl(file);
+            const res = await apiFetch('/api/elite-invoices/client-full/' + encodeURIComponent(clientId) + '/photos', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ dataUrl, name: file.name || 'photo' })
+            });
+            if (res.status === 401) {
+              sessionStorage.removeItem(AUTH_KEY);
+              showLogin('Session expired. Enter password again.');
+              return;
+            }
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Upload failed');
+            clientPhotosState.photos = Array.isArray(data.photos) ? data.photos : clientPhotosState.photos;
+            if (data.photoCounts) clientFull.photoCounts = data.photoCounts;
+          }
+          await renderClientPhotosGrid();
+          renderClientFullRows();
+          setStatus(files.length === 1 ? 'Photo uploaded.' : files.length + ' photos uploaded.');
+          window.setTimeout(() => setStatus(''), 1800);
+        } catch (err) {
+          setStatus(err.message || 'Upload failed', true);
+        } finally {
+          if (clientPhotosFileInput) clientPhotosFileInput.value = '';
+        }
+      }
+
+      async function deleteClientPhoto(photoId) {
+        const clientId = clientPhotosState.clientId;
+        if (!clientId || !photoId) return;
+        if (!window.confirm('Delete this property photo?')) return;
+        setStatus('Deleting photo...');
+        try {
+          const res = await apiFetch(
+            '/api/elite-invoices/client-full/' + encodeURIComponent(clientId) + '/photos/' + encodeURIComponent(photoId),
+            { method: 'DELETE' }
+          );
+          if (res.status === 401) {
+            sessionStorage.removeItem(AUTH_KEY);
+            showLogin('Session expired. Enter password again.');
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Delete failed');
+          clientPhotosState.photos = Array.isArray(data.photos) ? data.photos : [];
+          if (data.photoCounts) clientFull.photoCounts = data.photoCounts;
+          else {
+            clientFull.photoCounts = Object.assign({}, clientFull.photoCounts, {
+              [clientId]: clientPhotosState.photos.length
+            });
+          }
+          await renderClientPhotosGrid();
+          renderClientFullRows();
+          setStatus('Photo deleted.');
+          window.setTimeout(() => setStatus(''), 1800);
+        } catch (err) {
+          setStatus(err.message || 'Delete failed', true);
+        }
+      }
+
       function clientFullDisplayColumns() {
         const columns = (clientFull.columns || []).filter(Boolean);
         if (columns.includes('Notes')) return columns;
@@ -1131,12 +1521,17 @@
 
         clientFullRows.innerHTML = visibleRows.map(({ row, index }) => {
           const isEditing = clientFullEditingIndex === index;
+          const clientId = clientFullRowId(row);
+          const photoCount = clientFullPhotoCount(clientId);
+          const photosBtn = clientId
+            ? `<button type="button" class="btn-secondary btn-small btn-photos" data-action="client-photos">Images${photoCount ? `<span class="photo-count">${photoCount}</span>` : ''}</button>`
+            : '';
           const actions = isEditing
             ? `<button type="button" class="btn btn-small" data-action="save-client-full">Save</button>
                <button type="button" class="btn-secondary btn-small" data-action="cancel-client-full">Cancel</button>`
-            : `<button type="button" class="btn-secondary btn-small" data-action="edit-client-full">Edit</button>`;
+            : `${photosBtn}<button type="button" class="btn-secondary btn-small" data-action="edit-client-full">Edit</button>`;
           return `
-            <tr data-index="${index}" class="${isEditing ? 'editing' : ''}">
+            <tr data-index="${index}" data-client-id="${escapeHtml(clientId)}" class="${isEditing ? 'editing' : ''}">
               ${columns.map((col) => renderClientFullCell(row, col, isEditing)).join('')}
               <td class="actions">${actions}</td>
             </tr>
@@ -1202,7 +1597,13 @@
           return;
         }
         if (!res.ok) throw new Error('Failed to load Client Database');
-        clientFull = await res.json();
+        const data = await res.json();
+        clientFull = {
+          sheet: data.sheet || 'Client List NEW',
+          columns: Array.isArray(data.columns) ? data.columns : [],
+          rows: Array.isArray(data.rows) ? data.rows : [],
+          photoCounts: data.photoCounts && typeof data.photoCounts === 'object' ? data.photoCounts : {}
+        };
         clientFullLoaded = true;
         clientFullEditingIndex = null;
         renderClientFullRows();
@@ -2013,6 +2414,12 @@
         const editBtn = event.target.closest('[data-action="edit-client-full"]');
         const saveBtn = event.target.closest('[data-action="save-client-full"]');
         const cancelBtn = event.target.closest('[data-action="cancel-client-full"]');
+        const photosBtn = event.target.closest('[data-action="client-photos"]');
+        if (photosBtn) {
+          const clientRow = clientFull.rows[index];
+          if (clientRow) openClientPhotosModal(clientRow);
+          return;
+        }
         if (editBtn) {
           if (clientFullEditingIndex != null && clientFullEditingIndex !== index) {
             setStatus('Finish or cancel the open edit first.', true);
@@ -2032,6 +2439,40 @@
           return;
         }
         if (saveBtn) saveClientFullRow(index, saveBtn);
+      });
+
+      clientPhotosFileInput.addEventListener('change', () => {
+        uploadClientPhotos(clientPhotosFileInput.files);
+      });
+      closeClientPhotosBtn.addEventListener('click', closeClientPhotosModal);
+      clientPhotosModal.addEventListener('click', (event) => {
+        if (event.target === clientPhotosModal) closeClientPhotosModal();
+      });
+      clientPhotosGrid.addEventListener('click', (event) => {
+        const card = event.target.closest('[data-photo-id]');
+        if (!card) return;
+        const photoId = card.getAttribute('data-photo-id');
+        const photo = (clientPhotosState.photos || []).find((p) => p.id === photoId);
+        if (!photo) return;
+        if (event.target.closest('[data-action="delete-photo"]')) {
+          deleteClientPhoto(photoId);
+          return;
+        }
+        if (event.target.closest('[data-action="view-photo"]')) {
+          openPhotoLightbox(photo.url);
+        }
+      });
+      closePhotoLightboxBtn.addEventListener('click', closePhotoLightbox);
+      clientPhotoLightbox.addEventListener('click', (event) => {
+        if (event.target === clientPhotoLightbox) closePhotoLightbox();
+      });
+      document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') return;
+        if (clientPhotoLightbox.classList.contains('open')) {
+          closePhotoLightbox();
+          return;
+        }
+        if (clientPhotosModal.classList.contains('open')) closeClientPhotosModal();
       });
 
       clientsTab.addEventListener('click', () => showPanel('clients'));
