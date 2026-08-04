@@ -452,14 +452,14 @@
                 <div class="screen-settings">
                   <div>
                     <label for="screenOrientation">Orientation</label>
-                    <select id="screenOrientation">
+                    <select id="screenOrientation" title="Portrait rotates the output image — the panel itself cannot rotate">
                       <option value="landscape">Landscape</option>
                       <option value="portrait">Portrait</option>
                     </select>
                   </div>
                   <div>
                     <label for="screenHangRotation">Hang rotate</label>
-                    <select id="screenHangRotation" title="Physical mount — rotate output if the panel is hung sideways or upside down">
+                    <select id="screenHangRotation" title="Extra rotation if the panel is mounted upside-down or sideways">
                       <option value="0">0° upright</option>
                       <option value="90">90° CW</option>
                       <option value="180">180°</option>
@@ -475,14 +475,15 @@
                     </select>
                   </div>
                   <div>
-                    <label for="einkWidthDesign">W</label>
-                    <input id="einkWidthDesign" type="number" min="200" max="2500" value="800">
+                    <label for="einkWidthDesign">Panel W</label>
+                    <input id="einkWidthDesign" type="number" min="200" max="2500" value="800" title="Physical panel width (framebuffer)">
                   </div>
                   <div>
-                    <label for="einkHeightDesign">H</label>
-                    <input id="einkHeightDesign" type="number" min="120" max="2500" value="480">
+                    <label for="einkHeightDesign">Panel H</label>
+                    <input id="einkHeightDesign" type="number" min="120" max="2500" value="480" title="Physical panel height (framebuffer)">
                   </div>
                 </div>
+                <p class="hint" style="margin:4px 0 0;">Panel W×H is the device size. Orientation rotates the <strong>image</strong> (devices cannot rotate).</p>
               </div>
 
               <div class="ctrl-block">
@@ -680,19 +681,20 @@
               <p class="hint">720 = 12 hours · try 5–15 while testing</p>
             </div>
             <div>
-              <label for="einkWidth">E-ink width (px)</label>
+              <label for="einkWidth">Panel width (px)</label>
               <input id="einkWidth" type="number" min="200" max="2500" value="800">
             </div>
             <div>
-              <label for="einkHeight">E-ink height (px)</label>
+              <label for="einkHeight">Panel height (px)</label>
               <input id="einkHeight" type="number" min="120" max="2500" value="480">
             </div>
             <div>
               <label for="einkOrientation">Orientation</label>
               <select id="einkOrientation">
                 <option value="landscape">Landscape</option>
-                <option value="portrait">Portrait</option>
+                <option value="portrait">Portrait (rotates image 90°)</option>
               </select>
+              <p class="hint">Device cannot rotate — portrait bakes a 90° turn into the PNG</p>
             </div>
             <div>
               <label for="einkHangRotation">Hang rotate</label>
@@ -877,6 +879,36 @@
         scaleTablet();
       }
 
+      function panelSizeFromForm() {
+        let pw = Math.max(200, Math.min(2500, Number(document.getElementById('einkWidthDesign').value) || 800));
+        let ph = Math.max(120, Math.min(2500, Number(document.getElementById('einkHeightDesign').value) || 480));
+        // Panel native is landscape-ordered (wider when hung landscape)
+        if (ph > pw) {
+          const t = pw;
+          pw = ph;
+          ph = t;
+          document.getElementById('einkWidthDesign').value = pw;
+          document.getElementById('einkHeightDesign').value = ph;
+          document.getElementById('einkWidth').value = pw;
+          document.getElementById('einkHeight').value = ph;
+        }
+        return { width: pw, height: ph };
+      }
+
+      function designSizeFromPanel(orient, panel) {
+        const landscape = orient !== 'portrait';
+        return landscape
+          ? { width: panel.width, height: panel.height }
+          : { width: panel.height, height: panel.width };
+      }
+
+      function applyDesignCanvasFromForm() {
+        const orient = document.getElementById('screenOrientation').value;
+        const panel = panelSizeFromForm();
+        const design = designSizeFromPanel(orient, panel);
+        applyTabletSize(design.width, design.height);
+      }
+
       function syncScreenFields(fromDesign) {
         if (syncingScreenFields) return;
         syncingScreenFields = true;
@@ -894,10 +926,7 @@
             document.getElementById('einkWidthDesign').value = document.getElementById('einkWidth').value;
             document.getElementById('einkHeightDesign').value = document.getElementById('einkHeight').value;
           }
-          applyTabletSize(
-            document.getElementById('einkWidthDesign').value,
-            document.getElementById('einkHeightDesign').value
-          );
+          applyDesignCanvasFromForm();
           renderPaletteSwatches();
         } finally {
           syncingScreenFields = false;
@@ -907,15 +936,14 @@
       function applyOrientationDefaults(orient) {
         const oldW = TABLET.width;
         const oldH = TABLET.height;
-        const landscape = orient !== 'portrait';
-        const newW = landscape ? 800 : 480;
-        const newH = landscape ? 480 : 800;
-        document.getElementById('einkWidthDesign').value = newW;
-        document.getElementById('einkHeightDesign').value = newH;
-        syncScreenFields(true);
+        document.getElementById('screenOrientation').value = orient === 'portrait' ? 'portrait' : 'landscape';
+        document.getElementById('einkOrientation').value = document.getElementById('screenOrientation').value;
+        const panel = panelSizeFromForm();
+        const design = designSizeFromPanel(orient, panel);
+        applyTabletSize(design.width, design.height);
         const c = selected();
-        if (c && c.design && Array.isArray(c.design.layout) && (oldW !== newW || oldH !== newH)) {
-          c.design.layout = remapLayoutForCanvasSize(c.design.layout, oldW, oldH, newW, newH);
+        if (c && c.design && Array.isArray(c.design.layout) && (oldW !== design.width || oldH !== design.height)) {
+          c.design.layout = remapLayoutForCanvasSize(c.design.layout, oldW, oldH, design.width, design.height);
         }
       }
 
@@ -1121,8 +1149,13 @@
           wrap.style.height = scaledH + 'px';
         }
         if (meta) {
-          const orient = TABLET.width >= TABLET.height ? 'landscape' : 'portrait';
-          meta.textContent = `${TABLET.width} × ${TABLET.height} px · ${orient} · design = screen`;
+          const orient = document.getElementById('screenOrientation').value === 'portrait' ? 'portrait' : 'landscape';
+          const panel = panelSizeFromForm();
+          const bake = orient === 'portrait' ? 90 : 0;
+          const hang = Number(document.getElementById('screenHangRotation').value) || 0;
+          const outRot = ((bake + hang) % 360 + 360) % 360;
+          const rotNote = outRot ? ` · image bake ${outRot}°` : '';
+          meta.textContent = `Design ${TABLET.width}×${TABLET.height} · panel ${panel.width}×${panel.height} · ${orient}${rotNote}`;
         }
       }
 
@@ -1653,8 +1686,21 @@
       function writeEinkToForm(eink) {
         const e = eink || {};
         document.getElementById('einkPoll').value = e.pollIntervalMinutes || 720;
-        document.getElementById('einkWidth').value = e.width || 800;
-        document.getElementById('einkHeight').value = e.height || 480;
+        // Panel size — migrate old portrait-swapped values to landscape-ordered panel
+        let pw = Number(e.width) || 800;
+        let ph = Number(e.height) || 480;
+        if (e.orientation === 'portrait' && pw < ph) {
+          const t = pw;
+          pw = ph;
+          ph = t;
+        }
+        if (ph > pw) {
+          const t = pw;
+          pw = ph;
+          ph = t;
+        }
+        document.getElementById('einkWidth').value = pw;
+        document.getElementById('einkHeight').value = ph;
         document.getElementById('einkOrientation').value = e.orientation === 'portrait' ? 'portrait' : 'landscape';
         document.getElementById('einkHangRotation').value = String(
           e.hangRotation === 90 || e.hangRotation === 180 || e.hangRotation === 270 ? e.hangRotation : 0

@@ -195,12 +195,20 @@
         const open = isOpenNow(hours);
         const tabletInfo = data.tablet || data.eink || {};
         const einkInfo = data.eink || {};
+        const panelInfo = data.panel || {};
         screenW = Math.max(200, Number(tabletInfo.width) || 800);
         screenH = Math.max(120, Number(tabletInfo.height) || 480);
-        hangRotation = normalizeHangRotation(einkInfo.hangRotation != null ? einkInfo.hangRotation : tabletInfo.hangRotation);
+        // Same bake as display.png — portrait adds 90° because the panel cannot rotate
+        hangRotation = data.outputRotation != null
+          ? normalizeHangRotation(data.outputRotation)
+          : normalizeHangRotation(
+              (einkInfo.orientation === 'portrait' ? 90 : 0) + (Number(einkInfo.hangRotation) || 0)
+            );
         tablet.style.width = screenW + 'px';
         tablet.style.height = screenH + 'px';
         document.title = (data.name || 'Hours') + ' · SmartHours';
+        tablet.dataset.panelW = String(panelInfo.width || einkInfo.width || Math.max(screenW, screenH));
+        tablet.dataset.panelH = String(panelInfo.height || einkInfo.height || Math.min(screenW, screenH));
         const bg = design.backgroundColor || '#FFFFFF';
         tablet.style.background = bg;
         stage.style.background = bg;
