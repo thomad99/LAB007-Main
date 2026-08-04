@@ -424,6 +424,15 @@
                     </select>
                   </div>
                   <div>
+                    <label for="screenHangRotation">Hang rotate</label>
+                    <select id="screenHangRotation" title="Physical mount — rotate output if the panel is hung sideways or upside down">
+                      <option value="0">0° upright</option>
+                      <option value="90">90° CW</option>
+                      <option value="180">180°</option>
+                      <option value="270">270° CW</option>
+                    </select>
+                  </div>
+                  <div>
                     <label for="screenColorMode">Colors</label>
                     <select id="screenColorMode">
                       <option value="6color">6-color</option>
@@ -649,6 +658,16 @@
               </select>
             </div>
             <div>
+              <label for="einkHangRotation">Hang rotate</label>
+              <select id="einkHangRotation">
+                <option value="0">0° upright</option>
+                <option value="90">90° clockwise</option>
+                <option value="180">180° upside down</option>
+                <option value="270">270° clockwise</option>
+              </select>
+              <p class="hint">Use when the tablet can be mounted any way up</p>
+            </div>
+            <div>
               <label for="einkColorMode">Color mode</label>
               <select id="einkColorMode">
                 <option value="6color">6-color</option>
@@ -827,11 +846,13 @@
         try {
           if (fromDesign) {
             document.getElementById('einkOrientation').value = document.getElementById('screenOrientation').value;
+            document.getElementById('einkHangRotation').value = document.getElementById('screenHangRotation').value;
             document.getElementById('einkColorMode').value = document.getElementById('screenColorMode').value;
             document.getElementById('einkWidth').value = document.getElementById('einkWidthDesign').value;
             document.getElementById('einkHeight').value = document.getElementById('einkHeightDesign').value;
           } else {
             document.getElementById('screenOrientation').value = document.getElementById('einkOrientation').value;
+            document.getElementById('screenHangRotation').value = document.getElementById('einkHangRotation').value;
             document.getElementById('screenColorMode').value = document.getElementById('einkColorMode').value;
             document.getElementById('einkWidthDesign').value = document.getElementById('einkWidth').value;
             document.getElementById('einkHeightDesign').value = document.getElementById('einkHeight').value;
@@ -1572,6 +1593,7 @@
             width: Number(document.getElementById('einkWidth').value) || 800,
             height: Number(document.getElementById('einkHeight').value) || 480,
             orientation: document.getElementById('einkOrientation').value === 'portrait' ? 'portrait' : 'landscape',
+            hangRotation: Number(document.getElementById('einkHangRotation').value) || 0,
             colorMode: resolveColorMode(document.getElementById('einkColorMode').value),
             inverted: document.getElementById('einkInverted').checked
           }
@@ -1586,6 +1608,9 @@
         document.getElementById('einkWidth').value = e.width || 800;
         document.getElementById('einkHeight').value = e.height || 480;
         document.getElementById('einkOrientation').value = e.orientation === 'portrait' ? 'portrait' : 'landscape';
+        document.getElementById('einkHangRotation').value = String(
+          e.hangRotation === 90 || e.hangRotation === 180 || e.hangRotation === 270 ? e.hangRotation : 0
+        );
         document.getElementById('einkColorMode').value = resolveColorMode(e.colorMode);
         document.getElementById('einkInverted').checked = !!e.inverted;
         syncScreenFields(false);
@@ -2136,6 +2161,12 @@
         document.getElementById('screenOrientation').value = document.getElementById('einkOrientation').value;
         applyOrientationDefaults(document.getElementById('einkOrientation').value);
         renderCanvas();
+      });
+      document.getElementById('screenHangRotation').addEventListener('change', () => {
+        syncScreenFields(true);
+      });
+      document.getElementById('einkHangRotation').addEventListener('change', () => {
+        syncScreenFields(false);
       });
       document.getElementById('screenColorMode').addEventListener('change', () => {
         syncScreenFields(true);

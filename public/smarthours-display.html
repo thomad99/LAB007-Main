@@ -90,6 +90,7 @@
       let slideUrls = [];
       let screenW = 800;
       let screenH = 480;
+      let hangRotation = 0;
       let liveDesign = null;
       let liveHours = null;
 
@@ -129,9 +130,20 @@
         return inSlot(day.open, day.close) || inSlot(day.open2, day.close2);
       }
 
+      function normalizeHangRotation(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return 0;
+        const r = ((Math.round(n) % 360) + 360) % 360;
+        if (r === 90 || r === 180 || r === 270) return r;
+        return 0;
+      }
+
       function fit() {
-        const scale = Math.min(stage.clientWidth / screenW, stage.clientHeight / screenH);
-        tablet.style.transform = `scale(${scale})`;
+        const swap = hangRotation === 90 || hangRotation === 270;
+        const boxW = swap ? screenH : screenW;
+        const boxH = swap ? screenW : screenH;
+        const scale = Math.min(stage.clientWidth / boxW, stage.clientHeight / boxH);
+        tablet.style.transform = `rotate(${hangRotation}deg) scale(${scale})`;
       }
 
       function renderStatus(design, open) {
@@ -182,8 +194,10 @@
         const labels = data.dayLabels || {};
         const open = isOpenNow(hours);
         const tabletInfo = data.tablet || data.eink || {};
+        const einkInfo = data.eink || {};
         screenW = Math.max(200, Number(tabletInfo.width) || 800);
         screenH = Math.max(120, Number(tabletInfo.height) || 480);
+        hangRotation = normalizeHangRotation(einkInfo.hangRotation != null ? einkInfo.hangRotation : tabletInfo.hangRotation);
         tablet.style.width = screenW + 'px';
         tablet.style.height = screenH + 'px';
         document.title = (data.name || 'Hours') + ' · SmartHours';
