@@ -218,6 +218,7 @@
     .url-box a { color: var(--accent); word-break: break-all; }
     .design-layout {
       display: grid; grid-template-columns: 260px 1fr; gap: 12px;
+      align-items: start;
     }
     @media (max-width: 900px) { .design-layout { grid-template-columns: 1fr; } }
     .controls {
@@ -261,14 +262,47 @@
     }
     .toggle-row input { width: auto; margin: 0; }
     .canvas-stage {
-      display: flex; justify-content: center; align-items: flex-start;
-      min-height: 480px; overflow: auto; padding: 12px; background: #ffffff; border-radius: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 8px;
+      overflow: auto;
+      padding: 12px;
+      background: #070b14;
+      border-radius: 12px;
       border: 1px solid var(--line);
+      min-height: 0;
+      max-height: min(78vh, 900px);
+    }
+    .canvas-screen-meta {
+      flex: 0 0 auto;
+      font-size: 12px;
+      color: var(--muted);
+      letter-spacing: .02em;
+      text-align: center;
+    }
+    .tablet-scale-wrap {
+      position: relative;
+      flex: 0 0 auto;
+      overflow: hidden;
+      border-radius: 6px;
+      background: #000;
+      box-shadow:
+        0 0 0 2px rgba(118, 244, 197, .35),
+        0 16px 40px rgba(0, 0, 0, .5);
     }
     .tablet-frame {
-      width: 800px; height: 480px; position: relative; border-radius: 0;
-      overflow: hidden; box-shadow: 0 16px 48px rgba(0,0,0,.45); background: #ffffff;
-      flex-shrink: 0; transform-origin: top center;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 800px;
+      height: 480px;
+      overflow: hidden;
+      border-radius: 0;
+      background: #ffffff;
+      transform-origin: top left;
+      box-shadow: none;
     }
     .palette-swatches { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
     .palette-swatch {
@@ -625,8 +659,11 @@
                 </div>
               </div>
             </div>
-            <div class="canvas-stage">
-              <div class="tablet-frame" id="tabletFrame"></div>
+            <div class="canvas-stage" id="canvasStage">
+              <div class="canvas-screen-meta" id="canvasScreenMeta">800 × 480 px · landscape</div>
+              <div class="tablet-scale-wrap" id="tabletScaleWrap">
+                <div class="tablet-frame" id="tabletFrame"></div>
+              </div>
             </div>
           </div>
         </div>
@@ -1062,18 +1099,31 @@
       }
 
       function scaleTablet() {
-        const stage = tabletFrame.parentElement;
+        const wrap = document.getElementById('tabletScaleWrap');
+        const stage = document.getElementById('canvasStage') || (wrap && wrap.parentElement);
+        const meta = document.getElementById('canvasScreenMeta');
         if (!stage) return;
         const pad = 24;
         const maxW = Math.max(160, stage.clientWidth - pad);
-        const maxH = Math.max(280, Math.min(900, window.innerHeight - 200));
+        const maxH = Math.max(180, Math.min(stage.clientHeight - 40, window.innerHeight - 220));
         const scale = Math.min(1, maxW / TABLET.width, maxH / TABLET.height);
-        tabletFrame.style.transformOrigin = 'top center';
+        const scaledW = Math.max(1, Math.round(TABLET.width * scale));
+        const scaledH = Math.max(1, Math.round(TABLET.height * scale));
+
+        tabletFrame.style.width = TABLET.width + 'px';
+        tabletFrame.style.height = TABLET.height + 'px';
+        tabletFrame.style.transformOrigin = 'top left';
         tabletFrame.style.transform = `scale(${scale})`;
-        // Drop unused layout height after scaling from the top
-        tabletFrame.style.marginBottom = `${(scale - 1) * TABLET.height}px`;
-        tabletFrame.style.marginLeft = '0';
-        tabletFrame.style.marginRight = '0';
+        tabletFrame.style.margin = '0';
+
+        if (wrap) {
+          wrap.style.width = scaledW + 'px';
+          wrap.style.height = scaledH + 'px';
+        }
+        if (meta) {
+          const orient = TABLET.width >= TABLET.height ? 'landscape' : 'portrait';
+          meta.textContent = `${TABLET.width} × ${TABLET.height} px · ${orient} · design = screen`;
+        }
       }
 
       function syncHoursRowState(row) {
@@ -1345,8 +1395,6 @@
         tabletFrame.style.background = design.backgroundColor;
         tabletFrame.style.color = design.textColor;
         tabletFrame.style.fontFamily = design.fontFamily;
-        const stage = tabletFrame.parentElement;
-        if (stage) stage.style.background = design.backgroundColor || '#FFFFFF';
         tabletFrame.innerHTML = '';
 
         design.layout.forEach((el) => {
