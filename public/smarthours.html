@@ -218,7 +218,8 @@
     .url-box a { color: var(--accent); word-break: break-all; }
     .design-layout {
       display: grid; grid-template-columns: 260px 1fr; gap: 12px;
-      align-items: start;
+      align-items: stretch;
+      min-height: min(75vh, 820px);
     }
     @media (max-width: 900px) { .design-layout { grid-template-columns: 1fr; } }
     .controls {
@@ -265,14 +266,15 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      justify-content: flex-start;
+      justify-content: center;
       gap: 8px;
-      overflow: auto;
+      overflow: hidden;
       padding: 12px;
       background: #070b14;
       border-radius: 12px;
       border: 1px solid var(--line);
-      min-height: 0;
+      min-height: min(70vh, 640px);
+      height: 100%;
       max-height: min(78vh, 900px);
     }
     .canvas-screen-meta {
@@ -287,7 +289,8 @@
       flex: 0 0 auto;
       overflow: hidden;
       border-radius: 6px;
-      background: #000;
+      /* Match design BG so the screen reads edge-to-edge (no black letterbox) */
+      background: #ffffff;
       box-shadow:
         0 0 0 2px rgba(118, 244, 197, .35),
         0 16px 40px rgba(0, 0, 0, .5);
@@ -360,7 +363,7 @@
       font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
     }
     .preview-slide {
-      width: 100%; height: 100%; object-fit: cover; border-radius: 12px; background: #000; display: block;
+      width: 100%; height: 100%; object-fit: cover; object-position: center; border-radius: 0; background: #000; display: block;
     }
     .el-props { margin-top: 0; display: grid; gap: 6px; }
     .hidden-block { display: none !important; }
@@ -655,8 +658,9 @@
 
               <button type="button" class="btn" id="saveDesignBtn">Save Design</button>
               <div id="designEinkPreviewWrap" class="hidden-block">
-                <div style="background:#0a1020;border:1px solid var(--line);border-radius:10px;padding:8px;overflow:auto;">
-                  <img id="designEinkPreview" alt="Display preview" style="max-width:100%;height:auto;background:#fff;image-rendering:auto;">
+                <p class="hint" style="margin:0 0 6px;">Device PNG (rotated for panel)</p>
+                <div style="background:#0a1020;border:1px solid var(--line);border-radius:10px;padding:8px;overflow:auto;max-height:220px;">
+                  <img id="designEinkPreview" alt="Display preview" style="display:block;width:100%;height:auto;max-height:200px;object-fit:contain;background:#111;image-rendering:auto;">
                 </div>
               </div>
             </div>
@@ -1132,9 +1136,11 @@
         const meta = document.getElementById('canvasScreenMeta');
         if (!stage) return;
         const pad = 24;
+        const metaH = (meta && meta.offsetHeight) || 18;
         const maxW = Math.max(160, stage.clientWidth - pad);
-        const maxH = Math.max(180, Math.min(stage.clientHeight - 40, window.innerHeight - 220));
-        const scale = Math.min(1, maxW / TABLET.width, maxH / TABLET.height);
+        // Fill the stage — allow scale > 1 so the screen isn't a tiny box on large monitors
+        const maxH = Math.max(160, stage.clientHeight - metaH - pad);
+        const scale = Math.min(maxW / TABLET.width, maxH / TABLET.height);
         const scaledW = Math.max(1, Math.round(TABLET.width * scale));
         const scaledH = Math.max(1, Math.round(TABLET.height * scale));
 
@@ -1147,6 +1153,8 @@
         if (wrap) {
           wrap.style.width = scaledW + 'px';
           wrap.style.height = scaledH + 'px';
+          const bg = (tabletFrame.style.background || '#ffffff').trim() || '#ffffff';
+          wrap.style.background = bg;
         }
         if (meta) {
           const orient = document.getElementById('screenOrientation').value === 'portrait' ? 'portrait' : 'landscape';
@@ -1428,6 +1436,8 @@
         tabletFrame.style.background = design.backgroundColor;
         tabletFrame.style.color = design.textColor;
         tabletFrame.style.fontFamily = design.fontFamily;
+        const wrap = document.getElementById('tabletScaleWrap');
+        if (wrap) wrap.style.background = design.backgroundColor || '#ffffff';
         tabletFrame.innerHTML = '';
 
         design.layout.forEach((el) => {
