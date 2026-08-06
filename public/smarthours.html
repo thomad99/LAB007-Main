@@ -175,9 +175,15 @@
       border-radius: 12px;
       background: rgba(255,255,255,.03);
       display: flex;
-      flex-wrap: wrap;
-      gap: 10px 16px;
-      align-items: end;
+      flex-wrap: nowrap;
+      gap: 12px;
+      align-items: flex-end;
+    }
+    .auto-sync-bar > div {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 0;
     }
     .auto-sync-bar label {
       margin: 0;
@@ -189,7 +195,16 @@
     }
     .auto-sync-bar input {
       width: 88px;
-      margin-top: 4px;
+      margin-top: 0;
+      height: 42px;
+      box-sizing: border-box;
+    }
+    .auto-sync-bar #saveAutoSyncBtn {
+      height: 42px;
+      margin: 0;
+      flex: 0 0 auto;
+      white-space: nowrap;
+      box-sizing: border-box;
     }
     .hours-toolbar {
       margin-top: 14px;
@@ -253,15 +268,6 @@
       border-color: var(--accent);
       color: var(--accent);
     }
-    .toggle-row {
-      display: flex; flex-wrap: wrap; gap: 6px 10px;
-    }
-    .toggle-row label {
-      display: inline-flex; gap: 5px; align-items: center;
-      text-transform: none; letter-spacing: 0; font-size: .78rem;
-      color: var(--text); margin: 0; font-weight: 500;
-    }
-    .toggle-row input { width: auto; margin: 0; }
     .canvas-stage {
       display: flex;
       flex-direction: column;
@@ -387,7 +393,6 @@
       <div class="toolbar">
         <a class="btn-secondary" href="/SmartHours/about">About</a>
         <button type="button" class="btn" id="newCustomerBtn">New Customer</button>
-        <button type="button" class="btn-secondary" id="syncAllBtn">Sync All Google</button>
       </div>
     </header>
     <div class="status" id="status"></div>
@@ -547,24 +552,6 @@
                     <label for="logoFile">Logo</label>
                     <input id="logoFile" type="file" accept="image/*">
                   </div>
-                  <div>
-                    <label for="statusMode">OPEN style</label>
-                    <select id="statusMode">
-                      <option value="badge">Badge</option>
-                      <option value="text">Text</option>
-                      <option value="image">Images</option>
-                    </select>
-                  </div>
-                </div>
-                <div class="form-grid" style="gap:6px;">
-                  <div>
-                    <label for="openMediaSelect">OPEN img</label>
-                    <select id="openMediaSelect"><option value="">— badge —</option></select>
-                  </div>
-                  <div>
-                    <label for="closedMediaSelect">CLOSED img</label>
-                    <select id="closedMediaSelect"><option value="">— badge —</option></select>
-                  </div>
                 </div>
               </div>
 
@@ -580,13 +567,6 @@
                   <button type="button" class="btn-secondary" id="addTitleBtn">+ Title</button>
                   <button type="button" class="btn-secondary" id="addSlideshowBtn">+ Slides</button>
                   <button type="button" class="btn-danger" id="deleteElBtn">Delete</button>
-                </div>
-                <div class="toggle-row">
-                  <label><input type="checkbox" id="showLogo" checked> Logo</label>
-                  <label><input type="checkbox" id="showTitle" checked> Title</label>
-                  <label><input type="checkbox" id="showStatus" checked> Status</label>
-                  <label><input type="checkbox" id="showHours" checked> Hours</label>
-                  <label><input type="checkbox" id="showSlideshow"> Slides</label>
                 </div>
                 <div id="elProps" class="el-props hidden-block">
                   <div id="elTextProps">
@@ -658,7 +638,7 @@
 
               <button type="button" class="btn" id="saveDesignBtn">Save Design</button>
               <div id="designEinkPreviewWrap" class="hidden-block">
-                <p class="hint" style="margin:0 0 6px;">Device PNG (rotated for panel)</p>
+                <p class="hint" style="margin:0 0 6px;">PREVIEW</p>
                 <div style="background:#0a1020;border:1px solid var(--line);border-radius:10px;padding:8px;overflow:auto;max-height:220px;">
                   <img id="designEinkPreview" alt="Display preview" style="display:block;width:100%;height:auto;max-height:200px;object-fit:contain;background:#111;image-rendering:auto;">
                 </div>
@@ -1074,19 +1054,9 @@
 
       function renderGallery(customer) {
         const list = document.getElementById('galleryList');
-        const openSel = document.getElementById('openMediaSelect');
-        const closedSel = document.getElementById('closedMediaSelect');
         const media = (customer && customer.media) || [];
         const design = (customer && customer.design) || {};
         const slideIds = new Set(design.slideshowMediaIds || []);
-
-        const optHtml = ['<option value="">— built-in badge —</option>']
-          .concat(media.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name || m.id)}</option>`))
-          .join('');
-        openSel.innerHTML = optHtml;
-        closedSel.innerHTML = optHtml;
-        openSel.value = design.openMediaId || '';
-        closedSel.value = design.closedMediaId || '';
 
         if (!media.length) {
           list.innerHTML = '<p class="hint">No gallery images yet.</p>';
@@ -1217,9 +1187,10 @@
         design.titleFontSize = Number(document.getElementById('titleSize').value) || 34;
         design.hoursFontSize = Number(document.getElementById('hoursSize').value) || 22;
         design.statusFontSize = Number(document.getElementById('statusSize').value) || 48;
-        design.statusMode = document.getElementById('statusMode').value || 'badge';
-        design.openMediaId = document.getElementById('openMediaSelect').value || '';
-        design.closedMediaId = document.getElementById('closedMediaSelect').value || '';
+        // Status presentation is controlled on-canvas (+ Status); keep stored mode/media ids.
+        design.statusMode = design.statusMode || 'badge';
+        design.openMediaId = design.openMediaId || '';
+        design.closedMediaId = design.closedMediaId || '';
         design.slideshowIntervalSec = Number(document.getElementById('slideshowInterval').value) || 8;
         design.slideshowMediaIds = selectedSlideshowIds();
         const layout = Array.isArray(design.layout) ? design.layout : [];
@@ -1231,13 +1202,8 @@
         return design;
       }
 
-      function syncShowCheckboxes(design) {
-        const layout = (design && design.layout) || [];
-        document.getElementById('showLogo').checked = layout.some((e) => e.type === 'logo');
-        document.getElementById('showTitle').checked = layout.some((e) => e.type === 'title');
-        document.getElementById('showStatus').checked = layout.some((e) => e.type === 'status');
-        document.getElementById('showHours').checked = layout.some((e) => e.type === 'hours');
-        document.getElementById('showSlideshow').checked = layout.some((e) => e.type === 'slideshow');
+      function syncShowCheckboxes() {
+        // Element visibility is controlled via + Logo / + Hours / etc. on the canvas.
       }
 
       function writeDesignToForm(design) {
@@ -1252,7 +1218,6 @@
         document.getElementById('titleSize').value = d.titleFontSize;
         document.getElementById('hoursSize').value = d.hoursFontSize;
         document.getElementById('statusSize').value = d.statusFontSize || 36;
-        document.getElementById('statusMode').value = d.statusMode || 'badge';
         document.getElementById('slideshowInterval').value = d.slideshowIntervalSec || 8;
         syncShowCheckboxes(d);
         renderPaletteSwatches();
@@ -1999,23 +1964,6 @@
         }
       });
 
-      document.getElementById('syncAllBtn').addEventListener('click', async () => {
-        const btn = document.getElementById('syncAllBtn');
-        try {
-          setBusy(btn, true, 'Syncing…');
-          setStatus('Syncing all customers…', false, true);
-          const res = await apiFetch('/api/smarthours/sync-all', { method: 'POST' });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.error || 'Sync failed');
-          await loadCustomers();
-          setStatus(`Synced ${data.synced || 0} · changed ${data.changed || 0} · errors ${data.errors || 0}`);
-        } catch (err) {
-          setStatus(err.message || 'Sync failed', true);
-        } finally {
-          setBusy(btn, false);
-        }
-      });
-
       document.getElementById('saveAutoSyncBtn').addEventListener('click', async () => {
         const btn = document.getElementById('saveAutoSyncBtn');
         try {
@@ -2212,7 +2160,7 @@
         });
       });
 
-      ['titleSize','hoursSize','statusSize','fontFamily','fieldName','statusMode','openMediaSelect','closedMediaSelect','slideshowInterval'].forEach((id) => {
+      ['titleSize','hoursSize','statusSize','fontFamily','fieldName','slideshowInterval'].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('input', () => {
