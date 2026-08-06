@@ -1658,7 +1658,7 @@
         setStatus(
           data.googlePlacesApiConfigured
             ? ''
-            : 'Sync uses Google Places when PLACES_API is set, otherwise share.google / Maps page scrape.'
+            : 'PLACES_API is not set — Google often only returns “today,” so Sync may fail. Add a Google Places API key as PLACES_API on the server (or enter hours manually).'
         );
       }
 
