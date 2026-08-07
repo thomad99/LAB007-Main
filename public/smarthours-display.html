@@ -5,6 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
   <title>Opening Hours</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;600;700&family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     * { box-sizing: border-box; }
     html, body {
@@ -146,23 +149,44 @@
         tablet.style.transform = `rotate(${hangRotation}deg) scale(${scale})`;
       }
 
-      function renderStatus(design, open) {
+      function resolveFontSize(el, design) {
+        const n = Number(el && el.fontSize);
+        if (Number.isFinite(n) && n > 0) return Math.max(10, Math.min(120, Math.round(n)));
+        const d = design || {};
+        if (el && el.type === 'title') return Number(d.titleFontSize) || 28;
+        if (el && el.type === 'hours') return Number(d.hoursFontSize) || 18;
+        if (el && el.type === 'status') return Number(d.statusFontSize) || 36;
+        return 28;
+      }
+
+      function resolveFontFamily(el, design) {
+        return (el && el.fontFamily) || (design && design.fontFamily) || '"DM Sans", system-ui, sans-serif';
+      }
+
+      function renderStatus(design, open, el) {
         const mode = design.statusMode || 'badge';
         if (mode === 'image') {
           const url = open ? design.openImageUrl : design.closedImageUrl;
           if (url) return `<img class="status-img" src="${escapeHtml(url)}" alt="${open ? 'Open' : 'Closed'}">`;
         }
+        const fs = resolveFontSize(el || { type: 'status' }, design);
+        const ff = resolveFontFamily(el || { type: 'status' }, design);
         if (mode === 'text') {
-          return `<div class="status-text" style="font-size:${Math.min(design.statusFontSize || 28, 36)}px;color:${open ? (design.accentColor || '#FF0000') : '#000000'}">${open ? 'Open Now' : 'Closed Now'}</div>`;
+          return `<div class="status-text" style="font-size:${Math.min(fs, 36)}px;font-family:${escapeHtml(ff)};color:${open ? (design.accentColor || '#FF0000') : '#000000'}">${open ? 'Open Now' : 'Closed Now'}</div>`;
         }
-        return `<div class="status-badge" style="font-size:${design.statusFontSize || 36}px;background:${open ? (design.accentColor || '#FF0000') : '#000000'};color:${design.backgroundColor || '#FFFFFF'}">${open ? 'OPEN' : 'CLOSED'}</div>`;
+        return `<div class="status-badge" style="font-size:${fs}px;font-family:${escapeHtml(ff)};background:${open ? (design.accentColor || '#FF0000') : '#000000'};color:${design.backgroundColor || '#FFFFFF'}">${open ? 'OPEN' : 'CLOSED'}</div>`;
       }
 
       function refreshStatus() {
         if (!liveDesign || !liveHours) return;
         const open = isOpenNow(liveHours);
         tablet.querySelectorAll('[data-status]').forEach((node) => {
-          node.innerHTML = renderStatus(liveDesign, open);
+          const el = {
+            type: 'status',
+            fontSize: Number(node.dataset.fontSize) || undefined,
+            fontFamily: node.dataset.fontFamily || undefined
+          };
+          node.innerHTML = renderStatus(liveDesign, open, el);
           node.dataset.open = open ? '1' : '0';
         });
       }
@@ -215,7 +239,7 @@
         document.documentElement.style.background = bg;
         document.body.style.background = bg;
         tablet.style.color = design.textColor || '#000000';
-        tablet.style.fontFamily = design.fontFamily || 'Georgia, serif';
+        tablet.style.fontFamily = design.fontFamily || '"DM Sans", system-ui, sans-serif';
         tablet.innerHTML = '';
         slideUrls = Array.isArray(design.slideshowUrls) ? design.slideshowUrls.slice() : [];
         slideIndex = 0;
@@ -233,21 +257,29 @@
           if (el.type === 'logo' && design.logoUrl) {
             node.innerHTML = `<img class="logo" src="${escapeHtml(design.logoUrl)}" alt="">`;
           } else if (el.type === 'title') {
-            node.innerHTML = `<div class="title" style="font-size:${design.titleFontSize || 28}px">${escapeHtml(data.name)}</div>`;
+            const fs = resolveFontSize(el, design);
+            const ff = resolveFontFamily(el, design);
+            node.innerHTML = `<div class="title" style="font-size:${fs}px;font-family:${escapeHtml(ff)}">${escapeHtml(data.name)}</div>`;
           } else if (el.type === 'status') {
             node.dataset.status = '1';
-            node.innerHTML = renderStatus(design, open);
+            node.dataset.fontSize = String(resolveFontSize(el, design));
+            node.dataset.fontFamily = resolveFontFamily(el, design);
+            node.innerHTML = renderStatus(design, open, el);
           } else if (el.type === 'slideshow' && slideUrls.length) {
             node.innerHTML = `<img class="slide-img" data-slideshow-img src="${escapeHtml(slideUrls[0])}" alt="">`;
           } else if (el.type === 'hours') {
-            node.innerHTML = `<div class="hours" style="font-size:${design.hoursFontSize || 18}px">${
+            const fs = resolveFontSize(el, design);
+            const ff = resolveFontFamily(el, design);
+            node.innerHTML = `<div class="hours" style="font-size:${fs}px;font-family:${escapeHtml(ff)}">${
               days.map((day) => `<div class="row"><span>${escapeHtml(labels[day] || day)}</span><span style="color:${design.accentColor || '#FF0000'}">${escapeHtml(formatDay(hours[day]))}</span></div>`).join('')
             }</div>`;
           } else if (el.type === 'text') {
             const align = el.align === 'left' || el.align === 'right' ? el.align : 'center';
             const justify = align === 'left' ? 'flex-start' : align === 'right' ? 'flex-end' : 'center';
             const color = el.color || design.textColor || '#000000';
-            node.innerHTML = `<div class="custom-text" style="justify-content:${justify};text-align:${align};font-size:${el.fontSize || 28}px;color:${escapeHtml(color)};font-weight:${el.bold === false ? 400 : 700}">${escapeHtml(el.text || '')}</div>`;
+            const fs = resolveFontSize(el, design);
+            const ff = resolveFontFamily(el, design);
+            node.innerHTML = `<div class="custom-text" style="justify-content:${justify};text-align:${align};font-size:${fs}px;font-family:${escapeHtml(ff)};color:${escapeHtml(color)};font-weight:${el.bold === false ? 400 : 700}">${escapeHtml(el.text || '')}</div>`;
           } else if (el.type === 'image' && el.imageUrl) {
             const fitMode = el.fit === 'contain' ? 'contain' : 'cover';
             node.innerHTML = `<img class="custom-img" style="object-fit:${fitMode}" src="${escapeHtml(el.imageUrl)}" alt="">`;

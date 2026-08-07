@@ -7,6 +7,9 @@
   <title>SmartHours Admin | LAB007</title>
   <link rel="icon" type="image/png" href="/smarthours-assets/smarthours-logo.png">
   <link rel="apple-touch-icon" href="/smarthours-assets/smarthours-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;600;700&family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
     :root {
       --bg: #070b14;
@@ -237,6 +240,41 @@
       min-height: min(75vh, 820px);
     }
     @media (max-width: 900px) { .design-layout { grid-template-columns: 1fr; } }
+    .design-canvas-col {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      min-width: 0;
+      min-height: 0;
+    }
+    .canvas-tools {
+      flex: 0 0 auto;
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(255,255,255,.02);
+    }
+    .canvas-tools .tools-label {
+      margin: 0;
+      font-size: .68rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    .canvas-tools .add-row {
+      justify-content: center;
+    }
+    .canvas-tools-footer {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      padding-top: 2px;
+      border-top: 1px solid rgba(255,255,255,.06);
+    }
     .controls {
       display: grid; gap: 8px; align-content: start;
       max-height: min(78vh, 900px); overflow: auto; padding-right: 4px;
@@ -274,14 +312,14 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      overflow: hidden;
-      padding: 12px;
+      overflow: auto;
+      padding: 36px;
       background: #070b14;
       border-radius: 12px;
       border: 1px solid var(--line);
-      min-height: min(70vh, 640px);
-      height: 100%;
-      max-height: min(78vh, 900px);
+      min-height: min(55vh, 520px);
+      flex: 1 1 auto;
+      max-height: min(68vh, 760px);
     }
     .canvas-screen-meta {
       flex: 0 0 auto;
@@ -293,7 +331,7 @@
     .tablet-scale-wrap {
       position: relative;
       flex: 0 0 auto;
-      overflow: hidden;
+      overflow: visible;
       border-radius: 6px;
       /* Match design BG so the screen reads edge-to-edge (no black letterbox) */
       background: #ffffff;
@@ -307,7 +345,8 @@
       left: 0;
       width: 800px;
       height: 480px;
-      overflow: hidden;
+      /* Allow dragging elements slightly outside the screen for alignment */
+      overflow: visible;
       border-radius: 0;
       background: #ffffff;
       transform-origin: top left;
@@ -335,6 +374,30 @@
     .canvas-el:hover, .canvas-el.selected { border-color: var(--accent); }
     .canvas-el.dragging { cursor: grabbing; opacity: .92; z-index: 5; }
     .canvas-el.sketching { cursor: crosshair; }
+    .font-size-stepper {
+      display: grid; grid-template-columns: 36px 1fr 36px; gap: 6px; align-items: center;
+    }
+    .font-size-stepper button {
+      height: 36px; padding: 0; font-size: 1.25rem; font-weight: 700; line-height: 1;
+    }
+    .font-size-stepper .size-value {
+      text-align: center; font-size: .95rem; font-weight: 700;
+      padding: 8px 6px; border-radius: 8px; border: 1px solid var(--line);
+      background: #0a1020; color: var(--text);
+    }
+    .design-slots {
+      display: grid; gap: 8px;
+    }
+    .design-slot-row {
+      display: grid; grid-template-columns: 1fr auto; gap: 6px; align-items: center;
+    }
+    .design-slot-row select { min-width: 0; }
+    .live-pill {
+      display: inline-block; margin-left: 6px; padding: 2px 7px; border-radius: 999px;
+      font-size: .65rem; letter-spacing: .04em; text-transform: uppercase;
+      background: var(--accent-dim); color: var(--accent); border: 1px solid var(--line);
+      vertical-align: middle;
+    }
     .canvas-el .handle {
       position: absolute; right: 0; bottom: 0; width: 14px; height: 14px;
       background: var(--accent); border-radius: 3px 0 0 0; cursor: nwse-resize;
@@ -357,13 +420,30 @@
     }
     .hint { color: var(--muted); font-size: .86rem; line-height: 1.45; margin-top: 10px; }
     .color-row { display: grid; grid-template-columns: 1fr 48px; gap: 8px; align-items: center; }
-    .gallery-list { display: grid; gap: 6px; margin-top: 6px; max-height: 140px; overflow: auto; }
+    .gallery-list { display: grid; gap: 6px; margin-top: 6px; max-height: 180px; overflow: auto; }
     .gallery-item {
       display: grid; grid-template-columns: 44px 1fr auto; gap: 6px; align-items: center;
       border: 1px solid var(--line); border-radius: 8px; padding: 4px; background: rgba(255,255,255,.02);
     }
     .gallery-item img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; background: #000; }
-    .gallery-item label { display: flex; gap: 6px; align-items: center; font-size: .75rem; color: var(--muted); text-transform: none; letter-spacing: 0; margin: 0; }
+    .gallery-item .name { font-size: .75rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    details.slideshow-block {
+      padding: 8px; border: 1px solid var(--line); border-radius: 10px;
+      background: rgba(255,255,255,.02);
+    }
+    details.slideshow-block > summary {
+      cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between;
+      font-size: .68rem; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--muted); font-weight: 700; user-select: none;
+    }
+    details.slideshow-block > summary::-webkit-details-marker { display: none; }
+    details.slideshow-block > summary::after {
+      content: '▸'; color: var(--accent); font-size: .9rem; transition: transform .15s ease;
+    }
+    details.slideshow-block[open] > summary::after { transform: rotate(90deg); }
+    details.slideshow-block .slideshow-body {
+      display: grid; gap: 6px; margin-top: 8px;
+    }
     .preview-badge {
       width: 100%; height: 100%; display: grid; place-items: center; border-radius: 16px;
       font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
@@ -456,6 +536,28 @@
           <div class="design-layout">
             <div class="controls">
               <div class="ctrl-block">
+                <p class="block-title">Designs <span id="designLivePill" class="live-pill hidden-block">Live</span></p>
+                <div class="design-slots">
+                  <div class="design-slot-row">
+                    <div>
+                      <label for="designSlotSelect">Active design</label>
+                      <select id="designSlotSelect"></select>
+                    </div>
+                  </div>
+                  <div>
+                    <label for="designSlotName">Name</label>
+                    <input id="designSlotName" type="text" maxlength="40" placeholder="e.g. Christmas">
+                  </div>
+                  <div class="add-row">
+                    <button type="button" class="btn-secondary" id="designSetLiveBtn" title="Show this design on the live display">Set Live</button>
+                    <button type="button" class="btn-secondary" id="designNewBtn" title="Copy current design into a new slot (max 5)">+ New</button>
+                    <button type="button" class="btn-danger" id="designDeleteBtn" title="Delete this design slot">Delete</button>
+                  </div>
+                  <p class="hint" style="margin:0;">Save up to 5 themes (seasonal, promo, etc.). <strong>Set Live</strong> chooses what the display shows. Remember to Save Design.</p>
+                </div>
+              </div>
+
+              <div class="ctrl-block">
                 <p class="block-title">Screen</p>
                 <div class="screen-settings">
                   <div>
@@ -522,31 +624,6 @@
                     <div class="palette-swatches" data-palette-for="accent"></div>
                   </div>
                 </div>
-                <div class="form-grid" style="grid-template-columns:1.4fr .7fr .7fr .7fr;gap:6px;">
-                  <div>
-                    <label for="fontFamily">Font</label>
-                    <select id="fontFamily">
-                      <option value='Georgia, "Times New Roman", serif'>Georgia</option>
-                      <option value='"Palatino Linotype", Palatino, serif'>Palatino</option>
-                      <option value='"Trebuchet MS", sans-serif'>Trebuchet</option>
-                      <option value='"Segoe UI", Arial, sans-serif'>Segoe UI</option>
-                      <option value='Impact, Haettenschweiler, sans-serif'>Impact</option>
-                      <option value='"Courier New", monospace'>Courier</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label for="titleSize">Title</label>
-                    <input id="titleSize" type="number" min="12" max="72" value="34">
-                  </div>
-                  <div>
-                    <label for="hoursSize">Hours</label>
-                    <input id="hoursSize" type="number" min="12" max="48" value="22">
-                  </div>
-                  <div>
-                    <label for="statusSize">Status</label>
-                    <input id="statusSize" type="number" min="12" max="48" value="20">
-                  </div>
-                </div>
                 <div class="form-grid" style="gap:6px;">
                   <div>
                     <label for="logoFile">Logo</label>
@@ -555,28 +632,25 @@
                 </div>
               </div>
 
-              <div class="ctrl-block">
-                <p class="block-title">Elements</p>
-                <div class="add-row">
-                  <button type="button" class="btn-secondary" id="addTextBtn">+ Text</button>
-                  <button type="button" class="btn-secondary" id="addSketchBtn">+ Sketch</button>
-                  <button type="button" class="btn-secondary" id="addImageBtn">+ Image</button>
-                  <button type="button" class="btn-secondary" id="addHoursBtn">+ Hours</button>
-                  <button type="button" class="btn-secondary" id="addStatusBtn">+ Status</button>
-                  <button type="button" class="btn-secondary" id="addLogoBtn">+ Logo</button>
-                  <button type="button" class="btn-secondary" id="addTitleBtn">+ Title</button>
-                  <button type="button" class="btn-secondary" id="addSlideshowBtn">+ Slides</button>
-                  <button type="button" class="btn-danger" id="deleteElBtn">Delete</button>
-                </div>
+              <div class="ctrl-block" id="elPropsBlock">
+                <p class="block-title">Selected</p>
+                <p class="hint" id="elPropsEmptyHint" style="margin:0;">Click an item on the canvas to edit it here.</p>
                 <div id="elProps" class="el-props hidden-block">
-                  <div id="elTextProps">
+                  <div id="elTypeProps" class="hidden-block">
+                    <label for="elFontFamily">Font</label>
+                    <select id="elFontFamily"></select>
+                    <label style="margin-top:8px;">Size</label>
+                    <div class="font-size-stepper">
+                      <button type="button" class="btn-secondary" id="elFontMinus" title="Smaller">−</button>
+                      <div class="size-value" id="elFontSizeLabel">28</div>
+                      <button type="button" class="btn-secondary" id="elFontPlus" title="Larger">+</button>
+                    </div>
+                    <p class="hint" style="margin:4px 0 0;">Font and size apply to the selected text item.</p>
+                  </div>
+                  <div id="elTextProps" class="hidden-block">
                     <label for="elText">Text</label>
                     <textarea id="elText" rows="2" placeholder="Text content"></textarea>
                     <div class="form-grid" style="gap:6px;">
-                      <div>
-                        <label for="elFontSize">Size</label>
-                        <input id="elFontSize" type="number" min="10" max="120" value="28">
-                      </div>
                       <div>
                         <label for="elAlign">Align</label>
                         <select id="elAlign">
@@ -592,8 +666,9 @@
                     </div>
                   </div>
                   <div id="elImageProps" class="hidden-block">
-                    <label for="elMediaSelect">Gallery image</label>
-                    <select id="elMediaSelect"></select>
+                    <label for="elImageFile">Image</label>
+                    <input id="elImageFile" type="file" accept="image/*">
+                    <p class="hint" style="margin:2px 0 0;">Upload replaces this canvas image.</p>
                     <label for="elFit">Fit</label>
                     <select id="elFit">
                       <option value="cover">Cover</option>
@@ -621,20 +696,25 @@
                 </div>
               </div>
 
-              <div class="ctrl-block">
-                <p class="block-title">Gallery</p>
-                <div class="form-grid" style="gap:6px;">
-                  <div>
-                    <label for="slideshowInterval">Slide sec</label>
-                    <input id="slideshowInterval" type="number" min="2" max="300" value="8">
+              <details class="slideshow-block" id="slideshowBlock">
+                <summary>Slideshow</summary>
+                <div class="slideshow-body">
+                  <p class="hint" style="margin:0;">Upload multiple images to rotate on the display. Place a slideshow box with <strong>+ Slides</strong>.</p>
+                  <div class="form-grid" style="gap:6px;">
+                    <div>
+                      <label for="slideshowIntervalMin">Rotate every (min)</label>
+                      <input id="slideshowIntervalMin" type="number" min="1" max="1440" step="1" value="15" title="Minutes between slide changes on the live display">
+                    </div>
+                    <div>
+                      <label for="slideshowFile">Upload images</label>
+                      <input id="slideshowFile" type="file" accept="image/*" multiple>
+                    </div>
                   </div>
-                  <div>
-                    <label for="galleryFile">Upload</label>
-                    <input id="galleryFile" type="file" accept="image/*" multiple>
-                  </div>
+                  <div id="slideshowList" class="gallery-list"></div>
                 </div>
-                <div id="galleryList" class="gallery-list"></div>
-              </div>
+              </details>
+
+              <input id="canvasImageFile" type="file" accept="image/*" hidden>
 
               <button type="button" class="btn" id="saveDesignBtn">Save Design</button>
               <div id="designEinkPreviewWrap" class="hidden-block">
@@ -644,10 +724,29 @@
                 </div>
               </div>
             </div>
-            <div class="canvas-stage" id="canvasStage">
-              <div class="canvas-screen-meta" id="canvasScreenMeta">800 × 480 px · landscape</div>
-              <div class="tablet-scale-wrap" id="tabletScaleWrap">
-                <div class="tablet-frame" id="tabletFrame"></div>
+            <div class="design-canvas-col">
+              <div class="canvas-stage" id="canvasStage">
+                <div class="canvas-screen-meta" id="canvasScreenMeta">800 × 480 px · landscape</div>
+                <div class="tablet-scale-wrap" id="tabletScaleWrap">
+                  <div class="tablet-frame" id="tabletFrame"></div>
+                </div>
+              </div>
+              <div class="canvas-tools">
+                <p class="tools-label">Elements</p>
+                <div class="add-row">
+                  <button type="button" class="btn-secondary" id="addTextBtn">+ Text</button>
+                  <button type="button" class="btn-secondary" id="addSketchBtn">+ Sketch</button>
+                  <button type="button" class="btn-secondary" id="addImageBtn">+ Image</button>
+                  <button type="button" class="btn-secondary" id="addHoursBtn">+ Hours</button>
+                  <button type="button" class="btn-secondary" id="addStatusBtn">+ Status</button>
+                  <button type="button" class="btn-secondary" id="addLogoBtn">+ Logo</button>
+                  <button type="button" class="btn-secondary" id="addTitleBtn">+ Title</button>
+                  <button type="button" class="btn-secondary" id="addSlideshowBtn">+ Slides</button>
+                  <button type="button" class="btn-danger" id="deleteElBtn">Delete</button>
+                </div>
+                <div class="canvas-tools-footer">
+                  <button type="button" class="btn-danger" id="clearCanvasBtn">Clear canvas</button>
+                </div>
               </div>
             </div>
           </div>
@@ -740,6 +839,22 @@
   <script>
     (function () {
       const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
+      const TEXT_LAYOUT_TYPES = new Set(['title', 'hours', 'status', 'text']);
+      const FONT_OPTIONS = [
+        { label: 'DM Sans', value: '"DM Sans", system-ui, sans-serif' },
+        { label: 'Outfit', value: 'Outfit, system-ui, sans-serif' },
+        { label: 'Plus Jakarta Sans', value: '"Plus Jakarta Sans", system-ui, sans-serif' },
+        { label: 'Manrope', value: 'Manrope, system-ui, sans-serif' },
+        { label: 'Space Grotesk', value: '"Space Grotesk", system-ui, sans-serif' },
+        { label: 'Sora', value: 'Sora, system-ui, sans-serif' },
+        { label: 'Georgia', value: 'Georgia, "Times New Roman", serif' },
+        { label: 'Palatino', value: '"Palatino Linotype", Palatino, serif' },
+        { label: 'Trebuchet', value: '"Trebuchet MS", sans-serif' },
+        { label: 'Segoe UI', value: '"Segoe UI", Arial, sans-serif' },
+        { label: 'Impact', value: 'Impact, Haettenschweiler, sans-serif' },
+        { label: 'Courier', value: '"Courier New", monospace' }
+      ];
+      const DEFAULT_FONT = FONT_OPTIONS[0].value;
       const DAY_LABELS = {
         monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday', thursday:'Thursday',
         friday:'Friday', saturday:'Saturday', sunday:'Sunday'
@@ -760,7 +875,9 @@
       let customers = [];
       let selectedId = null;
       let selectedElId = null;
+      let editingDesignId = null;
       let logoDataUrl = null;
+      const MAX_DESIGNS = 5;
       let dragState = null;
       let sketchMode = 'draw';
       let suppressPropsSync = false;
@@ -1018,7 +1135,7 @@
           textColor: '#000000',
           accentColor: '#FF0000',
           mutedColor: '#555555',
-          fontFamily: 'Georgia, "Times New Roman", serif',
+          fontFamily: DEFAULT_FONT,
           titleFontSize: 28,
           hoursFontSize: 18,
           statusFontSize: 36,
@@ -1031,15 +1148,51 @@
           statusMode: 'badge',
           openMediaId: '',
           closedMediaId: '',
-          slideshowIntervalSec: 8,
+          slideshowIntervalSec: 900,
           slideshowMediaIds: [],
           layout: [
             { id: 'logo', type: 'logo', x: Math.round(w * 0.25), y: 12, w: Math.round(w * 0.5), h: Math.max(48, Math.round(h * 0.12)) },
-            { id: 'title', type: 'title', x: 24, y: Math.round(h * 0.16), w: w - 48, h: Math.max(36, Math.round(h * 0.1)) },
-            { id: 'status', type: 'status', x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.max(56, Math.round(h * 0.16)) },
-            { id: 'hours', type: 'hours', x: 24, y: Math.round(h * 0.48), w: w - 48, h: Math.max(120, h - Math.round(h * 0.48) - 16) }
+            { id: 'title', type: 'title', x: 24, y: Math.round(h * 0.16), w: w - 48, h: Math.max(36, Math.round(h * 0.1)), fontSize: 28, fontFamily: DEFAULT_FONT },
+            { id: 'status', type: 'status', x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.max(56, Math.round(h * 0.16)), fontSize: 36, fontFamily: DEFAULT_FONT },
+            { id: 'hours', type: 'hours', x: 24, y: Math.round(h * 0.48), w: w - 48, h: Math.max(120, h - Math.round(h * 0.48) - 16), fontSize: 18, fontFamily: DEFAULT_FONT }
           ]
         };
+      }
+
+      function defaultFontSizeForType(type, design) {
+        const d = design || {};
+        if (type === 'title') return Number(d.titleFontSize) || 28;
+        if (type === 'hours') return Number(d.hoursFontSize) || 18;
+        if (type === 'status') return Number(d.statusFontSize) || 36;
+        return 28;
+      }
+
+      function resolveElFontSize(el, design) {
+        const n = Number(el && el.fontSize);
+        if (Number.isFinite(n) && n > 0) return Math.max(10, Math.min(120, Math.round(n)));
+        return Math.max(10, Math.min(120, defaultFontSizeForType(el && el.type, design)));
+      }
+
+      function resolveElFontFamily(el, design) {
+        const fromEl = el && el.fontFamily ? String(el.fontFamily).trim() : '';
+        if (fromEl) return fromEl;
+        const fromDesign = design && design.fontFamily ? String(design.fontFamily).trim() : '';
+        return fromDesign || DEFAULT_FONT;
+      }
+
+      function fillFontFamilySelect() {
+        const sel = document.getElementById('elFontFamily');
+        if (!sel || sel.options.length) return;
+        sel.innerHTML = FONT_OPTIONS.map((f) =>
+          `<option value="${escapeHtml(f.value)}" style="font-family:${escapeHtml(f.value)}">${escapeHtml(f.label)}</option>`
+        ).join('');
+      }
+
+      function ensureElTypography(el, design) {
+        if (!el || !TEXT_LAYOUT_TYPES.has(el.type)) return el;
+        if (!(Number(el.fontSize) > 0)) el.fontSize = defaultFontSizeForType(el.type, design);
+        if (!el.fontFamily) el.fontFamily = (design && design.fontFamily) || DEFAULT_FONT;
+        return el;
       }
 
       function mediaUrl(customer, mediaItem) {
@@ -1048,28 +1201,37 @@
         return `/api/smarthours/public/${encodeURIComponent(customer.id)}/media/${encodeURIComponent(mediaItem.id)}`;
       }
 
-      function selectedSlideshowIds() {
-        return Array.from(document.querySelectorAll('#galleryList [data-slide]:checked')).map((el) => el.value);
+      function slideshowIntervalMinutesFromSec(sec) {
+        const n = Number(sec);
+        if (!Number.isFinite(n) || n <= 0) return 15;
+        // Legacy designs stored seconds (often 8); values under 60 stay as sub-minute → show 1 min min.
+        if (n < 60) return 1;
+        return Math.max(1, Math.min(1440, Math.round(n / 60)));
       }
 
-      function renderGallery(customer) {
-        const list = document.getElementById('galleryList');
+      function readSlideshowIntervalSecFromForm() {
+        const mins = Number(document.getElementById('slideshowIntervalMin').value);
+        if (!Number.isFinite(mins) || mins <= 0) return 900;
+        return Math.max(60, Math.min(86400, Math.round(mins * 60)));
+      }
+
+      function renderSlideshowList(customer) {
+        const list = document.getElementById('slideshowList');
         const media = (customer && customer.media) || [];
         const design = (customer && customer.design) || {};
-        const slideIds = new Set(design.slideshowMediaIds || []);
+        const slideIds = Array.isArray(design.slideshowMediaIds) ? design.slideshowMediaIds : [];
+        const mediaById = new Map(media.map((m) => [m.id, m]));
+        const slides = slideIds.map((id) => mediaById.get(id)).filter(Boolean);
 
-        if (!media.length) {
-          list.innerHTML = '<p class="hint">No gallery images yet.</p>';
+        if (!slides.length) {
+          list.innerHTML = '<p class="hint" style="margin:0;">No slideshow images yet.</p>';
           return;
         }
-        list.innerHTML = media.map((m) => `
+        list.innerHTML = slides.map((m) => `
           <div class="gallery-item" data-media-id="${escapeHtml(m.id)}">
             <img src="${escapeHtml(mediaUrl(customer, m))}" alt="">
-            <div>
-              <strong style="font-size:.86rem">${escapeHtml(m.name || m.id)}</strong>
-              <label><input type="checkbox" data-slide value="${escapeHtml(m.id)}" ${slideIds.has(m.id) ? 'checked' : ''}> In slideshow</label>
-            </div>
-            <button type="button" class="btn-danger" style="padding:6px 10px;font-size:.75rem;" data-del-media="${escapeHtml(m.id)}">Delete</button>
+            <div class="name">${escapeHtml(m.name || m.id)}</div>
+            <button type="button" class="btn-danger" style="padding:6px 10px;font-size:.75rem;" data-del-slide="${escapeHtml(m.id)}">Remove</button>
           </div>
         `).join('');
       }
@@ -1183,16 +1345,19 @@
         design.backgroundColor = document.getElementById('bgColor').value.trim() || design.backgroundColor;
         design.textColor = document.getElementById('textColor').value.trim() || design.textColor;
         design.accentColor = document.getElementById('accentColor').value.trim() || design.accentColor;
-        design.fontFamily = document.getElementById('fontFamily').value;
-        design.titleFontSize = Number(document.getElementById('titleSize').value) || 34;
-        design.hoursFontSize = Number(document.getElementById('hoursSize').value) || 22;
-        design.statusFontSize = Number(document.getElementById('statusSize').value) || 48;
+        // Font / size live on each selected text element (title, hours, status, text).
+        design.fontFamily = design.fontFamily || DEFAULT_FONT;
+        design.titleFontSize = Number(design.titleFontSize) || 28;
+        design.hoursFontSize = Number(design.hoursFontSize) || 18;
+        design.statusFontSize = Number(design.statusFontSize) || 36;
         // Status presentation is controlled on-canvas (+ Status); keep stored mode/media ids.
         design.statusMode = design.statusMode || 'badge';
         design.openMediaId = design.openMediaId || '';
         design.closedMediaId = design.closedMediaId || '';
-        design.slideshowIntervalSec = Number(document.getElementById('slideshowInterval').value) || 8;
-        design.slideshowMediaIds = selectedSlideshowIds();
+        design.slideshowIntervalSec = readSlideshowIntervalSecFromForm();
+        design.slideshowMediaIds = Array.isArray(design.slideshowMediaIds)
+          ? design.slideshowMediaIds.filter(Boolean)
+          : [];
         const layout = Array.isArray(design.layout) ? design.layout : [];
         design.showLogo = layout.some((e) => e.type === 'logo');
         design.showTitle = layout.some((e) => e.type === 'title');
@@ -1214,11 +1379,9 @@
         document.getElementById('textColorPick').value = nearestPalette(d.textColor);
         document.getElementById('accentColor').value = nearestPalette(d.accentColor);
         document.getElementById('accentColorPick').value = nearestPalette(d.accentColor);
-        document.getElementById('fontFamily').value = d.fontFamily;
-        document.getElementById('titleSize').value = d.titleFontSize;
-        document.getElementById('hoursSize').value = d.hoursFontSize;
-        document.getElementById('statusSize').value = d.statusFontSize || 36;
-        document.getElementById('slideshowInterval').value = d.slideshowIntervalSec || 8;
+        document.getElementById('slideshowIntervalMin').value = slideshowIntervalMinutesFromSec(
+          d.slideshowIntervalSec || 900
+        );
         syncShowCheckboxes(d);
         renderPaletteSwatches();
       }
@@ -1232,11 +1395,11 @@
         const h = TABLET.height;
         const map = {
           logo: { x: Math.round(w * 0.25), y: 12, w: Math.round(w * 0.5), h: Math.max(48, Math.round(h * 0.12)) },
-          title: { x: 24, y: Math.round(h * 0.16), w: w - 48, h: Math.max(36, Math.round(h * 0.1)) },
-          status: { x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.max(56, Math.round(h * 0.16)) },
+          title: { x: 24, y: Math.round(h * 0.16), w: w - 48, h: Math.max(36, Math.round(h * 0.1)), fontSize: 28, fontFamily: DEFAULT_FONT },
+          status: { x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.max(56, Math.round(h * 0.16)), fontSize: 36, fontFamily: DEFAULT_FONT },
           slideshow: { x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.round(h * 0.35) },
-          hours: { x: 24, y: Math.round(h * 0.48), w: w - 48, h: Math.max(120, h - Math.round(h * 0.48) - 16) },
-          text: { x: 40, y: 40, w: Math.min(480, w - 80), h: 56, text: 'New text', fontSize: 28, color: '', align: 'center', bold: true },
+          hours: { x: 24, y: Math.round(h * 0.48), w: w - 48, h: Math.max(120, h - Math.round(h * 0.48) - 16), fontSize: 18, fontFamily: DEFAULT_FONT },
+          text: { x: 40, y: 40, w: Math.min(480, w - 80), h: 56, text: 'New text', fontSize: 28, fontFamily: DEFAULT_FONT, color: '', align: 'center', bold: true },
           image: { x: 40, y: Math.round(h * 0.35), w: w - 80, h: Math.round(h * 0.4), mediaId: '', fit: 'cover' },
           sketch: {
             x: Math.round(w * 0.1),
@@ -1252,9 +1415,172 @@
         return Object.assign({ id: newElId(type), type }, base);
       }
 
+      function cloneDesignData(design) {
+        try {
+          return JSON.parse(JSON.stringify(design || defaultDesign()));
+        } catch (_) {
+          return defaultDesign();
+        }
+      }
+
+      function newDesignSlotId() {
+        return 'dsn-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
+      }
+
+      function ensureCustomerDesigns(c) {
+        if (!c) return null;
+        if (!Array.isArray(c.designs) || !c.designs.length) {
+          const id = c.liveDesignId || newDesignSlotId();
+          c.designs = [
+            {
+              id,
+              name: 'Default',
+              design: cloneDesignData(c.design || defaultDesign()),
+              updatedAt: c.updatedAt || new Date().toISOString()
+            }
+          ];
+          c.liveDesignId = id;
+        }
+        c.designs = c.designs.slice(0, MAX_DESIGNS);
+        if (!c.designs.some((d) => d.id === c.liveDesignId)) {
+          c.liveDesignId = c.designs[0].id;
+        }
+        if (!editingDesignId || !c.designs.some((d) => d.id === editingDesignId)) {
+          editingDesignId = c.liveDesignId;
+        }
+        if (!c.design) {
+          const slot = c.designs.find((d) => d.id === editingDesignId) || c.designs[0];
+          c.design = cloneDesignData(slot.design);
+        }
+        return c;
+      }
+
+      function editingDesignSlot(c) {
+        const cust = ensureCustomerDesigns(c || selected());
+        if (!cust) return null;
+        return cust.designs.find((d) => d.id === editingDesignId) || cust.designs[0] || null;
+      }
+
+      function flushEditorToDesignSlot() {
+        const c = selected();
+        if (!c) return;
+        ensureCustomerDesigns(c);
+        const slot = editingDesignSlot(c);
+        if (!slot) return;
+        const design = readDesignFromForm(c.design || defaultDesign());
+        if (c.design && Array.isArray(c.design.layout)) design.layout = c.design.layout;
+        if (c.design && c.design.logoUrl && !logoDataUrl) design.logoUrl = c.design.logoUrl;
+        delete design._legacyShowApplied;
+        const nameEl = document.getElementById('designSlotName');
+        const name = (nameEl && nameEl.value.trim()) || slot.name || 'Design';
+        slot.name = name.slice(0, 40);
+        slot.design = design;
+        slot.updatedAt = new Date().toISOString();
+        c.design = design;
+      }
+
+      function loadDesignSlotIntoEditor(slotId) {
+        const c = selected();
+        if (!c) return;
+        ensureCustomerDesigns(c);
+        const slot = c.designs.find((d) => d.id === slotId) || c.designs[0];
+        if (!slot) return;
+        editingDesignId = slot.id;
+        c.design = cloneDesignData(slot.design);
+        selectedElId = null;
+        logoDataUrl = null;
+        const logoFile = document.getElementById('logoFile');
+        if (logoFile) logoFile.value = '';
+        writeDesignToForm(c.design);
+        renderSlideshowList(c);
+        renderDesignSlotsUi();
+        renderCanvas();
+      }
+
+      function renderDesignSlotsUi() {
+        const c = selected();
+        const sel = document.getElementById('designSlotSelect');
+        const nameEl = document.getElementById('designSlotName');
+        const livePill = document.getElementById('designLivePill');
+        if (!sel || !nameEl) return;
+        if (!c) {
+          sel.innerHTML = '';
+          nameEl.value = '';
+          livePill.classList.add('hidden-block');
+          return;
+        }
+        ensureCustomerDesigns(c);
+        const slot = editingDesignSlot(c);
+        sel.innerHTML = c.designs
+          .map((d) => {
+            const live = d.id === c.liveDesignId ? ' ★ live' : '';
+            return `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name || 'Design')}${live}</option>`;
+          })
+          .join('');
+        if (slot) {
+          sel.value = slot.id;
+          nameEl.value = slot.name || '';
+          livePill.classList.toggle('hidden-block', slot.id !== c.liveDesignId);
+        }
+      }
+
+      function setLiveDesignSlot() {
+        const c = selected();
+        if (!c) return;
+        flushEditorToDesignSlot();
+        ensureCustomerDesigns(c);
+        const slot = editingDesignSlot(c);
+        if (!slot) return;
+        c.liveDesignId = slot.id;
+        renderDesignSlotsUi();
+        setStatus(`“${slot.name}” is set as live. Save Design to publish.`);
+      }
+
+      function addDesignSlot() {
+        const c = selected();
+        if (!c) return;
+        flushEditorToDesignSlot();
+        ensureCustomerDesigns(c);
+        if (c.designs.length >= MAX_DESIGNS) {
+          setStatus('Maximum of 5 designs. Delete one to add another.', true);
+          return;
+        }
+        const current = editingDesignSlot(c);
+        const id = newDesignSlotId();
+        const baseName = (current && current.name) || 'Design';
+        const name = `${baseName} copy`.slice(0, 40);
+        c.designs.push({
+          id,
+          name,
+          design: cloneDesignData(current ? current.design : c.design),
+          updatedAt: new Date().toISOString()
+        });
+        loadDesignSlotIntoEditor(id);
+        setStatus(`Created “${name}”. Rename it, edit, then Save Design.`);
+      }
+
+      function deleteDesignSlot() {
+        const c = selected();
+        if (!c) return;
+        ensureCustomerDesigns(c);
+        if (c.designs.length <= 1) {
+          setStatus('Keep at least one design.', true);
+          return;
+        }
+        const slot = editingDesignSlot(c);
+        if (!slot) return;
+        if (!confirm(`Delete design “${slot.name}”? This cannot be undone after you save.`)) return;
+        const wasLive = slot.id === c.liveDesignId;
+        c.designs = c.designs.filter((d) => d.id !== slot.id);
+        if (wasLive) c.liveDesignId = c.designs[0].id;
+        loadDesignSlotIntoEditor(c.liveDesignId);
+        setStatus('Design deleted locally. Save Design to keep the change.');
+      }
+
       function ensureLayout(c) {
         if (!c.design) c.design = defaultDesign();
         if (!Array.isArray(c.design.layout)) c.design.layout = defaultDesign().layout.slice();
+        c.design.layout.forEach((el) => ensureElTypography(el, c.design));
         return c.design.layout;
       }
 
@@ -1313,41 +1639,58 @@
         return (c.design.layout || []).find((e) => e.id === selectedElId) || null;
       }
 
-      function fillElMediaSelect(customer, selectedMediaId) {
-        const sel = document.getElementById('elMediaSelect');
-        const media = (customer && customer.media) || [];
-        sel.innerHTML = ['<option value="">— pick gallery image —</option>']
-          .concat(media.map((m) => `<option value="${escapeHtml(m.id)}">${escapeHtml(m.name || m.id)}</option>`))
-          .join('');
-        sel.value = selectedMediaId || '';
+      function fillElMediaSelect() {
+        // Image elements use direct file upload — no gallery picker.
       }
 
       function syncElPropsPanel() {
         const props = document.getElementById('elProps');
+        const emptyHint = document.getElementById('elPropsEmptyHint');
+        const typeProps = document.getElementById('elTypeProps');
         const textProps = document.getElementById('elTextProps');
         const imgProps = document.getElementById('elImageProps');
         const sketchProps = document.getElementById('elSketchProps');
         const el = selectedLayoutEl();
         const c = selected();
-        if (!el || (el.type !== 'text' && el.type !== 'image' && el.type !== 'sketch')) {
+        const isTextType = el && TEXT_LAYOUT_TYPES.has(el.type);
+        const isOther = el && (el.type === 'image' || el.type === 'sketch');
+        if (!el || (!isTextType && !isOther)) {
           props.classList.add('hidden-block');
+          if (emptyHint) emptyHint.classList.remove('hidden-block');
           return;
         }
         props.classList.remove('hidden-block');
+        if (emptyHint) emptyHint.classList.add('hidden-block');
         suppressPropsSync = true;
+        fillFontFamilySelect();
+        typeProps.classList.add('hidden-block');
         textProps.classList.add('hidden-block');
         imgProps.classList.add('hidden-block');
         sketchProps.classList.add('hidden-block');
-        if (el.type === 'text') {
-          textProps.classList.remove('hidden-block');
-          document.getElementById('elText').value = el.text || '';
-          document.getElementById('elFontSize').value = el.fontSize || 28;
-          document.getElementById('elAlign').value = el.align || 'center';
-          const color = el.color || (c && c.design && c.design.textColor) || '#f6f8ff';
-          document.getElementById('elColor').value = /^#/.test(color) ? color : '#f6f8ff';
+        if (isTextType) {
+          ensureElTypography(el, c && c.design);
+          typeProps.classList.remove('hidden-block');
+          const size = resolveElFontSize(el, c && c.design);
+          const family = resolveElFontFamily(el, c && c.design);
+          document.getElementById('elFontSizeLabel').textContent = String(size);
+          const fontSel = document.getElementById('elFontFamily');
+          if (![...fontSel.options].some((o) => o.value === family)) {
+            const opt = document.createElement('option');
+            opt.value = family;
+            opt.textContent = 'Custom';
+            fontSel.appendChild(opt);
+          }
+          fontSel.value = family;
+          if (el.type === 'text') {
+            textProps.classList.remove('hidden-block');
+            document.getElementById('elText').value = el.text || '';
+            document.getElementById('elAlign').value = el.align || 'center';
+            const color = el.color || (c && c.design && c.design.textColor) || '#f6f8ff';
+            document.getElementById('elColor').value = /^#/.test(color) ? color : '#f6f8ff';
+          }
         } else if (el.type === 'image') {
           imgProps.classList.remove('hidden-block');
-          fillElMediaSelect(c, el.mediaId || '');
+          document.getElementById('elImageFile').value = '';
           document.getElementById('elFit').value = el.fit === 'contain' ? 'contain' : 'cover';
         } else if (el.type === 'sketch') {
           sketchProps.classList.remove('hidden-block');
@@ -1357,6 +1700,22 @@
           document.getElementById('sketchMoveBtn').classList.toggle('active', sketchMode === 'move');
         }
         suppressPropsSync = false;
+      }
+
+      function clearCanvasLayout() {
+        const c = selected();
+        if (!c) return;
+        const layout = ensureLayout(c);
+        if (!layout.length) {
+          setStatus('Canvas is already empty.');
+          return;
+        }
+        if (!confirm('Clear all elements from this design?')) return;
+        c.design.layout = [];
+        selectedElId = null;
+        syncShowCheckboxes(c.design);
+        renderCanvas();
+        setStatus('Canvas cleared. Save Design to keep the change.');
       }
 
       function bindColorPair(textId, pickId) {
@@ -1400,12 +1759,13 @@
 
         tabletFrame.style.background = design.backgroundColor;
         tabletFrame.style.color = design.textColor;
-        tabletFrame.style.fontFamily = design.fontFamily;
+        tabletFrame.style.fontFamily = design.fontFamily || DEFAULT_FONT;
         const wrap = document.getElementById('tabletScaleWrap');
         if (wrap) wrap.style.background = design.backgroundColor || '#ffffff';
         tabletFrame.innerHTML = '';
 
         design.layout.forEach((el) => {
+          ensureElTypography(el, design);
           const node = document.createElement('div');
           node.className = 'canvas-el' + (el.id === selectedElId ? ' selected' : '');
           node.dataset.type = el.type;
@@ -1420,16 +1780,20 @@
               ? `<img class="preview-logo" src="${logoSrc}" alt="Logo">`
               : `<div style="height:100%;display:grid;place-items:center;opacity:.5;border:1px dashed ${design.accentColor}">Logo</div>`;
           } else if (el.type === 'title') {
-            node.innerHTML = `<div class="preview-title" style="font-size:${design.titleFontSize}px;color:${design.textColor}">${escapeHtml(c.name)}</div>`;
+            const fs = resolveElFontSize(el, design);
+            const ff = resolveElFontFamily(el, design);
+            node.innerHTML = `<div class="preview-title" style="font-size:${fs}px;font-family:${ff};color:${design.textColor}">${escapeHtml(c.name)}</div>`;
           } else if (el.type === 'status') {
             const openNow = isOpenNow(hours);
+            const fs = resolveElFontSize(el, design);
+            const ff = resolveElFontFamily(el, design);
             if (design.statusMode === 'image' && (openMedia || closedMedia)) {
               const preview = openNow ? (openMedia || closedMedia) : (closedMedia || openMedia);
               node.innerHTML = `<img class="preview-slide" src="${escapeHtml(mediaUrl(c, preview))}" alt="${openNow ? 'Open' : 'Closed'}">`;
             } else if (design.statusMode === 'text') {
-              node.innerHTML = `<div class="preview-status" style="font-size:${Math.min(design.statusFontSize, 28)}px;color:${openNow ? design.accentColor : design.textColor}">${openNow ? 'Open Now' : 'Closed Now'}</div>`;
+              node.innerHTML = `<div class="preview-status" style="font-size:${Math.min(fs, 28)}px;font-family:${ff};color:${openNow ? design.accentColor : design.textColor}">${openNow ? 'Open Now' : 'Closed Now'}</div>`;
             } else {
-              node.innerHTML = `<div class="preview-badge" style="font-size:${design.statusFontSize}px;background:${openNow ? design.accentColor : '#000000'};color:${openNow ? '#04120e' : '#FFFFFF'}">${openNow ? 'OPEN' : 'CLOSED'}</div>`;
+              node.innerHTML = `<div class="preview-badge" style="font-size:${fs}px;font-family:${ff};background:${openNow ? design.accentColor : '#000000'};color:${openNow ? '#04120e' : '#FFFFFF'}">${openNow ? 'OPEN' : 'CLOSED'}</div>`;
             }
           } else if (el.type === 'slideshow') {
             if (slideItems.length) {
@@ -1438,12 +1802,16 @@
               node.innerHTML = `<div style="height:100%;display:grid;place-items:center;opacity:.55;border:1px dashed ${design.accentColor}">Slideshow images</div>`;
             }
           } else if (el.type === 'hours') {
-            node.innerHTML = `<div class="preview-hours" style="font-size:${design.hoursFontSize}px">${
+            const fs = resolveElFontSize(el, design);
+            const ff = resolveElFontFamily(el, design);
+            node.innerHTML = `<div class="preview-hours" style="font-size:${fs}px;font-family:${ff}">${
               DAYS.map((day) => `<div class="row"><span>${DAY_LABELS[day]}</span><span style="color:${design.accentColor}">${escapeHtml(formatDay(hours[day]))}</span></div>`).join('')
             }</div>`;
           } else if (el.type === 'text') {
             const color = el.color || design.textColor;
-            node.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:${el.align === 'left' ? 'flex-start' : el.align === 'right' ? 'flex-end' : 'center'};font-size:${el.fontSize || 28}px;color:${color};font-weight:${el.bold === false ? 400 : 700};text-align:${el.align || 'center'};line-height:1.2;padding:4px;overflow:hidden;white-space:pre-wrap;word-break:break-word;">${escapeHtml(el.text || 'Text')}</div>`;
+            const fs = resolveElFontSize(el, design);
+            const ff = resolveElFontFamily(el, design);
+            node.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:${el.align === 'left' ? 'flex-start' : el.align === 'right' ? 'flex-end' : 'center'};font-size:${fs}px;font-family:${ff};color:${color};font-weight:${el.bold === false ? 400 : 700};text-align:${el.align || 'center'};line-height:1.2;padding:4px;overflow:hidden;white-space:pre-wrap;word-break:break-word;">${escapeHtml(el.text || 'Text')}</div>`;
           } else if (el.type === 'image') {
             const media = el.mediaId ? mediaById.get(el.mediaId) : null;
             if (media) {
@@ -1570,6 +1938,7 @@
       function fillEditor(customer) {
         editor.classList.add('open');
         selectedElId = null;
+        editingDesignId = null;
         document.getElementById('fieldName').value = customer.name || '';
         document.getElementById('fieldSlug').value = customer.slug || '';
         const slugEl = document.getElementById('fieldSlug');
@@ -1582,9 +1951,14 @@
             ? customer.hours || defaultHours()
             : customer.googleHours;
         renderHoursForm(hoursForForm);
+        ensureCustomerDesigns(customer);
+        editingDesignId = customer.liveDesignId;
+        const liveSlot = customer.designs.find((d) => d.id === customer.liveDesignId) || customer.designs[0];
+        customer.design = cloneDesignData(liveSlot.design);
         writeDesignToForm(customer.design);
         writeEinkToForm(customer.eink);
-        renderGallery(customer);
+        renderSlideshowList(customer);
+        renderDesignSlotsUi();
         logoDataUrl = null;
         document.getElementById('logoFile').value = '';
         if (customer.lastSyncedAt) {
@@ -1629,9 +2003,10 @@
 
       function collectPayload() {
         const c = selected();
-        const design = readDesignFromForm(c ? c.design : defaultDesign());
-        if (c && c.design && c.design.layout) design.layout = c.design.layout;
-        if (c && c.design && c.design.logoUrl && !logoDataUrl) design.logoUrl = c.design.logoUrl;
+        flushEditorToDesignSlot();
+        ensureCustomerDesigns(c);
+        const live = c.designs.find((d) => d.id === c.liveDesignId) || c.designs[0];
+        const design = cloneDesignData(live.design);
         delete design._legacyShowApplied;
         const googleRef = document.getElementById('fieldMapsUrl').value.trim();
         const looksLikePlaceId = /^ChIJ[\w-]+$/i.test(googleRef) || /^places\/ChIJ/i.test(googleRef);
@@ -1643,6 +2018,14 @@
           useManualHours: document.getElementById('fieldManual').checked,
           hours: readHoursFromForm(),
           design,
+          designs: c.designs.map((slot) => ({
+            id: slot.id,
+            name: String(slot.name || 'Design').slice(0, 40),
+            design: cloneDesignData(slot.design),
+            updatedAt: slot.updatedAt || new Date().toISOString()
+          })),
+          liveDesignId: c.liveDesignId,
+          editingDesignId,
           eink: {
             enabled: true,
             pollIntervalMinutes: Number(document.getElementById('einkPoll').value) || 720,
@@ -1772,9 +2155,14 @@
         }
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Save failed');
+        const keepEditing = editingDesignId;
         selectedId = data.id;
         logoDataUrl = null;
         await loadCustomers();
+        const c = selected();
+        if (c && keepEditing && (c.designs || []).some((d) => d.id === keepEditing)) {
+          loadDesignSlotIntoEditor(keepEditing);
+        }
         const hasGoogle = !!(payload.googleMapsUrl || payload.googlePlaceId);
         if (!opts.silent) {
           setStatus(
@@ -1853,6 +2241,23 @@
           })
           .catch((err) => setStatus(err.message, true));
       });
+      document.getElementById('designSlotSelect').addEventListener('change', () => {
+        const nextId = document.getElementById('designSlotSelect').value;
+        if (!nextId || nextId === editingDesignId) return;
+        flushEditorToDesignSlot();
+        loadDesignSlotIntoEditor(nextId);
+      });
+      document.getElementById('designSlotName').addEventListener('change', () => {
+        const c = selected();
+        const slot = editingDesignSlot(c);
+        if (!slot) return;
+        slot.name = document.getElementById('designSlotName').value.trim().slice(0, 40) || 'Design';
+        document.getElementById('designSlotName').value = slot.name;
+        renderDesignSlotsUi();
+      });
+      document.getElementById('designSetLiveBtn').addEventListener('click', () => setLiveDesignSlot());
+      document.getElementById('designNewBtn').addEventListener('click', () => addDesignSlot());
+      document.getElementById('designDeleteBtn').addEventListener('click', () => deleteDesignSlot());
       document.getElementById('saveEinkBtn').addEventListener('click', () => {
         saveCustomer()
           .then(() => {
@@ -2001,71 +2406,115 @@
         reader.readAsDataURL(file);
       });
 
-      async function uploadGalleryFiles(fileList) {
+      async function uploadMediaFile(file) {
         const c = selected();
         if (!c || String(c.id).startsWith('tmp-')) {
-          setStatus('Save the customer first, then upload gallery images.', true);
+          const err = new Error('Save the customer first, then upload images.');
+          throw err;
+        }
+        const dataUrl = await new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = reject;
+          reader.readAsDataURL(file);
+        });
+        const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(c.id) + '/media', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ dataUrl, name: file.name })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Upload failed');
+        c.media = data.media || c.media;
+        const uploaded = Array.isArray(data.media) ? data.media[data.media.length - 1] : null;
+        const mediaId =
+          (data.item && data.item.id) ||
+          (data.mediaItem && data.mediaItem.id) ||
+          (uploaded && uploaded.id) ||
+          '';
+        return { customer: c, mediaId, media: c.media };
+      }
+
+      async function uploadSlideshowFiles(fileList) {
+        const c = selected();
+        if (!c || String(c.id).startsWith('tmp-')) {
+          setStatus('Save the customer first, then upload slideshow images.', true);
           return;
         }
         const files = Array.from(fileList || []);
         if (!files.length) return;
-        setStatus('Uploading images…');
+        setStatus('Uploading slideshow images…');
+        ensureLayout(c);
+        if (!Array.isArray(c.design.slideshowMediaIds)) c.design.slideshowMediaIds = [];
         for (const file of files) {
-          const dataUrl = await new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onload = () => resolve(String(reader.result || ''));
-            reader.onerror = reject;
-            reader.readAsDataURL(file);
-          });
-          const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(c.id) + '/media', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ dataUrl, name: file.name })
-          });
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.error || 'Upload failed');
-          c.media = data.media || c.media;
+          const result = await uploadMediaFile(file);
+          if (result.mediaId && !c.design.slideshowMediaIds.includes(result.mediaId)) {
+            c.design.slideshowMediaIds.push(result.mediaId);
+          }
         }
-        const latest = selected();
-        if (latest) {
-          latest.media = c.media;
-          renderGallery(latest);
-          renderCanvas();
-        }
-        setStatus('Gallery updated.');
+        renderSlideshowList(selected());
+        renderCanvas();
+        setStatus('Slideshow images updated. Save Design to keep changes.');
       }
 
-      document.getElementById('galleryFile').addEventListener('change', (event) => {
-        uploadGalleryFiles(event.target.files)
+      async function uploadCanvasImageFile(file, options = {}) {
+        const c = selected();
+        if (!c) return;
+        if (String(c.id).startsWith('tmp-')) {
+          setStatus('Save the customer first, then add an image.', true);
+          return;
+        }
+        setStatus('Uploading image…');
+        const result = await uploadMediaFile(file);
+        if (options.replaceSelected) {
+          const el = selectedLayoutEl();
+          if (el && el.type === 'image') {
+            el.mediaId = result.mediaId;
+            renderCanvas();
+            syncElPropsPanel();
+            setStatus('Image updated. Save Design to keep it.');
+            return;
+          }
+        }
+        addLayoutElement('image', { mediaId: result.mediaId });
+        syncElPropsPanel();
+        setStatus('Image added to canvas. Save Design to keep it.');
+      }
+
+      document.getElementById('slideshowFile').addEventListener('change', (event) => {
+        uploadSlideshowFiles(event.target.files)
           .catch((err) => setStatus(err.message, true))
           .finally(() => { event.target.value = ''; });
       });
 
-      document.getElementById('galleryList').addEventListener('click', async (event) => {
-        const del = event.target.closest('[data-del-media]');
+      document.getElementById('slideshowList').addEventListener('click', async (event) => {
+        const del = event.target.closest('[data-del-slide]');
         if (!del) return;
         const c = selected();
-        if (!c || String(c.id).startsWith('tmp-')) return;
-        if (!confirm('Delete this image?')) return;
-        try {
-          const res = await apiFetch(
-            '/api/smarthours/customers/' + encodeURIComponent(c.id) + '/media/' + encodeURIComponent(del.dataset.delMedia),
-            { method: 'DELETE' }
-          );
-          const data = await res.json().catch(() => ({}));
-          if (!res.ok) throw new Error(data.error || 'Delete failed');
-          if (data.customer) {
-            const idx = customers.findIndex((x) => x.id === c.id);
-            if (idx >= 0) customers[idx] = { ...data.customer, media: data.media || data.customer.media };
-          }
-          fillEditor(selected());
-          setStatus('Image deleted.');
-        } catch (err) {
-          setStatus(err.message || 'Delete failed', true);
-        }
+        if (!c) return;
+        const id = del.dataset.delSlide;
+        ensureLayout(c);
+        c.design.slideshowMediaIds = (c.design.slideshowMediaIds || []).filter((x) => x !== id);
+        renderSlideshowList(c);
+        renderCanvas();
+        setStatus('Removed from slideshow. Save Design to keep the change.');
       });
 
-      document.getElementById('galleryList').addEventListener('change', () => renderCanvas());
+      document.getElementById('canvasImageFile').addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        uploadCanvasImageFile(file, { replaceSelected: false })
+          .catch((err) => setStatus(err.message, true))
+          .finally(() => { event.target.value = ''; });
+      });
+
+      document.getElementById('elImageFile').addEventListener('change', (event) => {
+        const file = event.target.files && event.target.files[0];
+        if (!file) return;
+        uploadCanvasImageFile(file, { replaceSelected: true })
+          .catch((err) => setStatus(err.message, true))
+          .finally(() => { event.target.value = ''; });
+      });
 
       document.getElementById('addTextBtn').addEventListener('click', () => addLayoutElement('text'));
       document.getElementById('addSketchBtn').addEventListener('click', () => {
@@ -2077,18 +2526,24 @@
       document.getElementById('addImageBtn').addEventListener('click', () => {
         const c = selected();
         if (!c) return;
-        if (!(c.media || []).length) {
-          setStatus('Upload a gallery image first, then add it to the canvas.', true);
+        if (String(c.id).startsWith('tmp-')) {
+          setStatus('Save the customer first, then add an image.', true);
           return;
         }
-        addLayoutElement('image');
+        document.getElementById('canvasImageFile').click();
       });
       document.getElementById('addHoursBtn').addEventListener('click', () => addLayoutElement('hours'));
       document.getElementById('addStatusBtn').addEventListener('click', () => addLayoutElement('status'));
       document.getElementById('addLogoBtn').addEventListener('click', () => addLayoutElement('logo'));
       document.getElementById('addTitleBtn').addEventListener('click', () => addLayoutElement('title'));
-      document.getElementById('addSlideshowBtn').addEventListener('click', () => addLayoutElement('slideshow'));
+      document.getElementById('addSlideshowBtn').addEventListener('click', () => {
+        addLayoutElement('slideshow');
+        const block = document.getElementById('slideshowBlock');
+        if (block) block.open = true;
+        setStatus('Slideshow box added. Expand Slideshow to upload rotating images.');
+      });
       document.getElementById('deleteElBtn').addEventListener('click', () => deleteSelectedElement());
+      document.getElementById('clearCanvasBtn').addEventListener('click', () => clearCanvasLayout());
 
       document.getElementById('sketchDrawBtn').addEventListener('click', () => {
         sketchMode = 'draw';
@@ -2122,7 +2577,33 @@
         input.addEventListener('change', apply);
       });
 
-      ['elText', 'elFontSize', 'elAlign', 'elColor', 'elMediaSelect', 'elFit'].forEach((id) => {
+      function bumpSelectedFontSize(delta) {
+        const el = selectedLayoutEl();
+        const c = selected();
+        if (!el || !c || !TEXT_LAYOUT_TYPES.has(el.type)) return;
+        ensureElTypography(el, c.design);
+        el.fontSize = Math.max(10, Math.min(120, resolveElFontSize(el, c.design) + delta));
+        // Keep design-level fallbacks in sync for older display paths
+        if (el.type === 'title') c.design.titleFontSize = el.fontSize;
+        if (el.type === 'hours') c.design.hoursFontSize = el.fontSize;
+        if (el.type === 'status') c.design.statusFontSize = el.fontSize;
+        document.getElementById('elFontSizeLabel').textContent = String(el.fontSize);
+        renderCanvas();
+      }
+
+      document.getElementById('elFontMinus').addEventListener('click', () => bumpSelectedFontSize(-2));
+      document.getElementById('elFontPlus').addEventListener('click', () => bumpSelectedFontSize(2));
+      document.getElementById('elFontFamily').addEventListener('change', () => {
+        if (suppressPropsSync) return;
+        const el = selectedLayoutEl();
+        const c = selected();
+        if (!el || !TEXT_LAYOUT_TYPES.has(el.type)) return;
+        el.fontFamily = document.getElementById('elFontFamily').value || DEFAULT_FONT;
+        if (c && c.design && !c.design.fontFamily) c.design.fontFamily = el.fontFamily;
+        renderCanvas();
+      });
+
+      ['elText', 'elAlign', 'elColor', 'elFit'].forEach((id) => {
         const input = document.getElementById(id);
         if (!input) return;
         const handler = () => {
@@ -2131,11 +2612,9 @@
           if (!el) return;
           if (el.type === 'text') {
             el.text = document.getElementById('elText').value.slice(0, 500);
-            el.fontSize = Math.max(10, Math.min(120, Number(document.getElementById('elFontSize').value) || 28));
             el.align = document.getElementById('elAlign').value || 'center';
             el.color = document.getElementById('elColor').value || '';
           } else if (el.type === 'image') {
-            el.mediaId = document.getElementById('elMediaSelect').value || '';
             el.fit = document.getElementById('elFit').value === 'contain' ? 'contain' : 'cover';
           }
           renderCanvas();
@@ -2160,7 +2639,7 @@
         });
       });
 
-      ['titleSize','hoursSize','statusSize','fontFamily','fieldName','slideshowInterval'].forEach((id) => {
+      ['fieldName','slideshowIntervalMin'].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('input', () => {
@@ -2316,11 +2795,12 @@
         const dx = (event.clientX - dragState.startX) / scale;
         const dy = (event.clientY - dragState.startY) / scale;
         if (dragState.mode === 'move') {
-          el.x = Math.max(0, Math.min(TABLET.width - el.w, Math.round(dragState.startLeft + dx)));
-          el.y = Math.max(0, Math.min(TABLET.height - el.h, Math.round(dragState.startTop + dy)));
+          // Allow placing partly outside the tablet so image content can be lined up to edges
+          el.x = Math.round(dragState.startLeft + dx);
+          el.y = Math.round(dragState.startTop + dy);
         } else {
-          el.w = Math.max(20, Math.min(TABLET.width - el.x, Math.round(dragState.startW + dx)));
-          el.h = Math.max(16, Math.min(TABLET.height - el.y, Math.round(dragState.startH + dy)));
+          el.w = Math.max(20, Math.round(dragState.startW + dx));
+          el.h = Math.max(16, Math.round(dragState.startH + dy));
         }
         renderCanvas();
       });
