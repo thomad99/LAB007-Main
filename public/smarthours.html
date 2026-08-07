@@ -264,8 +264,25 @@
       color: var(--muted);
       font-weight: 700;
     }
-    .canvas-tools .add-row {
+    .canvas-tools .elements-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(0, 1fr));
+      gap: 6px;
+    }
+    .canvas-tools .elements-grid > button {
+      width: 100%;
+      margin: 0;
+      text-align: center;
       justify-content: center;
+      white-space: nowrap;
+      padding-left: 4px;
+      padding-right: 4px;
+    }
+    @media (max-width: 1100px) {
+      .canvas-tools .elements-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+    }
+    @media (max-width: 560px) {
+      .canvas-tools .elements-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     .canvas-tools-footer {
       display: flex;
@@ -362,7 +379,16 @@
       display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 0;
       padding-bottom: 0; border-bottom: 0;
     }
-    @media (max-width: 700px) { .screen-settings { grid-template-columns: 1fr; } }
+    .screen-settings .panel-size-row {
+      grid-column: 1 / -1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+    }
+    @media (max-width: 700px) {
+      .screen-settings { grid-template-columns: 1fr; }
+      .screen-settings .panel-size-row { grid-template-columns: 1fr 1fr; }
+    }
     .color-triple {
       display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
     }
@@ -374,6 +400,25 @@
     .canvas-el:hover, .canvas-el.selected { border-color: var(--accent); }
     .canvas-el.dragging { cursor: grabbing; opacity: .92; z-index: 5; }
     .canvas-el.sketching { cursor: crosshair; }
+    .canvas-el.editing-text {
+      cursor: text; z-index: 6;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 2px var(--accent-dim);
+    }
+    .canvas-text-edit {
+      width: 100%; height: 100%;
+      display: flex; align-items: center;
+      outline: none; cursor: text;
+      white-space: pre-wrap; word-break: break-word;
+      line-height: 1.2; padding: 4px;
+      overflow: hidden; box-sizing: border-box;
+      user-select: text;
+    }
+    .canvas-text-edit:empty::before {
+      content: 'Type here…';
+      opacity: .45;
+      pointer-events: none;
+    }
     .font-size-stepper {
       display: grid; grid-template-columns: 36px 1fr 36px; gap: 6px; align-items: center;
     }
@@ -553,7 +598,6 @@
                     <button type="button" class="btn-secondary" id="designNewBtn" title="Copy current design into a new slot (max 5)">+ New</button>
                     <button type="button" class="btn-danger" id="designDeleteBtn" title="Delete this design slot">Delete</button>
                   </div>
-                  <p class="hint" style="margin:0;">Save up to 5 themes (seasonal, promo, etc.). <strong>Set Live</strong> chooses what the display shows. Remember to Save Design.</p>
                 </div>
               </div>
 
@@ -584,20 +628,22 @@
                       <option value="grayscale">Grayscale</option>
                     </select>
                   </div>
-                  <div>
-                    <label for="einkWidthDesign">Panel W</label>
-                    <input id="einkWidthDesign" type="number" min="200" max="2500" value="800" title="Physical panel width (framebuffer)">
-                  </div>
-                  <div>
-                    <label for="einkHeightDesign">Panel H</label>
-                    <input id="einkHeightDesign" type="number" min="120" max="2500" value="480" title="Physical panel height (framebuffer)">
+                  <div class="panel-size-row">
+                    <div>
+                      <label for="einkWidthDesign">Panel W</label>
+                      <input id="einkWidthDesign" type="number" min="200" max="2500" value="800" title="Physical panel width (framebuffer)">
+                    </div>
+                    <div>
+                      <label for="einkHeightDesign">Panel H</label>
+                      <input id="einkHeightDesign" type="number" min="120" max="2500" value="480" title="Physical panel height (framebuffer)">
+                    </div>
                   </div>
                 </div>
                 <p class="hint" style="margin:4px 0 0;">Panel W×H is the device size. Orientation rotates the <strong>image</strong> (devices cannot rotate).</p>
               </div>
 
               <div class="ctrl-block">
-                <p class="block-title">Look</p>
+                <p class="block-title">Hours Design</p>
                 <div class="color-triple">
                   <div>
                     <label for="bgColor">BG</label>
@@ -608,7 +654,7 @@
                     <div class="palette-swatches" data-palette-for="bg"></div>
                   </div>
                   <div>
-                    <label for="textColor">Text</label>
+                    <label for="textColor">Days</label>
                     <div class="color-row">
                       <input id="textColor" type="text" value="#000000">
                       <input id="textColorPick" type="color" value="#000000">
@@ -616,18 +662,12 @@
                     <div class="palette-swatches" data-palette-for="text"></div>
                   </div>
                   <div>
-                    <label for="accentColor">Accent</label>
+                    <label for="accentColor">Time</label>
                     <div class="color-row">
                       <input id="accentColor" type="text" value="#FF0000">
                       <input id="accentColorPick" type="color" value="#FF0000">
                     </div>
                     <div class="palette-swatches" data-palette-for="accent"></div>
-                  </div>
-                </div>
-                <div class="form-grid" style="gap:6px;">
-                  <div>
-                    <label for="logoFile">Logo</label>
-                    <input id="logoFile" type="file" accept="image/*">
                   </div>
                 </div>
               </div>
@@ -733,16 +773,14 @@
               </div>
               <div class="canvas-tools">
                 <p class="tools-label">Elements</p>
-                <div class="add-row">
+                <div class="elements-grid">
                   <button type="button" class="btn-secondary" id="addTextBtn">+ Text</button>
                   <button type="button" class="btn-secondary" id="addSketchBtn">+ Sketch</button>
                   <button type="button" class="btn-secondary" id="addImageBtn">+ Image</button>
                   <button type="button" class="btn-secondary" id="addHoursBtn">+ Hours</button>
                   <button type="button" class="btn-secondary" id="addStatusBtn">+ Status</button>
-                  <button type="button" class="btn-secondary" id="addLogoBtn">+ Logo</button>
                   <button type="button" class="btn-secondary" id="addTitleBtn">+ Title</button>
                   <button type="button" class="btn-secondary" id="addSlideshowBtn">+ Slides</button>
-                  <button type="button" class="btn-danger" id="deleteElBtn">Delete</button>
                 </div>
                 <div class="canvas-tools-footer">
                   <button type="button" class="btn-danger" id="clearCanvasBtn">Clear canvas</button>
@@ -876,6 +914,7 @@
       let selectedId = null;
       let selectedElId = null;
       let editingDesignId = null;
+      let editingTextId = null;
       let logoDataUrl = null;
       const MAX_DESIGNS = 5;
       let dragState = null;
@@ -1140,7 +1179,7 @@
           hoursFontSize: 18,
           statusFontSize: 36,
           logoUrl: '',
-          showLogo: true,
+          showLogo: false,
           showTitle: true,
           showStatus: true,
           showHours: true,
@@ -1151,7 +1190,6 @@
           slideshowIntervalSec: 900,
           slideshowMediaIds: [],
           layout: [
-            { id: 'logo', type: 'logo', x: Math.round(w * 0.25), y: 12, w: Math.round(w * 0.5), h: Math.max(48, Math.round(h * 0.12)) },
             { id: 'title', type: 'title', x: 24, y: Math.round(h * 0.16), w: w - 48, h: Math.max(36, Math.round(h * 0.1)), fontSize: 28, fontFamily: DEFAULT_FONT },
             { id: 'status', type: 'status', x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.max(56, Math.round(h * 0.16)), fontSize: 36, fontFamily: DEFAULT_FONT },
             { id: 'hours', type: 'hours', x: 24, y: Math.round(h * 0.48), w: w - 48, h: Math.max(120, h - Math.round(h * 0.48) - 16), fontSize: 18, fontFamily: DEFAULT_FONT }
@@ -1427,6 +1465,28 @@
         return 'dsn-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 7);
       }
 
+      function nextDesignName(designs) {
+        const used = new Set((designs || []).map((d) => String(d.name || '').trim().toLowerCase()));
+        for (let n = 1; n <= MAX_DESIGNS + 20; n += 1) {
+          const name = 'Design' + n;
+          if (!used.has(name.toLowerCase())) return name;
+        }
+        return 'Design' + ((designs || []).length + 1);
+      }
+
+      function blankDesignCanvas(fromDesign) {
+        const design = cloneDesignData(fromDesign || defaultDesign());
+        design.layout = [];
+        design.showLogo = false;
+        design.showTitle = false;
+        design.showStatus = false;
+        design.showHours = false;
+        design.showSlideshow = false;
+        design.slideshowMediaIds = [];
+        delete design._legacyShowApplied;
+        return design;
+      }
+
       function ensureCustomerDesigns(c) {
         if (!c) return null;
         if (!Array.isArray(c.designs) || !c.designs.length) {
@@ -1434,7 +1494,7 @@
           c.designs = [
             {
               id,
-              name: 'Default',
+              name: 'Design1',
               design: cloneDesignData(c.design || defaultDesign()),
               updatedAt: c.updatedAt || new Date().toISOString()
             }
@@ -1489,8 +1549,6 @@
         c.design = cloneDesignData(slot.design);
         selectedElId = null;
         logoDataUrl = null;
-        const logoFile = document.getElementById('logoFile');
-        if (logoFile) logoFile.value = '';
         writeDesignToForm(c.design);
         renderSlideshowList(c);
         renderDesignSlotsUi();
@@ -1547,16 +1605,16 @@
         }
         const current = editingDesignSlot(c);
         const id = newDesignSlotId();
-        const baseName = (current && current.name) || 'Design';
-        const name = `${baseName} copy`.slice(0, 40);
+        const name = nextDesignName(c.designs);
         c.designs.push({
           id,
           name,
-          design: cloneDesignData(current ? current.design : c.design),
+          design: blankDesignCanvas(current ? current.design : c.design),
           updatedAt: new Date().toISOString()
         });
+        selectedElId = null;
         loadDesignSlotIntoEditor(id);
-        setStatus(`Created “${name}”. Rename it, edit, then Save Design.`);
+        setStatus(`Created “${name}”.`);
       }
 
       function deleteDesignSlot() {
@@ -1607,6 +1665,7 @@
         selectedElId = el.id;
         syncShowCheckboxes(c.design);
         renderCanvas();
+        if (type === 'text') startTextEdit(el.id);
       }
 
       function removeLayoutType(type) {
@@ -1625,12 +1684,85 @@
           setStatus('Select an element on the canvas first.', true);
           return;
         }
+        if (editingTextId === selectedElId) editingTextId = null;
         const layout = ensureLayout(c);
         c.design.layout = layout.filter((e) => e.id !== selectedElId);
         selectedElId = null;
         syncShowCheckboxes(c.design);
         renderCanvas();
         setStatus('Element deleted. Save to keep the change.');
+      }
+
+      function isTypingInCanvasText() {
+        const active = document.activeElement;
+        return !!(active && active.classList && active.classList.contains('canvas-text-edit'));
+      }
+
+      function commitCanvasTextEditor(editor) {
+        if (!editor) return;
+        const id = editor.dataset.elId;
+        const c = selected();
+        if (!c || !id) return;
+        const el = (c.design.layout || []).find((x) => x.id === id);
+        if (!el || el.type !== 'text') return;
+        el.text = String(editor.innerText || '').replace(/\u00a0/g, ' ').slice(0, 500);
+        const side = document.getElementById('elText');
+        if (side && selectedElId === id) {
+          suppressPropsSync = true;
+          side.value = el.text;
+          suppressPropsSync = false;
+        }
+      }
+
+      function endTextEditSoft() {
+        if (!editingTextId) return;
+        const id = editingTextId;
+        const editor = tabletFrame.querySelector(
+          '.canvas-text-edit[data-el-id="' + String(id).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]'
+        );
+        commitCanvasTextEditor(editor);
+        editingTextId = null;
+        if (editor) {
+          editor.contentEditable = 'false';
+          const node = editor.closest('.canvas-el');
+          if (node) node.classList.remove('editing-text');
+        }
+      }
+
+      function startTextEdit(id) {
+        const c = selected();
+        if (!c) return;
+        const el = (c.design.layout || []).find((x) => x.id === id && x.type === 'text');
+        if (!el) return;
+        if (editingTextId && editingTextId !== id) endTextEditSoft();
+        editingTextId = id;
+        selectedElId = id;
+        renderCanvas();
+        requestAnimationFrame(() => {
+          const editor = tabletFrame.querySelector(
+            '.canvas-text-edit[data-el-id="' + String(id).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]'
+          );
+          if (!editor) return;
+          editor.focus();
+          const text = String(el.text || '');
+          const range = document.createRange();
+          range.selectNodeContents(editor);
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          if (text === 'New text' || text === 'Text' || !text.trim()) {
+            sel.addRange(range);
+          } else {
+            range.collapse(false);
+            sel.addRange(range);
+          }
+          syncElPropsPanel();
+        });
+      }
+
+      function stopTextEdit() {
+        if (!editingTextId) return;
+        endTextEditSoft();
+        renderCanvas();
       }
 
       function selectedLayoutEl() {
@@ -1711,6 +1843,7 @@
           return;
         }
         if (!confirm('Clear all elements from this design?')) return;
+        editingTextId = null;
         c.design.layout = [];
         selectedElId = null;
         syncShowCheckboxes(c.design);
@@ -1811,7 +1944,43 @@
             const color = el.color || design.textColor;
             const fs = resolveElFontSize(el, design);
             const ff = resolveElFontFamily(el, design);
-            node.innerHTML = `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:${el.align === 'left' ? 'flex-start' : el.align === 'right' ? 'flex-end' : 'center'};font-size:${fs}px;font-family:${ff};color:${color};font-weight:${el.bold === false ? 400 : 700};text-align:${el.align || 'center'};line-height:1.2;padding:4px;overflow:hidden;white-space:pre-wrap;word-break:break-word;">${escapeHtml(el.text || 'Text')}</div>`;
+            const justify = el.align === 'left' ? 'flex-start' : el.align === 'right' ? 'flex-end' : 'center';
+            const editing = editingTextId === el.id;
+            if (editing) node.classList.add('editing-text');
+            const editor = document.createElement('div');
+            editor.className = 'canvas-text-edit';
+            editor.dataset.elId = el.id;
+            editor.contentEditable = editing ? 'true' : 'false';
+            editor.spellcheck = false;
+            editor.style.justifyContent = justify;
+            editor.style.textAlign = el.align || 'center';
+            editor.style.fontSize = fs + 'px';
+            editor.style.fontFamily = ff;
+            editor.style.color = color;
+            editor.style.fontWeight = el.bold === false ? '400' : '700';
+            editor.textContent = el.text || '';
+            editor.addEventListener('input', () => {
+              if (suppressPropsSync) return;
+              commitCanvasTextEditor(editor);
+            });
+            editor.addEventListener('blur', () => {
+              if (editingTextId === el.id) {
+                commitCanvasTextEditor(editor);
+                editingTextId = null;
+                node.classList.remove('editing-text');
+                editor.contentEditable = 'false';
+                syncElPropsPanel();
+              }
+            });
+            editor.addEventListener('keydown', (event) => {
+              if (event.key === 'Escape') {
+                event.preventDefault();
+                editor.blur();
+                return;
+              }
+              event.stopPropagation();
+            });
+            node.appendChild(editor);
           } else if (el.type === 'image') {
             const media = el.mediaId ? mediaById.get(el.mediaId) : null;
             if (media) {
@@ -1848,9 +2017,17 @@
 
           node.addEventListener('pointerdown', (event) => {
             if (event.target === del || event.target.closest('.del-x')) return;
+            const textEditor = event.target.closest('.canvas-text-edit');
+            // While typing in this box, don't start a drag
+            if (textEditor && editingTextId === el.id) {
+              selectedElId = el.id;
+              syncElPropsPanel();
+              return;
+            }
             selectedElId = el.id;
             syncElPropsPanel();
             if (event.target === handle) {
+              if (editingTextId) endTextEditSoft();
               dragState = { mode: 'resize', id: el.id, startX: event.clientX, startY: event.clientY, startW: el.w, startH: el.h };
               node.classList.add('dragging', 'selected');
               node.setPointerCapture(event.pointerId);
@@ -1905,13 +2082,37 @@
               }
               return;
             }
-            dragState = { mode: 'move', id: el.id, startX: event.clientX, startY: event.clientY, startLeft: el.x, startTop: el.y };
+            if (editingTextId && editingTextId !== el.id) endTextEditSoft();
+            dragState = {
+              mode: 'move',
+              id: el.id,
+              startX: event.clientX,
+              startY: event.clientY,
+              startLeft: el.x,
+              startTop: el.y,
+              moved: false,
+              maybeTextEdit: el.type === 'text'
+            };
             node.classList.add('dragging', 'selected');
             node.setPointerCapture(event.pointerId);
           });
+          if (el.type === 'text') {
+            node.addEventListener('dblclick', (event) => {
+              if (event.target === del || event.target.closest('.del-x') || event.target === handle) return;
+              event.preventDefault();
+              event.stopPropagation();
+              startTextEdit(el.id);
+            });
+          }
         });
         syncElPropsPanel();
         scaleTablet();
+        if (editingTextId) {
+          const editor = tabletFrame.querySelector(
+            '.canvas-text-edit[data-el-id="' + String(editingTextId).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]'
+          );
+          if (editor && document.activeElement !== editor) editor.focus();
+        }
       }
 
       function escapeHtml(str) {
@@ -1938,6 +2139,7 @@
       function fillEditor(customer) {
         editor.classList.add('open');
         selectedElId = null;
+        editingTextId = null;
         editingDesignId = null;
         document.getElementById('fieldName').value = customer.name || '';
         document.getElementById('fieldSlug').value = customer.slug || '';
@@ -1960,7 +2162,6 @@
         renderSlideshowList(customer);
         renderDesignSlotsUi();
         logoDataUrl = null;
-        document.getElementById('logoFile').value = '';
         if (customer.lastSyncedAt) {
           document.getElementById('syncMeta').textContent =
             'Last sync: ' + new Date(customer.lastSyncedAt).toLocaleString() +
@@ -2395,17 +2596,6 @@
         }
       });
 
-      document.getElementById('logoFile').addEventListener('change', (event) => {
-        const file = event.target.files && event.target.files[0];
-        if (!file) return;
-        const reader = new FileReader();
-        reader.onload = () => {
-          logoDataUrl = String(reader.result || '');
-          renderCanvas();
-        };
-        reader.readAsDataURL(file);
-      });
-
       async function uploadMediaFile(file) {
         const c = selected();
         if (!c || String(c.id).startsWith('tmp-')) {
@@ -2534,7 +2724,6 @@
       });
       document.getElementById('addHoursBtn').addEventListener('click', () => addLayoutElement('hours'));
       document.getElementById('addStatusBtn').addEventListener('click', () => addLayoutElement('status'));
-      document.getElementById('addLogoBtn').addEventListener('click', () => addLayoutElement('logo'));
       document.getElementById('addTitleBtn').addEventListener('click', () => addLayoutElement('title'));
       document.getElementById('addSlideshowBtn').addEventListener('click', () => {
         addLayoutElement('slideshow');
@@ -2542,7 +2731,6 @@
         if (block) block.open = true;
         setStatus('Slideshow box added. Expand Slideshow to upload rotating images.');
       });
-      document.getElementById('deleteElBtn').addEventListener('click', () => deleteSelectedElement());
       document.getElementById('clearCanvasBtn').addEventListener('click', () => clearCanvasLayout());
 
       document.getElementById('sketchDrawBtn').addEventListener('click', () => {
@@ -2614,6 +2802,13 @@
             el.text = document.getElementById('elText').value.slice(0, 500);
             el.align = document.getElementById('elAlign').value || 'center';
             el.color = document.getElementById('elColor').value || '';
+            if (id === 'elText' && editingTextId === el.id) {
+              const editor = tabletFrame.querySelector(
+                '.canvas-text-edit[data-el-id="' + String(el.id).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]'
+              );
+              if (editor && document.activeElement !== editor) editor.textContent = el.text;
+              return;
+            }
           } else if (el.type === 'image') {
             el.fit = document.getElementById('elFit').value === 'contain' ? 'contain' : 'cover';
           }
@@ -2749,6 +2944,7 @@
         if (!selected()) return;
         if (!document.querySelector('.tabs [data-tab="design"].active')) return;
         if (dragState && dragState.mode === 'sketch') return;
+        if (editingTextId || isTypingInCanvasText()) return;
         renderCanvas();
       }, 30 * 1000);
 
@@ -2794,6 +2990,7 @@
         const scale = Number((tabletFrame.style.transform.match(/scale\(([^)]+)\)/) || [])[1] || 1);
         const dx = (event.clientX - dragState.startX) / scale;
         const dy = (event.clientY - dragState.startY) / scale;
+        if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dragState.moved = true;
         if (dragState.mode === 'move') {
           // Allow placing partly outside the tablet so image content can be lined up to edges
           el.x = Math.round(dragState.startLeft + dx);
@@ -2805,14 +3002,21 @@
         renderCanvas();
       });
       window.addEventListener('pointerup', () => {
-        if (dragState && dragState.mode === 'sketch') {
+        const pending = dragState;
+        if (pending && pending.mode === 'sketch') {
           const c = selected();
           const el = c && c.design && c.design.layout
-            ? c.design.layout.find((x) => x.id === dragState.id)
+            ? c.design.layout.find((x) => x.id === pending.id)
             : null;
-          if (el && dragState.canvas) {
-            el.dataUrl = dragState.canvas.toDataURL('image/png');
+          if (el && pending.canvas) {
+            el.dataUrl = pending.canvas.toDataURL('image/png');
           }
+        }
+        // Click (no drag) on a text box → type directly in it
+        if (pending && pending.mode === 'move' && pending.maybeTextEdit && !pending.moved) {
+          dragState = null;
+          startTextEdit(pending.id);
+          return;
         }
         dragState = null;
       });
@@ -2820,6 +3024,8 @@
         if ((event.key === 'Delete' || event.key === 'Backspace') && selectedElId) {
           const tag = (event.target && event.target.tagName) || '';
           if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+          if (editingTextId || isTypingInCanvasText()) return;
+          if (event.target && event.target.isContentEditable) return;
           event.preventDefault();
           deleteSelectedElement();
         }
