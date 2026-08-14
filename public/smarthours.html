@@ -349,6 +349,9 @@
       position: relative;
       flex: 0 0 auto;
       overflow: visible;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       border-radius: 6px;
       /* Match design BG so the screen reads edge-to-edge (no black letterbox) */
       background: #ffffff;
@@ -357,17 +360,35 @@
         0 16px 40px rgba(0, 0, 0, .5);
     }
     .tablet-frame {
-      position: absolute;
-      top: 0;
-      left: 0;
+      position: relative;
+      top: auto;
+      left: auto;
+      flex-shrink: 0;
       width: 800px;
       height: 480px;
       /* Allow dragging elements slightly outside the screen for alignment */
       overflow: visible;
       border-radius: 0;
       background: #ffffff;
-      transform-origin: top left;
+      transform-origin: center center;
       box-shadow: none;
+    }
+    .tablet-frame::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 0;
+      background-image:
+        linear-gradient(to right, rgba(0, 0, 0, .08) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(0, 0, 0, .08) 1px, transparent 1px);
+      background-size: 40px 40px;
+      opacity: .9;
+    }
+    .tablet-frame > .canvas-el { z-index: 1; }
+    .canvas-el.snap-hint {
+      outline: 2px solid var(--accent);
+      outline-offset: -2px;
     }
     .palette-swatches { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 3px; }
     .palette-swatch {
@@ -783,6 +804,7 @@
                   <button type="button" class="btn-secondary" id="addSlideshowBtn">+ Slides</button>
                 </div>
                 <div class="canvas-tools-footer">
+                  <button type="button" class="btn-secondary" id="fillScreenBtn" title="Snap selected element to full canvas">Fill screen</button>
                   <button type="button" class="btn-danger" id="clearCanvasBtn">Clear canvas</button>
                 </div>
               </div>
@@ -917,6 +939,10 @@
       let editingTextId = null;
       let logoDataUrl = null;
       const MAX_DESIGNS = 5;
+      const GRID_SIZE = 40;
+      const SNAP_EDGE = 28;
+      let canvasPreviewScale = 1;
+      let canvasPreviewRotation = 0;
       let dragState = null;
       let sketchMode = 'draw';
       let suppressPropsSync = false;
@@ -1300,6 +1326,138 @@
         return inSlot(day.open, day.close) || inSlot(day.open2, day.close2);
       }
 
+      function normalizeHangRotation(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n)) return 0;
+        const r = ((Math.round(n) % 360) + 360) % 360;
+        return r === 90 || r === 180 || r === 270 ? r : 0;
+      }
+
+      function canvasOutputRotation() {
+        const orient = document.getElementById('screenOrientation').value === 'portrait' ? 'portrait' : 'landscape';
+        const bake = orient === 'portrait' ? 90 : 0;
+        const hang = normalizeHangRotation(document.getElementById('screenHangRotation').value);
+        return normalizeHangRotation(bake + hang);
+      }
+
+      function snapScalar(value, size, max) {
+        const grid = GRID_SIZE;
+        const edge = SNAP_EDGE;
+        let v = Math.round(value);
+        const candidates = [0, max];
+        for (let g = grid; g < max; g += grid) candidates.push(g);
+        let best = v;
+        let bestDist = Infinity;
+        candidates.forEach((c) => {
+          const d = Math.abs(v - c);
+          if (d < bestDist && d <= edge) {
+            bestDist = d;
+            best = c;
+          }
+        });
+        // Also snap right/bottom edge of a box when resizing (handled separately)
+        return best;
+      }
+
+      function snapMove(el) {
+        const maxX = TABLET.width;
+        const maxY = TABLET.height;
+        let x = Math.round(el.x);
+        let y = Math.round(el.y);
+        const right = x + el.w;
+        const bottom = y + el.h;
+        // Prefer edge magnets for full-screen placement
+        if (Math.abs(x) <= SNAP_EDGE) x = 0;
+        else if (Math.abs(right - maxX) <= SNAP_EDGE) x = maxX - el.w;
+        else x = snapScalar(x, el.w, maxX);
+        if (Math.abs(y) <= SNAP_EDGE) y = 0;
+        else if (Math.abs(bottom - maxY) <= SNAP_EDGE) y = maxY - el.h;
+        else y = snapScalar(y, el.h, maxY);
+        el.x = x;
+        el.y = y;
+        return el;
+      }
+
+      function snapResize(el) {
+        const maxX = TABLET.width;
+        const maxY = TABLET.height;
+        let x = Math.round(el.x);
+        let y = Math.round(el.y);
+        let w = Math.max(20, Math.round(el.w));
+        let h = Math.max(16, Math.round(el.h));
+        let right = x + w;
+        let bottom = y + h;
+
+        if (Math.abs(x) <= SNAP_EDGE) {
+          w += x;
+          x = 0;
+        }
+        if (Math.abs(y) <= SNAP_EDGE) {
+          h += y;
+          y = 0;
+        }
+        if (Math.abs(right - maxX) <= SNAP_EDGE) {
+          w = maxX - x;
+          right = maxX;
+        } else {
+          const snappedRight = snapScalar(right, 0, maxX);
+          if (snappedRight !== right) w = Math.max(20, snappedRight - x);
+        }
+        if (Math.abs(bottom - maxY) <= SNAP_EDGE) {
+          h = maxY - y;
+          bottom = maxY;
+        } else {
+          const snappedBottom = snapScalar(bottom, 0, maxY);
+          if (snappedBottom !== bottom) h = Math.max(16, snappedBottom - y);
+        }
+
+        // Near both axes → fill the canvas
+        if (Math.abs(x) <= SNAP_EDGE && Math.abs(y) <= SNAP_EDGE
+          && Math.abs((x + w) - maxX) <= SNAP_EDGE * 1.5
+          && Math.abs((y + h) - maxY) <= SNAP_EDGE * 1.5) {
+          x = 0;
+          y = 0;
+          w = maxX;
+          h = maxY;
+        }
+
+        el.x = x;
+        el.y = y;
+        el.w = Math.max(20, w);
+        el.h = Math.max(16, h);
+        if (el.type === 'image' && el.x === 0 && el.y === 0 && el.w === maxX && el.h === maxY) {
+          el.fit = 'cover';
+        }
+        return el;
+      }
+
+      function fillSelectedToScreen() {
+        const el = selectedLayoutEl();
+        if (!el) {
+          setStatus('Select an element on the canvas first.', true);
+          return;
+        }
+        el.x = 0;
+        el.y = 0;
+        el.w = TABLET.width;
+        el.h = TABLET.height;
+        if (el.type === 'image') el.fit = 'cover';
+        renderCanvas();
+        setStatus('Element filled the canvas. Save Design to keep it.');
+      }
+
+      function screenDeltaToDesign(dx, dy) {
+        const rot = canvasPreviewRotation;
+        const scale = canvasPreviewScale || 1;
+        const rad = (-rot * Math.PI) / 180;
+        const cos = Math.cos(rad);
+        const sin = Math.sin(rad);
+        return {
+          dx: (dx * cos - dy * sin) / scale,
+          dy: (dx * sin + dy * cos) / scale
+        };
+      }
+
       function scaleTablet() {
         const wrap = document.getElementById('tabletScaleWrap');
         const stage = document.getElementById('canvasStage') || (wrap && wrap.parentElement);
@@ -1308,16 +1466,20 @@
         const pad = 24;
         const metaH = (meta && meta.offsetHeight) || 18;
         const maxW = Math.max(160, stage.clientWidth - pad);
-        // Fill the stage — allow scale > 1 so the screen isn't a tiny box on large monitors
         const maxH = Math.max(160, stage.clientHeight - metaH - pad);
-        const scale = Math.min(maxW / TABLET.width, maxH / TABLET.height);
-        const scaledW = Math.max(1, Math.round(TABLET.width * scale));
-        const scaledH = Math.max(1, Math.round(TABLET.height * scale));
+        const rot = canvasOutputRotation();
+        canvasPreviewRotation = rot;
+        const swap = rot === 90 || rot === 270;
+        const boxW = swap ? TABLET.height : TABLET.width;
+        const boxH = swap ? TABLET.width : TABLET.height;
+        const scale = Math.min(maxW / boxW, maxH / boxH);
+        canvasPreviewScale = scale;
+        const scaledW = Math.max(1, Math.round(boxW * scale));
+        const scaledH = Math.max(1, Math.round(boxH * scale));
 
         tabletFrame.style.width = TABLET.width + 'px';
         tabletFrame.style.height = TABLET.height + 'px';
-        tabletFrame.style.transformOrigin = 'top left';
-        tabletFrame.style.transform = `scale(${scale})`;
+        tabletFrame.style.transform = rot ? `rotate(${rot}deg) scale(${scale})` : `scale(${scale})`;
         tabletFrame.style.margin = '0';
 
         if (wrap) {
@@ -1327,13 +1489,11 @@
           wrap.style.background = bg;
         }
         if (meta) {
-          const orient = document.getElementById('screenOrientation').value === 'portrait' ? 'portrait' : 'landscape';
+          const designOrient = TABLET.width >= TABLET.height ? 'landscape' : 'portrait';
+          const viewOrient = swap ? (designOrient === 'landscape' ? 'portrait' : 'landscape') : designOrient;
           const panel = panelSizeFromForm();
-          const bake = orient === 'portrait' ? 90 : 0;
-          const hang = Number(document.getElementById('screenHangRotation').value) || 0;
-          const outRot = ((bake + hang) % 360 + 360) % 360;
-          const rotNote = outRot ? ` · image bake ${outRot}°` : '';
-          meta.textContent = `Design ${TABLET.width}×${TABLET.height} · panel ${panel.width}×${panel.height} · ${orient}${rotNote}`;
+          const rotNote = rot ? ` · mounted ${rot}°` : '';
+          meta.textContent = `Design ${TABLET.width}×${TABLET.height} · panel ${panel.width}×${panel.height} · ${viewOrient}${rotNote}`;
         }
       }
 
@@ -1438,7 +1598,7 @@
           slideshow: { x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.round(h * 0.35) },
           hours: { x: 24, y: Math.round(h * 0.48), w: w - 48, h: Math.max(120, h - Math.round(h * 0.48) - 16), fontSize: 18, fontFamily: DEFAULT_FONT },
           text: { x: 40, y: 40, w: Math.min(480, w - 80), h: 56, text: 'New text', fontSize: 28, fontFamily: DEFAULT_FONT, color: '', align: 'center', bold: true },
-          image: { x: 40, y: Math.round(h * 0.35), w: w - 80, h: Math.round(h * 0.4), mediaId: '', fit: 'cover' },
+          image: { x: 0, y: 0, w, h, mediaId: '', fit: 'cover' },
           sketch: {
             x: Math.round(w * 0.1),
             y: Math.round(h * 0.55),
@@ -2731,6 +2891,7 @@
         if (block) block.open = true;
         setStatus('Slideshow box added. Expand Slideshow to upload rotating images.');
       });
+      document.getElementById('fillScreenBtn').addEventListener('click', () => fillSelectedToScreen());
       document.getElementById('clearCanvasBtn').addEventListener('click', () => clearCanvasLayout());
 
       document.getElementById('sketchDrawBtn').addEventListener('click', () => {
@@ -2890,9 +3051,11 @@
       });
       document.getElementById('screenHangRotation').addEventListener('change', () => {
         syncScreenFields(true);
+        scaleTablet();
       });
       document.getElementById('einkHangRotation').addEventListener('change', () => {
         syncScreenFields(false);
+        scaleTablet();
       });
       document.getElementById('screenColorMode').addEventListener('change', () => {
         syncScreenFields(true);
@@ -2987,17 +3150,19 @@
           }
           return;
         }
-        const scale = Number((tabletFrame.style.transform.match(/scale\(([^)]+)\)/) || [])[1] || 1);
-        const dx = (event.clientX - dragState.startX) / scale;
-        const dy = (event.clientY - dragState.startY) / scale;
+        const screenDx = event.clientX - dragState.startX;
+        const screenDy = event.clientY - dragState.startY;
+        const { dx, dy } = screenDeltaToDesign(screenDx, screenDy);
         if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dragState.moved = true;
         if (dragState.mode === 'move') {
           // Allow placing partly outside the tablet so image content can be lined up to edges
           el.x = Math.round(dragState.startLeft + dx);
           el.y = Math.round(dragState.startTop + dy);
+          snapMove(el);
         } else {
           el.w = Math.max(20, Math.round(dragState.startW + dx));
           el.h = Math.max(16, Math.round(dragState.startH + dy));
+          snapResize(el);
         }
         renderCanvas();
       });
@@ -3010,6 +3175,18 @@
             : null;
           if (el && pending.canvas) {
             el.dataUrl = pending.canvas.toDataURL('image/png');
+          }
+        }
+        // Final snap pass when releasing a move/resize
+        if (pending && (pending.mode === 'move' || pending.mode === 'resize') && pending.moved) {
+          const c = selected();
+          const el = c && c.design && c.design.layout
+            ? c.design.layout.find((x) => x.id === pending.id)
+            : null;
+          if (el) {
+            if (pending.mode === 'move') snapMove(el);
+            else snapResize(el);
+            renderCanvas();
           }
         }
         // Click (no drag) on a text box → type directly in it

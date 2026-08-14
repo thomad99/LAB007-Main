@@ -2799,7 +2799,7 @@ function generateCloneScript(selectedImages, destinationFolder, moveSourceAfterC
     scriptLines.push('        Write-Host "  Preparing to clone machine $originalVMName" -ForegroundColor Yellow');
     scriptLines.push('        Write-Host "    from Host $($vmHost.Name) on Storage $($datastoreCluster.Name)" -ForegroundColor Yellow');
     scriptLines.push('        Write-Host "    To Clone machine $newVMName" -ForegroundColor Yellow');
-        scriptLines.push('        if ($TeamsWorkflowUrl) { Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl -Title "Clone Started" -Text "Clone of Image $originalVMName Started" -Level "info" -Computer $env:COMPUTERNAME }');
+        scriptLines.push('        if ($TeamsWorkflowUrl) { Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl -Title "Clone Started" -Text "Image : $originalVMName cloning to $newVMName" -Level "info" -Computer $env:COMPUTERNAME }');
     scriptLines.push('        ');
         scriptLines.push('        # Perform the clone with task monitoring');
     scriptLines.push('        Write-Host "  [DEBUG] Starting clone operation..." -ForegroundColor DarkGray');
@@ -2870,9 +2870,10 @@ function generateCloneScript(selectedImages, destinationFolder, moveSourceAfterC
     scriptLines.push('                        }');
     scriptLines.push('                    }');
     scriptLines.push('                    ');
-                    scriptLines.push('                    if ($TeamsWorkflowUrl) { Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl -Title "Clone Completed" -Text "Clone of Image $originalVMName Completed" -Level "success" -Computer $env:COMPUTERNAME }');
+                    scriptLines.push('                    if ($TeamsWorkflowUrl) { Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl -Title "Clone Completed" -Text ("Image : {0} Cloned to {1}" -f $originalVMName, $newVMName) -Level "success" -Computer $env:COMPUTERNAME }');
                     scriptLines.push('                    ');
     scriptLines.push('                    if ($pushWindowsUpdate) {');
+    scriptLines.push('                        if ($TeamsWorkflowUrl) { Send-TeamsAdaptiveCard -WorkflowUrl $TeamsWorkflowUrl -Title "Patching" -Text ("Image : {0} Cloned to {1}`r`nPowering On and pushing patches" -f $originalVMName, $newVMName) -Level "info" -Computer $env:COMPUTERNAME }');
     scriptLines.push('                        if ($newVM) {');
     scriptLines.push('                            Write-Host "  [PATCH] Powering on cloned VM $newVMName..." -ForegroundColor Yellow');
     scriptLines.push('                            try {');
