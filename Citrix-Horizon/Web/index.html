@@ -812,7 +812,7 @@
             <h2>HZ Builds</h2>
             <div id="horizonTasksContent">
                 <!-- Task navigation tabs will be added here -->
-                <div id="horizonTasksTabs" style="border-bottom: 2px solid #ddd; margin-bottom: 20px;">
+                <div id="horizonTasksTabs" style="border-bottom: 2px solid #ddd; margin-bottom: 20px; display:flex; flex-wrap:wrap; gap:4px;">
                     <button class="task-tab active" onclick="showHorizonTask('masterImageSearch')">Master Image Search</button>
                     <button class="task-tab" onclick="showHorizonTask('cloneMasterImage')">Clone Master Image</button>
                     <button class="task-tab" onclick="showHorizonTask('addApplications')">Add Applications to HZ</button>
@@ -822,6 +822,7 @@
                     <button class="task-tab" onclick="showHorizonTask('appReport')">App Report</button>
                     <button class="task-tab" onclick="showHorizonTask('serverLoad')">Server Load</button>
                     <button class="task-tab" onclick="showHorizonTask('userReport')">User Report</button>
+                    <button class="task-tab" onclick="showHorizonTask('eventPoll')">Event Poll</button>
                     <!-- More tasks can be added here -->
                 </div>
                 
@@ -1268,6 +1269,38 @@
                     </div>
                 </div>
 
+                <!-- Hourly Omnissa Horizon event poll -->
+                <div id="eventPollTask" class="horizon-task-panel">
+                    <h3>Event Poll (Horizon REST — last hour)</h3>
+                    <p style="color:#666;">Low-impact hourly poller. Queries Omnissa Horizon <code>/external/v1/audit-events</code> with a <strong>server-side last-hour time filter</strong> (no unfiltered dump). Appends compact events into a single store file you can query offline, and refreshes a tile dashboard HTML.</p>
+                    <ul style="color:#555; margin: 8px 0 14px 18px; font-size: 14px;">
+                        <li>Store: <code>Reports\horizon-event-store.json</code> (one file; re-runs replace the same hour bucket; keeps 7 days by default)</li>
+                        <li>Dashboard: <code>Reports\horizon-event-dashboard.html</code> — connections and “pending session on machine” tiles, with green / amber / red thresholds you can edit on the page</li>
+                        <li>Schedule hourly (Task Scheduler) after the first interactive credential save</li>
+                    </ul>
+
+                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin: 10px 0 15px 0;">
+                        <div>
+                            <label for="eventPollHorizonBase" style="font-weight: 600;">Horizon Controller Address</label>
+                            <input type="text" id="eventPollHorizonBase" value="https://hd.steward.org" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
+                            <small style="color: #666;">REST base URL (same pattern as App Report / User Report).</small>
+                        </div>
+                    </div>
+
+                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 20px 0;">
+                        <button class="btn btn-primary" onclick="generateEventPollScript()">Generate Event Poll Script</button>
+                    </div>
+
+                    <div id="eventPollScriptOutput" style="margin-top: 10px;">
+                        <h4>Generated Script:</h4>
+                        <textarea id="eventPollScriptContent" readonly style="width: 100%; height: 380px; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
+                        <div style="margin-top: 10px; text-align: right;">
+                            <button class="btn btn-secondary" onclick="copyEventPollScript()">Copy Script</button>
+                            <button class="btn btn-secondary" onclick="downloadEventPollScript()">Download Script</button>
+                        </div>
+                    </div>
+                </div>
+
             </div>
 
         </div>
@@ -1664,6 +1697,7 @@
             <div style="border-bottom: 2px solid #ddd; margin-bottom: 16px; display: flex; gap: 10px; flex-wrap: wrap;">
                 <button class="task-tab active" id="debugTabUploadBtn" onclick="showDebugToolsTab('upload')" style="color:#111;">Upload &amp; Store</button>
                 <button class="task-tab" id="debugTabAnonBtn" onclick="showDebugToolsTab('anon')" style="color:#111;">Anonymise Log</button>
+                <button class="task-tab" id="debugTabHostAgentBtn" onclick="showDebugToolsTab('hostAgent')" style="color:#111;">Host Agent</button>
             </div>
 
             <div id="debugToolsUploadPanel" class="horizon-task-panel active" style="display: block; color:#111;">
@@ -1710,6 +1744,29 @@
                         <span id="anonStatusModal" style="color:#555;">No file chosen.</span>
                     </div>
                     <p style="color:#444; margin:0;">Downloads an anonymised copy with “_anon” suffix.</p>
+                </div>
+            </div>
+
+            <div id="debugToolsHostAgentPanel" class="horizon-task-panel" style="display: none; color:#111;">
+                <div style="margin: 12px 0; padding: 14px; border: 1px solid #ddd; border-radius: 6px; background: #f8f9fa; display:flex; flex-direction:column; gap:12px;">
+                    <p style="margin:0; color:#333;">
+                        Upload a <strong>ZIP</strong> of Omnissa / Horizon <strong>Host Agent</strong> debug logs from a single RDS host.
+                        The server scans for errors/warnings, then optionally asks OpenAI for a plain-English readout (uses server <code>OPENAI_API_KEY</code>).
+                    </p>
+                    <div>
+                        <label for="hostAgentHostHint" style="font-weight:600;">RDS host name (optional)</label>
+                        <input id="hostAgentHostHint" type="text" class="input" placeholder="e.g. RDS-01" style="width:100%; padding:10px; border:1px solid #ccc; border-radius:4px; color:#111;">
+                    </div>
+                    <label style="display:flex; align-items:center; gap:8px; cursor:pointer; color:#111;">
+                        <input type="checkbox" id="hostAgentUseAi" checked>
+                        Use OpenAI to interpret findings
+                    </label>
+                    <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+                        <button id="hostAgentPickBtn" class="btn btn-secondary" style="background:#e5b600; color:#000; border-color:#e5b600;">Choose ZIP</button>
+                        <input type="file" id="hostAgentFileModal" accept=".zip,application/zip" style="display:none;">
+                        <span id="hostAgentStatus" style="color:#555;">No file chosen.</span>
+                    </div>
+                    <div id="hostAgentResults" style="display:none; margin-top:4px; padding:12px; border:1px solid #ddd; border-radius:6px; background:#fff; max-height:55vh; overflow:auto;"></div>
                 </div>
             </div>
         </div>

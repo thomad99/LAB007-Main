@@ -1,11 +1,11 @@
 (() => {
   const links = [
     ['Home', '/'],
-    ['Web-Dashboard', '/tomopi'],
+    // ['Web-Dashboard', '/tomopi'],
     ['Digital Marketing', '/digitalmarketing'],
-    ['CursorAI', '/cursorai'],
+    // ['CursorAI', '/cursorai'],
     ['BUCK', 'https://buck-lab007.onrender.com/'],
-    ['007Trade', '/007trade'],
+    // ['007Trade', '/007trade'],
     ['Elite Invoices', '/Elite-Invoices'],
     ['Clever-CRM', '/Clever-CRM'],
     ['SmartHours', '/SmartHours'],

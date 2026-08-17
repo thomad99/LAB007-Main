@@ -5762,6 +5762,46 @@ app.post('/citrix/api/upload-debug', upload.single('debugFile'), (req, res) => {
   }
 });
 
+// Omnissa / Horizon Host Agent ZIP analysis (heuristic + optional OpenAI)
+app.post('/citrix/api/host-agent-debug/analyze', upload.single('debugFile'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No ZIP file uploaded' });
+    }
+    const name = String(req.file.originalname || req.file.filename || '').toLowerCase();
+    if (!name.endsWith('.zip')) {
+      try {
+        fs.unlinkSync(req.file.path);
+      } catch (_) {
+        /* ignore */
+      }
+      return res.status(400).json({ error: 'Please upload a .zip of Host Agent debug logs.' });
+    }
+
+    const useAi =
+      String(req.body?.useAi || req.query?.useAi || '1') !== '0' &&
+      String(req.body?.useAi || req.query?.useAi || '1').toLowerCase() !== 'false';
+    const hostHint = String(req.body?.hostHint || req.query?.hostHint || '').trim();
+
+    const { analyzeHostAgentZip } = require('./lib/citrixHostAgentDebug');
+    const result = await analyzeHostAgentZip(req.file.path, { useAi, hostHint });
+
+    return res.json({
+      success: !!result.ok,
+      ...result,
+      file: {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        size: req.file.size
+      },
+      openaiConfigured: !!(process.env.OPENAI_API_KEY || process.env.OPENAI_KEY)
+    });
+  } catch (err) {
+    console.error('host-agent-debug analyze error', err);
+    return res.status(500).json({ error: err.message || 'Host Agent analysis failed' });
+  }
+});
+
 // UAG AI analysis endpoint
 app.post('/api/uag/ai-analyze', async (req, res) => {
   try {

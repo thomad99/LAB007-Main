@@ -188,6 +188,11 @@ document.addEventListener('DOMContentLoaded', async function() {
         userReportBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
     }
 
+    const eventPollBaseInput = document.getElementById('eventPollHorizonBase');
+    if (eventPollBaseInput && !eventPollBaseInput.value) {
+        eventPollBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
+    }
+
     // GoldenSun VMware toggle
     const goldenSunVmwareToggle = document.getElementById('goldenSunVmwareToggle');
     if (goldenSunVmwareToggle) {
@@ -642,13 +647,17 @@ function closeDebugToolsModal() {
 function showDebugToolsTab(tab) {
     const uploadPanel = document.getElementById('debugToolsUploadPanel');
     const anonPanel = document.getElementById('debugToolsAnonPanel');
+    const hostAgentPanel = document.getElementById('debugToolsHostAgentPanel');
     const uploadBtn = document.getElementById('debugTabUploadBtn');
     const anonBtn = document.getElementById('debugTabAnonBtn');
+    const hostAgentBtn = document.getElementById('debugTabHostAgentBtn');
 
     if (uploadPanel) uploadPanel.style.display = tab === 'upload' ? 'block' : 'none';
     if (anonPanel) anonPanel.style.display = tab === 'anon' ? 'block' : 'none';
+    if (hostAgentPanel) hostAgentPanel.style.display = tab === 'hostAgent' ? 'block' : 'none';
     if (uploadBtn) uploadBtn.classList.toggle('active', tab === 'upload');
     if (anonBtn) anonBtn.classList.toggle('active', tab === 'anon');
+    if (hostAgentBtn) hostAgentBtn.classList.toggle('active', tab === 'hostAgent');
 }
 
 function initDebugTools() {
@@ -678,6 +687,142 @@ function initDebugTools() {
             }
             e.target.value = '';
         });
+    }
+
+    // Host Agent ZIP analyze
+    const hostPickBtn = document.getElementById('hostAgentPickBtn');
+    const hostFile = document.getElementById('hostAgentFileModal');
+    if (hostPickBtn && hostFile) {
+        hostPickBtn.addEventListener('click', () => hostFile.click());
+        hostFile.addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (file) {
+                await analyzeHostAgentZipFile(file);
+            }
+            e.target.value = '';
+        });
+    }
+}
+
+function escapeHostAgentHtml(str) {
+    return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+}
+
+function renderHostAgentResults(data) {
+    const box = document.getElementById('hostAgentResults');
+    if (!box) return;
+    if (!data || !data.ok) {
+        box.style.display = 'block';
+        box.innerHTML = `<p style="color:#b00020;margin:0;">${escapeHostAgentHtml(data?.error || 'Analysis failed')}</p>`;
+        return;
+    }
+
+    const report = data.report || {};
+    const summary = report.summary || {};
+    const sev = summary.bySeverity || {};
+    const findings = Array.isArray(report.findings) ? report.findings : [];
+    const ai = data.ai || {};
+
+    const findingRows = findings.slice(0, 50).map((f) => {
+        const color =
+            f.severity === 'critical' ? '#8b0000' :
+            f.severity === 'high' ? '#b45309' :
+            f.severity === 'medium' ? '#1d4ed8' : '#555';
+        return `<tr>
+            <td style="padding:4px 6px;color:${color};font-weight:700;text-transform:uppercase;font-size:11px;">${escapeHostAgentHtml(f.severity)}</td>
+            <td style="padding:4px 6px;font-size:12px;">${escapeHostAgentHtml(f.category)}</td>
+            <td style="padding:4px 6px;font-size:11px;color:#444;">${escapeHostAgentHtml(f.file)}:${f.line || ''}</td>
+            <td style="padding:4px 6px;font-size:12px;font-family:Consolas,monospace;word-break:break-word;">${escapeHostAgentHtml(f.text)}</td>
+        </tr>`;
+    }).join('');
+
+    const aiBlock = ai.used
+        ? `<div style="margin-top:14px;padding:10px;border:1px solid #c7e0ff;border-radius:6px;background:#f0f7ff;">
+            <div style="font-weight:700;margin-bottom:6px;">OpenAI interpretation (${escapeHostAgentHtml(ai.model || 'gpt')})</div>
+            <pre style="white-space:pre-wrap;margin:0;font-family:inherit;font-size:13px;line-height:1.45;color:#111;">${escapeHostAgentHtml(ai.text || '')}</pre>
+           </div>`
+        : `<div style="margin-top:12px;color:#666;font-size:13px;">
+            OpenAI: ${escapeHostAgentHtml(ai.error || (ai.skipped ? 'skipped' : 'not used'))}
+            ${data.openaiConfigured === false ? ' — set OPENAI_API_KEY on the server to enable.' : ''}
+           </div>`;
+
+    box.style.display = 'block';
+    box.innerHTML = `
+        <div style="font-weight:700;font-size:15px;margin-bottom:6px;">${escapeHostAgentHtml(report.verdict || 'Analysis complete')}</div>
+        <div style="font-size:13px;color:#444;margin-bottom:10px;">
+            Host: <strong>${escapeHostAgentHtml(report.hostHint || '—')}</strong>
+            · Files scanned: <strong>${report.filesScanned || 0}</strong>
+            · Findings: <strong>${summary.total || 0}</strong>
+            (crit ${sev.critical || 0} / high ${sev.high || 0} / med ${sev.medium || 0} / low ${sev.low || 0})
+        </div>
+        ${(report.highlights || []).length
+            ? `<ul style="margin:0 0 12px 18px;color:#333;font-size:13px;">${report.highlights.map((h) => `<li>${escapeHostAgentHtml(h)}</li>`).join('')}</ul>`
+            : ''}
+        ${aiBlock}
+        <div style="margin-top:14px;font-weight:700;">Heuristic findings</div>
+        <div style="overflow:auto;max-height:280px;margin-top:6px;border:1px solid #eee;border-radius:4px;">
+            <table style="width:100%;border-collapse:collapse;">
+                <thead>
+                    <tr style="background:#f3f4f6;text-align:left;font-size:12px;">
+                        <th style="padding:6px;">Sev</th>
+                        <th style="padding:6px;">Category</th>
+                        <th style="padding:6px;">Location</th>
+                        <th style="padding:6px;">Line</th>
+                    </tr>
+                </thead>
+                <tbody>${findingRows || '<tr><td colspan="4" style="padding:8px;color:#666;">No matching error/warn lines.</td></tr>'}</tbody>
+            </table>
+        </div>
+    `;
+}
+
+async function analyzeHostAgentZipFile(file) {
+    const status = document.getElementById('hostAgentStatus');
+    const results = document.getElementById('hostAgentResults');
+    if (!file) {
+        if (status) status.textContent = 'No file chosen.';
+        return;
+    }
+    if (!/\.zip$/i.test(file.name)) {
+        if (status) status.textContent = 'Please choose a .zip file.';
+        return;
+    }
+    if (status) status.innerHTML = `<span class="spinner-eye"></span> Analyzing ${file.name}...`;
+    if (results) {
+        results.style.display = 'block';
+        results.innerHTML = '<p style="margin:0;color:#555;">Scanning Host Agent logs…</p>';
+    }
+
+    const formData = new FormData();
+    formData.append('debugFile', file);
+    formData.append('useAi', document.getElementById('hostAgentUseAi')?.checked ? '1' : '0');
+    formData.append('hostHint', document.getElementById('hostAgentHostHint')?.value || '');
+
+    try {
+        const res = await fetch('/citrix/api/host-agent-debug/analyze', {
+            method: 'POST',
+            body: formData
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok || data.success === false) {
+            throw new Error(data.error || `Analyze failed (${res.status})`);
+        }
+        if (status) {
+            status.textContent = `Analyzed ${file.name}` +
+                (data.report?.filesScanned != null ? ` · ${data.report.filesScanned} log file(s)` : '');
+        }
+        renderHostAgentResults(data);
+    } catch (err) {
+        console.error('Host Agent analyze error', err);
+        if (status) status.textContent = `Analyze error: ${err.message || err}`;
+        if (results) {
+            results.style.display = 'block';
+            results.innerHTML = `<p style="color:#b00020;margin:0;">${escapeHostAgentHtml(err.message || err)}</p>`;
+        }
     }
 }
 
@@ -2293,6 +2438,15 @@ function showHorizonTask(taskName) {
         const userReportBaseInput = document.getElementById('userReportHorizonBase');
         if (userReportBaseInput && !userReportBaseInput.value) {
             userReportBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
+        }
+    } else if (taskName === 'eventPoll') {
+        const eventPollBaseInput = document.getElementById('eventPollHorizonBase');
+        if (eventPollBaseInput && !eventPollBaseInput.value) {
+            eventPollBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
+        }
+        const area = document.getElementById('eventPollScriptContent');
+        if (area && !String(area.value || '').trim()) {
+            generateEventPollScript();
         }
     }
 }
@@ -6562,6 +6716,512 @@ function downloadUserReportScript() {
     const a = document.createElement('a');
     a.href = url;
     a.download = 'Horizon-User-Report.ps1';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    window.URL.revokeObjectURL(url);
+}
+
+function normalizeHorizonRestBaseUrl(raw) {
+    let baseUrl = String(raw || '').trim();
+    if (!baseUrl) baseUrl = HZ_ADMIN_DEFAULT_BASE;
+    if (!/^https?:\/\//i.test(baseUrl)) baseUrl = 'https://' + baseUrl;
+    const protoMatch = baseUrl.match(/^(https?:\/\/)(.*)$/i);
+    if (protoMatch) {
+        baseUrl = protoMatch[1] + protoMatch[2].replace(/^\/+/, '');
+    }
+    if (!baseUrl.toLowerCase().includes('/rest')) {
+        baseUrl = baseUrl.replace(/\/+$/, '') + '/rest';
+    }
+    return baseUrl.replace(/\/+$/, '');
+}
+
+function generateEventPollScript() {
+    const baseUrl = normalizeHorizonRestBaseUrl(document.getElementById('eventPollHorizonBase')?.value);
+    const lines = [];
+    lines.push('# Horizon hourly event poll (Omnissa / Horizon REST 2506)');
+    lines.push('# Low impact: server-side Between(time) filter for the last 60 minutes only.');
+    lines.push('# No unfiltered paging. Appends compact events to one JSON store + tile dashboard HTML.');
+    lines.push('# Schedule hourly after first run (credentials saved beside this script).');
+    lines.push('# Example: schtasks /Create /TN "Horizon Event Poll" /SC HOURLY /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"D:\\HZ\\Horizon-Event-Poll.ps1`""');
+    lines.push('');
+    lines.push('$ErrorActionPreference = "Stop"');
+    lines.push('$cwd = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }');
+    lines.push('$ReportsDir = Join-Path $cwd "Reports"');
+    lines.push('if (-not (Test-Path $ReportsDir)) { New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null }');
+    lines.push(`$BaseUrl = "${baseUrl}"`);
+    lines.push('$WindowMinutes = 60');
+    lines.push('$RetainHours = 168');
+    lines.push('$PageSize = 250');
+    lines.push('$MaxPages = 40');
+    lines.push('$PendingNeedle = "the pending session on machine"');
+    lines.push('$OutStore = Join-Path $ReportsDir "horizon-event-store.json"');
+    lines.push('$OutHtml  = Join-Path $ReportsDir "horizon-event-dashboard.html"');
+    lines.push('');
+    lines.push('$ConnectTypeRegex = "AGENT_CONNECTED|BROKER_USER_CONNECT|BROKER_PROTOCOLSESSION_CREATED|BROKER_USER_LOGGED|AGENT_SESSION_CONNECTED"');
+    lines.push('');
+    lines.push('try {');
+    lines.push('    if (-not ("TrustAllCertsPolicy" -as [type])) {');
+    lines.push('        Add-Type @"');
+    lines.push('using System.Net;');
+    lines.push('using System.Security.Cryptography.X509Certificates;');
+    lines.push('public class TrustAllCertsPolicy : ICertificatePolicy {');
+    lines.push('    public bool CheckValidationResult(ServicePoint sp, X509Certificate cert, WebRequest req, int problem) { return true; }');
+    lines.push('}');
+    lines.push('"@');
+    lines.push('    }');
+    lines.push('    [System.Net.ServicePointManager]::CertificatePolicy = New-Object TrustAllCertsPolicy');
+    lines.push('    [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12');
+    lines.push('} catch {}');
+    lines.push('');
+    pushHorizonRestCredentialLines(lines);
+    lines.push('$loginBody = @{ username = $loginUser; password = $loginPass }');
+    lines.push('if ($Domain) { $loginBody.domain = $Domain }');
+    lines.push('$tokenResp = Invoke-RestMethod -Method Post -Uri "$BaseUrl/login" -ContentType "application/json" -Body ($loginBody | ConvertTo-Json)');
+    lines.push('$token = $tokenResp.access_token');
+    lines.push('if (-not $token) { throw "Login did not return access_token" }');
+    lines.push('$headers = @{ Authorization = "Bearer $token"; Accept = "application/json" }');
+    lines.push('');
+    lines.push('$now = [DateTime]::UtcNow');
+    lines.push('$start = $now.AddMinutes(-1 * $WindowMinutes)');
+    lines.push('$nowMs   = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()');
+    lines.push('$startMs = [DateTimeOffset]::UtcNow.AddMinutes(-1 * $WindowMinutes).ToUnixTimeMilliseconds()');
+    lines.push('$hourKey = $now.ToString("yyyy-MM-dd-HH")');
+    lines.push('Write-Host ("Event poll window: last {0} min  {1:u} -> {2:u}  (hour bucket {3})" -f $WindowMinutes, $start, $now, $hourKey) -ForegroundColor Cyan');
+    lines.push('');
+    lines.push('function Get-RestErrorDetail($errRec) {');
+    lines.push('    $status = $null; $body = $null');
+    lines.push('    try { if ($errRec.Exception.Response) { $status = [int]$errRec.Exception.Response.StatusCode } } catch {}');
+    lines.push('    try { if ($errRec.ErrorDetails -and $errRec.ErrorDetails.Message) { $body = [string]$errRec.ErrorDetails.Message } } catch {}');
+    lines.push('    return @{ status = $status; body = $body }');
+    lines.push('}');
+    lines.push('');
+    lines.push('function Get-HzProp($obj, [string[]]$names) {');
+    lines.push('    if (-not $obj) { return $null }');
+    lines.push('    foreach ($n in $names) {');
+    lines.push('        if ($obj.PSObject.Properties.Name -contains $n) {');
+    lines.push('            $v = $obj.$n');
+    lines.push('            if ($null -ne $v -and "$v" -ne "") { return $v }');
+    lines.push('        }');
+    lines.push('    }');
+    lines.push('    return $null');
+    lines.push('}');
+    lines.push('');
+    lines.push('$filterTime = [ordered]@{ type = "Between"; name = "time"; fromValue = $startMs; toValue = $nowMs }');
+    lines.push('$filterEventTime = [ordered]@{ type = "Between"; name = "eventTime"; fromValue = $startMs; toValue = $nowMs }');
+    lines.push('$variants = @(');
+    lines.push('    @{ label = "Between time"; enc = [System.Uri]::EscapeDataString(($filterTime | ConvertTo-Json -Depth 5 -Compress)); json = ($filterTime | ConvertTo-Json -Depth 5 -Compress) },');
+    lines.push('    @{ label = "Between eventTime"; enc = [System.Uri]::EscapeDataString(($filterEventTime | ConvertTo-Json -Depth 5 -Compress)); json = ($filterEventTime | ConvertTo-Json -Depth 5 -Compress) }');
+    lines.push(')');
+    lines.push('$candidatePaths = @("/external/v1/audit-events","/external/v2/audit-events")');
+    lines.push('');
+    lines.push('$all = New-Object System.Collections.ArrayList');
+    lines.push('$usedLabel = $null');
+    lines.push('$usedPath = $null');
+    lines.push('foreach ($epPath in $candidatePaths) {');
+    lines.push('    foreach ($fv in $variants) {');
+    lines.push('        Write-Host ("Trying {0} {1} ..." -f $epPath, $fv.label) -ForegroundColor DarkGray');
+    lines.push('        $page = 1');
+    lines.push('        $gotAny = $false');
+    lines.push('        $failed = $false');
+    lines.push('        $tmp = New-Object System.Collections.ArrayList');
+    lines.push('        while ($true) {');
+    lines.push('            $uri = "{0}{1}?filter={2}&page={3}&size={4}" -f $BaseUrl, $epPath, $fv.enc, $page, $PageSize');
+    lines.push('            try {');
+    lines.push('                $r = Invoke-RestMethod -Method Get -Uri $uri -Headers $headers');
+    lines.push('            } catch {');
+    lines.push('                $det = Get-RestErrorDetail $_');
+    lines.push('                $st = if ($det.status) { "HTTP " + $det.status } else { "no status" }');
+    lines.push('                Write-Warning ("  {0} {1} page {2} -> {3}: {4}" -f $epPath, $fv.label, $page, $st, $_.Exception.Message)');
+    lines.push('                if ($det.body) { Write-Warning ("    " + $det.body.Substring(0, [Math]::Min(240, $det.body.Length))) }');
+    lines.push('                $failed = $true');
+    lines.push('                break');
+    lines.push('            }');
+    lines.push('            $items = $null');
+    lines.push('            if ($r -is [array]) { $items = $r }');
+    lines.push('            elseif ($r -is [pscustomobject] -and $r.PSObject.Properties.Name -contains "items") { $items = $r.items }');
+    lines.push('            if (-not $items -or $items.Count -eq 0) { break }');
+    lines.push('            $gotAny = $true');
+    lines.push('            foreach ($it in $items) { [void]$tmp.Add($it) }');
+    lines.push('            Write-Host ("  page {0}: {1} events (running {2})" -f $page, $items.Count, $tmp.Count) -ForegroundColor DarkGray');
+    lines.push('            if ($items.Count -lt $PageSize) { break }');
+    lines.push('            $page++');
+    lines.push('            if ($page -gt $MaxPages) { Write-Warning "  Page cap hit; stopping this filter."; break }');
+    lines.push('        }');
+    lines.push('        if (-not $failed -and ($gotAny -or $page -eq 1)) {');
+    lines.push('            $all = $tmp');
+    lines.push('            $usedLabel = $fv.label');
+    lines.push('            $usedPath = $epPath');
+    lines.push('            break');
+    lines.push('        }');
+    lines.push('    }');
+    lines.push('    if ($usedPath) { break }');
+    lines.push('}');
+    lines.push('if (-not $usedPath) { throw "Could not query audit-events with a last-hour time filter. Aborting to avoid an unfiltered pull." }');
+    lines.push('Write-Host ("Using {0} + {1}. Events this hour: {2}" -f $usedPath, $usedLabel, $all.Count) -ForegroundColor Green');
+    lines.push('');
+    lines.push('$compact = New-Object System.Collections.ArrayList');
+    lines.push('$connections = 0');
+    lines.push('$pending = 0');
+    lines.push('$errorSev = 0');
+    lines.push('$users = New-Object "System.Collections.Generic.HashSet[string]"');
+    lines.push('$pendingSamples = New-Object System.Collections.ArrayList');
+    lines.push('foreach ($ev in $all) {');
+    lines.push('    $etype = [string](Get-HzProp $ev @("type","event_type","eventType"))');
+    lines.push('    $sev   = [string](Get-HzProp $ev @("severity","event_severity"))');
+    lines.push('    $msg   = [string](Get-HzProp $ev @("message","msg","event_message"))');
+    lines.push('    $user  = [string](Get-HzProp $ev @("user_display_name","userDisplayName","user_name","userName","user_id","userId"))');
+    lines.push('    $mach  = [string](Get-HzProp $ev @("machine_dns_name","machineDnsName","machine_name","machineName","machine_id","machineId"))');
+    lines.push('    $tval  = Get-HzProp $ev @("time","event_time","eventTime")');
+    lines.push('    $timeIso = $null');
+    lines.push('    try {');
+    lines.push('        if ($tval -is [datetime]) { $timeIso = ([datetime]$tval).ToUniversalTime().ToString("o") }');
+    lines.push('        elseif ("$tval" -match "^\\d{10,13}$") {');
+    lines.push('            $ms = [int64]$tval; if ($ms -lt 100000000000) { $ms = $ms * 1000 }');
+    lines.push('            $timeIso = [DateTimeOffset]::FromUnixTimeMilliseconds($ms).UtcDateTime.ToString("o")');
+    lines.push('        } else { $timeIso = [string]$tval }');
+    lines.push('    } catch { $timeIso = [string]$tval }');
+    lines.push('    $row = [ordered]@{');
+    lines.push('        time = $timeIso');
+    lines.push('        type = $etype');
+    lines.push('        severity = $sev');
+    lines.push('        user = $user');
+    lines.push('        machine = $mach');
+    lines.push('        message = $msg');
+    lines.push('    }');
+    lines.push('    [void]$compact.Add([pscustomobject]$row)');
+    lines.push('    if ($etype -match $ConnectTypeRegex) { $connections++ }');
+    lines.push('    if ($msg -and ($msg.ToLower().Contains($PendingNeedle))) {');
+    lines.push('        $pending++');
+    lines.push('        if ($pendingSamples.Count -lt 25) { [void]$pendingSamples.Add([pscustomobject]$row) }');
+    lines.push('    }');
+    lines.push('    if ($sev -match "ERROR|FATAL|AUDIT_FAIL|SEVERE") { $errorSev++ }');
+    lines.push('    if ($user) { [void]$users.Add($user.ToLower()) }');
+    lines.push('}');
+    lines.push('');
+    lines.push('$poll = [ordered]@{');
+    lines.push('    hourKey = $hourKey');
+    lines.push('    polledAt = $now.ToString("o")');
+    lines.push('    windowStart = $start.ToString("o")');
+    lines.push('    windowEnd = $now.ToString("o")');
+    lines.push('    apiPath = $usedPath');
+    lines.push('    filter = $usedLabel');
+    lines.push('    eventCount = $compact.Count');
+    lines.push('    summary = [ordered]@{');
+    lines.push('        connections = $connections');
+    lines.push('        pendingSessionErrors = $pending');
+    lines.push('        errorSeverity = $errorSev');
+    lines.push('        uniqueUsers = $users.Count');
+    lines.push('    }');
+    lines.push('    pendingSamples = @($pendingSamples)');
+    lines.push('    events = @($compact)');
+    lines.push('}');
+    lines.push('');
+    lines.push('$store = $null');
+    lines.push('if (Test-Path -LiteralPath $OutStore) {');
+    lines.push('    try { $store = Get-Content -LiteralPath $OutStore -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $store = $null }');
+    lines.push('}');
+    lines.push('if (-not $store) { $store = [pscustomobject]@{ schema = "horizon-event-poll-v1"; polls = @() } }');
+    lines.push('$existing = @()');
+    lines.push('if ($store.PSObject.Properties.Name -contains "polls" -and $store.polls) { $existing = @($store.polls) }');
+    lines.push('$existing = @($existing | Where-Object { $_.hourKey -ne $hourKey })');
+    lines.push('$cutoff = $now.AddHours(-1 * $RetainHours)');
+    lines.push('$existing = @($existing | Where-Object {');
+    lines.push('    try { [datetime]$_.polledAt -ge $cutoff } catch { $true }');
+    lines.push('})');
+    lines.push('$polls = @($existing + [pscustomobject]$poll)');
+    lines.push('$storeOut = [ordered]@{');
+    lines.push('    schema = "horizon-event-poll-v1"');
+    lines.push('    updatedAt = $now.ToString("o")');
+    lines.push('    retainHours = $RetainHours');
+    lines.push('    controller = $BaseUrl');
+    lines.push('    polls = $polls');
+    lines.push('}');
+    lines.push('($storeOut | ConvertTo-Json -Depth 8) | Out-File -FilePath $OutStore -Encoding UTF8');
+    lines.push('Write-Host ("Wrote store: {0}  ({1} hour buckets)" -f $OutStore, $polls.Count) -ForegroundColor Green');
+    lines.push('');
+    lines.push('$history = @($polls | Select-Object -Last 24 | ForEach-Object {');
+    lines.push('    [ordered]@{');
+    lines.push('        hourKey = $_.hourKey');
+    lines.push('        polledAt = $_.polledAt');
+    lines.push('        connections = $_.summary.connections');
+    lines.push('        pendingSessionErrors = $_.summary.pendingSessionErrors');
+    lines.push('        errorSeverity = $_.summary.errorSeverity');
+    lines.push('        uniqueUsers = $_.summary.uniqueUsers');
+    lines.push('        eventCount = $_.eventCount');
+    lines.push('    }');
+    lines.push('})');
+    lines.push('$dashData = [ordered]@{');
+    lines.push('    schema = "horizon-event-dashboard-v1"');
+    lines.push('    generatedAt = $now.ToString("o")');
+    lines.push('    controller = $BaseUrl');
+    lines.push('    latest = [ordered]@{');
+    lines.push('        hourKey = $poll.hourKey');
+    lines.push('        polledAt = $poll.polledAt');
+    lines.push('        windowStart = $poll.windowStart');
+    lines.push('        windowEnd = $poll.windowEnd');
+    lines.push('        eventCount = $poll.eventCount');
+    lines.push('        summary = $poll.summary');
+    lines.push('        pendingSamples = $poll.pendingSamples');
+    lines.push('    }');
+    lines.push('    history = $history');
+    lines.push('}');
+    lines.push('$jsonEmbed = $dashData | ConvertTo-Json -Depth 8 -Compress');
+    lines.push('');
+    lines.push("$DashTemplate = @'");
+    const dashHtml = getHorizonEventDashboardHtmlTemplate();
+    dashHtml.split('\n').forEach((l) => lines.push(l));
+    lines.push("'@");
+    lines.push('$html = $DashTemplate.Replace("__HZ_EVENT_DATA_JSON__", $jsonEmbed)');
+    lines.push('$html | Out-File -FilePath $OutHtml -Encoding UTF8');
+    lines.push('Write-Host ("Wrote dashboard: {0}" -f $OutHtml) -ForegroundColor Green');
+    lines.push('Write-Host ("Past hour  connections={0}  pendingSession={1}  errorSeverity={2}  uniqueUsers={3}" -f $connections, $pending, $errorSev, $users.Count) -ForegroundColor Cyan');
+    lines.push('');
+
+    const out = document.getElementById('eventPollScriptContent');
+    if (out) out.value = lines.join('\n');
+}
+
+function getHorizonEventDashboardHtmlTemplate() {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Horizon Event Dashboard</title>
+<style>
+  :root { --bg:#0f172a; --card:#111827; --ink:#e5e7eb; --muted:#94a3b8; --line:#1f2937; }
+  * { box-sizing: border-box; }
+  body { margin:0; font-family: Segoe UI, system-ui, sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:22px 24px 8px; }
+  h1 { margin:0 0 6px; font-size:22px; }
+  .sub { color:var(--muted); font-size:13px; }
+  .wrap { padding:16px 24px 40px; }
+  .tiles { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:14px; }
+  .tile { border-radius:14px; padding:16px 18px; background:#0b1220; border:1px solid var(--line); min-height:128px; }
+  .tile .label { font-size:13px; color:var(--muted); font-weight:700; letter-spacing:.02em; }
+  .tile .num { font-size:42px; font-weight:800; line-height:1.15; margin:10px 0 6px; }
+  .tile .hint { font-size:12px; color:var(--muted); }
+  .green { background:#052e16; border-color:#166534; }
+  .amber { background:#451a03; border-color:#b45309; }
+  .red { background:#450a0a; border-color:#b91c1c; }
+  .panel { margin-top:22px; padding:16px; border:1px solid var(--line); border-radius:12px; background:#0b1220; }
+  .panel h2 { margin:0 0 12px; font-size:16px; }
+  .cfg { display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:12px; }
+  .cfg label { display:block; font-size:12px; color:var(--muted); margin-bottom:4px; }
+  .cfg input { width:100%; padding:8px; border-radius:8px; border:1px solid #334155; background:#020617; color:#e5e7eb; }
+  .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  button, .filebtn { background:#e5b600; color:#111; border:0; border-radius:8px; padding:8px 12px; font-weight:700; cursor:pointer; }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:8px; border-bottom:1px solid #1f2937; vertical-align:top; }
+  th { color:#94a3b8; font-size:12px; }
+  .hist { display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }
+  .pill { font-size:11px; padding:4px 7px; border-radius:999px; background:#1e293b; color:#cbd5e1; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Horizon Event Dashboard</h1>
+  <div class="sub" id="meta">Loading…</div>
+</header>
+<div class="wrap">
+  <div class="tiles" id="tiles"></div>
+  <div class="panel">
+    <h2>Thresholds (saved in this browser)</h2>
+    <p class="sub" style="margin-top:0;">Green is 0 through Green max. Amber is Green max + 1 through Amber max. Red is above Amber max.</p>
+    <div class="cfg">
+      <div>
+        <label>Connections — green max</label>
+        <input id="cGreen" type="number" min="0">
+        <label style="margin-top:8px;">Connections — amber max</label>
+        <input id="cAmber" type="number" min="0">
+      </div>
+      <div>
+        <label>Pending session on machine — green max</label>
+        <input id="pGreen" type="number" min="0">
+        <label style="margin-top:8px;">Pending session on machine — amber max</label>
+        <input id="pAmber" type="number" min="0">
+      </div>
+      <div>
+        <label>Error-severity events — green max</label>
+        <input id="eGreen" type="number" min="0">
+        <label style="margin-top:8px;">Error-severity events — amber max</label>
+        <input id="eAmber" type="number" min="0">
+      </div>
+    </div>
+    <div class="row">
+      <button type="button" id="saveCfg">Save thresholds</button>
+      <label class="filebtn">Load event store JSON<input id="fileJson" type="file" accept=".json,application/json" style="display:none"></label>
+    </div>
+  </div>
+  <div class="panel">
+    <h2>Pending session samples (latest hour)</h2>
+    <div id="samples"></div>
+  </div>
+  <div class="panel">
+    <h2>Recent hours</h2>
+    <div class="hist" id="hist"></div>
+  </div>
+</div>
+<script>
+var DATA = __HZ_EVENT_DATA_JSON__;
+var DEFAULTS = {
+  connections: { greenMax: 100000, amberMax: 200000 },
+  pending: { greenMax: 2, amberMax: 10 },
+  errors: { greenMax: 5, amberMax: 20 }
+};
+function loadCfg() {
+  try {
+    var raw = localStorage.getItem("hzEventDashThresholds");
+    if (!raw) return JSON.parse(JSON.stringify(DEFAULTS));
+    var c = JSON.parse(raw);
+    return {
+      connections: { greenMax: num(c.connections && c.connections.greenMax, DEFAULTS.connections.greenMax), amberMax: num(c.connections && c.connections.amberMax, DEFAULTS.connections.amberMax) },
+      pending: { greenMax: num(c.pending && c.pending.greenMax, DEFAULTS.pending.greenMax), amberMax: num(c.pending && c.pending.amberMax, DEFAULTS.pending.amberMax) },
+      errors: { greenMax: num(c.errors && c.errors.greenMax, DEFAULTS.errors.greenMax), amberMax: num(c.errors && c.errors.amberMax, DEFAULTS.errors.amberMax) }
+    };
+  } catch (e) { return JSON.parse(JSON.stringify(DEFAULTS)); }
+}
+function num(v, d) { var n = Number(v); return Number.isFinite(n) ? n : d; }
+function band(n, greenMax, amberMax) {
+  if (n <= greenMax) return "green";
+  if (n <= amberMax) return "amber";
+  return "red";
+}
+function esc(s) {
+  return String(s == null ? "" : s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+}
+function fillCfg(cfg) {
+  document.getElementById("cGreen").value = cfg.connections.greenMax;
+  document.getElementById("cAmber").value = cfg.connections.amberMax;
+  document.getElementById("pGreen").value = cfg.pending.greenMax;
+  document.getElementById("pAmber").value = cfg.pending.amberMax;
+  document.getElementById("eGreen").value = cfg.errors.greenMax;
+  document.getElementById("eAmber").value = cfg.errors.amberMax;
+}
+function readCfg() {
+  return {
+    connections: { greenMax: num(document.getElementById("cGreen").value, DEFAULTS.connections.greenMax), amberMax: num(document.getElementById("cAmber").value, DEFAULTS.connections.amberMax) },
+    pending: { greenMax: num(document.getElementById("pGreen").value, DEFAULTS.pending.greenMax), amberMax: num(document.getElementById("pAmber").value, DEFAULTS.pending.amberMax) },
+    errors: { greenMax: num(document.getElementById("eGreen").value, DEFAULTS.errors.greenMax), amberMax: num(document.getElementById("eAmber").value, DEFAULTS.errors.amberMax) }
+  };
+}
+function summarizeFromStore(store) {
+  var polls = (store && store.polls) ? store.polls.slice() : [];
+  if (!polls.length) return null;
+  polls.sort(function(a,b){ return String(a.polledAt||"").localeCompare(String(b.polledAt||"")); });
+  var latestPoll = polls[polls.length-1];
+  var history = polls.slice(-24).map(function(p){
+    return {
+      hourKey: p.hourKey,
+      polledAt: p.polledAt,
+      connections: p.summary && p.summary.connections,
+      pendingSessionErrors: p.summary && p.summary.pendingSessionErrors,
+      errorSeverity: p.summary && p.summary.errorSeverity,
+      uniqueUsers: p.summary && p.summary.uniqueUsers,
+      eventCount: p.eventCount
+    };
+  });
+  return {
+    schema: "horizon-event-dashboard-v1",
+    generatedAt: store.updatedAt || latestPoll.polledAt,
+    controller: store.controller || "",
+    latest: {
+      hourKey: latestPoll.hourKey,
+      polledAt: latestPoll.polledAt,
+      windowStart: latestPoll.windowStart,
+      windowEnd: latestPoll.windowEnd,
+      eventCount: latestPoll.eventCount,
+      summary: latestPoll.summary || {},
+      pendingSamples: latestPoll.pendingSamples || []
+    },
+    history: history
+  };
+}
+function render(data) {
+  var cfg = loadCfg();
+  fillCfg(cfg);
+  var latest = (data && data.latest) || {};
+  var s = latest.summary || {};
+  var connections = Number(s.connections || 0);
+  var pending = Number(s.pendingSessionErrors || 0);
+  var errors = Number(s.errorSeverity || 0);
+  var users = Number(s.uniqueUsers || 0);
+  document.getElementById("meta").textContent =
+    "Last poll " + (latest.polledAt || "n/a") +
+    "  |  window " + (latest.windowStart || "") + " → " + (latest.windowEnd || "") +
+    "  |  events " + (latest.eventCount || 0) +
+    (data && data.controller ? "  |  " + data.controller : "");
+  var tiles = [
+    { title: "Connections (past hour)", n: connections, g: cfg.connections.greenMax, a: cfg.connections.amberMax, hint: users + " unique users" },
+    { title: "Pending session on machine", n: pending, g: cfg.pending.greenMax, a: cfg.pending.amberMax, hint: "Message contains “the pending session on machine”" },
+    { title: "Error-severity events", n: errors, g: cfg.errors.greenMax, a: cfg.errors.amberMax, hint: "severity ERROR / FATAL / SEVERE" }
+  ];
+  document.getElementById("tiles").innerHTML = tiles.map(function(t){
+    return '<div class="tile ' + band(t.n, t.g, t.a) + '"><div class="label">' + esc(t.title) + '</div><div class="num">' + t.n + '</div><div class="hint">' + esc(t.hint) + '</div></div>';
+  }).join("");
+  var samples = latest.pendingSamples || [];
+  if (!samples.length) {
+    document.getElementById("samples").innerHTML = '<p class="sub">None in the latest hour.</p>';
+  } else {
+    document.getElementById("samples").innerHTML = '<table><thead><tr><th>Time</th><th>User</th><th>Machine</th><th>Message</th></tr></thead><tbody>' +
+      samples.map(function(r){
+        return '<tr><td>' + esc(r.time) + '</td><td>' + esc(r.user) + '</td><td>' + esc(r.machine) + '</td><td>' + esc(r.message) + '</td></tr>';
+      }).join("") + '</tbody></table>';
+  }
+  var hist = (data && data.history) || [];
+  document.getElementById("hist").innerHTML = hist.map(function(h){
+    return '<span class="pill">' + esc(h.hourKey || "") + ' · conn ' + Number(h.connections||0) + ' · pend ' + Number(h.pendingSessionErrors||0) + '</span>';
+  }).join("") || '<span class="sub">No history yet.</span>';
+}
+document.getElementById("saveCfg").addEventListener("click", function(){
+  var cfg = readCfg();
+  localStorage.setItem("hzEventDashThresholds", JSON.stringify(cfg));
+  render(DATA);
+});
+document.getElementById("fileJson").addEventListener("change", function(ev){
+  var f = ev.target.files && ev.target.files[0];
+  if (!f) return;
+  var reader = new FileReader();
+  reader.onload = function(){
+    try {
+      var parsed = JSON.parse(reader.result);
+      var dash = parsed && parsed.polls ? summarizeFromStore(parsed) : parsed;
+      if (!dash) throw new Error("No polls in file");
+      DATA = dash;
+      render(DATA);
+    } catch (e) { alert("Could not read JSON: " + e.message); }
+  };
+  reader.readAsText(f);
+  ev.target.value = "";
+});
+render(DATA);
+</script>
+</body>
+</html>`;
+}
+
+function copyEventPollScript() {
+    const area = document.getElementById('eventPollScriptContent');
+    if (!area) return;
+    if (!String(area.value || '').trim()) generateEventPollScript();
+    area.select();
+    document.execCommand('copy');
+}
+
+function downloadEventPollScript() {
+    const area = document.getElementById('eventPollScriptContent');
+    if (area && !String(area.value || '').trim()) generateEventPollScript();
+    const scriptContent = document.getElementById('eventPollScriptContent')?.value || '';
+    if (!scriptContent) {
+        alert('Generate the script first.');
+        return;
+    }
+    const blob = new Blob([scriptContent], { type: 'text/plain' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'Horizon-Event-Poll.ps1';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
