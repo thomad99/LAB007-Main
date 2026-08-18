@@ -1271,28 +1271,20 @@
 
                 <!-- Hourly Omnissa Horizon event poll -->
                 <div id="eventPollTask" class="horizon-task-panel">
-                    <h3>Event Poll (Horizon REST — last hour)</h3>
-                    <p style="color:#666;">Low-impact hourly poller. Queries Omnissa Horizon <code>/external/v1/audit-events</code> with a <strong>server-side last-hour time filter</strong> (no unfiltered dump). Appends compact events into a single store file you can query offline, and refreshes a tile dashboard HTML.</p>
-                    <ul style="color:#555; margin: 8px 0 14px 18px; font-size: 14px;">
-                        <li>Store: <code>Reports\horizon-event-store.json</code> (one file; re-runs replace the same hour bucket; keeps 7 days by default)</li>
-                        <li>Dashboard: <code>Reports\horizon-event-dashboard.html</code> — connections and “pending session on machine” tiles, with green / amber / red thresholds you can edit on the page</li>
-                        <li>Schedule hourly (Task Scheduler) after the first interactive credential save</li>
-                    </ul>
+                    <h3>Event Poll</h3>
 
-                    <div style="display: grid; grid-template-columns: 1fr; gap: 10px; margin: 10px 0 15px 0;">
+                    <div style="display: grid; grid-template-columns: 1fr 220px; gap: 12px; margin: 10px 0 15px 0;">
                         <div>
                             <label for="eventPollHorizonBase" style="font-weight: 600;">Horizon Controller Address</label>
                             <input type="text" id="eventPollHorizonBase" value="https://hd.steward.org" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
-                            <small style="color: #666;">REST base URL (same pattern as App Report / User Report).</small>
+                        </div>
+                        <div>
+                            <label for="eventPollWindowMin" style="font-weight: 600;">Poll period (minutes)</label>
+                            <input type="number" id="eventPollWindowMin" min="1" max="1440" step="1" value="60" style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;">
                         </div>
                     </div>
 
-                    <div style="display: flex; flex-wrap: wrap; gap: 10px; margin: 10px 0 20px 0;">
-                        <button class="btn btn-primary" onclick="generateEventPollScript()">Generate Event Poll Script</button>
-                    </div>
-
                     <div id="eventPollScriptOutput" style="margin-top: 10px;">
-                        <h4>Generated Script:</h4>
                         <textarea id="eventPollScriptContent" readonly style="width: 100%; height: 380px; font-family: 'Courier New', monospace; font-size: 12px; padding: 10px; border: 1px solid #ddd; border-radius: 4px; background-color: #f8f9fa;"></textarea>
                         <div style="margin-top: 10px; text-align: right;">
                             <button class="btn btn-secondary" onclick="copyEventPollScript()">Copy Script</button>

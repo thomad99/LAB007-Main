@@ -192,6 +192,12 @@ document.addEventListener('DOMContentLoaded', async function() {
     if (eventPollBaseInput && !eventPollBaseInput.value) {
         eventPollBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
     }
+    const refreshEventPollScript = () => {
+        if (typeof generateEventPollScript === 'function') generateEventPollScript();
+    };
+    if (eventPollBaseInput) eventPollBaseInput.addEventListener('change', refreshEventPollScript);
+    const eventPollWindowMin = document.getElementById('eventPollWindowMin');
+    if (eventPollWindowMin) eventPollWindowMin.addEventListener('change', refreshEventPollScript);
 
     // GoldenSun VMware toggle
     const goldenSunVmwareToggle = document.getElementById('goldenSunVmwareToggle');
@@ -2444,10 +2450,7 @@ function showHorizonTask(taskName) {
         if (eventPollBaseInput && !eventPollBaseInput.value) {
             eventPollBaseInput.value = HZ_ADMIN_DEFAULT_BASE;
         }
-        const area = document.getElementById('eventPollScriptContent');
-        if (area && !String(area.value || '').trim()) {
-            generateEventPollScript();
-        }
+        generateEventPollScript();
     }
 }
 
@@ -6736,21 +6739,28 @@ function normalizeHorizonRestBaseUrl(raw) {
     return baseUrl.replace(/\/+$/, '');
 }
 
+function readEventPollWindowMinutes() {
+    const n = Number(document.getElementById('eventPollWindowMin')?.value);
+    if (!Number.isFinite(n) || n < 1) return 60;
+    return Math.max(1, Math.min(1440, Math.round(n)));
+}
+
 function generateEventPollScript() {
     const baseUrl = normalizeHorizonRestBaseUrl(document.getElementById('eventPollHorizonBase')?.value);
+    const windowMinutes = readEventPollWindowMinutes();
     const lines = [];
-    lines.push('# Horizon hourly event poll (Omnissa / Horizon REST 2506)');
-    lines.push('# Low impact: server-side Between(time) filter for the last 60 minutes only.');
+    lines.push('# Horizon event poll (Omnissa / Horizon REST 2506)');
+    lines.push(`# Server-side Between(time) filter for the last ${windowMinutes} minutes.`);
     lines.push('# No unfiltered paging. Appends compact events to one JSON store + tile dashboard HTML.');
-    lines.push('# Schedule hourly after first run (credentials saved beside this script).');
-    lines.push('# Example: schtasks /Create /TN "Horizon Event Poll" /SC HOURLY /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"D:\\HZ\\Horizon-Event-Poll.ps1`""');
+    lines.push('# Schedule to match the poll period after first run (credentials saved beside this script).');
+    lines.push(`# Example: schtasks /Create /TN "Horizon Event Poll" /SC MINUTE /MO ${windowMinutes} /TR "powershell.exe -NoProfile -ExecutionPolicy Bypass -File `"D:\\HZ\\Horizon-Event-Poll.ps1`""`);
     lines.push('');
     lines.push('$ErrorActionPreference = "Stop"');
     lines.push('$cwd = if ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }');
     lines.push('$ReportsDir = Join-Path $cwd "Reports"');
     lines.push('if (-not (Test-Path $ReportsDir)) { New-Item -ItemType Directory -Path $ReportsDir -Force | Out-Null }');
     lines.push(`$BaseUrl = "${baseUrl}"`);
-    lines.push('$WindowMinutes = 60');
+    lines.push(`$WindowMinutes = ${windowMinutes}`);
     lines.push('$RetainHours = 168');
     lines.push('$PageSize = 250');
     lines.push('$MaxPages = 40');
@@ -6786,8 +6796,9 @@ function generateEventPollScript() {
     lines.push('$start = $now.AddMinutes(-1 * $WindowMinutes)');
     lines.push('$nowMs   = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()');
     lines.push('$startMs = [DateTimeOffset]::UtcNow.AddMinutes(-1 * $WindowMinutes).ToUnixTimeMilliseconds()');
-    lines.push('$hourKey = $now.ToString("yyyy-MM-dd-HH")');
-    lines.push('Write-Host ("Event poll window: last {0} min  {1:u} -> {2:u}  (hour bucket {3})" -f $WindowMinutes, $start, $now, $hourKey) -ForegroundColor Cyan');
+    lines.push('$bucketMs = [int64]([Math]::Floor($nowMs / ($WindowMinutes * 60L * 1000L)) * ($WindowMinutes * 60L * 1000L))');
+    lines.push('$hourKey = [DateTimeOffset]::FromUnixTimeMilliseconds($bucketMs).UtcDateTime.ToString("yyyy-MM-dd-HH-mm")');
+    lines.push('Write-Host ("Event poll window: last {0} min  {1:u} -> {2:u}  (bucket {3})" -f $WindowMinutes, $start, $now, $hourKey) -ForegroundColor Cyan');
     lines.push('');
     lines.push('function Get-RestErrorDetail($errRec) {');
     lines.push('    $status = $null; $body = $null');
@@ -6902,6 +6913,7 @@ function generateEventPollScript() {
     lines.push('$poll = [ordered]@{');
     lines.push('    hourKey = $hourKey');
     lines.push('    polledAt = $now.ToString("o")');
+    lines.push('    windowMinutes = $WindowMinutes');
     lines.push('    windowStart = $start.ToString("o")');
     lines.push('    windowEnd = $now.ToString("o")');
     lines.push('    apiPath = $usedPath');
@@ -6955,9 +6967,11 @@ function generateEventPollScript() {
     lines.push('    schema = "horizon-event-dashboard-v1"');
     lines.push('    generatedAt = $now.ToString("o")');
     lines.push('    controller = $BaseUrl');
+    lines.push('    windowMinutes = $WindowMinutes');
     lines.push('    latest = [ordered]@{');
     lines.push('        hourKey = $poll.hourKey');
     lines.push('        polledAt = $poll.polledAt');
+    lines.push('        windowMinutes = $WindowMinutes');
     lines.push('        windowStart = $poll.windowStart');
     lines.push('        windowEnd = $poll.windowEnd');
     lines.push('        eventCount = $poll.eventCount');
@@ -7055,7 +7069,7 @@ function getHorizonEventDashboardHtmlTemplate() {
     </div>
   </div>
   <div class="panel">
-    <h2>Pending session samples (latest hour)</h2>
+    <h2>Pending session samples (latest poll)</h2>
     <div id="samples"></div>
   </div>
   <div class="panel">
@@ -7126,9 +7140,11 @@ function summarizeFromStore(store) {
     schema: "horizon-event-dashboard-v1",
     generatedAt: store.updatedAt || latestPoll.polledAt,
     controller: store.controller || "",
+    windowMinutes: latestPoll.windowMinutes || 60,
     latest: {
       hourKey: latestPoll.hourKey,
       polledAt: latestPoll.polledAt,
+      windowMinutes: latestPoll.windowMinutes || 60,
       windowStart: latestPoll.windowStart,
       windowEnd: latestPoll.windowEnd,
       eventCount: latestPoll.eventCount,
@@ -7147,13 +7163,15 @@ function render(data) {
   var pending = Number(s.pendingSessionErrors || 0);
   var errors = Number(s.errorSeverity || 0);
   var users = Number(s.uniqueUsers || 0);
+  var windowMin = Number((latest.windowMinutes != null ? latest.windowMinutes : (data && data.windowMinutes)) || 60);
   document.getElementById("meta").textContent =
     "Last poll " + (latest.polledAt || "n/a") +
+    "  |  last " + windowMin + " min" +
     "  |  window " + (latest.windowStart || "") + " → " + (latest.windowEnd || "") +
     "  |  events " + (latest.eventCount || 0) +
     (data && data.controller ? "  |  " + data.controller : "");
   var tiles = [
-    { title: "Connections (past hour)", n: connections, g: cfg.connections.greenMax, a: cfg.connections.amberMax, hint: users + " unique users" },
+    { title: "Connections (last " + windowMin + " min)", n: connections, g: cfg.connections.greenMax, a: cfg.connections.amberMax, hint: users + " unique users" },
     { title: "Pending session on machine", n: pending, g: cfg.pending.greenMax, a: cfg.pending.amberMax, hint: "Message contains “the pending session on machine”" },
     { title: "Error-severity events", n: errors, g: cfg.errors.greenMax, a: cfg.errors.amberMax, hint: "severity ERROR / FATAL / SEVERE" }
   ];
@@ -7202,19 +7220,18 @@ render(DATA);
 }
 
 function copyEventPollScript() {
+    generateEventPollScript();
     const area = document.getElementById('eventPollScriptContent');
     if (!area) return;
-    if (!String(area.value || '').trim()) generateEventPollScript();
     area.select();
     document.execCommand('copy');
 }
 
 function downloadEventPollScript() {
-    const area = document.getElementById('eventPollScriptContent');
-    if (area && !String(area.value || '').trim()) generateEventPollScript();
+    generateEventPollScript();
     const scriptContent = document.getElementById('eventPollScriptContent')?.value || '';
     if (!scriptContent) {
-        alert('Generate the script first.');
+        alert('Could not build the Event Poll script.');
         return;
     }
     const blob = new Blob([scriptContent], { type: 'text/plain' });
