@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
   <title>SmartHours | LAB007</title>
-  <link rel="icon" type="image/png" href="/SmartHours/assets/smarthours-logo.png?v=2">
-  <link rel="apple-touch-icon" href="/SmartHours/assets/smarthours-logo.png?v=2">
+  <link rel="icon" type="image/png" href="/SmartHours/assets/smarthours-logo.png?v=3">
+  <link rel="apple-touch-icon" href="/SmartHours/assets/smarthours-logo.png?v=3">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;600;700&family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -45,10 +45,10 @@
     .brand-logo {
       width: min(280px, 72vw);
       height: auto;
-      border-radius: 12px;
+      border-radius: 0;
       flex: 0 0 auto;
-      background: #fff;
-      padding: 8px 12px;
+      background: transparent;
+      padding: 0;
     }
     .brand-text { min-width: 0; }
     .sub { margin: 4px 0 0; color: var(--muted); }
@@ -167,9 +167,10 @@
     body.customer-mode .brand-logo {
       width: min(168px, 48vw);
       height: auto;
-      border-radius: 10px;
-      padding: 5px 7px;
+      border-radius: 0;
+      padding: 0;
       box-shadow: none;
+      background: transparent;
     }
     body.customer-mode .brand-text { display: none; }
     .about-link { display: none !important; }
@@ -802,7 +803,7 @@
   <div id="app" class="wrap">
     <header>
       <div class="brand">
-        <img class="brand-logo" src="/SmartHours/assets/smarthours-lockup.png?v=2" width="640" height="180" alt="SmartHours" onerror="this.onerror=null;this.src='/SmartHours/assets/smarthours-logo.png?v=2'">
+        <img class="brand-logo" src="/SmartHours/assets/smarthours-lockup.png?v=3" width="640" height="180" alt="SmartHours" onerror="this.onerror=null;this.src='/SmartHours/assets/smarthours-logo.png?v=3'">
         <div class="brand-text">
           <h1 id="pageTitle">SmartHours</h1>
           <p class="sub" id="pageSub">Set up your hours display</p>
