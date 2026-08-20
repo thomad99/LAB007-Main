@@ -106,6 +106,11 @@
       overflow: hidden;
       height: 100dvh;
     }
+    body.has-studio:not([data-studio-tab="design"]) {
+      overflow: auto;
+      height: auto;
+      min-height: 100dvh;
+    }
     body.has-studio .wrap {
       width: calc(100% - 24px);
       max-width: none;
@@ -118,6 +123,11 @@
       overflow: hidden;
       box-sizing: border-box;
     }
+    body.has-studio:not([data-studio-tab="design"]) .wrap {
+      height: auto;
+      max-height: none;
+      overflow: visible;
+    }
     body.customer-mode.has-studio .wrap { padding-top: 12px; }
     body.customer-mode.has-studio header { margin-bottom: 8px; }
     body.has-studio header { flex: 0 0 auto; margin-bottom: 8px; }
@@ -128,7 +138,14 @@
       align-items: start;
       overflow: auto;
     }
-    body.has-studio .grid-main:has(#tab-design.active) {
+    body.has-studio:not([data-studio-tab="design"]) .grid-main {
+      flex: 0 0 auto;
+      align-items: start;
+      align-content: start;
+      grid-auto-rows: min-content;
+      overflow: visible;
+    }
+    body.has-studio[data-studio-tab="design"] .grid-main {
       align-items: stretch;
       overflow: hidden;
     }
@@ -143,30 +160,47 @@
       flex-direction: column;
       justify-content: flex-start;
       align-items: stretch;
+      align-self: start;
       min-height: 0;
       height: auto;
       max-height: 100%;
       overflow: auto;
       gap: 10px;
     }
-    body.has-studio .editor.open:has(#tab-design.active) {
+    body.has-studio:not([data-studio-tab="design"]) .editor.open {
+      display: block !important;
+      height: auto !important;
+      max-height: none !important;
+      overflow: visible;
+    }
+    body.has-studio[data-studio-tab="design"] .editor.open {
       height: 100%;
+      max-height: 100%;
+      align-self: stretch;
       overflow: hidden;
     }
     body.has-studio .tabs { margin: 0 0 10px; flex: 0 0 auto; }
-    body.has-studio .tab-panel:not(.active) { display: none !important; }
+    body.has-studio .tab-panel:not(.active),
+    #tab-design:not(.active) {
+      display: none !important;
+      height: 0 !important;
+      min-height: 0 !important;
+      overflow: hidden !important;
+    }
     body.has-studio .tab-panel.active {
       flex: 0 0 auto;
       min-height: 0;
-      align-self: stretch;
+      margin-top: 0;
       overflow: visible;
     }
     #tab-hours.active,
     #tab-devices.active,
-    #tab-info.active {
-      display: block;
-      flex: 0 0 auto;
-      margin-top: 0;
+    #tab-info.active,
+    #tab-preview.active {
+      display: block !important;
+      flex: none !important;
+      margin-top: 0 !important;
+      height: auto !important;
     }
     #tab-design.active {
       display: flex !important;
@@ -1094,7 +1128,7 @@
     .canvas-el.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
   </style>
 </head>
-<body class="customer-mode">
+<body class="customer-mode" data-studio-tab="info">
   <script>
     (function () {
       var admin = /smarthours-admin/i.test(location.pathname);
@@ -3205,6 +3239,8 @@
         suppressAutosave += 1;
         document.body.classList.add('has-studio');
         editor.classList.add('open');
+        const activeTab = document.querySelector('.tabs [data-tab].active');
+        document.body.dataset.studioTab = (activeTab && activeTab.dataset.tab) || 'info';
         selectedElId = null;
         editingTextId = null;
         editingDesignId = null;
@@ -3689,6 +3725,7 @@
           document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
           btn.classList.add('active');
           document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+          document.body.dataset.studioTab = btn.dataset.tab || 'info';
           if (btn.dataset.tab === 'design') {
             renderCanvas();
             scaleTablet();
