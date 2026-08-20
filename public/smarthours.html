@@ -102,27 +102,38 @@
       min-width: 0;
     }
     body.admin-mode .customer-list { max-height: none; }
+    body.has-studio {
+      overflow: hidden;
+      height: 100dvh;
+    }
     body.has-studio .wrap {
       width: calc(100% - 24px);
       max-width: none;
-      min-height: 100vh;
+      height: 100dvh;
+      max-height: 100dvh;
+      min-height: 0;
       display: flex;
       flex-direction: column;
-      padding-bottom: 12px;
+      padding: 12px 0;
+      overflow: hidden;
+      box-sizing: border-box;
     }
     body.customer-mode.has-studio .wrap { padding-top: 12px; }
     body.customer-mode.has-studio header { margin-bottom: 8px; }
+    body.has-studio header { flex: 0 0 auto; margin-bottom: 8px; }
     body.has-studio .status { min-height: 0; margin-bottom: 6px; }
     body.has-studio .grid-main {
       flex: 1 1 auto;
       min-height: 0;
       align-items: stretch;
+      overflow: hidden;
     }
     body.has-studio .editor.open {
       display: flex;
       flex-direction: column;
       min-height: 0;
       height: 100%;
+      overflow: hidden;
       gap: 10px;
     }
     body.has-studio .tabs { margin: 0 0 10px; flex: 0 0 auto; }
@@ -130,6 +141,7 @@
       flex: 0 1 auto;
       min-height: 0;
       align-self: stretch;
+      overflow: auto;
     }
     #tab-hours.active {
       display: block;
@@ -141,6 +153,7 @@
       flex: 1 1 auto;
       min-height: 0;
       height: auto;
+      overflow: hidden;
     }
     .customer-list { display: grid; gap: 8px; max-height: 70vh; overflow: auto; }
     .customer-item {
@@ -693,6 +706,7 @@
       flex: 1 1 auto;
       min-height: 0;
       height: 100%;
+      overflow: hidden;
     }
     @media (max-width: 900px) { .design-layout { grid-template-columns: 1fr; } }
     .design-canvas-col {
@@ -701,6 +715,7 @@
       gap: 10px;
       min-width: 0;
       min-height: 0;
+      overflow: hidden;
     }
     .canvas-tools {
       flex: 0 0 auto;
@@ -790,14 +805,13 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      overflow: auto;
-      padding: 16px;
+      overflow: hidden;
+      padding: 12px;
       background: #070b14;
       border-radius: 12px;
       border: 1px solid var(--line);
       min-height: 0;
       flex: 1 1 auto;
-      max-height: none;
     }
     .canvas-screen-meta {
       flex: 0 0 auto;
@@ -2216,15 +2230,7 @@
         const boxW = swap ? TABLET.height : TABLET.width;
         const boxH = swap ? TABLET.width : TABLET.height;
         const fitContain = Math.min(maxW / boxW, maxH / boxH);
-        const fitWidth = maxW / boxW;
-        let scale = fitContain;
-        if (window.innerWidth >= 900) {
-          const minRead = 1.7;
-          const maxRead = 2.25;
-          scale = Math.min(fitWidth, maxRead);
-          if (scale < minRead) scale = Math.min(minRead, fitWidth);
-        }
-        scale = Math.max(0.25, scale);
+        const scale = Math.max(0.25, Math.min(fitContain, 4));
         canvasPreviewScale = scale;
         const scaledW = Math.max(1, Math.round(boxW * scale));
         const scaledH = Math.max(1, Math.round(boxH * scale));
