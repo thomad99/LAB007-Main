@@ -1156,7 +1156,7 @@
       }
       .canvas-tools-footer {
         display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
+        grid-template-columns: 1fr 1fr;
         gap: 8px;
       }
       .canvas-tools-footer > button { width: 100%; }
@@ -1195,6 +1195,13 @@
     .canvas-settings-head { margin: 0 0 8px; }
     .canvas-settings-head h2 { font-size: 1.02rem; }
     .canvas-settings-head + .ctrl-block { border-top: 0; padding-top: 0; }
+    .controls .field-hint {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.35;
+    }
+    .device-live-field { grid-column: 1 / -1; }
     .controls label {
       margin-bottom: 2px; font-size: .68rem;
     }
@@ -1985,6 +1992,11 @@
                   <p>Customize how your SmartHours display looks.</p>
                 </div>
               </div>
+              <div class="ctrl-block" id="canvasPickBlock">
+                <p class="block-title">Canvas to edit <span id="designLivePill" class="live-pill hidden-block">Live</span></p>
+                <select id="designSlotSelect" aria-label="Canvas to edit"></select>
+                <p class="field-hint">Save updates this canvas. Save As copies it under a new name (up to 5).</p>
+              </div>
               <div class="ctrl-block">
                 <p class="block-title">Orientation</p>
                 <select id="screenOrientation">
@@ -1993,15 +2005,9 @@
                 </select>
               </div>
 
-              <div class="ctrl-block hidden-block admin-only">
-                <p class="block-title">Designs <span id="designLivePill" class="live-pill hidden-block">Live</span></p>
+              <div class="ctrl-block admin-only">
+                <p class="block-title">Design tools</p>
                 <div class="design-slots">
-                  <div class="design-slot-row">
-                    <div>
-                      <label for="designSlotSelect">Active design</label>
-                      <select id="designSlotSelect"></select>
-                    </div>
-                  </div>
                   <div>
                     <label for="designSlotName">Name</label>
                     <input id="designSlotName" type="text" maxlength="40" placeholder="e.g. Christmas">
@@ -2216,6 +2222,10 @@
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                   Save
                 </button>
+                <button type="button" class="btn-secondary mutate-only" id="saveDesignAsBtn" title="Copy this canvas under a new name">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M4 16V6a2 2 0 0 1 2-2h10"/></svg>
+                  Save As
+                </button>
               </div>
             </div>
           </div>
@@ -2233,6 +2243,11 @@
               </div>
             </div>
             <div class="device-settings-grid">
+              <div class="device-live-field">
+                <label for="liveDesignSelect">Live Design</label>
+                <select id="liveDesignSelect"></select>
+                <p class="field-hint">This canvas is shown on the e-ink display.</p>
+              </div>
               <div>
                 <label for="einkPoll">Screen Update Interval (minutes)</label>
                 <div class="field-with-icon">
@@ -2515,14 +2530,14 @@
       function setBusy(btn, busy, busyLabel) {
         if (!btn) return;
         if (busy) {
-          if (!btn.dataset.label) btn.dataset.label = btn.textContent;
+          if (!btn.dataset.label) btn.dataset.label = btn.innerHTML;
           btn.disabled = true;
           btn.classList.add('is-busy');
           if (busyLabel) btn.textContent = busyLabel;
         } else {
           btn.disabled = false;
           btn.classList.remove('is-busy');
-          if (btn.dataset.label) btn.textContent = btn.dataset.label;
+          if (btn.dataset.label) btn.innerHTML = btn.dataset.label;
         }
       }
 
@@ -3399,26 +3414,37 @@
         const sel = document.getElementById('designSlotSelect');
         const nameEl = document.getElementById('designSlotName');
         const livePill = document.getElementById('designLivePill');
-        if (!sel || !nameEl) return;
+        const liveSel = document.getElementById('liveDesignSelect');
+        if (!sel) return;
         if (!c) {
           sel.innerHTML = '';
-          nameEl.value = '';
-          livePill.classList.add('hidden-block');
+          if (nameEl) nameEl.value = '';
+          if (livePill) livePill.classList.add('hidden-block');
+          if (liveSel) liveSel.innerHTML = '';
           return;
         }
         ensureCustomerDesigns(c);
         const slot = editingDesignSlot(c);
-        sel.innerHTML = c.designs
+        const options = c.designs
           .map((d) => {
             const live = d.id === c.liveDesignId ? ' ★ live' : '';
             return `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name || 'Design')}${live}</option>`;
           })
           .join('');
+        sel.innerHTML = options;
+        if (liveSel) {
+          liveSel.innerHTML = c.designs
+            .map((d) => `<option value="${escapeHtml(d.id)}">${escapeHtml(d.name || 'Design')}</option>`)
+            .join('');
+          liveSel.value = c.liveDesignId || (c.designs[0] && c.designs[0].id) || '';
+        }
         if (slot) {
           sel.value = slot.id;
-          nameEl.value = slot.name || '';
-          livePill.classList.toggle('hidden-block', slot.id !== c.liveDesignId);
+          if (nameEl) nameEl.value = slot.name || '';
+          if (livePill) livePill.classList.toggle('hidden-block', slot.id !== c.liveDesignId);
         }
+        const asBtn = document.getElementById('saveDesignAsBtn');
+        if (asBtn) asBtn.disabled = c.designs.length >= MAX_DESIGNS;
       }
 
       function setLiveDesignSlot() {
@@ -4717,17 +4743,72 @@
         saveCustomer()
           .then((c) => {
             if (!c) return;
+            renderDesignSlotsUi();
             setStatus('Saved.');
           })
           .catch((err) => setStatus(err.message, true))
           .finally(() => setBusy(btn, false));
       }
+      function saveDesignAs() {
+        const c = selected();
+        if (!c) return;
+        ensureCustomerDesigns(c);
+        if (c.designs.length >= MAX_DESIGNS) {
+          setStatus('Maximum of 5 designs. Delete one to add another.', true);
+          return;
+        }
+        const suggested = nextDesignName(c.designs);
+        const typed = window.prompt('Name this canvas', suggested);
+        if (typed == null) return;
+        const name = typed.trim().slice(0, 40) || suggested;
+        const design = readDesignFromForm(c.design || defaultDesign());
+        if (c.design && Array.isArray(c.design.layout)) design.layout = c.design.layout;
+        if (c.design && c.design.logoUrl && !logoDataUrl) design.logoUrl = c.design.logoUrl;
+        delete design._legacyShowApplied;
+        const slot = {
+          id: newDesignSlotId(),
+          name,
+          design: cloneDesignData(design),
+          updatedAt: new Date().toISOString()
+        };
+        c.designs.push(slot);
+        editingDesignId = slot.id;
+        c.design = cloneDesignData(slot.design);
+        const nameEl = document.getElementById('designSlotName');
+        if (nameEl) nameEl.value = slot.name;
+        selectedElId = null;
+        renderDesignSlotsUi();
+        renderCanvas();
+        const btn = document.getElementById('saveDesignAsBtn');
+        setBusy(btn, true, 'Saving…');
+        saveCustomer()
+          .then((saved) => {
+            if (!saved) return;
+            renderDesignSlotsUi();
+            setStatus('Saved as “' + name + '”.');
+          })
+          .catch((err) => setStatus(err.message, true))
+          .finally(() => setBusy(btn, false));
+      }
       document.getElementById('saveDesignBtn').addEventListener('click', saveDesignNow);
+      document.getElementById('saveDesignAsBtn').addEventListener('click', saveDesignAs);
       document.getElementById('designSlotSelect').addEventListener('change', () => {
         const nextId = document.getElementById('designSlotSelect').value;
         if (!nextId || nextId === editingDesignId) return;
         flushEditorToDesignSlot();
         loadDesignSlotIntoEditor(nextId);
+      });
+      document.getElementById('liveDesignSelect').addEventListener('change', () => {
+        const c = selected();
+        const liveSel = document.getElementById('liveDesignSelect');
+        if (!c || !liveSel || !liveSel.value) return;
+        ensureCustomerDesigns(c);
+        if (!c.designs.some((d) => d.id === liveSel.value)) return;
+        c.liveDesignId = liveSel.value;
+        renderDesignSlotsUi();
+        saveCustomer()
+          .then(() => setStatus('Live design updated.'))
+          .catch((err) => setStatus(err.message, true));
       });
       document.getElementById('designSlotName').addEventListener('change', () => {
         const c = selected();
