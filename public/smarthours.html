@@ -704,6 +704,14 @@
   </style>
 </head>
 <body class="customer-mode">
+  <script>
+    (function () {
+      var admin = /smarthours-admin/i.test(location.pathname);
+      document.body.classList.toggle('admin-mode', admin);
+      document.body.classList.toggle('customer-mode', !admin);
+      if (admin) document.body.classList.add('readonly');
+    })();
+  </script>
   <div id="adminGate">
     <form class="panel login-card" id="adminLoginForm">
       <h2>SmartHours Admin</h2>
@@ -2431,7 +2439,6 @@
         syncShowCheckboxes(c.design);
         renderCanvas();
         scheduleAutosave(200);
-      }
       }
 
       function bindColorPair(textId, pickId) {
