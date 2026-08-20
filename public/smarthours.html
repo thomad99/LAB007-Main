@@ -2371,12 +2371,13 @@
                     <th>Device</th>
                     <th>WiFi</th>
                     <th>Customer URL</th>
+                    <th>Poll</th>
                     <th>Last check-in</th>
                     <th></th>
                   </tr>
                 </thead>
                 <tbody id="deviceTableBody">
-                  <tr><td colspan="6" class="hint">No devices have checked in yet.</td></tr>
+                  <tr><td colspan="7" class="hint">No devices have checked in yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2415,12 +2416,13 @@
                 <th>WiFi</th>
                 <th>IP</th>
                 <th>Customer URL</th>
+                <th>Poll</th>
                 <th>Last check-in</th>
                 <th></th>
               </tr>
             </thead>
             <tbody id="fleetTableBody">
-              <tr><td colspan="8" class="hint">No devices have checked in yet.</td></tr>
+              <tr><td colspan="9" class="hint">No devices have checked in yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -4369,6 +4371,21 @@
         return String((d && (d.reportedSlug || d.customerSlug)) || '').trim();
       }
 
+      function devicePollMinutes(d) {
+        const n = Number(d && d.pollIntervalMinutes);
+        if (Number.isFinite(n) && n > 0) return n;
+        const key = String(deviceUrlCode(d) || '').toLowerCase();
+        if (!key) return 0;
+        const c = (customers || []).find((x) => String(x.slug || '').toLowerCase() === key);
+        const fromCustomer = c && c.eink && Number(c.eink.pollIntervalMinutes);
+        return Number.isFinite(fromCustomer) && fromCustomer > 0 ? fromCustomer : 0;
+      }
+
+      function formatPollInterval(d) {
+        const n = devicePollMinutes(d);
+        return n ? n + ' min' : '—';
+      }
+
       function visibleDevices() {
         const slug = selected() && selected().slug;
         if (IS_ADMIN && !slug) return devices;
@@ -4404,7 +4421,7 @@
         if (!list.length) {
           const table = document.getElementById('deviceTable');
           if (table) table.classList.add('is-empty');
-          body.innerHTML = `<tr><td colspan="6">
+          body.innerHTML = `<tr><td colspan="7">
             <div class="device-empty">
               <svg viewBox="0 0 88 72" aria-hidden="true">
                 <rect x="18" y="22" width="34" height="28" rx="3"/>
@@ -4427,6 +4444,7 @@
             <td data-label="Device"><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span>${d.fwVersion ? `<br><span class="hint">${escapeHtml(d.fwVersion)}</span>` : ''}</td>
             <td data-label="WiFi">${escapeHtml(d.wifiSsid || '—')}</td>
             <td data-label="Customer URL">${escapeHtml(deviceUrlCode(d) || '—')}</td>
+            <td data-label="Poll">${escapeHtml(formatPollInterval(d))}</td>
             <td data-label="Last check-in">${escapeHtml(formatCheckin(d.lastSeen))}</td>
             <td>${deviceActionHtml(d)}</td>
           </tr>`;
@@ -4446,7 +4464,7 @@
             : 'No devices have checked in yet';
         }
         if (!list.length) {
-          body.innerHTML = '<tr><td colspan="8" class="hint">No devices have checked in yet.</td></tr>';
+          body.innerHTML = '<tr><td colspan="9" class="hint">No devices have checked in yet.</td></tr>';
           return;
         }
         body.innerHTML = list.map((d) => {
@@ -4458,6 +4476,7 @@
             <td data-label="WiFi">${escapeHtml(d.wifiSsid || '—')}</td>
             <td data-label="IP">${escapeHtml(d.ip || '—')}</td>
             <td data-label="Customer URL">${escapeHtml(deviceUrlCode(d) || '—')}</td>
+            <td data-label="Poll">${escapeHtml(formatPollInterval(d))}</td>
             <td data-label="Last check-in">${escapeHtml(formatCheckin(d.lastSeen))}</td>
             <td>${deviceActionHtml(d)}</td>
           </tr>`;
