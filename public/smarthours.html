@@ -131,6 +131,7 @@
     body.has-studio .editor.open {
       display: flex;
       flex-direction: column;
+      justify-content: flex-start;
       min-height: 0;
       height: 100%;
       overflow: hidden;
@@ -138,14 +139,17 @@
     }
     body.has-studio .tabs { margin: 0 0 10px; flex: 0 0 auto; }
     body.has-studio .tab-panel.active {
-      flex: 0 1 auto;
+      flex: 0 0 auto;
       min-height: 0;
       align-self: stretch;
       overflow: auto;
     }
-    #tab-hours.active {
+    #tab-hours.active,
+    #tab-devices.active,
+    #tab-info.active {
       display: block;
       flex: 0 0 auto;
+      margin-top: 0;
     }
     #tab-design.active {
       display: flex;
@@ -520,9 +524,10 @@
     }
     .device-settings-grid {
       display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 14px;
-      align-items: end;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 22px 28px;
+      align-items: start;
+      max-width: 920px;
     }
     @media (max-width: 800px) {
       .device-settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -532,6 +537,36 @@
     }
     .device-settings-grid > div { min-width: 0; }
     .device-settings-grid .hint { margin: 6px 0 0; }
+    #tab-devices label {
+      margin-bottom: 10px;
+      font-size: 1.35rem;
+      letter-spacing: .05em;
+    }
+    #tab-devices input,
+    #tab-devices select {
+      padding: 12px 14px;
+      font-size: 1.35rem;
+      min-height: 52px;
+    }
+    #tab-devices .device-note {
+      margin: 28px 0 0;
+      font-size: 1.15rem;
+      line-height: 1.5;
+      max-width: 70ch;
+      color: var(--muted);
+    }
+    #tab-devices .device-toolbar {
+      margin-top: 18px;
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    #tab-devices .device-toolbar .btn-secondary {
+      min-height: 48px;
+      padding: 12px 22px;
+      font-size: 1.15rem;
+    }
     .hours-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
     .hours-table th, .hours-table td { padding: 14px 10px; border-bottom: 1px solid rgba(255,255,255,.06); text-align: left; font-size: 1.4rem; }
     .hours-table th {
@@ -567,10 +602,10 @@
       text-transform: uppercase;
       color: var(--muted);
     }
-    .device-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-    .device-table th, .device-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.08); text-align: left; font-size: .88rem; vertical-align: middle; }
-    .device-table th { color: var(--muted); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; }
-    .device-table select { min-width: 140px; }
+    .device-table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+    .device-table th, .device-table td { padding: 14px 10px; border-bottom: 1px solid rgba(255,255,255,.08); text-align: left; font-size: 1.15rem; vertical-align: middle; }
+    .device-table th { color: var(--muted); font-size: 1.05rem; letter-spacing: .06em; text-transform: uppercase; }
+    .device-table select { min-width: 140px; font-size: 1.1rem; min-height: 44px; }
     .pill-on { color: #34d399; font-weight: 700; }
     .pill-off { color: var(--muted); }
     .btn-sync {
@@ -1447,11 +1482,11 @@
             <p class="hint" id="sketchMeta"></p>
             <textarea id="espSketch" rows="4" readonly></textarea>
           </div>
-          <p class="hint" style="margin-top:18px;">
+          <p class="device-note hint">
             Each e-ink display checks in about every 60 minutes with its name, WiFi, and customer URL.
             Reset queues a factory-style wipe: on the next check-in the display forgets WiFi and URL and opens the <strong>MySmartLife</strong> setup network. Use this if the device is resold or the shop WiFi changes.
           </p>
-          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+          <div class="device-toolbar">
             <button type="button" class="btn-secondary" id="refreshDevicesBtn">Refresh</button>
           </div>
           <table class="device-table" id="deviceTable">
