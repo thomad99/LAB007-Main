@@ -938,6 +938,7 @@
       border: 1px solid var(--line);
       min-height: 0;
       flex: 1 1 auto;
+      touch-action: none;
     }
     .canvas-screen-meta {
       flex: 0 0 auto;
@@ -973,6 +974,7 @@
       background: #ffffff;
       transform-origin: center center;
       box-shadow: none;
+      touch-action: none;
     }
     .tablet-frame::before {
       content: '';
@@ -1018,6 +1020,8 @@
     .canvas-el {
       position: absolute; border: 1px dashed transparent; cursor: grab; user-select: none;
       padding: 0; overflow: hidden; box-sizing: border-box;
+      touch-action: none;
+      -webkit-user-select: none;
     }
     .canvas-el:hover, .canvas-el.selected { border-color: var(--accent); }
     .canvas-el.dragging { cursor: grabbing; opacity: .92; z-index: 5; }
@@ -1084,6 +1088,7 @@
     .preview-sketch-empty {
       width: 100%; height: 100%; display: grid; place-items: center;
       opacity: .5; font-size: .75rem; border: 1px dashed currentColor; color: inherit;
+      pointer-events: none;
     }
     .hint { color: var(--muted); font-size: .86rem; line-height: 1.45; margin-top: 10px; }
     .color-row { display: grid; grid-template-columns: 1fr 48px; gap: 8px; align-items: center; }
@@ -1640,7 +1645,7 @@
                       <button type="button" class="btn-secondary" id="sketchMoveBtn">Move</button>
                       <button type="button" class="btn-danger" id="sketchClearBtn">Clear</button>
                     </div>
-                    <p class="hint" style="margin:2px 0 0;">Select Draw, then write on the sketch box.</p>
+                    <p class="hint" style="margin:2px 0 0;">Select Draw, then write on the sketch box with a finger or mouse.</p>
                   </div>
                 </div>
               </div>
@@ -3255,7 +3260,7 @@
             } else {
               node.innerHTML = `<div class="preview-sketch-empty">Sketch — tap Draw & write</div>`;
             }
-            if (el.id === selectedElId && sketchMode === 'draw') node.classList.add('sketching');
+            if (el.type === 'sketch' && sketchMode === 'draw') node.classList.add('sketching');
           }
 
           const del = document.createElement('button');
@@ -3285,13 +3290,18 @@
               syncElPropsPanel();
               return;
             }
+            event.preventDefault();
+            event.stopPropagation();
             selectedElId = el.id;
             syncElPropsPanel();
+            const capturePointer = () => {
+              try { node.setPointerCapture(event.pointerId); } catch {}
+            };
             if (event.target === handle) {
               if (editingTextId) endTextEditSoft();
               dragState = { mode: 'resize', id: el.id, startX: event.clientX, startY: event.clientY, startW: el.w, startH: el.h };
               node.classList.add('dragging', 'selected');
-              node.setPointerCapture(event.pointerId);
+              capturePointer();
               return;
             }
             if (el.type === 'sketch' && sketchMode === 'draw') {
@@ -3307,6 +3317,7 @@
               dragState = {
                 mode: 'sketch',
                 id: el.id,
+                pointerId: event.pointerId,
                 canvas: document.createElement('canvas'),
                 lastX: x,
                 lastY: y,
@@ -3318,6 +3329,7 @@
               canvas.height = Math.max(1, Math.round(el.h));
               const ctx = canvas.getContext('2d');
               const finishStart = () => {
+                if (!dragState || dragState.id !== el.id || dragState.mode !== 'sketch') return;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
                 ctx.strokeStyle = penColor;
@@ -3327,11 +3339,12 @@
                 ctx.lineTo(x + 0.01, y + 0.01);
                 ctx.stroke();
                 node.classList.add('sketching', 'selected');
-                node.setPointerCapture(event.pointerId);
+                capturePointer();
               };
               if (el.dataUrl) {
                 const img = new Image();
                 img.onload = () => {
+                  if (!dragState || dragState.id !== el.id) return;
                   ctx.clearRect(0, 0, canvas.width, canvas.height);
                   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
                   finishStart();
@@ -3355,8 +3368,8 @@
               maybeTextEdit: el.type === 'text'
             };
             node.classList.add('dragging', 'selected');
-            node.setPointerCapture(event.pointerId);
-          });
+            capturePointer();
+          }, { passive: false });
           if (el.type === 'text') {
             node.addEventListener('dblclick', (event) => {
               if (event.target === del || event.target.closest('.del-x') || event.target === handle) return;
@@ -4492,6 +4505,9 @@
 
       window.addEventListener('pointermove', (event) => {
         if (!dragState) return;
+        if (dragState.mode === 'sketch' || dragState.mode === 'move' || dragState.mode === 'resize') {
+          event.preventDefault();
+        }
         const c = selected();
         if (!c || !c.design || !c.design.layout) return;
         const el = c.design.layout.find((x) => x.id === dragState.id);
@@ -4544,8 +4560,9 @@
           snapResize(el);
         }
         renderCanvas();
-      });
-      window.addEventListener('pointerup', () => {
+      }, { passive: false });
+      function endCanvasPointer(event) {
+        if (event && dragState) event.preventDefault();
         const pending = dragState;
         if (pending && pending.mode === 'sketch') {
           const c = selected();
@@ -4578,7 +4595,13 @@
           return;
         }
         dragState = null;
-      });
+      }
+      window.addEventListener('pointerup', endCanvasPointer, { passive: false });
+      window.addEventListener('pointercancel', endCanvasPointer, { passive: false });
+      window.addEventListener('touchmove', (event) => {
+        if (!dragState) return;
+        event.preventDefault();
+      }, { passive: false });
       window.addEventListener('keydown', (event) => {
         if ((event.key === 'Delete' || event.key === 'Backspace') && selectedElId) {
           const tag = (event.target && event.target.tagName) || '';
