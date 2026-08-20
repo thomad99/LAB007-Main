@@ -151,10 +151,35 @@
     }
     body.has-studio.fleet-open .grid-main {
       display: grid;
+      grid-template-columns: 1fr;
       align-items: stretch;
-      overflow: hidden;
+      overflow: auto;
     }
     body.has-studio.fleet-open .editor { display: none !important; }
+    body.admin-mode.fleet-open {
+      overflow: auto;
+      height: auto;
+      min-height: 100dvh;
+    }
+    body.admin-mode.fleet-open.has-studio .wrap {
+      height: auto;
+      max-height: none;
+      overflow: visible;
+    }
+    body.admin-mode.fleet-open .grid-main {
+      display: grid;
+      grid-template-columns: 1fr !important;
+      overflow: visible;
+    }
+    body.admin-mode.fleet-open .grid-main > aside,
+    body.admin-mode.fleet-open .editor {
+      display: none !important;
+    }
+    body.admin-mode.fleet-open #customersNavBtn {
+      color: var(--accent);
+      background: transparent;
+      border-color: var(--line);
+    }
     body.has-studio .editor.open {
       display: flex;
       flex-direction: column;
@@ -838,6 +863,7 @@
       min-height: 0;
       overflow: auto;
     }
+    body.admin-mode:not(.fleet-open) #customersNavBtn,
     body.admin-mode.fleet-open #deviceMgmtBtn {
       color: #04120e;
       background: var(--accent);
@@ -1826,6 +1852,7 @@
       </div>
       <div class="toolbar">
         <a class="btn-secondary about-link admin-only" href="/SmartHours/about">About</a>
+        <button type="button" class="btn-secondary admin-only" id="customersNavBtn">Customers</button>
         <button type="button" class="btn-secondary admin-only" id="deviceMgmtBtn">Devices</button>
         <button type="button" class="btn-secondary admin-only" id="logoutBtn">Log out</button>
         <button type="button" class="btn hidden-block" id="newCustomerBtn">New Customer</button>
@@ -2369,6 +2396,15 @@
         </div>
       </section>
       <section class="panel fleet-page admin-only" id="fleetPage">
+        <div class="device-card-head" style="margin-bottom:12px;">
+          <span class="device-card-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+          </span>
+          <div>
+            <h2>Devices</h2>
+            <p>All displays that have checked in.</p>
+          </div>
+        </div>
         <div class="fleet-toolbar">
           <p class="fleet-meta" id="fleetMeta">No devices have checked in yet</p>
           <button type="button" class="btn-secondary" id="refreshFleetBtn">Refresh</button>
@@ -4458,10 +4494,29 @@
 
       function closeFleetView() {
         document.body.classList.remove('fleet-open');
+        if (IS_ADMIN && selected()) {
+          document.body.classList.add('has-studio');
+          editor.classList.add('open');
+        }
+      }
+
+      function showCustomerListView() {
+        closeFleetView();
+        if (!IS_ADMIN) return;
+        if (!selected() && customers.length) {
+          selectedId = customers[0].id;
+        }
+        const c = selected();
+        if (c) fillEditor(c);
+        else {
+          document.body.classList.remove('has-studio');
+          editor.classList.remove('open');
+        }
+        renderList();
+        setStatus('');
       }
 
       function openDeviceMgmt() {
-        document.body.classList.add('has-studio');
         document.body.classList.add('fleet-open');
         loadDevices().catch((err) => setStatus(err.message, true));
       }
@@ -4653,6 +4708,10 @@
       });
 
       document.getElementById('deviceMgmtBtn').addEventListener('click', () => openDeviceMgmt());
+      const customersNavBtn = document.getElementById('customersNavBtn');
+      if (customersNavBtn) {
+        customersNavBtn.addEventListener('click', () => showCustomerListView());
+      }
       document.getElementById('refreshDevicesBtn').addEventListener('click', () => {
         loadDevices().catch((err) => setStatus(err.message, true));
       });
