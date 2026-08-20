@@ -1087,7 +1087,6 @@
               </details>
 
               <input id="canvasImageFile" type="file" accept="image/*" hidden>
-              <button type="button" class="btn mutate-only" id="canvasSaveBtn">Save</button>
             </div>
             <div class="design-canvas-col">
               <div class="canvas-stage" id="canvasStage">
@@ -1108,9 +1107,9 @@
                   <button type="button" class="btn-secondary" id="addSlideshowBtn">+ Slides</button>
                 </div>
                 <div class="canvas-tools-footer">
-                  <button type="button" class="btn mutate-only" id="saveDesignBtn">Save</button>
                   <button type="button" class="btn-secondary" id="fillScreenBtn" title="Snap selected element to full canvas">Fill screen</button>
                   <button type="button" class="btn-danger" id="clearCanvasBtn">Clear canvas</button>
+                  <button type="button" class="btn mutate-only" id="saveDesignBtn">Save</button>
                 </div>
               </div>
             </div>
@@ -3288,22 +3287,16 @@
       }
       function saveDesignNow() {
         const btn = document.getElementById('saveDesignBtn');
-        const btn2 = document.getElementById('canvasSaveBtn');
         setBusy(btn, true, 'Saving…');
-        setBusy(btn2, true, 'Saving…');
         saveCustomer()
           .then((c) => {
             if (!c) return;
             setStatus('Saved.');
           })
           .catch((err) => setStatus(err.message, true))
-          .finally(() => {
-            setBusy(btn, false);
-            setBusy(btn2, false);
-          });
+          .finally(() => setBusy(btn, false));
       }
       document.getElementById('saveDesignBtn').addEventListener('click', saveDesignNow);
-      document.getElementById('canvasSaveBtn').addEventListener('click', saveDesignNow);
       document.getElementById('designSlotSelect').addEventListener('change', () => {
         const nextId = document.getElementById('designSlotSelect').value;
         if (!nextId || nextId === editingDesignId) return;
