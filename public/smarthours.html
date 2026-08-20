@@ -457,19 +457,34 @@
     .form-grid > .full { grid-column: 1 / -1; }
     #tab-info .form-grid {
       grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 8px 14px;
+      gap: 22px 28px;
       max-width: none;
       align-items: start;
     }
-    #tab-info label { margin-bottom: 4px; }
+    #tab-info label {
+      margin-bottom: 10px;
+      font-size: 1.35rem;
+      letter-spacing: .05em;
+    }
     #tab-info input:not([type="checkbox"]):not([type="number"]) {
-      padding: 6px 9px;
-      border-radius: 8px;
-      font-size: .9rem;
+      padding: 16px 18px;
+      border-radius: 12px;
+      font-size: 1.45rem;
+      min-height: 58px;
+    }
+    #tab-info #fieldSlug[readonly] {
+      font-size: 1.55rem;
+      padding: 4px 0;
+    }
+    #tab-info .slug-preview,
+    #tab-info a.slug-preview {
+      margin-top: 10px;
+      font-size: 1.35rem;
     }
     #tab-info .form-grid > .full { max-width: none; }
-    #tab-info .maps-help { margin: 0 0 4px; }
-    #tab-info .hint { margin: 4px 0 0; }
+    #tab-info .maps-help { margin: 0 0 10px; }
+    #tab-info .maps-help a { font-size: 1.25rem; }
+    #tab-info .hint { margin: 8px 0 0; font-size: 1.15rem; }
     #tab-info .auto-sync-bar {
       max-width: 220px;
       padding: 8px 10px;
