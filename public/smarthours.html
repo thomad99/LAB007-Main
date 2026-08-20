@@ -4365,11 +4365,20 @@
         return Number.isFinite(t) && (Date.now() - t) < 90 * 60 * 1000;
       }
 
+      function deviceUrlCode(d) {
+        return String((d && (d.reportedSlug || d.customerSlug)) || '').trim();
+      }
+
       function visibleDevices() {
         const slug = selected() && selected().slug;
         if (IS_ADMIN && !slug) return devices;
         if (!slug) return [];
-        return devices.filter((d) => d.customerSlug === slug);
+        const key = String(slug).toLowerCase();
+        return devices.filter((d) => {
+          const reported = String(d.reportedSlug || '').toLowerCase();
+          const assigned = String(d.customerSlug || '').toLowerCase();
+          return reported === key || assigned === key;
+        });
       }
 
       function bindDeviceResetButtons(root) {
@@ -4417,7 +4426,7 @@
             <td class="${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
             <td data-label="Device"><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span>${d.fwVersion ? `<br><span class="hint">${escapeHtml(d.fwVersion)}</span>` : ''}</td>
             <td data-label="WiFi">${escapeHtml(d.wifiSsid || '—')}</td>
-            <td data-label="Customer URL">${escapeHtml(d.customerSlug || '—')}</td>
+            <td data-label="Customer URL">${escapeHtml(deviceUrlCode(d) || '—')}</td>
             <td data-label="Last check-in">${escapeHtml(formatCheckin(d.lastSeen))}</td>
             <td>${deviceActionHtml(d)}</td>
           </tr>`;
@@ -4448,7 +4457,7 @@
             <td data-label="Firmware">${escapeHtml(d.fwVersion || '—')}</td>
             <td data-label="WiFi">${escapeHtml(d.wifiSsid || '—')}</td>
             <td data-label="IP">${escapeHtml(d.ip || '—')}</td>
-            <td data-label="Customer URL">${escapeHtml(d.customerSlug || '—')}</td>
+            <td data-label="Customer URL">${escapeHtml(deviceUrlCode(d) || '—')}</td>
             <td data-label="Last check-in">${escapeHtml(formatCheckin(d.lastSeen))}</td>
             <td>${deviceActionHtml(d)}</td>
           </tr>`;
