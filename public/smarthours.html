@@ -540,46 +540,107 @@
     }
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
     .form-grid > .full { grid-column: 1 / -1; }
-    #tab-info .form-grid {
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-      gap: 22px 28px;
-      max-width: none;
-      align-items: start;
+    .info-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(12, 18, 34, .9);
+      padding: 18px 16px 20px;
+      display: grid;
+      gap: 22px;
     }
+    .info-field { min-width: 0; }
+    .info-field-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0 0 10px;
+    }
+    .info-field-label label { margin: 0; }
+    .info-icon {
+      flex: 0 0 auto;
+      width: 22px;
+      height: 22px;
+      color: var(--accent);
+    }
+    .info-icon svg {
+      width: 22px;
+      height: 22px;
+      display: block;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .info-icon.info-icon-pin svg { fill: #ea4335; stroke: none; }
+    .info-icon.info-icon-pin circle { fill: #fff; }
     #tab-info label {
-      margin-bottom: 10px;
-      font-size: 1.35rem;
-      letter-spacing: .05em;
+      margin-bottom: 0;
+      font-size: .72rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      font-weight: 700;
+      color: var(--muted);
     }
     #tab-info input:not([type="checkbox"]):not([type="number"]) {
-      padding: 16px 18px;
+      padding: 12px 14px;
       border-radius: 12px;
-      font-size: 1.45rem;
-      min-height: 58px;
+      font-size: 1.05rem;
+      min-height: 46px;
     }
     #tab-info #fieldSlug[readonly] {
-      font-size: 1.55rem;
-      padding: 4px 0;
+      font-size: 1.28rem;
+      font-weight: 800;
+      padding: 0;
+      min-height: 0;
+    }
+    #tab-info #fieldMapsUrl {
+      overflow-wrap: anywhere;
+      word-break: break-all;
+      font-size: .92rem;
     }
     #tab-info .slug-preview,
     #tab-info a.slug-preview {
-      margin-top: 10px;
-      font-size: 1.35rem;
+      margin-top: 8px;
+      font-size: .9rem;
+      font-weight: 650;
+      text-decoration: none;
+      color: var(--accent);
     }
-    #tab-info .form-grid > .full { max-width: none; }
+    #tab-info a.slug-preview:hover { text-decoration: underline; }
     #tab-info .maps-help { margin: 0 0 10px; }
-    #tab-info .maps-help a { font-size: 1.25rem; }
-    #tab-info .hint { margin: 8px 0 0; font-size: 1.15rem; }
+    #tab-info .maps-help a {
+      color: var(--accent);
+      font-size: .9rem;
+      font-weight: 650;
+      text-decoration: none;
+    }
+    #tab-info .maps-help a:hover { text-decoration: underline; }
+    #tab-info a.slug-preview::after,
+    #tab-info .maps-help a::after {
+      content: '';
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      margin-left: 6px;
+      vertical-align: -1px;
+      background: currentColor;
+      -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E") center / contain no-repeat;
+      mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E") center / contain no-repeat;
+    }
+    #tab-info .hint { margin: 8px 0 0; font-size: .86rem; }
     #tab-info .auto-sync-bar {
-      max-width: 220px;
-      padding: 8px 10px;
+      max-width: none;
+      padding: 10px 0 0;
       gap: 8px;
+      border-top: 1px solid rgba(255,255,255,.08);
     }
     #tab-info .auto-sync-bar input {
       width: 56px;
       height: 30px;
       padding: 4px 8px;
     }
+    #tab-info .info-admin-actions { margin-top: 14px; }
     body.admin-mode #tab-info .maps-help,
     body.admin-mode #tab-info .full > p.hint:not(#studioMapsStatus) {
       display: none;
@@ -1422,14 +1483,25 @@
         text-overflow: ellipsis;
       }
       .tabs .tab-btn svg { width: 20px; height: 20px; }
-      #tab-info .form-grid,
       #tab-info .form-grid { grid-template-columns: 1fr; gap: 14px; }
-      #tab-info label,
-      #tab-devices label { font-size: 1rem; margin-bottom: 6px; }
-      #tab-info input:not([type="checkbox"]):not([type="number"]),
-      #tab-info #fieldSlug[readonly],
+      #tab-info label { font-size: .7rem; }
+      #tab-info input:not([type="checkbox"]):not([type="number"]) {
+        font-size: 1.02rem;
+        min-height: 44px;
+        padding: 10px 12px;
+      }
+      #tab-info #fieldSlug[readonly] {
+        font-size: 1.18rem;
+        min-height: 0;
+        padding: 0;
+      }
       #tab-info .slug-preview,
-      #tab-info a.slug-preview,
+      #tab-info a.slug-preview {
+        font-size: .86rem;
+        min-height: 0;
+        padding: 0;
+      }
+      #tab-devices label { font-size: 1rem; margin-bottom: 6px; }
       #tab-devices input,
       #tab-devices select {
         font-size: 1.05rem;
@@ -1518,6 +1590,7 @@
       #tab-devices .device-note { font-size: .88rem; }
       .device-card { padding: 14px; }
       .device-card-head h2 { font-size: 1rem; }
+      .info-card { padding: 16px 14px; gap: 20px; }
       .device-table-wrap, .fleet-table-wrap { overflow: visible; }
       .device-table thead { display: none; }
       .device-table, .device-table tbody { display: block; width: 100%; }
@@ -1722,26 +1795,41 @@
         </div>
 
         <div class="tab-panel active" id="tab-info">
-          <div class="form-grid">
-            <div>
-              <label for="fieldName">Customer name</label>
+          <div class="info-card">
+            <div class="info-field">
+              <div class="info-field-label">
+                <span class="info-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.2c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/></svg>
+                </span>
+                <label for="fieldName">Customer name</label>
+              </div>
               <input id="fieldName" type="text">
             </div>
-            <div class="full">
-              <label for="fieldSlug">URL Name</label>
+            <div class="info-field">
+              <div class="info-field-label">
+                <span class="info-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 5.93"/><path d="M14 11a5 5 0 0 0-7.07 0L5.52 12.41a5 5 0 0 0 7.07 7.07L14 18.07"/></svg>
+                </span>
+                <label for="fieldSlug">URL name</label>
+              </div>
               <input id="fieldSlug" type="text" placeholder="acme-cafe" autocomplete="off" readonly>
               <a class="slug-preview" id="studioSlugPreview" target="_blank" rel="noopener"></a>
               <p class="hint" id="studioSlugStatus"></p>
             </div>
-            <div class="full">
-              <label for="fieldMapsUrl">Google business link</label>
+            <div class="info-field">
+              <div class="info-field-label">
+                <span class="info-icon info-icon-pin" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 2c-3.9 0-7 3-7 7.1C5 14.2 12 22 12 22s7-7.8 7-12.9C19 5 15.9 2 12 2z"/><circle cx="12" cy="9.2" r="2.6"/></svg>
+                </span>
+                <label for="fieldMapsUrl">Google business link</label>
+              </div>
               <div class="maps-help">
                 <a href="https://maps.google.com" target="_blank" rel="noopener">Find your business on Google Maps</a>
               </div>
               <input id="fieldMapsUrl" type="text" placeholder="https://maps.app.goo.gl/VNM7eFRQ4yyN9RG28">
               <p class="hint" id="studioMapsStatus"></p>
             </div>
-            <div class="full auto-sync-bar admin-only">
+            <div class="auto-sync-bar admin-only">
               <div>
                 <label for="autoSyncHours">Auto Google sync</label>
                 <input id="autoSyncHours" type="number" min="0" max="168" step="1" value="24" title="0 disables auto-sync for all customers. Each customer sets their own interval on Device Controls (default 60 minutes).">
@@ -1749,8 +1837,7 @@
               <button type="button" class="btn-secondary mutate-only" id="saveAutoSyncBtn">Save interval</button>
             </div>
           </div>
-          </div>
-          <div class="admin-only" style="margin-top:16px;">
+          <div class="admin-only info-admin-actions">
             <button type="button" class="btn-danger" id="deleteBtn">Delete Customer</button>
           </div>
         </div>
