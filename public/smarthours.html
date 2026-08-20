@@ -1127,11 +1127,11 @@
               <input id="googleSyncMinutes" type="number" min="0" max="10080" value="60" title="How often to refresh opening hours from Google. Default 60. 0 turns auto-sync off for this page.">
               <p class="hint">Checks Google hours on this schedule. Default 60 minutes. Use 0 to turn it off.</p>
             </div>
-            <div>
+            <div class="admin-only">
               <label for="einkWidth">Panel width (px)</label>
               <input id="einkWidth" type="number" min="200" max="2500" value="800">
             </div>
-            <div>
+            <div class="admin-only">
               <label for="einkHeight">Panel height (px)</label>
               <input id="einkHeight" type="number" min="120" max="2500" value="480">
             </div>
@@ -1151,7 +1151,7 @@
                 <option value="270">270° clockwise</option>
               </select>
             </div>
-            <div>
+            <div class="admin-only">
               <label for="einkColorMode">Color mode</label>
               <select id="einkColorMode">
                 <option value="6color">6-color</option>
