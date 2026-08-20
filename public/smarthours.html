@@ -1126,6 +1126,192 @@
       cursor: pointer; line-height: 1; z-index: 3;
     }
     .canvas-el.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+    @media (max-width: 720px) {
+      body.has-studio,
+      body.has-studio[data-studio-tab="design"] {
+        overflow: auto !important;
+        height: auto !important;
+        min-height: 100dvh;
+      }
+      body.has-studio .wrap,
+      body.has-studio[data-studio-tab="design"] .wrap {
+        width: calc(100% - 12px);
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        padding: 8px 0 28px;
+      }
+      body.has-studio .grid-main,
+      body.has-studio[data-studio-tab="design"] .grid-main,
+      body.has-studio:not([data-studio-tab="design"]) .grid-main {
+        flex: 0 0 auto;
+        overflow: visible !important;
+        align-items: start;
+      }
+      body.has-studio .editor.open,
+      body.has-studio[data-studio-tab="design"] .editor.open,
+      body.has-studio:not([data-studio-tab="design"]) .editor.open {
+        display: block !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        padding: 10px;
+      }
+      body.customer-mode header,
+      body.customer-mode.has-studio header {
+        margin-bottom: 8px;
+      }
+      body.customer-mode .brand-logo,
+      body.customer-mode.has-studio .brand-logo {
+        width: min(188px, 58vw);
+      }
+      body.has-studio .tabs,
+      .tabs,
+      body.admin-mode .tabs {
+        position: sticky;
+        top: 0;
+        z-index: 80;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 6px;
+        margin: -10px -10px 12px;
+        padding: 8px 10px 10px;
+        background: rgba(8, 12, 22, .94);
+        backdrop-filter: blur(14px);
+        border-bottom: 1px solid var(--line);
+      }
+      body.admin-mode .tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+      .tabs .tab-btn {
+        min-height: 58px;
+        padding: 8px 4px 10px;
+        font-size: .68rem;
+        gap: 4px;
+        border-radius: 10px;
+      }
+      .tabs .tab-btn span {
+        max-width: 100%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .tabs .tab-btn svg { width: 20px; height: 20px; }
+      #tab-info .form-grid,
+      #tab-info .form-grid { grid-template-columns: 1fr; gap: 14px; }
+      #tab-info label,
+      #tab-devices label { font-size: 1rem; margin-bottom: 6px; }
+      #tab-info input:not([type="checkbox"]):not([type="number"]),
+      #tab-info #fieldSlug[readonly],
+      #tab-info .slug-preview,
+      #tab-info a.slug-preview,
+      #tab-devices input,
+      #tab-devices select {
+        font-size: 1.05rem;
+        min-height: 44px;
+        padding: 10px 12px;
+      }
+      .hours-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 10px;
+      }
+      .btn-sync { min-width: 0; width: 100%; font-size: 1rem; padding: 12px; }
+      .hours-toolbar .sync-stamp,
+      .hours-toolbar .manual-opt { font-size: 1rem; flex: 1 1 auto; }
+      .hours-table { margin-top: 8px; }
+      .hours-table thead { display: none; }
+      .hours-table, .hours-table tbody { display: block; width: 100%; }
+      .hours-table tr {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 6px 10px;
+        width: 100%;
+        margin: 0 0 10px;
+        padding: 10px 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(255,255,255,.03);
+      }
+      .hours-table th, .hours-table td {
+        border: 0;
+        padding: 4px 0;
+        font-size: 1.05rem;
+      }
+      .hours-table td:nth-child(1) { font-weight: 700; align-self: center; }
+      .hours-table td:nth-child(2) { align-self: center; }
+      .hours-table td:nth-child(3) { grid-column: 1 / -1; }
+      .hours-table .hours-times {
+        grid-template-columns: auto minmax(0, 1fr);
+        max-width: none;
+        gap: 8px 10px;
+      }
+      .hours-table input[type="time"] { font-size: 1rem; min-height: 42px; }
+      .device-settings-grid {
+        grid-template-columns: 1fr;
+        gap: 14px;
+        max-width: none;
+      }
+      #tab-devices .device-note { font-size: 1rem; margin-top: 16px; }
+      .device-table-wrap, .fleet-table-wrap { overflow: visible; }
+      .device-table thead { display: none; }
+      .device-table, .device-table tbody { display: block; width: 100%; }
+      .device-table tr {
+        display: grid;
+        gap: 8px;
+        margin: 0 0 12px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+        background: rgba(255,255,255,.03);
+      }
+      .device-table th, .device-table td {
+        border: 0;
+        padding: 0;
+        font-size: 1rem;
+        display: block;
+        min-width: 0;
+        overflow-wrap: anywhere;
+      }
+      .device-table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 2px;
+        font-size: .7rem;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .device-table select { min-width: 0; width: 100%; }
+      #tab-design.active {
+        display: flex !important;
+        flex-direction: column;
+        height: auto !important;
+        overflow: visible !important;
+      }
+      .design-layout {
+        display: flex;
+        flex-direction: column;
+        height: auto !important;
+        overflow: visible;
+        gap: 12px;
+      }
+      .design-canvas-col {
+        order: -1;
+        overflow: visible;
+      }
+      .canvas-stage {
+        flex: none;
+        height: min(62vh, 420px);
+        min-height: 240px;
+        overflow: hidden;
+        padding: 8px;
+      }
+      .controls {
+        height: auto;
+        max-height: none;
+        overflow: visible;
+      }
+      .canvas-tools .elements-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
   </style>
 </head>
 <body class="customer-mode" data-studio-tab="info">
@@ -1580,6 +1766,7 @@
           <div class="device-toolbar">
             <button type="button" class="btn-secondary" id="refreshDevicesBtn">Refresh</button>
           </div>
+          <div class="device-table-wrap">
           <table class="device-table" id="deviceTable">
             <thead>
               <tr>
@@ -1595,6 +1782,7 @@
               <tr><td colspan="6" class="hint">No devices have checked in yet.</td></tr>
             </tbody>
           </table>
+          </div>
         </div>
 
         <div class="tab-panel" id="tab-preview">
@@ -1633,7 +1821,6 @@
     </div>
   </div>
 
-  <script src="/lab007-site-nav.js" defer></script>
   <script>
     (function () {
       const IS_ADMIN = /smarthours-admin/i.test(location.pathname);
@@ -2373,8 +2560,10 @@
         if (!stage) return;
         const pad = 12;
         const metaH = (meta && meta.offsetHeight) || 18;
+        const mobile = window.innerWidth < 720;
         const maxW = Math.max(160, stage.clientWidth - pad);
-        const maxH = Math.max(160, stage.clientHeight - metaH - pad);
+        const naturalH = stage.clientHeight - metaH - pad;
+        const maxH = Math.max(mobile ? 220 : 160, mobile ? Math.max(naturalH, Math.min(window.innerHeight * 0.52, 380)) : naturalH);
         const rot = canvasOutputRotation();
         canvasPreviewRotation = rot;
         const swap = rot === 90 || rot === 270;
@@ -2433,7 +2622,7 @@
           const d = h[day] || emptyDay();
           return `<tr data-day="${day}" class="${d.closed ? 'is-closed' : ''}">
             <td>${DAY_LABELS[day]}</td>
-            <td><input type="checkbox" data-f="closed" ${d.closed ? 'checked' : ''}></td>
+            <td><input type="checkbox" data-f="closed" ${d.closed ? 'checked' : ''} aria-label="${DAY_LABELS[day]} closed"></td>
             <td>
               <span class="closed-label">Closed</span>
               <span class="hours-times">
@@ -3397,11 +3586,11 @@
         body.innerHTML = list.map((d) => {
           const on = deviceOnline(d.lastSeen);
           return `<tr>
-            <td class="${on ? 'pill-on' : 'pill-off'}">${on ? 'Online' : 'Offline'}</td>
-            <td><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span>${d.fwVersion ? `<br><span class="hint">${escapeHtml(d.fwVersion)}</span>` : ''}</td>
-            <td>${escapeHtml(d.wifiSsid || '—')}</td>
-            <td>${escapeHtml(d.customerSlug || '—')}</td>
-            <td>${escapeHtml(formatCheckin(d.lastSeen))}</td>
+            <td class="${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
+            <td data-label="Device"><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span>${d.fwVersion ? `<br><span class="hint">${escapeHtml(d.fwVersion)}</span>` : ''}</td>
+            <td data-label="WiFi">${escapeHtml(d.wifiSsid || '—')}</td>
+            <td data-label="Customer URL">${escapeHtml(d.customerSlug || '—')}</td>
+            <td data-label="Last check-in">${escapeHtml(formatCheckin(d.lastSeen))}</td>
             <td>${deviceActionHtml(d)}</td>
           </tr>`;
         }).join('');
@@ -3426,13 +3615,13 @@
         body.innerHTML = list.map((d) => {
           const on = deviceOnline(d.lastSeen);
           return `<tr>
-            <td class="${on ? 'pill-on' : 'pill-off'}">${on ? 'Online' : 'Offline'}</td>
-            <td><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span></td>
-            <td>${escapeHtml(d.fwVersion || '—')}</td>
-            <td>${escapeHtml(d.wifiSsid || '—')}</td>
-            <td>${escapeHtml(d.ip || '—')}</td>
-            <td>${escapeHtml(d.customerSlug || '—')}</td>
-            <td>${escapeHtml(formatCheckin(d.lastSeen))}</td>
+            <td class="${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
+            <td data-label="Device"><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span></td>
+            <td data-label="Firmware">${escapeHtml(d.fwVersion || '—')}</td>
+            <td data-label="WiFi">${escapeHtml(d.wifiSsid || '—')}</td>
+            <td data-label="IP">${escapeHtml(d.ip || '—')}</td>
+            <td data-label="Customer URL">${escapeHtml(d.customerSlug || '—')}</td>
+            <td data-label="Last check-in">${escapeHtml(formatCheckin(d.lastSeen))}</td>
             <td>${deviceActionHtml(d)}</td>
           </tr>`;
         }).join('');
