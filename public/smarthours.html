@@ -611,7 +611,7 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      overflow: hidden;
+      overflow: auto;
       padding: 16px;
       background: #070b14;
       border-radius: 12px;
@@ -2001,7 +2001,16 @@
         const swap = rot === 90 || rot === 270;
         const boxW = swap ? TABLET.height : TABLET.width;
         const boxH = swap ? TABLET.width : TABLET.height;
-        const scale = Math.min(maxW / boxW, maxH / boxH);
+        const fitContain = Math.min(maxW / boxW, maxH / boxH);
+        const fitWidth = maxW / boxW;
+        let scale = fitContain;
+        if (window.innerWidth >= 900) {
+          const minRead = 1.7;
+          const maxRead = 2.25;
+          scale = Math.min(fitWidth, maxRead);
+          if (scale < minRead) scale = Math.min(minRead, fitWidth);
+        }
+        scale = Math.max(0.25, scale);
         canvasPreviewScale = scale;
         const scaledW = Math.max(1, Math.round(boxW * scale));
         const scaledH = Math.max(1, Math.round(boxH * scale));
