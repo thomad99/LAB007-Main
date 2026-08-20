@@ -1033,14 +1033,42 @@
     .form-grid .url-box { margin-top: 0; }
     .url-box a { color: var(--accent); word-break: break-all; }
     .design-layout {
-      display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 12px;
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr) auto;
+      gap: 12px;
       align-items: stretch;
       flex: 1 1 auto;
       min-height: 0;
       height: 100%;
       overflow: hidden;
     }
-    @media (max-width: 900px) { .design-layout { grid-template-columns: 1fr; } }
+    .design-layout > .controls {
+      grid-column: 1;
+      grid-row: 1 / span 2;
+    }
+    .design-layout > .design-canvas-col {
+      grid-column: 2;
+      grid-row: 1;
+    }
+    .design-layout > .canvas-tools {
+      grid-column: 2;
+      grid-row: 2;
+    }
+    @media (max-width: 900px) {
+      .design-layout {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto;
+        overflow: visible;
+        height: auto;
+      }
+      .design-layout > .controls,
+      .design-layout > .design-canvas-col,
+      .design-layout > .canvas-tools {
+        grid-column: auto;
+        grid-row: auto;
+      }
+    }
     .design-canvas-col {
       display: flex;
       flex-direction: column;
@@ -1052,16 +1080,16 @@
     .canvas-tools {
       flex: 0 0 auto;
       display: grid;
-      gap: 8px;
-      padding: 10px;
+      gap: 10px;
+      padding: 12px;
       border: 1px solid var(--line);
-      border-radius: 12px;
-      background: rgba(255,255,255,.02);
+      border-radius: 16px;
+      background: rgba(12, 18, 34, .9);
     }
     .canvas-tools .tools-label {
       margin: 0;
-      font-size: .68rem;
-      letter-spacing: .06em;
+      font-size: .72rem;
+      letter-spacing: .08em;
       text-transform: uppercase;
       color: var(--muted);
       font-weight: 700;
@@ -1069,41 +1097,99 @@
     .canvas-tools .elements-grid {
       display: grid;
       grid-template-columns: repeat(7, minmax(0, 1fr));
-      gap: 6px;
+      gap: 8px;
     }
-    .canvas-tools .elements-grid > button {
+    .el-add-btn {
       width: 100%;
       margin: 0;
-      text-align: center;
+      min-height: 74px;
+      padding: 10px 6px 8px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
       justify-content: center;
+      gap: 6px;
+      text-align: center;
       white-space: nowrap;
-      padding-left: 4px;
-      padding-right: 4px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,.14);
+      background: rgba(255,255,255,.03);
+      color: var(--text);
+      font-size: .72rem;
+      font-weight: 650;
+      line-height: 1.1;
+      cursor: pointer;
+      font-family: inherit;
     }
+    .el-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+    .el-add-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.7;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
+    }
+    .el-add-btn svg [fill="currentColor"] { fill: currentColor; }
     @media (max-width: 1100px) {
       .canvas-tools .elements-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
     }
     @media (max-width: 720px) {
-      .canvas-tools .elements-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .canvas-tools .elements-grid {
+        display: flex;
+        overflow-x: auto;
+        gap: 8px;
+        padding-bottom: 4px;
+        -webkit-overflow-scrolling: touch;
+      }
+      .el-add-btn {
+        flex: 0 0 76px;
+        width: 76px;
+        min-height: 78px;
+      }
       .canvas-tools-footer {
         display: grid;
-        grid-template-columns: 1fr 1fr;
+        grid-template-columns: 1fr 1fr 1fr;
         gap: 8px;
       }
       .canvas-tools-footer > button { width: 100%; }
     }
     .canvas-tools-footer {
       display: flex;
-      justify-content: center;
+      justify-content: stretch;
       gap: 8px;
       flex-wrap: wrap;
-      padding-top: 2px;
+      padding-top: 8px;
       border-top: 1px solid rgba(255,255,255,.06);
     }
-    .controls {
-      display: grid; gap: 8px; align-content: start;
-      max-height: none; height: 100%; overflow: auto; padding-right: 4px;
+    .canvas-tools-footer > button {
+      flex: 1 1 0;
+      min-width: 0;
+      min-height: 44px;
+      gap: 8px;
     }
+    .canvas-tools-footer svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
+    }
+    .controls {
+      display: grid; gap: 4px; align-content: start;
+      max-height: none; height: 100%; overflow: auto; padding: 12px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(12, 18, 34, .9);
+    }
+    .canvas-settings-head { margin: 0 0 8px; }
+    .canvas-settings-head h2 { font-size: 1.02rem; }
+    .canvas-settings-head + .ctrl-block { border-top: 0; padding-top: 0; }
     .controls label {
       margin-bottom: 2px; font-size: .68rem;
     }
@@ -1115,8 +1201,12 @@
     }
     .controls .hint { margin-top: 4px; font-size: .78rem; }
     .ctrl-block {
-      padding: 8px; border: 1px solid var(--line); border-radius: 10px;
-      background: rgba(255,255,255,.02); display: grid; gap: 6px;
+      padding: 10px 0;
+      border: 0;
+      border-top: 1px solid rgba(255,255,255,.08);
+      border-radius: 0;
+      background: transparent;
+      display: grid; gap: 6px;
     }
     .ctrl-block > .block-title {
       margin: 0; font-size: .68rem; letter-spacing: .06em; text-transform: uppercase;
@@ -1305,21 +1395,30 @@
     }
     .gallery-item img { width: 44px; height: 44px; object-fit: cover; border-radius: 6px; background: #000; }
     .gallery-item .name { font-size: .75rem; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    details.slideshow-block {
-      padding: 8px; border: 1px solid var(--line); border-radius: 10px;
-      background: rgba(255,255,255,.02);
+    details.slideshow-block,
+    details.design-accordion {
+      padding: 10px 0;
+      border: 0;
+      border-top: 1px solid rgba(255,255,255,.08);
+      border-radius: 0;
+      background: transparent;
     }
-    details.slideshow-block > summary {
+    details.slideshow-block > summary,
+    details.design-accordion > summary {
       cursor: pointer; list-style: none; display: flex; align-items: center; justify-content: space-between;
-      font-size: .68rem; letter-spacing: .06em; text-transform: uppercase;
+      font-size: .72rem; letter-spacing: .08em; text-transform: uppercase;
       color: var(--muted); font-weight: 700; user-select: none;
     }
-    details.slideshow-block > summary::-webkit-details-marker { display: none; }
-    details.slideshow-block > summary::after {
+    details.slideshow-block > summary::-webkit-details-marker,
+    details.design-accordion > summary::-webkit-details-marker { display: none; }
+    details.slideshow-block > summary::after,
+    details.design-accordion > summary::after {
       content: '▸'; color: var(--accent); font-size: .9rem; transition: transform .15s ease;
     }
-    details.slideshow-block[open] > summary::after { transform: rotate(90deg); }
-    details.slideshow-block .slideshow-body {
+    details.slideshow-block[open] > summary::after,
+    details.design-accordion[open] > summary::after { transform: rotate(90deg); }
+    details.slideshow-block .slideshow-body,
+    details.design-accordion .design-accordion-body {
       display: grid; gap: 6px; margin-top: 8px;
     }
     .preview-badge {
@@ -1657,7 +1756,6 @@
         gap: 12px;
       }
       .design-canvas-col {
-        order: -1;
         overflow: visible;
       }
       .canvas-stage {
@@ -1672,7 +1770,6 @@
         max-height: none;
         overflow: visible;
       }
-      .canvas-tools .elements-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
   </style>
 </head>
@@ -1867,6 +1964,15 @@
         <div class="tab-panel" id="tab-design">
           <div class="design-layout">
             <div class="controls">
+              <div class="device-card-head canvas-settings-head">
+                <span class="device-card-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="20" cy="14" r="2"/></svg>
+                </span>
+                <div>
+                  <h2>Canvas Settings</h2>
+                  <p>Customize how your SmartHours display looks.</p>
+                </div>
+              </div>
               <div class="ctrl-block">
                 <p class="block-title">Orientation</p>
                 <select id="screenOrientation">
@@ -1959,8 +2065,9 @@
                 </div>
               </div>
 
-              <div class="ctrl-block" id="elPropsBlock">
-                <p class="block-title">Selected</p>
+              <details class="design-accordion" id="elPropsBlock">
+                <summary>Selected</summary>
+                <div class="design-accordion-body">
                 <p class="hint" id="elPropsEmptyHint" style="margin:0;">Click an item on the canvas to edit it here.</p>
                 <div id="elProps" class="el-props hidden-block">
                   <div id="elTypeProps" class="hidden-block">
@@ -2021,12 +2128,13 @@
                     <p class="hint" style="margin:2px 0 0;">Place the sketch box, then tap the pencil to draw full screen. Save with the disk icon.</p>
                   </div>
                 </div>
-              </div>
+                </div>
+              </details>
 
-              <details class="slideshow-block" id="slideshowBlock">
+              <details class="slideshow-block design-accordion" id="slideshowBlock">
                 <summary>Slideshow</summary>
                 <div class="slideshow-body">
-                  <p class="hint" style="margin:0;">Upload multiple images to rotate on the display. Place a slideshow box with <strong>+ Slides</strong>.</p>
+                  <p class="hint" style="margin:0;">Upload multiple images to rotate on the display. Place a slideshow box with <strong>Slides</strong>.</p>
                   <div class="form-grid" style="gap:6px;">
                     <div>
                       <label for="slideshowIntervalMin">Rotate every (min)</label>
@@ -2045,27 +2153,57 @@
             </div>
             <div class="design-canvas-col">
               <div class="canvas-stage" id="canvasStage">
-                <div class="canvas-screen-meta" id="canvasScreenMeta">800 × 480 px · landscape</div>
+                <div class="canvas-screen-meta" id="canvasScreenMeta">Preview (800 × 480)</div>
                 <div class="tablet-scale-wrap" id="tabletScaleWrap">
                   <div class="tablet-frame" id="tabletFrame"></div>
                 </div>
               </div>
-              <div class="canvas-tools">
-                <p class="tools-label">Elements</p>
-                <div class="elements-grid">
-                  <button type="button" class="btn-secondary" id="addTextBtn">+ Text</button>
-                  <button type="button" class="btn-secondary" id="addSketchBtn">+ Sketch</button>
-                  <button type="button" class="btn-secondary" id="addImageBtn">+ Image</button>
-                  <button type="button" class="btn-secondary" id="addHoursBtn">+ Hours</button>
-                  <button type="button" class="btn-secondary" id="addStatusBtn">+ Status</button>
-                  <button type="button" class="btn-secondary" id="addTitleBtn">+ Title</button>
-                  <button type="button" class="btn-secondary" id="addSlideshowBtn">+ Slides</button>
-                </div>
-                <div class="canvas-tools-footer">
-                  <button type="button" class="btn-secondary" id="fillScreenBtn" title="Snap selected element to full canvas">Fill screen</button>
-                  <button type="button" class="btn-danger" id="clearCanvasBtn">Clear canvas</button>
-                  <button type="button" class="btn mutate-only" id="saveDesignBtn">Save</button>
-                </div>
+            </div>
+            <div class="canvas-tools">
+              <p class="tools-label">Add Elements</p>
+              <div class="elements-grid">
+                <button type="button" class="el-add-btn" id="addTextBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M12 6v13"/></svg>
+                  <span>Text</span>
+                </button>
+                <button type="button" class="el-add-btn" id="addSketchBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                  <span>Sketch</span>
+                </button>
+                <button type="button" class="el-add-btn" id="addImageBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="m21 15-4.5-4.5-3.5 3.5-2-2L3 17"/></svg>
+                  <span>Image</span>
+                </button>
+                <button type="button" class="el-add-btn" id="addHoursBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 1.7"/></svg>
+                  <span>Hours</span>
+                </button>
+                <button type="button" class="el-add-btn" id="addStatusBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg>
+                  <span>Status</span>
+                </button>
+                <button type="button" class="el-add-btn" id="addTitleBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 18 8-13 8 13M7.5 13h9"/></svg>
+                  <span>Title</span>
+                </button>
+                <button type="button" class="el-add-btn" id="addSlideshowBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="13" rx="1.5"/><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4H19a1.5 1.5 0 0 1 1.5 1.5V14A1.5 1.5 0 0 1 19 15.5H16"/></svg>
+                  <span>Slides</span>
+                </button>
+              </div>
+              <div class="canvas-tools-footer">
+                <button type="button" class="btn-secondary" id="fillScreenBtn" title="Snap selected element to full canvas">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 3H3v6M15 3h6v6M9 21H3v-6M21 15v6h-6"/></svg>
+                  Fill Screen
+                </button>
+                <button type="button" class="btn-danger" id="clearCanvasBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4h8v2"/></svg>
+                  Clear Canvas
+                </button>
+                <button type="button" class="btn mutate-only" id="saveDesignBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                  Save
+                </button>
               </div>
             </div>
           </div>
@@ -3032,11 +3170,7 @@
           wrap.style.background = bg;
         }
         if (meta) {
-          const designOrient = TABLET.width >= TABLET.height ? 'landscape' : 'portrait';
-          const viewOrient = swap ? (designOrient === 'landscape' ? 'portrait' : 'landscape') : designOrient;
-          const panel = panelSizeFromForm();
-          const rotNote = rot ? ` · mounted ${rot}°` : '';
-          meta.textContent = `Design ${TABLET.width}×${TABLET.height} · panel ${panel.width}×${panel.height} · ${viewOrient}${rotNote}`;
+          meta.textContent = `Preview (${swap ? TABLET.height : TABLET.width} × ${swap ? TABLET.width : TABLET.height})`;
         }
       }
 
@@ -3631,6 +3765,10 @@
         const c = selected();
         const isTextType = el && TEXT_LAYOUT_TYPES.has(el.type);
         const isOther = el && (el.type === 'image' || el.type === 'sketch');
+        const block = document.getElementById('elPropsBlock');
+        if (block && block.tagName === 'DETAILS' && el && (isTextType || isOther)) {
+          block.open = true;
+        }
         if (!el || (!isTextType && !isOther)) {
           props.classList.add('hidden-block');
           if (emptyHint) emptyHint.classList.remove('hidden-block');
