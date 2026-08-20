@@ -53,6 +53,8 @@ shots/
 !**/elite-cleaning-assets/**/*.jpg
 !**/clever-crm-assets/**/*.png
 !**/clever-crm-assets/**/*.jpg
+!**/smarthours-assets/**/*.png
+!**/smarthours-assets/**/*.jpg
 
 # TomoPI uploaded images - server-only, never in git
 tomopi-data/images/
