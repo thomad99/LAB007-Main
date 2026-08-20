@@ -657,6 +657,11 @@
       gap: 12px;
       margin: 0 0 16px;
     }
+    .device-card-head > div { flex: 1 1 auto; min-width: 0; }
+    .device-card-head #refreshDevicesBtn {
+      flex: 0 0 auto;
+      margin-left: auto;
+    }
     .device-card-icon {
       flex: 0 0 auto;
       width: 36px;
@@ -2300,21 +2305,6 @@
             <textarea id="espSketch" rows="4" readonly></textarea>
           </div>
           <section class="device-card">
-            <div class="device-note hint">
-              <span class="device-info-icon" aria-hidden="true">i</span>
-              <p>
-                Each e-ink display checks in about every 60 minutes with its name, WiFi, and customer URL.
-                Reset queues a factory-style wipe: on the next check-in the display forgets WiFi and URL and opens the <span class="mysmartlife">MySmartLife</span> setup network. Use this if the device is resold or the shop WiFi changes.
-              </p>
-            </div>
-            <div class="device-toolbar">
-              <button type="button" class="btn-secondary" id="refreshDevicesBtn">
-                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-                Refresh
-              </button>
-            </div>
-          </section>
-          <section class="device-card">
             <div class="device-card-head">
               <span class="device-card-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
@@ -2323,6 +2313,10 @@
                 <h2>Device Check-ins</h2>
                 <p>See your displays and their status.</p>
               </div>
+              <button type="button" class="btn-secondary" id="refreshDevicesBtn">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                Refresh
+              </button>
             </div>
             <div class="device-table-wrap">
               <table class="device-table is-empty" id="deviceTable">
