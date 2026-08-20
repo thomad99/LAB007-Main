@@ -118,6 +118,12 @@
       text-transform: uppercase;
       color: var(--muted);
     }
+    .device-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    .device-table th, .device-table td { padding: 10px 8px; border-bottom: 1px solid rgba(255,255,255,.08); text-align: left; font-size: .88rem; vertical-align: middle; }
+    .device-table th { color: var(--muted); font-size: .72rem; letter-spacing: .06em; text-transform: uppercase; }
+    .device-table select { min-width: 140px; }
+    .pill-on { color: #34d399; font-weight: 700; }
+    .pill-off { color: var(--muted); }
     .btn-sync {
       background: linear-gradient(135deg, #5eead4, #34d399);
       color: #042f2e;
@@ -538,6 +544,7 @@
       </div>
       <div class="toolbar">
         <a class="btn-secondary" href="/SmartHours/about">About</a>
+        <button type="button" class="btn-secondary" id="deviceMgmtBtn">Device Mgmt</button>
         <button type="button" class="btn" id="newCustomerBtn">New Customer</button>
       </div>
     </header>
@@ -551,6 +558,7 @@
           <button type="button" class="btn-secondary active" data-tab="details">Details & Hours</button>
           <button type="button" class="btn-secondary" data-tab="design">Design Canvas</button>
           <button type="button" class="btn-secondary" data-tab="esp32">ESP32 / E-ink</button>
+          <button type="button" class="btn-secondary" data-tab="devices">Device Mgmt</button>
         </div>
 
         <div class="tab-panel active" id="tab-details">
@@ -891,6 +899,31 @@
           <label for="espSketch" style="margin-top:14px;">Generated Arduino / ESP32 sketch</label>
           <textarea id="espSketch" rows="18" style="font-family:Consolas,monospace;font-size:.8rem;" readonly></textarea>
         </div>
+
+        <div class="tab-panel" id="tab-devices">
+          <p class="hint">
+            Each e-ink display checks in every 60 minutes with its name, WiFi, and customer URL.
+            Change the customer URL here; the device picks it up on the next check-in.
+          </p>
+          <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn-secondary" id="refreshDevicesBtn">Refresh</button>
+          </div>
+          <table class="device-table" id="deviceTable">
+            <thead>
+              <tr>
+                <th>Status</th>
+                <th>Device</th>
+                <th>WiFi</th>
+                <th>Customer URL</th>
+                <th>Last check-in</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="deviceTableBody">
+              <tr><td colspan="6" class="hint">No devices have checked in yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </div>
   </div>
@@ -933,6 +966,7 @@
       const tabletFrame = document.getElementById('tabletFrame');
 
       let customers = [];
+      let devices = [];
       let selectedId = null;
       let selectedElId = null;
       let editingDesignId = null;
@@ -2343,6 +2377,7 @@
         if (!res.ok) throw new Error('Failed to load customers');
         const data = await res.json();
         customers = data.customers || [];
+        devices = data.devices || devices;
         settings = data.settings || settings;
         const autoEl = document.getElementById('autoSyncHours');
         if (autoEl) autoEl.value = String(settings.autoSyncIntervalHours ?? 24);
@@ -2360,6 +2395,89 @@
             ? ''
             : 'PLACES_API is not set — Google often only returns “today,” so Sync may fail. Add a Google Places API key as PLACES_API on the server (or enter hours manually).'
         );
+        if (document.getElementById('tab-devices').classList.contains('active')) renderDevices();
+      }
+
+      function formatCheckin(iso) {
+        if (!iso) return 'Never';
+        const t = new Date(iso);
+        if (Number.isNaN(t.getTime())) return iso;
+        const mins = Math.round((Date.now() - t.getTime()) / 60000);
+        const abs = Math.abs(mins);
+        let rel = t.toLocaleString();
+        if (abs < 1) rel = 'just now';
+        else if (abs < 60) rel = abs + ' min ago';
+        else if (abs < 48 * 60) rel = Math.round(abs / 60) + ' hr ago';
+        return rel + ' · ' + t.toLocaleString();
+      }
+
+      function deviceOnline(iso) {
+        if (!iso) return false;
+        const t = new Date(iso).getTime();
+        return Number.isFinite(t) && (Date.now() - t) < 90 * 60 * 1000;
+      }
+
+      function renderDevices() {
+        const body = document.getElementById('deviceTableBody');
+        if (!body) return;
+        if (!devices.length) {
+          body.innerHTML = '<tr><td colspan="6" class="hint">No devices have checked in yet.</td></tr>';
+          return;
+        }
+        const slugOptions = ['<option value="">(unassigned)</option>']
+          .concat(customers.map((c) => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.slug)}</option>`));
+        body.innerHTML = devices.map((d) => {
+          const on = deviceOnline(d.lastSeen);
+          const opts = slugOptions.join('').replace(
+            `value="${escapeHtml(d.customerSlug || '')}"`,
+            `value="${escapeHtml(d.customerSlug || '')}" selected`
+          );
+          return `<tr>
+            <td class="${on ? 'pill-on' : 'pill-off'}">${on ? 'Online' : 'Offline'}</td>
+            <td><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span>${d.fwVersion ? `<br><span class="hint">${escapeHtml(d.fwVersion)}</span>` : ''}</td>
+            <td>${escapeHtml(d.wifiSsid || '—')}</td>
+            <td><select data-device-id="${escapeHtml(d.id)}">${opts}</select></td>
+            <td>${escapeHtml(formatCheckin(d.lastSeen))}</td>
+            <td><button type="button" class="btn-secondary" data-save-device="${escapeHtml(d.id)}">Save</button></td>
+          </tr>`;
+        }).join('');
+        body.querySelectorAll('[data-save-device]').forEach((btn) => {
+          btn.addEventListener('click', () => saveDeviceSlug(btn.dataset.saveDevice));
+        });
+      }
+
+      async function loadDevices() {
+        const res = await apiFetch('/api/smarthours/devices');
+        if (!res.ok) throw new Error('Failed to load devices');
+        const data = await res.json();
+        devices = data.devices || [];
+        renderDevices();
+      }
+
+      async function saveDeviceSlug(id) {
+        const select = document.querySelector(`select[data-device-id="${id}"]`);
+        if (!select) return;
+        const res = await apiFetch('/api/smarthours/devices/' + encodeURIComponent(id), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerSlug: select.value })
+        });
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.error || 'Could not update device');
+        }
+        setStatus('Customer URL saved. The display will switch on its next hourly check-in.');
+        await loadDevices();
+      }
+
+      function openDeviceMgmt() {
+        editor.classList.add('open');
+        document.querySelectorAll('.tabs [data-tab]').forEach((b) => b.classList.remove('active'));
+        document.querySelectorAll('.tab-panel').forEach((p) => p.classList.remove('active'));
+        const tabBtn = document.querySelector('.tabs [data-tab="devices"]');
+        if (tabBtn) tabBtn.classList.add('active');
+        document.getElementById('tab-devices').classList.add('active');
+        loadDevices().catch((err) => setStatus(err.message, true));
       }
 
       function collectPayload() {
@@ -2541,6 +2659,11 @@
         syncHoursRowState(row);
       });
 
+      document.getElementById('deviceMgmtBtn').addEventListener('click', () => openDeviceMgmt());
+      document.getElementById('refreshDevicesBtn').addEventListener('click', () => {
+        loadDevices().catch((err) => setStatus(err.message, true));
+      });
+
       document.getElementById('newCustomerBtn').addEventListener('click', () => {
         const temp = {
           id: 'tmp-' + Date.now(),
@@ -2587,6 +2710,7 @@
             scaleTablet();
           }
           if (btn.dataset.tab === 'esp32') refreshEinkPanel();
+          if (btn.dataset.tab === 'devices') loadDevices().catch((err) => setStatus(err.message, true));
         });
       });
 
