@@ -175,11 +175,7 @@
     body.admin-mode.fleet-open .editor {
       display: none !important;
     }
-    body.admin-mode.fleet-open #customersNavBtn {
-      color: var(--accent);
-      background: transparent;
-      border-color: var(--line);
-    }
+    body.admin-mode.fleet-open #newCustomerBtn { display: none !important; }
     body.has-studio .editor.open {
       display: flex;
       flex-direction: column;
@@ -1853,9 +1849,9 @@
       <div class="toolbar">
         <a class="btn-secondary about-link admin-only" href="/SmartHours/about">About</a>
         <button type="button" class="btn-secondary admin-only" id="customersNavBtn">Customers</button>
+        <button type="button" class="btn-secondary admin-only" id="newCustomerBtn">New Customer</button>
         <button type="button" class="btn-secondary admin-only" id="deviceMgmtBtn">Devices</button>
         <button type="button" class="btn-secondary admin-only" id="logoutBtn">Log out</button>
-        <button type="button" class="btn hidden-block" id="newCustomerBtn">New Customer</button>
       </div>
     </header>
     <div class="status" id="status"></div>
@@ -1882,7 +1878,7 @@
             <p>Choose your unique page link</p>
           </div>
           <div class="setup-url">
-            <span class="setup-url-suffix">lab007.ai/SmartHours/e/</span>
+            <span class="setup-url-suffix">lab007.ai/SmartHours/</span>
             <input id="onboardSlug" type="text" placeholder="e.g. smarthours" autocomplete="off">
           </div>
         </div>
@@ -2787,8 +2783,12 @@
 
       function studioSlugFromLocation() {
         const path = location.pathname.replace(/\/+$/, '');
-        const m = path.match(/\/SmartHours\/e\/([^/]+)$/i);
-        if (m) return decodeURIComponent(m[1]);
+        const direct = path.match(/^\/SmartHours\/([^/]+)$/i);
+        if (direct && !/^(about|assets|e|v)$/i.test(direct[1])) {
+          return decodeURIComponent(direct[1]);
+        }
+        const legacy = path.match(/\/SmartHours\/e\/([^/]+)$/i);
+        if (legacy) return decodeURIComponent(legacy[1]);
         const q = new URLSearchParams(location.search).get('s');
         if (q) return String(q).trim();
         const hash = location.hash.replace(/^#/, '').trim();
@@ -2801,12 +2801,12 @@
         if (!value) return;
         try { localStorage.setItem('smarthours_slug', value); } catch {}
         if (IS_ADMIN) return;
-        const next = '/SmartHours/e/' + encodeURIComponent(value);
+        const next = '/SmartHours/' + encodeURIComponent(value);
         if (location.pathname !== next) history.replaceState(null, '', next);
       }
 
       function studioManageUrl(slug) {
-        return location.origin + '/SmartHours/e/' + encodeURIComponent(slug);
+        return location.origin + '/SmartHours/' + encodeURIComponent(slug);
       }
 
       function showUrlSavedModal(slug) {
@@ -2866,7 +2866,7 @@
         if (!previewEl) return;
         const value = clientSlugify(slug);
         const url = value ? studioManageUrl(value) : '';
-        previewEl.textContent = url || (location.origin + '/SmartHours/e/your-slug');
+        previewEl.textContent = url || (location.origin + '/SmartHours/your-slug');
         if (previewEl.tagName === 'A') {
           if (url) {
             previewEl.href = url;
@@ -4203,7 +4203,7 @@
         customerList.innerHTML = customers.map((c) => `
           <button type="button" class="customer-item ${c.id === selectedId ? 'active' : ''}" data-id="${escapeHtml(c.id)}">
             <strong>${escapeHtml(c.name || 'Untitled')}</strong>
-            <span>/SmartHours/v/${escapeHtml(c.slug || '…')}</span>
+            <span>/SmartHours/${escapeHtml(c.slug || '…')}</span>
           </button>
         `).join('');
       }
@@ -4238,6 +4238,9 @@
         suppressAutosave += 1;
         document.body.classList.add('has-studio');
         editor.classList.add('open');
+        if (IS_ADMIN) {
+          document.body.classList.toggle('readonly', !String(customer.id || '').startsWith('tmp-'));
+        }
         const activeTab = document.querySelector('.tabs [data-tab].active');
         document.body.dataset.studioTab = (activeTab && activeTab.dataset.tab) || 'info';
         selectedElId = null;
@@ -4608,7 +4611,7 @@
           return;
         }
         const base = (document.getElementById('espBaseUrl').value || location.origin).replace(/\/$/, '');
-        const manageUrl = `${base}/SmartHours/e/${encodeURIComponent(c.slug)}`;
+        const manageUrl = `${base}/SmartHours/${encodeURIComponent(c.slug)}`;
         const pngUrl = displayPngUrl(c);
         document.getElementById('einkUrlBox').innerHTML =
           `<div><strong>Management Portal URL:</strong> <a href="${manageUrl}" target="_blank" rel="noopener">${manageUrl}</a></div>` +
