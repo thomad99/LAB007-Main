@@ -1830,10 +1830,9 @@
       }
 
       function canvasOutputRotation() {
-        const orient = document.getElementById('screenOrientation').value === 'portrait' ? 'portrait' : 'landscape';
-        const bake = orient === 'portrait' ? 90 : 0;
-        const hang = normalizeHangRotation(document.getElementById('screenHangRotation').value);
-        return normalizeHangRotation(bake + hang);
+        // Keep the editor upright in the selected orientation.
+        // Portrait 90° bake is applied on the PNG for the panel, not in this view.
+        return 0;
       }
 
       function snapScalar(value, size, max) {
