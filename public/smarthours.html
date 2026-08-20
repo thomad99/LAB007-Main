@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
-  <title>SmartHours Admin | LAB007</title>
+  <title>SmartHours | LAB007</title>
   <link rel="icon" type="image/png" href="/smarthours-assets/smarthours-logo.png">
   <link rel="apple-touch-icon" href="/smarthours-assets/smarthours-logo.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -79,10 +79,57 @@
     .customer-item span { color: var(--muted); font-size: .82rem; }
     .editor { display: none; }
     .editor.open { display: grid; gap: 16px; }
-    .tabs { display: flex; gap: 8px; flex-wrap: wrap; }
-    .tabs button.active { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
+    .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 4px 0 14px; }
+    .tabs .tab-btn {
+      appearance: none;
+      background: transparent;
+      color: var(--accent);
+      border: 1px solid var(--line);
+      padding: 6px 12px;
+      font-size: .8rem;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      font-family: inherit;
+      line-height: 1.2;
+    }
+    .tabs .tab-btn.active { background: var(--accent-dim); border-color: var(--accent); color: #fff; }
     .tab-panel { display: none; }
     .tab-panel.active { display: block; }
+    body.customer-mode .grid-main { grid-template-columns: 1fr; }
+    body.customer-mode aside.admin-only { display: none; }
+    body.customer-mode:not(.has-studio) .grid-main { display: none; }
+    body.admin-mode #onboard { display: none !important; }
+    body.customer-mode.has-studio #onboard { display: none; }
+    body.customer-mode .admin-only { display: none !important; }
+    body.admin-mode .customer-only { display: none !important; }
+    body.admin-mode.readonly .mutate-only { display: none !important; }
+    body.admin-mode.readonly input:not([type="password"]),
+    body.admin-mode.readonly select,
+    body.admin-mode.readonly textarea {
+      pointer-events: none;
+      opacity: .88;
+    }
+    .onboard { max-width: 560px; margin: 8px auto 0; }
+    .onboard h2 { margin: 0 0 8px; font-size: 1.35rem; }
+    .onboard .form-grid { grid-template-columns: 1fr; margin-top: 12px; }
+    .slug-preview { margin: 6px 0 0; color: var(--accent); font-size: .9rem; word-break: break-all; }
+    #adminGate {
+      position: fixed; inset: 0; z-index: 90;
+      background: rgba(5, 7, 15, .94);
+      display: none;
+      place-items: center;
+      padding: 24px;
+    }
+    body.admin-mode:not(.authed) #adminGate { display: grid; }
+    body.admin-mode:not(.authed) #app { visibility: hidden; }
+    .login-card { width: min(420px, 100%); }
+    .login-card h2 { margin: 0 0 8px; }
+    body.admin-mode.readonly .tablet-frame,
+    body.admin-mode.readonly .canvas-tools,
+    body.admin-mode.readonly .elements-grid {
+      pointer-events: none;
+    }
     label { display: block; font-size: .74rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 6px; }
     input, select, textarea {
       width: 100%; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line);
@@ -534,34 +581,68 @@
   </style>
 </head>
 <body>
+  <div id="adminGate">
+    <form class="panel login-card" id="adminLoginForm">
+      <h2>SmartHours Admin</h2>
+      <p class="hint">Enter your Render password to view all customer pages.</p>
+      <label for="adminPassword">Password</label>
+      <input id="adminPassword" name="password" type="password" required autocomplete="current-password" placeholder="Password">
+      <p class="hint err" id="adminLoginError" style="color:var(--danger);min-height:1.2em;"></p>
+      <button type="submit" class="btn" style="width:100%;margin-top:8px;">Sign in</button>
+    </form>
+  </div>
   <div id="app" class="wrap">
     <header>
       <div class="brand">
         <img class="brand-logo" src="/smarthours-assets/smarthours-logo.png" width="52" height="52" alt="SmartHours">
         <div class="brand-text">
-          <h1>SmartHours</h1>
+          <h1 id="pageTitle">SmartHours</h1>
+          <p class="sub" id="pageSub">Set up your hours display</p>
         </div>
       </div>
       <div class="toolbar">
         <a class="btn-secondary" href="/SmartHours/about">About</a>
-        <button type="button" class="btn-secondary" id="deviceMgmtBtn">Device Mgmt</button>
-        <button type="button" class="btn" id="newCustomerBtn">New Customer</button>
+        <button type="button" class="btn-secondary admin-only" id="logoutBtn">Log out</button>
+        <button type="button" class="btn-secondary hidden-block" id="deviceMgmtBtn">Device Mgmt</button>
+        <button type="button" class="btn hidden-block" id="newCustomerBtn">New Customer</button>
       </div>
     </header>
     <div class="status" id="status"></div>
+    <section class="panel onboard customer-only" id="onboard">
+      <h2>Create your SmartHours page</h2>
+      <p class="hint">Enter your business name, pick a unique URL, and paste your Google Business link. You can design the screen after you save.</p>
+      <div class="form-grid">
+        <div>
+          <label for="onboardName">Your name / business name</label>
+          <input id="onboardName" type="text" placeholder="Acme Cafe" autocomplete="organization">
+        </div>
+        <div>
+          <label for="onboardSlug">URL slug</label>
+          <input id="onboardSlug" type="text" placeholder="acme-cafe" autocomplete="off">
+          <p class="slug-preview" id="onboardSlugPreview"></p>
+          <p class="hint" id="onboardSlugStatus"></p>
+        </div>
+        <div>
+          <label for="onboardMaps">Google business link</label>
+          <input id="onboardMaps" type="text" placeholder="https://maps.google.com/…" autocomplete="off">
+        </div>
+      </div>
+      <button type="button" class="btn" id="onboardSaveBtn" style="margin-top:16px;">Save</button>
+    </section>
     <div class="grid-main">
-      <aside class="panel">
+      <aside class="panel admin-only">
         <div class="customer-list" id="customerList"></div>
       </aside>
       <section class="panel editor" id="editor">
         <div class="tabs">
-          <button type="button" class="btn-secondary active" data-tab="details">Details & Hours</button>
-          <button type="button" class="btn-secondary" data-tab="design">Design Canvas</button>
-          <button type="button" class="btn-secondary" data-tab="esp32">ESP32 / E-ink</button>
-          <button type="button" class="btn-secondary" data-tab="devices">Device Mgmt</button>
+          <button type="button" class="tab-btn active" data-tab="info">Customer Info</button>
+          <button type="button" class="tab-btn" data-tab="hours">Store Hours</button>
+          <button type="button" class="tab-btn" data-tab="design">Design Canvas</button>
+          <button type="button" class="tab-btn" data-tab="devices">Device Controls</button>
+          <button type="button" class="tab-btn" data-tab="preview">Preview</button>
         </div>
 
-        <div class="tab-panel active" id="tab-details">
+        <div class="tab-panel active" id="tab-info">
           <div class="form-grid">
             <div>
               <label for="fieldName">Customer name</label>
@@ -570,21 +651,30 @@
             <div>
               <label for="fieldSlug">URL slug</label>
               <input id="fieldSlug" type="text" placeholder="acme-cafe">
+              <p class="slug-preview" id="studioSlugPreview"></p>
+              <p class="hint" id="studioSlugStatus"></p>
             </div>
             <div class="full">
               <label for="fieldMapsUrl">Google business link</label>
               <input id="fieldMapsUrl" type="text" placeholder="Google Maps / place URL">
             </div>
-            <div class="full auto-sync-bar">
+            <div class="full auto-sync-bar admin-only">
               <div>
                 <label for="autoSyncHours">Auto Google sync (hours)</label>
                 <input id="autoSyncHours" type="number" min="0" max="168" step="1" value="24" title="0 disables auto sync">
               </div>
-              <button type="button" class="btn-secondary" id="saveAutoSyncBtn">Save interval</button>
+              <button type="button" class="btn-secondary mutate-only" id="saveAutoSyncBtn">Save interval</button>
             </div>
           </div>
+          <div class="mutate-only" style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
+            <button type="button" class="btn" id="saveBtn">Save</button>
+            <button type="button" class="btn-danger admin-only" id="deleteBtn">Delete</button>
+          </div>
+        </div>
+
+        <div class="tab-panel" id="tab-hours">
           <div class="hours-toolbar">
-            <button type="button" class="btn btn-sync" id="syncOneBtn">Sync Google hours</button>
+            <button type="button" class="btn btn-sync mutate-only" id="syncOneBtn">Sync Google hours</button>
             <label class="manual-opt">
               <input id="fieldManual" type="checkbox"> Manual hours
             </label>
@@ -600,16 +690,15 @@
             </thead>
             <tbody id="hoursBody"></tbody>
           </table>
-          <div style="margin-top:16px; display:flex; gap:8px; flex-wrap:wrap;">
-            <button type="button" class="btn" id="saveBtn">Save Customer</button>
-            <button type="button" class="btn-danger" id="deleteBtn">Delete</button>
+          <div class="mutate-only" style="margin-top:16px;">
+            <button type="button" class="btn" id="saveHoursBtn">Save Hours</button>
           </div>
         </div>
 
         <div class="tab-panel" id="tab-design">
           <div class="design-layout">
             <div class="controls">
-              <div class="ctrl-block">
+              <div class="ctrl-block hidden-block admin-only">
                 <p class="block-title">Designs <span id="designLivePill" class="live-pill hidden-block">Live</span></p>
                 <div class="design-slots">
                   <div class="design-slot-row">
@@ -630,7 +719,7 @@
                 </div>
               </div>
 
-              <div class="ctrl-block">
+              <div class="ctrl-block hidden-block">
                 <p class="block-title">Screen</p>
                 <div class="screen-settings">
                   <div>
@@ -668,7 +757,6 @@
                     </div>
                   </div>
                 </div>
-                <p class="hint" style="margin:4px 0 0;">Panel W×H is the device size. Orientation rotates the <strong>image</strong> (devices cannot rotate).</p>
               </div>
 
               <div class="ctrl-block">
@@ -785,7 +873,7 @@
 
               <input id="canvasImageFile" type="file" accept="image/*" hidden>
 
-              <button type="button" class="btn" id="saveDesignBtn">Save Design</button>
+              <button type="button" class="btn mutate-only" id="saveDesignBtn">Save Design</button>
               <div id="designEinkPreviewWrap" class="hidden-block">
                 <p class="hint" style="margin:0 0 6px;">PREVIEW</p>
                 <div style="background:#0a1020;border:1px solid var(--line);border-radius:10px;padding:8px;overflow:auto;max-height:220px;">
@@ -820,16 +908,16 @@
           </div>
         </div>
 
-        <div class="tab-panel" id="tab-esp32">
+        <div class="tab-panel" id="tab-devices">
           <p class="hint">
-            Screens are designed as <strong>HTML</strong> (live page) and a matching <strong>high-res PNG</strong>.
-            Default panel size is <strong>800×480</strong>.
+            Set how often the e-ink display should poll for a new image, plus the panel size and color mode.
+            Devices that check in with this URL appear below.
           </p>
           <div class="form-grid" style="margin-top:12px;">
             <div>
-              <label for="einkPoll">Poll interval (minutes)</label>
-              <input id="einkPoll" type="number" min="1" max="20160" value="720">
-              <p class="hint">720 = 12 hours · try 5–15 while testing</p>
+              <label for="einkPoll">Screen update interval (minutes)</label>
+              <input id="einkPoll" type="number" min="1" max="20160" value="60">
+              <p class="hint">How often the display should fetch a new PNG. 60 = hourly.</p>
             </div>
             <div>
               <label for="einkWidth">Panel width (px)</label>
@@ -855,7 +943,7 @@
                 <option value="180">180° upside down</option>
                 <option value="270">270° clockwise</option>
               </select>
-              <p class="hint">Use when the tablet can be mounted any way up</p>
+              <p class="hint">Use when the tablet is mounted sideways or upside down</p>
             </div>
             <div>
               <label for="einkColorMode">Color mode</label>
@@ -871,7 +959,10 @@
               </label>
             </div>
           </div>
-          <div class="form-grid" style="margin-top:12px;">
+          <div class="mutate-only" style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
+            <button type="button" class="btn" id="saveEinkBtn">Save Device Settings</button>
+          </div>
+          <div class="hidden-block">
             <div>
               <label for="espWifiSsid">WiFi SSID (for generated code)</label>
               <input id="espWifiSsid" type="text" placeholder="ShopWiFi" autocomplete="off">
@@ -884,26 +975,15 @@
               <label for="espBaseUrl">Server base URL</label>
               <input id="espBaseUrl" type="url" placeholder="https://your-host">
             </div>
+            <button type="button" id="previewEinkBtn">Refresh PNG Preview</button>
+            <button type="button" id="downloadSketchBtn">Download ESP32 .ino (legacy BMP)</button>
+            <button type="button" id="copySketchBtn">Copy Code</button>
+            <p class="hint" id="sketchMeta"></p>
+            <textarea id="espSketch" rows="4" readonly></textarea>
           </div>
-          <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap;">
-            <button type="button" class="btn" id="saveEinkBtn">Save Display Settings</button>
-            <button type="button" class="btn-secondary" id="previewEinkBtn">Refresh PNG Preview</button>
-            <button type="button" class="btn" id="downloadSketchBtn">Download ESP32 .ino (legacy BMP)</button>
-            <button type="button" class="btn-secondary" id="copySketchBtn">Copy Code</button>
-          </div>
-          <p class="hint" id="sketchMeta" style="margin-top:8px;"></p>
-          <div class="url-box" id="einkUrlBox" style="margin-top:14px;"></div>
-          <div style="margin-top:14px;background:#0a1020;border:1px solid var(--line);border-radius:12px;padding:12px;overflow:auto;">
-            <img id="einkPreview" alt="Display PNG preview" style="max-width:100%;height:auto;background:#fff;image-rendering:auto;">
-          </div>
-          <label for="espSketch" style="margin-top:14px;">Generated Arduino / ESP32 sketch</label>
-          <textarea id="espSketch" rows="18" style="font-family:Consolas,monospace;font-size:.8rem;" readonly></textarea>
-        </div>
-
-        <div class="tab-panel" id="tab-devices">
-          <p class="hint">
-            Each e-ink display checks in every 60 minutes with its name, WiFi, and customer URL.
-            Change the customer URL here; the device picks it up on the next check-in.
+          <p class="hint" style="margin-top:18px;">
+            Each e-ink display checks in about every 60 minutes with its name, WiFi, and customer URL.
+            Reset queues a factory-style wipe: on the next check-in the display forgets WiFi and URL and opens the <strong>MySmartLife</strong> setup network. Use this if the device is resold or the shop WiFi changes.
           </p>
           <div style="margin-top:12px;display:flex;gap:8px;flex-wrap:wrap;">
             <button type="button" class="btn-secondary" id="refreshDevicesBtn">Refresh</button>
@@ -924,6 +1004,14 @@
             </tbody>
           </table>
         </div>
+
+        <div class="tab-panel" id="tab-preview">
+          <p class="hint">Live HTML page and the PNG the e-ink display downloads.</p>
+          <div class="url-box preview-links" id="einkUrlBox" style="margin-top:14px;"></div>
+          <div style="margin-top:14px;background:#0a1020;border:1px solid var(--line);border-radius:12px;padding:12px;overflow:auto;">
+            <img id="einkPreview" alt="Display PNG preview" style="max-width:100%;height:auto;background:#fff;image-rendering:auto;">
+          </div>
+        </div>
       </section>
     </div>
   </div>
@@ -931,6 +1019,16 @@
   <script src="/lab007-site-nav.js" defer></script>
   <script>
     (function () {
+      const IS_ADMIN = /smarthours-admin/i.test(location.pathname);
+      document.body.classList.add(IS_ADMIN ? 'admin-mode' : 'customer-mode');
+      if (IS_ADMIN) document.body.classList.add('readonly');
+      document.title = IS_ADMIN ? 'SmartHours Admin | LAB007' : 'SmartHours | LAB007';
+      const pageTitle = document.getElementById('pageTitle');
+      const pageSub = document.getElementById('pageSub');
+      if (pageTitle) pageTitle.textContent = IS_ADMIN ? 'SmartHours Admin' : 'SmartHours';
+      if (pageSub) pageSub.textContent = IS_ADMIN
+        ? 'All customer pages · read only'
+        : 'Set up your hours display';
       const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
       const TEXT_LAYOUT_TYPES = new Set(['title', 'hours', 'status', 'text']);
       const FONT_OPTIONS = [
@@ -1202,7 +1300,55 @@
       }
 
       function apiFetch(url, options) {
-        return fetch(url, Object.assign({ credentials: 'omit' }, options || {}));
+        return fetch(url, Object.assign({ credentials: IS_ADMIN ? 'include' : 'same-origin' }, options || {}));
+      }
+
+      function studioSlugFromLocation() {
+        const path = location.pathname.replace(/\/+$/, '');
+        const m = path.match(/\/SmartHours\/e\/([^/]+)$/i);
+        if (m) return decodeURIComponent(m[1]);
+        const q = new URLSearchParams(location.search).get('s');
+        if (q) return String(q).trim();
+        const hash = location.hash.replace(/^#/, '').trim();
+        if (hash) return hash;
+        try { return localStorage.getItem('smarthours_slug') || ''; } catch { return ''; }
+      }
+
+      function rememberStudioSlug(slug) {
+        const value = String(slug || '').trim();
+        if (!value) return;
+        try { localStorage.setItem('smarthours_slug', value); } catch {}
+        if (IS_ADMIN) return;
+        const next = '/SmartHours/e/' + encodeURIComponent(value);
+        if (location.pathname !== next) history.replaceState(null, '', next);
+      }
+
+      function clientSlugify(value) {
+        return String(value || '')
+          .trim()
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .slice(0, 64);
+      }
+
+      function updateSlugPreview(slug, previewEl) {
+        if (!previewEl) return;
+        const value = clientSlugify(slug);
+        previewEl.textContent = value
+          ? `${location.origin}/SmartHours/v/${value}`
+          : `${location.origin}/SmartHours/v/your-slug`;
+      }
+
+      async function checkSlugAvailable(slug, exceptId) {
+        const value = clientSlugify(slug);
+        if (!value || value.length < 2) {
+          return { available: false, error: 'Choose a URL slug with at least 2 letters or numbers.', slug: value };
+        }
+        const params = new URLSearchParams({ slug: value });
+        if (exceptId && !String(exceptId).startsWith('tmp-')) params.set('exceptId', exceptId);
+        const res = await fetch('/api/smarthours/slug-available?' + params.toString());
+        return res.json().catch(() => ({ available: false, error: 'Could not check slug.' }));
       }
 
       function selected() {
@@ -2318,8 +2464,9 @@
       }
 
       function renderList() {
+        if (!customerList) return;
         if (!customers.length) {
-          customerList.innerHTML = '<p class="hint">No customers yet. Click New Customer.</p>';
+          customerList.innerHTML = '<p class="hint">No customer pages yet.</p>';
           return;
         }
         customerList.innerHTML = customers.map((c) => `
@@ -2337,6 +2484,7 @@
         editingDesignId = null;
         document.getElementById('fieldName').value = customer.name || '';
         document.getElementById('fieldSlug').value = customer.slug || '';
+        updateSlugPreview(customer.slug, document.getElementById('studioSlugPreview'));
         const slugEl = document.getElementById('fieldSlug');
         if (customer.slug) slugEl.dataset.touched = '1';
         else delete slugEl.dataset.touched;
@@ -2371,9 +2519,41 @@
         else showDesignEinkPreview(null);
       }
 
+      async function loadStudio(slug) {
+        setStatus('Loading…', false, true);
+        const res = await apiFetch('/api/smarthours/studio/' + encodeURIComponent(slug));
+        if (res.status === 404) {
+          document.body.classList.remove('has-studio');
+          setStatus('No page found for that URL. Create one below.', true);
+          return false;
+        }
+        if (!res.ok) throw new Error('Failed to load your page');
+        const data = await res.json();
+        customers = data.customer ? [data.customer] : [];
+        devices = data.devices || [];
+        selectedId = data.customer && data.customer.id;
+        document.body.classList.add('has-studio');
+        if (data.customer) {
+          rememberStudioSlug(data.customer.slug);
+          fillEditor(data.customer);
+        }
+        setStatus(
+          data.googlePlacesApiConfigured
+            ? ''
+            : 'Google Places is not configured — enter hours manually, or ask LAB007 to add a Places API key.'
+        );
+        if (document.getElementById('tab-devices').classList.contains('active')) renderDevices();
+        if (document.getElementById('tab-preview').classList.contains('active')) refreshEinkPanel();
+        return true;
+      }
+
       async function loadCustomers() {
         setStatus('Loading…', false, true);
         const res = await apiFetch('/api/smarthours/customers');
+        if (res.status === 401) {
+          document.body.classList.remove('authed');
+          throw new Error('Authentication required.');
+        }
         if (!res.ok) throw new Error('Failed to load customers');
         const data = await res.json();
         customers = data.customers || [];
@@ -2417,36 +2597,50 @@
         return Number.isFinite(t) && (Date.now() - t) < 90 * 60 * 1000;
       }
 
+      function visibleDevices() {
+        const slug = selected() && selected().slug;
+        if (IS_ADMIN && !slug) return devices;
+        if (!slug) return [];
+        return devices.filter((d) => d.customerSlug === slug);
+      }
+
       function renderDevices() {
         const body = document.getElementById('deviceTableBody');
         if (!body) return;
-        if (!devices.length) {
-          body.innerHTML = '<tr><td colspan="6" class="hint">No devices have checked in yet.</td></tr>';
+        const list = visibleDevices();
+        if (!list.length) {
+          body.innerHTML = '<tr><td colspan="6" class="hint">No devices have checked in for this URL yet.</td></tr>';
           return;
         }
-        const slugOptions = ['<option value="">(unassigned)</option>']
-          .concat(customers.map((c) => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.slug)}</option>`));
-        body.innerHTML = devices.map((d) => {
+        body.innerHTML = list.map((d) => {
           const on = deviceOnline(d.lastSeen);
-          const opts = slugOptions.join('').replace(
-            `value="${escapeHtml(d.customerSlug || '')}"`,
-            `value="${escapeHtml(d.customerSlug || '')}" selected`
-          );
+          const pending = !!d.pendingReset;
+          const action = pending
+            ? '<span class="hint">Reset queued — waiting for next check-in</span>'
+            : `<button type="button" class="btn-danger" data-reset-device="${escapeHtml(d.id)}">Reset to setup</button>`;
           return `<tr>
             <td class="${on ? 'pill-on' : 'pill-off'}">${on ? 'Online' : 'Offline'}</td>
             <td><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span>${d.fwVersion ? `<br><span class="hint">${escapeHtml(d.fwVersion)}</span>` : ''}</td>
             <td>${escapeHtml(d.wifiSsid || '—')}</td>
-            <td><select data-device-id="${escapeHtml(d.id)}">${opts}</select></td>
+            <td>${escapeHtml(d.customerSlug || '—')}</td>
             <td>${escapeHtml(formatCheckin(d.lastSeen))}</td>
-            <td><button type="button" class="btn-secondary" data-save-device="${escapeHtml(d.id)}">Save</button></td>
+            <td>${action}</td>
           </tr>`;
         }).join('');
-        body.querySelectorAll('[data-save-device]').forEach((btn) => {
-          btn.addEventListener('click', () => saveDeviceSlug(btn.dataset.saveDevice));
+        body.querySelectorAll('[data-reset-device]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            queueDeviceReset(btn.dataset.resetDevice).catch((err) => setStatus(err.message, true));
+          });
         });
       }
 
       async function loadDevices() {
+        if (!IS_ADMIN) {
+          const c = selected();
+          if (c && c.slug) await loadStudio(c.slug);
+          else renderDevices();
+          return;
+        }
         const res = await apiFetch('/api/smarthours/devices');
         if (!res.ok) throw new Error('Failed to load devices');
         const data = await res.json();
@@ -2454,20 +2648,24 @@
         renderDevices();
       }
 
-      async function saveDeviceSlug(id) {
-        const select = document.querySelector(`select[data-device-id="${id}"]`);
-        if (!select) return;
-        const res = await apiFetch('/api/smarthours/devices/' + encodeURIComponent(id), {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ customerSlug: select.value })
-        });
-        if (!res.ok) {
-          const err = await res.json().catch(() => ({}));
-          throw new Error(err.error || 'Could not update device');
+      async function queueDeviceReset(id) {
+        const c = selected();
+        if (!confirm('Reset this display to setup mode? It will forget WiFi and the customer URL on its next check-in, then broadcast the MySmartLife network.')) {
+          return;
         }
-        setStatus('Customer URL saved. The display will switch on its next hourly check-in.');
+        const res = await apiFetch('/api/smarthours/devices/' + encodeURIComponent(id) + '/reset', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customerSlug: (c && c.slug) || '' })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not queue reset');
+        setStatus('Reset queued. The display will enter setup mode on its next check-in.');
         await loadDevices();
+      }
+
+      async function saveDeviceSlug(id) {
+        return id;
       }
 
       function openDeviceMgmt() {
@@ -2507,7 +2705,7 @@
           editingDesignId,
           eink: {
             enabled: true,
-            pollIntervalMinutes: Number(document.getElementById('einkPoll').value) || 720,
+            pollIntervalMinutes: Number(document.getElementById('einkPoll').value) || 60,
             width: Number(document.getElementById('einkWidth').value) || 800,
             height: Number(document.getElementById('einkHeight').value) || 480,
             orientation: document.getElementById('einkOrientation').value === 'portrait' ? 'portrait' : 'landscape',
@@ -2522,7 +2720,7 @@
 
       function writeEinkToForm(eink) {
         const e = eink || {};
-        document.getElementById('einkPoll').value = e.pollIntervalMinutes || 720;
+        document.getElementById('einkPoll').value = e.pollIntervalMinutes || 60;
         // Panel size — migrate old portrait-swapped values to landscape-ordered panel
         let pw = Number(e.width) || 800;
         let ph = Number(e.height) || 480;
@@ -2584,7 +2782,6 @@
           `<div style="margin-top:6px"><strong>PNG image:</strong> <a href="${pngUrl}" target="_blank" rel="noopener">${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/display.png</a></div>`;
         document.getElementById('einkPreview').src = pngUrl;
         showDesignEinkPreview(c);
-        loadEspSketch().catch((err) => setStatus(err.message, true));
       }
 
       async function loadEspSketch() {
@@ -2637,7 +2834,9 @@
         const keepEditing = editingDesignId;
         selectedId = data.id;
         logoDataUrl = null;
-        await loadCustomers();
+        if (IS_ADMIN) await loadCustomers();
+        else await loadStudio(data.slug || payload.slug);
+        rememberStudioSlug(data.slug || payload.slug);
         const c = selected();
         if (c && keepEditing && (c.designs || []).some((d) => d.id === keepEditing)) {
           loadDesignSlotIntoEditor(keepEditing);
@@ -2709,7 +2908,7 @@
             renderCanvas();
             scaleTablet();
           }
-          if (btn.dataset.tab === 'esp32') refreshEinkPanel();
+          if (btn.dataset.tab === 'preview') refreshEinkPanel();
           if (btn.dataset.tab === 'devices') loadDevices().catch((err) => setStatus(err.message, true));
         });
       });
@@ -2717,6 +2916,12 @@
       document.getElementById('saveBtn').addEventListener('click', () => {
         saveCustomer().catch((err) => setStatus(err.message, true));
       });
+      const saveHoursBtn = document.getElementById('saveHoursBtn');
+      if (saveHoursBtn) {
+        saveHoursBtn.addEventListener('click', () => {
+          saveCustomer().catch((err) => setStatus(err.message, true));
+        });
+      }
       document.getElementById('saveDesignBtn').addEventListener('click', () => {
         saveCustomer()
           .then((c) => {
@@ -2789,7 +2994,7 @@
       });
       ['espBaseUrl', 'espWifiSsid', 'espWifiPass', 'einkPoll'].forEach((id) => {
         document.getElementById(id).addEventListener('change', () => {
-          if (document.getElementById('tab-esp32').classList.contains('active')) {
+          if (document.getElementById('tab-devices').classList.contains('active')) {
             loadEspSketch().catch(() => {});
           }
         });
@@ -2836,7 +3041,9 @@
           const id = selectedId;
           const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(id) + '/sync', { method: 'POST' });
           const data = await res.json().catch(() => ({}));
-          await loadCustomers();
+          if (IS_ADMIN) await loadCustomers();
+          else if (selected() && selected().slug) await loadStudio(selected().slug);
+          else await loadCustomers();
           if (!res.ok) throw new Error(data.error || data.customer?.lastSyncError || 'Sync failed');
           const name = data.displayName || data.customer?.googleDisplayName || '';
           const note = data.syncNote || data.customer?.lastSyncNote || '';
@@ -3128,14 +3335,10 @@
             c.name = el.value;
             const slugEl = document.getElementById('fieldSlug');
             if (slugEl && !slugEl.dataset.touched) {
-              const slug = String(el.value || '')
-                .trim()
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, '-')
-                .replace(/^-+|-+$/g, '')
-                .slice(0, 64);
+              const slug = clientSlugify(el.value);
               slugEl.value = slug;
               c.slug = slug;
+              updateSlugPreview(slug, document.getElementById('studioSlugPreview'));
             }
             renderList();
           }
@@ -3144,11 +3347,23 @@
         el.addEventListener('change', () => renderCanvas());
       });
 
+      let slugCheckTimer = null;
       document.getElementById('fieldSlug').addEventListener('input', () => {
         document.getElementById('fieldSlug').dataset.touched = '1';
+        const slug = document.getElementById('fieldSlug').value.trim();
         const c = selected();
-        if (c) c.slug = document.getElementById('fieldSlug').value.trim();
+        if (c) c.slug = slug;
+        updateSlugPreview(slug, document.getElementById('studioSlugPreview'));
         renderList();
+        const statusEl = document.getElementById('studioSlugStatus');
+        clearTimeout(slugCheckTimer);
+        slugCheckTimer = setTimeout(() => {
+          checkSlugAvailable(slug, selectedId).then((data) => {
+            if (!statusEl) return;
+            statusEl.textContent = data.available ? 'This URL is available.' : (data.error || 'Not available.');
+            statusEl.style.color = data.available ? 'var(--accent)' : 'var(--danger)';
+          }).catch(() => {});
+        }, 280);
       });
 
       bindColorPair('bgColor', 'bgColorPick');
@@ -3333,7 +3548,128 @@
       });
       window.addEventListener('resize', scaleTablet);
 
-      loadCustomers().catch((err) => setStatus(err.message, true));
+      function wireOnboard() {
+        const nameEl = document.getElementById('onboardName');
+        const slugEl = document.getElementById('onboardSlug');
+        const mapsEl = document.getElementById('onboardMaps');
+        const saveEl = document.getElementById('onboardSaveBtn');
+        const statusEl = document.getElementById('onboardSlugStatus');
+        const previewEl = document.getElementById('onboardSlugPreview');
+        if (!nameEl || !slugEl || !saveEl) return;
+        updateSlugPreview('', previewEl);
+        let onboardSlugTimer = null;
+        const refreshSlug = () => {
+          if (!slugEl.dataset.touched) slugEl.value = clientSlugify(nameEl.value);
+          updateSlugPreview(slugEl.value, previewEl);
+          clearTimeout(onboardSlugTimer);
+          onboardSlugTimer = setTimeout(() => {
+            checkSlugAvailable(slugEl.value).then((data) => {
+              statusEl.textContent = data.available ? 'This URL is available.' : (data.error || 'Not available.');
+              statusEl.style.color = data.available ? 'var(--accent)' : 'var(--danger)';
+            }).catch(() => {});
+          }, 280);
+        };
+        nameEl.addEventListener('input', refreshSlug);
+        slugEl.addEventListener('input', () => {
+          slugEl.dataset.touched = '1';
+          refreshSlug();
+        });
+        saveEl.addEventListener('click', async () => {
+          try {
+            const name = nameEl.value.trim();
+            const slug = clientSlugify(slugEl.value || name);
+            if (!name) {
+              setStatus('Enter your name or business name.', true);
+              return;
+            }
+            const check = await checkSlugAvailable(slug);
+            if (!check.available) {
+              setStatus(check.error || 'That URL slug is already taken.', true);
+              return;
+            }
+            setStatus('Creating your page…', false, true);
+            const res = await apiFetch('/api/smarthours/customers', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                name,
+                slug,
+                googleMapsUrl: (mapsEl && mapsEl.value.trim()) || ''
+              })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Could not create your page');
+            rememberStudioSlug(data.slug || slug);
+            await loadStudio(data.slug || slug);
+            setStatus('Saved. Your unique URL is ready — design your screen in the tabs above.');
+          } catch (err) {
+            setStatus(err.message || 'Could not create your page', true);
+          }
+        });
+      }
+
+      async function checkAdminAuth() {
+        const res = await fetch('/api/smarthours/admin/auth/status', { credentials: 'include' });
+        const data = await res.json().catch(() => ({}));
+        const errEl = document.getElementById('adminLoginError');
+        if (!data.configured) {
+          if (errEl) errEl.textContent = 'Admin password is not configured on the server.';
+          return false;
+        }
+        if (data.ok) {
+          document.body.classList.add('authed');
+          return true;
+        }
+        return false;
+      }
+
+      const loginForm = document.getElementById('adminLoginForm');
+      if (loginForm) {
+        loginForm.addEventListener('submit', async (event) => {
+          event.preventDefault();
+          const errEl = document.getElementById('adminLoginError');
+          const pw = document.getElementById('adminPassword');
+          if (errEl) errEl.textContent = '';
+          const res = await fetch('/api/smarthours/admin/auth/login', {
+            method: 'POST',
+            credentials: 'include',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ password: pw ? pw.value : '' })
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            if (errEl) errEl.textContent = data.error || 'Incorrect password.';
+            return;
+          }
+          document.body.classList.add('authed');
+          loadCustomers().catch((err) => setStatus(err.message, true));
+        });
+      }
+      const logoutBtn = document.getElementById('logoutBtn');
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', async () => {
+          await fetch('/api/smarthours/admin/auth/logout', { method: 'POST', credentials: 'include' });
+          document.body.classList.remove('authed');
+          location.reload();
+        });
+      }
+      wireOnboard();
+
+      (async function boot() {
+        if (IS_ADMIN) {
+          const ok = await checkAdminAuth();
+          if (!ok) return;
+          await loadCustomers();
+          return;
+        }
+        const slug = studioSlugFromLocation();
+        if (slug) {
+          const loaded = await loadStudio(slug);
+          if (loaded) return;
+        }
+        document.body.classList.remove('has-studio');
+        setStatus('');
+      })().catch((err) => setStatus(err.message, true));
     })();
   </script>
 </body>

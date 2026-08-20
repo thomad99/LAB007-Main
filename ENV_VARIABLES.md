@@ -153,6 +153,22 @@ MARKETING_MANAGER_PASSWORD=your_strong_password_here
 
 ---
 
+## SmartHours Admin (private — lab007.ai/SmartHours-Admin)
+
+Password-protects `/SmartHours-Admin` and admin-only APIs (list all customers, devices, delete, sync-all, settings). The public `/SmartHours` page is customer self-onboarding and does not require a password.
+
+- `SMARTHOURS_ADMIN_PASSWORD` — Optional. If unset, falls back to `MARKETING_MANAGER_PASSWORD` (your existing Render password).
+- `SMARTHOURS_ADMIN_SESSION_SECRET` — Optional HMAC secret for session cookies (defaults to a hash of the password).
+- `SMARTHOURS_ADMIN_COOKIE_SECURE` — Set to `1` to force `Secure` cookies when not in `NODE_ENV=production`.
+
+```bash
+SMARTHOURS_ADMIN_PASSWORD=your_strong_password_here
+# or reuse:
+# MARKETING_MANAGER_PASSWORD=your_strong_password_here
+```
+
+---
+
 ## Digital Marketing / SEO Analyzer (lab007.ai)
 
 Used by `POST /api/analyze` on the main LAB007 server (`/digitalmarketing`).
