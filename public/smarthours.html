@@ -102,6 +102,40 @@
       min-width: 0;
     }
     body.admin-mode .customer-list { max-height: none; }
+    body.has-studio .wrap {
+      width: calc(100% - 24px);
+      max-width: none;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      padding-bottom: 12px;
+    }
+    body.customer-mode.has-studio .wrap { padding-top: 12px; }
+    body.customer-mode.has-studio header { margin-bottom: 8px; }
+    body.has-studio .status { min-height: 0; margin-bottom: 6px; }
+    body.has-studio .grid-main {
+      flex: 1 1 auto;
+      min-height: 0;
+      align-items: stretch;
+    }
+    body.has-studio .editor.open {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      height: 100%;
+      gap: 10px;
+    }
+    body.has-studio .tabs { margin: 0 0 10px; flex: 0 0 auto; }
+    body.has-studio .tab-panel.active {
+      flex: 1 1 auto;
+      min-height: 0;
+    }
+    #tab-design.active {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      height: 100%;
+    }
     .customer-list { display: grid; gap: 8px; max-height: 70vh; overflow: auto; }
     .customer-item {
       text-align: left; width: 100%; border: 1px solid var(--line); background: rgba(255,255,255,.02);
@@ -475,9 +509,11 @@
     .form-grid .url-box { margin-top: 0; }
     .url-box a { color: var(--accent); word-break: break-all; }
     .design-layout {
-      display: grid; grid-template-columns: 260px 1fr; gap: 12px;
+      display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 12px;
       align-items: stretch;
-      min-height: min(75vh, 820px);
+      flex: 1 1 auto;
+      min-height: 0;
+      height: 100%;
     }
     @media (max-width: 900px) { .design-layout { grid-template-columns: 1fr; } }
     .design-canvas-col {
@@ -540,7 +576,7 @@
     }
     .controls {
       display: grid; gap: 8px; align-content: start;
-      max-height: min(78vh, 900px); overflow: auto; padding-right: 4px;
+      max-height: none; height: 100%; overflow: auto; padding-right: 4px;
     }
     .controls label {
       margin-bottom: 2px; font-size: .68rem;
@@ -575,14 +611,14 @@
       align-items: center;
       justify-content: center;
       gap: 8px;
-      overflow: auto;
-      padding: 36px;
+      overflow: hidden;
+      padding: 16px;
       background: #070b14;
       border-radius: 12px;
       border: 1px solid var(--line);
-      min-height: min(55vh, 520px);
+      min-height: 0;
       flex: 1 1 auto;
-      max-height: min(68vh, 760px);
+      max-height: none;
     }
     .canvas-screen-meta {
       flex: 0 0 auto;
@@ -1956,7 +1992,7 @@
         const stage = document.getElementById('canvasStage') || (wrap && wrap.parentElement);
         const meta = document.getElementById('canvasScreenMeta');
         if (!stage) return;
-        const pad = 24;
+        const pad = 12;
         const metaH = (meta && meta.offsetHeight) || 18;
         const maxW = Math.max(160, stage.clientWidth - pad);
         const maxH = Math.max(160, stage.clientHeight - metaH - pad);
@@ -2821,6 +2857,7 @@
 
       function fillEditor(customer) {
         suppressAutosave += 1;
+        document.body.classList.add('has-studio');
         editor.classList.add('open');
         selectedElId = null;
         editingTextId = null;
@@ -3259,6 +3296,10 @@
           if (btn.dataset.tab === 'design') {
             renderCanvas();
             scaleTablet();
+            requestAnimationFrame(() => {
+              scaleTablet();
+              requestAnimationFrame(scaleTablet);
+            });
           }
           if (btn.dataset.tab === 'preview') refreshEinkPanel();
           if (btn.dataset.tab === 'devices') loadDevices().catch((err) => setStatus(err.message, true));
@@ -3927,6 +3968,10 @@
         }
       });
       window.addEventListener('resize', scaleTablet);
+      if (typeof ResizeObserver !== 'undefined') {
+        const stage = document.getElementById('canvasStage');
+        if (stage) new ResizeObserver(() => scaleTablet()).observe(stage);
+      }
 
       function wireOnboard() {
         const nameEl = document.getElementById('onboardName');
