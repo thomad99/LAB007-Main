@@ -194,10 +194,16 @@
       overflow: visible;
     }
     #tab-hours.active,
-    #tab-devices.active,
     #tab-info.active,
     #tab-preview.active {
       display: block !important;
+      flex: none !important;
+      margin-top: 0 !important;
+      height: auto !important;
+    }
+    #tab-devices.active {
+      display: grid !important;
+      gap: 14px;
       flex: none !important;
       margin-top: 0 !important;
       height: auto !important;
@@ -578,41 +584,136 @@
     body.admin-mode #tab-info .full > p.hint:not(#studioMapsStatus) {
       display: none;
     }
+    .device-card {
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(12, 18, 34, .9);
+      padding: 16px;
+    }
+    .device-card-head {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin: 0 0 16px;
+    }
+    .device-card-icon {
+      flex: 0 0 auto;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: var(--accent-dim);
+      color: var(--accent);
+      border: 1px solid rgba(118, 244, 197, .35);
+    }
+    .device-card-icon svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .device-card-head h2 {
+      margin: 0;
+      font-size: 1.05rem;
+      font-weight: 700;
+      letter-spacing: -.01em;
+    }
+    .device-card-head p {
+      margin: 3px 0 0;
+      color: var(--muted);
+      font-size: .86rem;
+      line-height: 1.35;
+    }
     .device-settings-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 22px 28px;
+      gap: 16px 18px;
       align-items: start;
-      max-width: 920px;
     }
     @media (max-width: 800px) {
       .device-settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
-    @media (max-width: 520px) {
+    @media (max-width: 380px) {
       .device-settings-grid { grid-template-columns: 1fr; }
     }
     .device-settings-grid > div { min-width: 0; }
-    .device-settings-grid .hint { margin: 6px 0 0; }
+    .device-settings-grid .field-hint {
+      margin: 6px 0 0;
+      color: var(--muted);
+      font-size: .78rem;
+      line-height: 1.35;
+    }
+    .field-with-icon { position: relative; }
+    .field-with-icon input { width: 100%; padding-right: 42px; }
+    .field-icon {
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 18px;
+      height: 18px;
+      color: var(--muted);
+      pointer-events: none;
+    }
+    .field-icon svg {
+      width: 18px;
+      height: 18px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      display: block;
+    }
     #tab-devices label {
-      margin-bottom: 10px;
-      font-size: 1.35rem;
-      letter-spacing: .05em;
+      margin-bottom: 8px;
+      font-size: .82rem;
+      letter-spacing: 0;
+      text-transform: none;
+      font-weight: 650;
+      color: var(--text);
     }
     #tab-devices input,
     #tab-devices select {
-      padding: 12px 14px;
-      font-size: 1.35rem;
-      min-height: 52px;
+      padding: 10px 12px;
+      font-size: .98rem;
+      min-height: 44px;
+      width: 100%;
     }
     #tab-devices .device-note {
-      margin: 28px 0 0;
-      font-size: 1.15rem;
+      margin: 0;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      font-size: .92rem;
       line-height: 1.5;
-      max-width: 70ch;
       color: var(--muted);
     }
+    #tab-devices .device-note p { margin: 0; }
+    #tab-devices .device-note .mysmartlife {
+      color: #7db4ff;
+      font-weight: 700;
+    }
+    .device-info-icon {
+      flex: 0 0 auto;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(90, 140, 255, .18);
+      color: #7db4ff;
+      font-weight: 800;
+      font-size: .9rem;
+      font-style: italic;
+      font-family: Georgia, serif;
+    }
     #tab-devices .device-toolbar {
-      margin-top: 18px;
+      margin-top: 14px;
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
@@ -620,10 +721,45 @@
     }
     #tab-devices .device-toolbar .btn-secondary,
     .fleet-page .fleet-toolbar .btn-secondary {
-      min-height: 48px;
-      padding: 12px 22px;
-      font-size: 1.15rem;
+      min-height: 42px;
+      padding: 8px 16px;
+      font-size: .95rem;
     }
+    #refreshDevicesBtn svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .device-empty {
+      display: grid;
+      justify-items: center;
+      gap: 8px;
+      padding: 18px 8px 8px;
+      color: var(--muted);
+      text-align: center;
+    }
+    .device-empty svg {
+      width: 72px;
+      height: 72px;
+      fill: none;
+      stroke: #5d6b82;
+      stroke-width: 1.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      opacity: .85;
+    }
+    .device-empty strong {
+      display: block;
+      color: var(--text);
+      font-size: .98rem;
+    }
+    .device-empty span { font-size: .86rem; }
+    #tab-devices .device-table { margin-top: 0; }
+    #tab-devices .device-table-wrap { overflow: auto; }
     .fleet-page {
       display: none;
       flex-direction: column;
@@ -1368,11 +1504,20 @@
       .canvas-el .edit-sketch { width: 34px; height: 34px; }
       .canvas-el .edit-sketch svg { width: 18px; height: 18px; }
       .device-settings-grid {
-        grid-template-columns: 1fr;
-        gap: 14px;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px 10px;
         max-width: none;
       }
-      #tab-devices .device-note { font-size: 1rem; margin-top: 16px; }
+      #tab-devices label { font-size: .78rem; margin-bottom: 6px; }
+      #tab-devices input,
+      #tab-devices select {
+        font-size: .92rem;
+        min-height: 42px;
+        padding: 8px 10px;
+      }
+      #tab-devices .device-note { font-size: .88rem; }
+      .device-card { padding: 14px; }
+      .device-card-head h2 { font-size: 1rem; }
       .device-table-wrap, .fleet-table-wrap { overflow: visible; }
       .device-table thead { display: none; }
       .device-table, .device-table tbody { display: block; width: 100%; }
@@ -1403,6 +1548,28 @@
         color: var(--muted);
       }
       .device-table select { min-width: 0; width: 100%; }
+      #tab-devices .device-table.is-empty thead { display: table-header-group; }
+      #tab-devices .device-table.is-empty { display: table; width: 100%; table-layout: fixed; }
+      #tab-devices .device-table.is-empty tbody { display: table-row-group; }
+      #tab-devices .device-table.is-empty tr {
+        display: table-row;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+      }
+      #tab-devices .device-table.is-empty th,
+      #tab-devices .device-table.is-empty td {
+        display: table-cell;
+        padding: 8px 4px;
+        font-size: .62rem;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+      }
+      #tab-devices .device-table.is-empty td {
+        text-align: center;
+        padding: 20px 8px 8px;
+        font-size: .9rem;
+      }
       #tab-design.active {
         display: flex !important;
         flex-direction: column;
@@ -1818,48 +1985,72 @@
         </div>
 
         <div class="tab-panel" id="tab-devices">
-          <div class="device-settings-grid">
-            <div>
-              <label for="einkPoll">Screen update interval (minutes)</label>
-              <input id="einkPoll" type="number" min="1" max="20160" value="60">
+          <section class="device-card">
+            <div class="device-card-head">
+              <span class="device-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg>
+              </span>
+              <div>
+                <h2>Display Settings</h2>
+                <p>Control how your SmartHours display works.</p>
+              </div>
             </div>
-            <div>
-              <label for="googleSyncMinutes">Google hours sync (minutes)</label>
-              <input id="googleSyncMinutes" type="number" min="0" max="10080" value="60" title="How often to refresh opening hours from Google. Default 60. 0 turns auto-sync off for this page.">
+            <div class="device-settings-grid">
+              <div>
+                <label for="einkPoll">Screen Update Interval (minutes)</label>
+                <div class="field-with-icon">
+                  <input id="einkPoll" type="number" min="1" max="20160" value="60">
+                  <span class="field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  </span>
+                </div>
+                <p class="field-hint">How often the display content refreshes.</p>
+              </div>
+              <div>
+                <label for="googleSyncMinutes">Google Hours Sync (minutes)</label>
+                <div class="field-with-icon">
+                  <input id="googleSyncMinutes" type="number" min="0" max="10080" value="60" title="How often to refresh opening hours from Google. Default 60. 0 turns auto-sync off for this page.">
+                  <span class="field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  </span>
+                </div>
+                <p class="field-hint">How often to check for Google hours.</p>
+              </div>
+              <div>
+                <label for="einkOrientation">Orientation</label>
+                <select id="einkOrientation">
+                  <option value="landscape">Landscape</option>
+                  <option value="portrait" selected>Portrait</option>
+                </select>
+              </div>
+              <div>
+                <label for="einkHangRotation">Hang Rotate</label>
+                <select id="einkHangRotation">
+                  <option value="0">0° upright</option>
+                  <option value="90">90° clockwise</option>
+                  <option value="180">180° upside down</option>
+                  <option value="270">270° clockwise</option>
+                </select>
+                <p class="field-hint">Rotate the display if mounted.</p>
+              </div>
+              <div class="admin-only">
+                <label for="einkWidth">Panel width (px)</label>
+                <input id="einkWidth" type="number" min="200" max="2500" value="800">
+              </div>
+              <div class="admin-only">
+                <label for="einkHeight">Panel height (px)</label>
+                <input id="einkHeight" type="number" min="120" max="2500" value="480">
+              </div>
+              <div class="admin-only">
+                <label for="einkColorMode">Color mode</label>
+                <select id="einkColorMode">
+                  <option value="6color">6-color</option>
+                  <option value="4color">4-color</option>
+                  <option value="grayscale">Grayscale</option>
+                </select>
+              </div>
             </div>
-            <div class="admin-only">
-              <label for="einkWidth">Panel width (px)</label>
-              <input id="einkWidth" type="number" min="200" max="2500" value="800">
-            </div>
-            <div class="admin-only">
-              <label for="einkHeight">Panel height (px)</label>
-              <input id="einkHeight" type="number" min="120" max="2500" value="480">
-            </div>
-            <div>
-              <label for="einkOrientation">Orientation</label>
-              <select id="einkOrientation">
-                <option value="landscape">Landscape</option>
-                <option value="portrait" selected>Portrait</option>
-              </select>
-            </div>
-            <div>
-              <label for="einkHangRotation">Hang rotate</label>
-              <select id="einkHangRotation">
-                <option value="0">0° upright</option>
-                <option value="90">90° clockwise</option>
-                <option value="180">180° upside down</option>
-                <option value="270">270° clockwise</option>
-              </select>
-            </div>
-            <div class="admin-only">
-              <label for="einkColorMode">Color mode</label>
-              <select id="einkColorMode">
-                <option value="6color">6-color</option>
-                <option value="4color">4-color</option>
-                <option value="grayscale">Grayscale</option>
-              </select>
-            </div>
-          </div>
+          </section>
           <div class="hidden-block">
             <input id="einkInverted" type="checkbox">
             <div>
@@ -1883,30 +2074,49 @@
             <p class="hint" id="sketchMeta"></p>
             <textarea id="espSketch" rows="4" readonly></textarea>
           </div>
-          <p class="device-note hint">
-            Each e-ink display checks in about every 60 minutes with its name, WiFi, and customer URL.
-            Reset queues a factory-style wipe: on the next check-in the display forgets WiFi and URL and opens the <strong>MySmartLife</strong> setup network. Use this if the device is resold or the shop WiFi changes.
-          </p>
-          <div class="device-toolbar">
-            <button type="button" class="btn-secondary" id="refreshDevicesBtn">Refresh</button>
-          </div>
-          <div class="device-table-wrap">
-          <table class="device-table" id="deviceTable">
-            <thead>
-              <tr>
-                <th>Status</th>
-                <th>Device</th>
-                <th>WiFi</th>
-                <th>Customer URL</th>
-                <th>Last check-in</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody id="deviceTableBody">
-              <tr><td colspan="6" class="hint">No devices have checked in yet.</td></tr>
-            </tbody>
-          </table>
-          </div>
+          <section class="device-card">
+            <div class="device-note hint">
+              <span class="device-info-icon" aria-hidden="true">i</span>
+              <p>
+                Each e-ink display checks in about every 60 minutes with its name, WiFi, and customer URL.
+                Reset queues a factory-style wipe: on the next check-in the display forgets WiFi and URL and opens the <span class="mysmartlife">MySmartLife</span> setup network. Use this if the device is resold or the shop WiFi changes.
+              </p>
+            </div>
+            <div class="device-toolbar">
+              <button type="button" class="btn-secondary" id="refreshDevicesBtn">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+                Refresh
+              </button>
+            </div>
+          </section>
+          <section class="device-card">
+            <div class="device-card-head">
+              <span class="device-card-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg>
+              </span>
+              <div>
+                <h2>Device Check-ins</h2>
+                <p>See your displays and their status.</p>
+              </div>
+            </div>
+            <div class="device-table-wrap">
+              <table class="device-table is-empty" id="deviceTable">
+                <thead>
+                  <tr>
+                    <th>Status</th>
+                    <th>Device</th>
+                    <th>WiFi</th>
+                    <th>Customer URL</th>
+                    <th>Last check-in</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody id="deviceTableBody">
+                  <tr><td colspan="6" class="hint">No devices have checked in yet.</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </section>
         </div>
 
         <div class="tab-panel" id="tab-preview">
@@ -3892,9 +4102,24 @@
         if (!body) return;
         const list = visibleDevices();
         if (!list.length) {
-          body.innerHTML = '<tr><td colspan="6" class="hint">No devices have checked in for this URL yet.</td></tr>';
+          const table = document.getElementById('deviceTable');
+          if (table) table.classList.add('is-empty');
+          body.innerHTML = `<tr><td colspan="6">
+            <div class="device-empty">
+              <svg viewBox="0 0 88 72" aria-hidden="true">
+                <rect x="18" y="22" width="34" height="28" rx="3"/>
+                <path d="M26 22v-6h18v6"/>
+                <circle cx="58" cy="46" r="12"/>
+                <path d="M67 55l9 9"/>
+              </svg>
+              <strong>No devices have checked in for this URL yet.</strong>
+              <span>Once your display connects, it will appear here.</span>
+            </div>
+          </td></tr>`;
           return;
         }
+        const table = document.getElementById('deviceTable');
+        if (table) table.classList.remove('is-empty');
         body.innerHTML = list.map((d) => {
           const on = deviceOnline(d.lastSeen);
           return `<tr>
