@@ -43,8 +43,12 @@
       display: flex; align-items: center; gap: 14px; min-width: 0;
     }
     .brand-logo {
-      width: 52px; height: 52px; border-radius: 14px; flex: 0 0 auto;
-      box-shadow: 0 10px 28px rgba(37, 99, 235, .28);
+      width: min(280px, 72vw);
+      height: auto;
+      border-radius: 12px;
+      flex: 0 0 auto;
+      background: #fff;
+      padding: 8px 12px;
     }
     .brand-text { min-width: 0; }
     .sub { margin: 4px 0 0; color: var(--muted); }
@@ -115,12 +119,13 @@
       gap: 16px;
     }
     body.customer-mode .brand-logo {
-      width: min(320px, 78vw);
+      width: min(520px, 94vw);
       height: auto;
-      border-radius: 28px;
-      box-shadow: 0 18px 50px rgba(37, 99, 235, .32);
+      border-radius: 16px;
+      padding: 10px 14px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, .28);
     }
-    body.customer-mode .brand-text h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); }
+    body.customer-mode .brand-text { display: none; }
     .about-link { display: none !important; }
     body.admin-mode .about-link { display: inline-flex !important; }
     body.customer-mode .toolbar { justify-content: center; }
@@ -131,6 +136,8 @@
     body.admin-mode #onboard { display: none !important; }
     body.customer-mode.has-studio #onboard { display: none; }
     body.customer-mode .admin-only { display: none !important; }
+    body.customer-mode .tabs [data-tab="preview"],
+    body.customer-mode #tab-preview { display: none !important; }
     body.admin-mode .customer-only { display: none !important; }
     body.admin-mode.readonly .mutate-only { display: none !important; }
     body.admin-mode.readonly input:not([type="password"]),
@@ -142,8 +149,8 @@
     .onboard { max-width: 560px; margin: 8px auto 0; }
     .onboard h2 { margin: 0 0 8px; font-size: 1.35rem; }
     .onboard .form-grid { grid-template-columns: 1fr; margin-top: 12px; }
-    .slug-preview { margin: 6px 0 0; color: var(--accent); font-size: .9rem; word-break: break-all; }
-    a.slug-preview { display: inline-block; font-weight: 600; text-decoration: underline; }
+    .slug-preview { margin: 6px 0 0; color: var(--accent); font-size: .82rem; overflow-wrap: anywhere; word-break: break-word; }
+    a.slug-preview { display: block; max-width: 100%; font-weight: 600; text-decoration: underline; line-height: 1.35; }
     #fieldSlug[readonly] {
       border: 0;
       background: transparent;
@@ -157,6 +164,7 @@
       display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: baseline;
       margin: 0 0 8px;
     }
+    .maps-help a { color: #fff; text-decoration: underline; }
     code {
       font-family: Consolas, "Courier New", monospace;
       font-size: .82em;
@@ -217,9 +225,9 @@
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
     .form-grid > .full { grid-column: 1 / -1; }
     #tab-info .form-grid {
-      grid-template-columns: minmax(140px, 240px) minmax(140px, 240px);
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
       gap: 8px 14px;
-      max-width: 520px;
+      max-width: none;
       align-items: start;
     }
     #tab-info label { margin-bottom: 4px; }
@@ -228,7 +236,7 @@
       border-radius: 8px;
       font-size: .9rem;
     }
-    #tab-info .form-grid > .full { max-width: 420px; }
+    #tab-info .form-grid > .full { max-width: none; }
     #tab-info .maps-help { margin: 0 0 4px; }
     #tab-info .hint { margin: 4px 0 0; }
     #tab-info .auto-sync-bar {
@@ -404,6 +412,15 @@
       font-weight: 500;
     }
     .hours-toolbar .manual-opt input { width: auto; margin: 0; }
+    .hours-toolbar .sync-stamp {
+      margin: 0;
+      flex: 1 1 220px;
+      min-width: 0;
+      color: var(--text);
+      font-size: .9rem;
+      font-weight: 600;
+    }
+    .hours-toolbar .sync-stamp.empty { color: var(--muted); font-weight: 500; }
     .url-box {
       display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 10px;
       padding: 10px 12px; border-radius: 12px; background: var(--accent-dim); border: 1px solid var(--line);
@@ -733,7 +750,7 @@
   <div id="app" class="wrap">
     <header>
       <div class="brand">
-        <img class="brand-logo" src="/smarthours-assets/smarthours-logo.png" width="320" height="320" alt="SmartHours">
+        <img class="brand-logo" src="/smarthours-assets/smarthours-lockup.png" width="640" height="180" alt="SmartHours">
         <div class="brand-text">
           <h1 id="pageTitle">SmartHours</h1>
           <p class="sub" id="pageSub">Set up your hours display</p>
@@ -792,7 +809,7 @@
               <label for="fieldName">Customer name</label>
               <input id="fieldName" type="text">
             </div>
-            <div>
+            <div class="full">
               <label for="fieldSlug">URL slug</label>
               <input id="fieldSlug" type="text" placeholder="acme-cafe" autocomplete="off" readonly>
               <a class="slug-preview" id="studioSlugPreview" target="_blank" rel="noopener"></a>
@@ -804,7 +821,7 @@
                 <a href="https://maps.google.com" target="_blank" rel="noopener">Find your business on Google Maps</a>
               </div>
               <input id="fieldMapsUrl" type="text" placeholder="https://maps.app.goo.gl/VNM7eFRQ4yyN9RG28">
-              <p class="hint">Paste the Share link. Example: <code>https://maps.app.goo.gl/VNM7eFRQ4yyN9RG28</code></p>
+              <p class="hint">Example: <code>https://maps.app.goo.gl/VNM7eFRQ4yyN9RG28</code></p>
               <p class="hint" id="studioMapsStatus"></p>
             </div>
             <div class="full auto-sync-bar admin-only">
@@ -815,7 +832,7 @@
               <button type="button" class="btn-secondary mutate-only" id="saveAutoSyncBtn">Save interval</button>
             </div>
           </div>
-          <p class="hint mutate-only" style="margin-top:14px;">Changes save automatically.</p>
+          </div>
           <div class="admin-only" style="margin-top:16px;">
             <button type="button" class="btn-danger" id="deleteBtn">Delete Customer</button>
           </div>
@@ -824,11 +841,11 @@
         <div class="tab-panel" id="tab-hours">
           <div class="hours-toolbar">
             <button type="button" class="btn btn-sync mutate-only" id="syncOneBtn">Sync Google hours</button>
+            <p class="sync-stamp empty" id="syncMeta"></p>
             <label class="manual-opt">
               <input id="fieldManual" type="checkbox"> Manual hours
             </label>
           </div>
-          <p class="hint" id="syncMeta"></p>
           <table class="hours-table">
             <thead>
               <tr>
@@ -844,6 +861,14 @@
         <div class="tab-panel" id="tab-design">
           <div class="design-layout">
             <div class="controls">
+              <div class="ctrl-block">
+                <p class="block-title">Orientation</p>
+                <select id="screenOrientation">
+                  <option value="landscape">Landscape</option>
+                  <option value="portrait" selected>Portrait</option>
+                </select>
+              </div>
+
               <div class="ctrl-block hidden-block admin-only">
                 <p class="block-title">Designs <span id="designLivePill" class="live-pill hidden-block">Live</span></p>
                 <div class="design-slots">
@@ -868,13 +893,6 @@
               <div class="ctrl-block hidden-block">
                 <p class="block-title">Screen</p>
                 <div class="screen-settings">
-                  <div>
-                    <label for="screenOrientation">Orientation</label>
-                    <select id="screenOrientation" title="Portrait rotates the output image — the panel itself cannot rotate">
-                      <option value="landscape">Landscape</option>
-                      <option value="portrait" selected>Portrait</option>
-                    </select>
-                  </div>
                   <div>
                     <label for="screenHangRotation">Hang rotate</label>
                     <select id="screenHangRotation" title="Extra rotation if the panel is mounted upside-down or sideways">
@@ -1018,14 +1036,7 @@
               </details>
 
               <input id="canvasImageFile" type="file" accept="image/*" hidden>
-
-              <p class="hint mutate-only" style="margin:4px 0 0;">Changes save automatically.</p>
-              <div id="designEinkPreviewWrap" class="hidden-block">
-                <p class="hint" style="margin:0 0 6px;">PREVIEW</p>
-                <div style="background:#0a1020;border:1px solid var(--line);border-radius:10px;padding:8px;overflow:auto;max-height:220px;">
-                  <img id="designEinkPreview" alt="Display preview" style="display:block;width:100%;height:auto;max-height:200px;object-fit:contain;background:#111;image-rendering:auto;">
-                </div>
-              </div>
+              <button type="button" class="btn mutate-only" id="canvasSaveBtn">Save</button>
             </div>
             <div class="design-canvas-col">
               <div class="canvas-stage" id="canvasStage">
@@ -1046,6 +1057,7 @@
                   <button type="button" class="btn-secondary" id="addSlideshowBtn">+ Slides</button>
                 </div>
                 <div class="canvas-tools-footer">
+                  <button type="button" class="btn mutate-only" id="saveDesignBtn">Save</button>
                   <button type="button" class="btn-secondary" id="fillScreenBtn" title="Snap selected element to full canvas">Fill screen</button>
                   <button type="button" class="btn-danger" id="clearCanvasBtn">Clear canvas</button>
                 </div>
@@ -1117,7 +1129,6 @@
             <button type="button" id="copySketchBtn">Copy Code</button>
             <button type="button" id="saveBtn">Save</button>
             <button type="button" id="saveHoursBtn">Save Hours</button>
-            <button type="button" id="saveDesignBtn">Save Design</button>
             <button type="button" id="saveEinkBtn">Save Device Settings</button>
             <p class="hint" id="sketchMeta"></p>
             <textarea id="espSketch" rows="4" readonly></textarea>
@@ -1168,9 +1179,15 @@
       const pageTitle = document.getElementById('pageTitle');
       const pageSub = document.getElementById('pageSub');
       if (pageTitle) pageTitle.textContent = IS_ADMIN ? 'SmartHours Admin' : 'SmartHours';
-      if (pageSub) pageSub.textContent = IS_ADMIN
-        ? 'All customer pages · read only'
-        : 'Set up your hours display';
+      if (pageSub) {
+        if (IS_ADMIN) {
+          pageSub.textContent = '';
+          pageSub.hidden = true;
+        } else {
+          pageSub.textContent = 'Set up your hours display';
+          pageSub.hidden = false;
+        }
+      }
       const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
       const TEXT_LAYOUT_TYPES = new Set(['title', 'hours', 'status', 'text']);
       const FONT_OPTIONS = [
@@ -2727,6 +2744,32 @@
         `).join('');
       }
 
+      function formatSyncWhen(iso) {
+        if (!iso) return '';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '';
+        return d.toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' });
+      }
+
+      function renderSyncMeta(customer) {
+        const el = document.getElementById('syncMeta');
+        if (!el) return;
+        const when = formatSyncWhen(customer && customer.lastSyncedAt);
+        const failWhen = formatSyncWhen(customer && customer.lastSyncAttemptAt);
+        if (when) {
+          el.textContent = 'Last Google sync: ' + when;
+          el.classList.remove('empty');
+          return;
+        }
+        if (customer && customer.lastSyncError) {
+          el.textContent = 'Last Google sync failed' + (failWhen ? ': ' + failWhen : '');
+          el.classList.add('empty');
+          return;
+        }
+        el.textContent = 'Last Google sync: never';
+        el.classList.add('empty');
+      }
+
       function fillEditor(customer) {
         suppressAutosave += 1;
         editor.classList.add('open');
@@ -2765,19 +2808,8 @@
         renderSlideshowList(customer);
         renderDesignSlotsUi();
         logoDataUrl = null;
-        if (customer.lastSyncedAt) {
-          document.getElementById('syncMeta').textContent =
-            'Last sync: ' + new Date(customer.lastSyncedAt).toLocaleString() +
-            (customer.googleDisplayName ? ` · Google: ${customer.googleDisplayName}` : '') +
-            (customer.lastSyncNote ? ` · ${customer.lastSyncNote}` : '');
-        } else if (customer.lastSyncError) {
-          document.getElementById('syncMeta').textContent = 'Last sync failed: ' + customer.lastSyncError;
-        } else {
-          document.getElementById('syncMeta').textContent = '';
-        }
+        renderSyncMeta(customer);
         renderCanvas();
-        if (customer && !String(customer.id).startsWith('tmp-')) showDesignEinkPreview(customer);
-        else showDesignEinkPreview(null);
         setTimeout(() => {
           suppressAutosave = Math.max(0, suppressAutosave - 1);
         }, 80);
@@ -3020,25 +3052,12 @@
         return `${base}/api/smarthours/public/${encodeURIComponent(customer.slug)}/display.png?t=${bust || Date.now()}`;
       }
 
-      function showDesignEinkPreview(customer) {
-        const wrap = document.getElementById('designEinkPreviewWrap');
-        const img = document.getElementById('designEinkPreview');
-        if (!customer || String(customer.id).startsWith('tmp-')) {
-          wrap.classList.add('hidden-block');
-          img.removeAttribute('src');
-          return;
-        }
-        wrap.classList.remove('hidden-block');
-        img.src = displayPngUrl(customer);
-      }
-
       function refreshEinkPanel() {
         const c = selected();
         if (!c || String(c.id).startsWith('tmp-')) {
           document.getElementById('einkUrlBox').textContent = 'Save the customer first to enable display URLs.';
           document.getElementById('einkPreview').removeAttribute('src');
           document.getElementById('espSketch').value = '';
-          showDesignEinkPreview(null);
           return;
         }
         const base = (document.getElementById('espBaseUrl').value || location.origin).replace(/\/$/, '');
@@ -3048,7 +3067,6 @@
           `<div><strong>Management Portal URL:</strong> <a href="${manageUrl}" target="_blank" rel="noopener">${manageUrl}</a></div>` +
           `<div style="margin-top:6px"><strong>PNG image:</strong> <a href="${pngUrl}" target="_blank" rel="noopener">${base}/api/smarthours/public/${encodeURIComponent(c.slug)}/display.png</a></div>`;
         document.getElementById('einkPreview').src = pngUrl;
-        showDesignEinkPreview(c);
       }
 
       async function loadEspSketch() {
@@ -3217,15 +3235,24 @@
           saveCustomer().catch((err) => setStatus(err.message, true));
         });
       }
-      document.getElementById('saveDesignBtn').addEventListener('click', () => {
+      function saveDesignNow() {
+        const btn = document.getElementById('saveDesignBtn');
+        const btn2 = document.getElementById('canvasSaveBtn');
+        setBusy(btn, true, 'Saving…');
+        setBusy(btn2, true, 'Saving…');
         saveCustomer()
           .then((c) => {
             if (!c) return;
-            showDesignEinkPreview(c);
-            setStatus('Design saved. High-res PNG preview updated below.');
+            setStatus('Saved.');
           })
-          .catch((err) => setStatus(err.message, true));
-      });
+          .catch((err) => setStatus(err.message, true))
+          .finally(() => {
+            setBusy(btn, false);
+            setBusy(btn2, false);
+          });
+      }
+      document.getElementById('saveDesignBtn').addEventListener('click', saveDesignNow);
+      document.getElementById('canvasSaveBtn').addEventListener('click', saveDesignNow);
       document.getElementById('designSlotSelect').addEventListener('change', () => {
         const nextId = document.getElementById('designSlotSelect').value;
         if (!nextId || nextId === editingDesignId) return;

@@ -160,8 +160,8 @@ Password-protects `/SmartHours-Admin` and admin-only APIs (list all customers, d
 - `SMARTHOURS_ADMIN_PASSWORD` — Optional. If unset, falls back to `MARKETING_MANAGER_PASSWORD` (your existing Render password).
 - `SMARTHOURS_ADMIN_SESSION_SECRET` — Optional HMAC secret for session cookies (defaults to a hash of the password).
 - `SMARTHOURS_ADMIN_COOKIE_SECURE` — Set to `1` to force `Secure` cookies when not in `NODE_ENV=production`.
-- `PLACES_API` (or `GOOGLE_PLACES_API_KEY`) — Google Places API (New) key used to pull weekly hours. Server calls send `Referer: https://www.lab007.ai/` so an HTTP-referrer-restricted key still works. Override with `PLACES_API_REFERER` if the key is locked to another site. Prefer IP restriction for a server key if Google still blocks it.
-- `PLACES_API_REFERER` — Optional. Allowed website origin sent as the Places request Referer (default `https://www.lab007.ai/`).
+- `PLACES_API` (or `GOOGLE_PLACES_API_KEY`) — **Server** Google Places API (New) key used to pull weekly hours. This must **not** be an HTTP-referrer (website) key. Google rejects those for Places web service, even if the request sends a Referer. Create a dedicated key: Application restriction **None** (or **IP addresses** if you have a static Render outbound IP), API restriction **Places API**. Do not reuse the Maps JavaScript browser key.
+- `PLACES_API_REFERER` — Optional. Unused for a correctly restricted server key. Left for compatibility.
 - `SMARTHOURS_SYNC_ENABLED` — Set to `0` / `false` to disable background Google hours sync.
 
 ```bash
