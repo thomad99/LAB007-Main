@@ -1211,7 +1211,7 @@
               <input id="fieldName" type="text">
             </div>
             <div class="full">
-              <label for="fieldSlug">URL slug</label>
+              <label for="fieldSlug">URL Name</label>
               <input id="fieldSlug" type="text" placeholder="acme-cafe" autocomplete="off" readonly>
               <a class="slug-preview" id="studioSlugPreview" target="_blank" rel="noopener"></a>
               <p class="hint" id="studioSlugStatus"></p>
@@ -2031,7 +2031,7 @@
       async function checkSlugAvailable(slug, exceptId) {
         const value = clientSlugify(slug);
         if (!value || value.length < 2) {
-          return { available: false, error: 'Choose a URL slug with at least 2 letters or numbers.', slug: value };
+          return { available: false, error: 'Choose a URL name with at least 2 letters or numbers.', slug: value };
         }
         const params = new URLSearchParams({ slug: value });
         if (exceptId && !String(exceptId).startsWith('tmp-')) params.set('exceptId', exceptId);
@@ -4407,7 +4407,7 @@
           statusEl.textContent = check.available ? 'This URL is available.' : (check.error || 'Not available.');
           statusEl.style.color = check.available ? 'var(--accent)' : 'var(--danger)';
           if (!check.available) {
-            if (showNameError) setStatus(check.error || 'That URL slug is already taken.', true);
+            if (showNameError) setStatus(check.error || 'That URL name is already taken.', true);
             return;
           }
           const mapsCheck = mapsShareLinkCheck(mapsEl && mapsEl.value);
