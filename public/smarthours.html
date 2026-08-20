@@ -873,7 +873,6 @@
                 <a href="https://maps.google.com" target="_blank" rel="noopener">Find your business on Google Maps</a>
               </div>
               <input id="fieldMapsUrl" type="text" placeholder="https://maps.app.goo.gl/VNM7eFRQ4yyN9RG28">
-              <p class="hint">Example: <code>https://maps.app.goo.gl/VNM7eFRQ4yyN9RG28</code></p>
               <p class="hint" id="studioMapsStatus"></p>
             </div>
             <div class="full auto-sync-bar admin-only">
@@ -1617,13 +1616,13 @@
       function showMapsLinkStatus(inputEl, statusEl) {
         if (!statusEl) return mapsShareLinkCheck(inputEl && inputEl.value);
         const check = mapsShareLinkCheck(inputEl && inputEl.value);
-        if (check.empty) {
+        if (check.empty || check.ok) {
           statusEl.textContent = '';
           statusEl.style.color = '';
           return check;
         }
-        statusEl.textContent = check.ok ? 'That looks like a Google Maps share link.' : check.error;
-        statusEl.style.color = check.ok ? 'var(--accent)' : 'var(--danger)';
+        statusEl.textContent = check.error;
+        statusEl.style.color = 'var(--danger)';
         return check;
       }
 
