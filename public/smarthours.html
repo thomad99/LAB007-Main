@@ -73,6 +73,35 @@
       display: grid; grid-template-columns: 280px 1fr; gap: 16px;
     }
     @media (max-width: 960px) { .grid-main { grid-template-columns: 1fr; } }
+    @media (max-width: 960px) {
+      body.admin-mode .grid-main { grid-template-columns: 260px minmax(0, 1fr); }
+    }
+    @media (max-width: 800px) {
+      body.admin-mode .grid-main { grid-template-columns: 1fr; }
+      body.admin-mode .grid-main > aside {
+        position: static;
+        max-height: 36vh;
+      }
+    }
+    body.admin-mode .wrap {
+      width: min(1480px, calc(100% - 28px));
+    }
+    body.admin-mode .grid-main {
+      grid-template-columns: 260px minmax(0, 1fr);
+      align-items: start;
+    }
+    body.admin-mode .grid-main > aside {
+      position: sticky;
+      top: 16px;
+      max-height: calc(100vh - 32px);
+      overflow: auto;
+    }
+    body.admin-mode .editor {
+      display: grid;
+      gap: 16px;
+      min-width: 0;
+    }
+    body.admin-mode .customer-list { max-height: none; }
     .customer-list { display: grid; gap: 8px; max-height: 70vh; overflow: auto; }
     .customer-item {
       text-align: left; width: 100%; border: 1px solid var(--line); background: rgba(255,255,255,.02);
@@ -2857,13 +2886,14 @@
         settings = data.settings || settings;
         const autoEl = document.getElementById('autoSyncHours');
         if (autoEl) autoEl.value = String(settings.autoSyncIntervalHours ?? 24);
+        if (!selectedId && customers.length) selectedId = customers[0].id;
         renderList();
         if (selectedId) {
           const c = selected();
           if (c) fillEditor(c);
           else {
             selectedId = null;
-            editor.classList.remove('open');
+            if (!IS_ADMIN) editor.classList.remove('open');
           }
         }
         setStatus(
