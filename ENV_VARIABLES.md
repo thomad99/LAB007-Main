@@ -161,7 +161,7 @@ Password-protects `/SmartHours-Admin` and admin-only APIs (list all customers, d
 - `SMARTHOURS_ADMIN_SESSION_SECRET` — Optional HMAC secret for session cookies (defaults to a hash of the password).
 - `SMARTHOURS_ADMIN_COOKIE_SECURE` — Set to `1` to force `Secure` cookies when not in `NODE_ENV=production`.
 - `PLACES_API` (or `GOOGLE_PLACES_API_KEY`) — **Server** Google Places API (New) key used to pull weekly hours. This must **not** be an HTTP-referrer (website) key. Google rejects those for Places web service, even if the request sends a Referer. Create a dedicated key: Application restriction **None** (or **IP addresses** if you have a static Render outbound IP), API restriction **Places API**. Do not reuse the Maps JavaScript browser key.
-- `PLACES_API_REFERER` — Optional. Unused for a correctly restricted server key. Left for compatibility.
+- `PLACES_API_REFERER` — Optional. Do not set this. A server Places key must not use HTTP referrers.
 - `SMARTHOURS_SYNC_ENABLED` — Set to `0` / `false` to disable background Google hours sync.
 
 ```bash
