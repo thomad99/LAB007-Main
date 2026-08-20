@@ -125,6 +125,11 @@
     body.has-studio .grid-main {
       flex: 1 1 auto;
       min-height: 0;
+      align-items: start;
+      overflow: auto;
+    }
+    body.has-studio .grid-main:has(#tab-design.active),
+    body.has-studio .grid-main:has(#tab-fleet.active) {
       align-items: stretch;
       overflow: hidden;
     }
@@ -132,17 +137,25 @@
       display: flex;
       flex-direction: column;
       justify-content: flex-start;
+      align-items: stretch;
       min-height: 0;
-      height: 100%;
-      overflow: hidden;
+      height: auto;
+      max-height: 100%;
+      overflow: auto;
       gap: 10px;
     }
+    body.has-studio .editor.open:has(#tab-design.active),
+    body.has-studio .editor.open:has(#tab-fleet.active) {
+      height: 100%;
+      overflow: hidden;
+    }
     body.has-studio .tabs { margin: 0 0 10px; flex: 0 0 auto; }
+    body.has-studio .tab-panel:not(.active) { display: none !important; }
     body.has-studio .tab-panel.active {
       flex: 0 0 auto;
       min-height: 0;
       align-self: stretch;
-      overflow: auto;
+      overflow: visible;
     }
     #tab-hours.active,
     #tab-devices.active,
@@ -159,7 +172,7 @@
       margin-top: 0;
     }
     #tab-design.active {
-      display: flex;
+      display: flex !important;
       flex-direction: column;
       flex: 1 1 auto;
       min-height: 0;
@@ -175,7 +188,12 @@
     .customer-item strong { display: block; }
     .customer-item span { color: var(--muted); font-size: .82rem; }
     .editor { display: none; }
-    .editor.open { display: grid; gap: 16px; }
+    .editor.open {
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-start;
+      gap: 16px;
+    }
     .tabs {
       display: grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -249,8 +267,8 @@
         font-size: .82rem;
       }
     }
-    .tab-panel { display: none; }
-    .tab-panel.active { display: block; }
+    .tab-panel { display: none !important; }
+    .tab-panel.active { display: block !important; }
     body.customer-mode header {
       flex-direction: column;
       align-items: center;
