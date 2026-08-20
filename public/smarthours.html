@@ -127,14 +127,20 @@
     }
     body.has-studio .tabs { margin: 0 0 10px; flex: 0 0 auto; }
     body.has-studio .tab-panel.active {
-      flex: 1 1 auto;
+      flex: 0 1 auto;
       min-height: 0;
+      align-self: stretch;
+    }
+    #tab-hours.active {
+      display: block;
+      flex: 0 0 auto;
     }
     #tab-design.active {
       display: flex;
       flex-direction: column;
+      flex: 1 1 auto;
       min-height: 0;
-      height: 100%;
+      height: auto;
     }
     .customer-list { display: grid; gap: 8px; max-height: 70vh; overflow: auto; }
     .customer-item {
@@ -513,10 +519,16 @@
     }
     .device-settings-grid > div { min-width: 0; }
     .device-settings-grid .hint { margin: 6px 0 0; }
-    .hours-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-    .hours-table th, .hours-table td { padding: 8px 6px; border-bottom: 1px solid rgba(255,255,255,.06); text-align: left; font-size: .9rem; }
-    .hours-table input[type="time"] { padding: 6px 8px; }
-    .hours-table input[type="checkbox"] { width: auto; }
+    .hours-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    .hours-table th, .hours-table td { padding: 14px 10px; border-bottom: 1px solid rgba(255,255,255,.06); text-align: left; font-size: 1.4rem; }
+    .hours-table th {
+      color: var(--muted);
+      font-size: 1.05rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .hours-table input[type="time"] { padding: 10px 12px; font-size: 1.25rem; min-height: 48px; }
+    .hours-table input[type="checkbox"] { width: 22px; height: 22px; }
     .hours-table tr.is-closed { opacity: .55; }
     .hours-table tr.is-closed td { color: var(--muted); }
     .hours-table .closed-label {
@@ -524,7 +536,7 @@
       font-weight: 600;
       letter-spacing: .04em;
       text-transform: uppercase;
-      font-size: .82rem;
+      font-size: 1.2rem;
       color: var(--muted);
     }
     .hours-table tr.is-closed .hours-times { display: none; }
@@ -532,12 +544,12 @@
     .hours-table .hours-times {
       display: grid;
       grid-template-columns: auto 1fr auto 1fr;
-      gap: 6px 8px;
+      gap: 10px 14px;
       align-items: center;
-      max-width: 320px;
+      max-width: 560px;
     }
     .hours-table .hours-times .time-label {
-      font-size: .72rem;
+      font-size: 1.15rem;
       letter-spacing: .04em;
       text-transform: uppercase;
       color: var(--muted);
@@ -553,7 +565,9 @@
       color: #042f2e;
       border: none;
       box-shadow: 0 8px 22px rgba(52, 211, 153, .28);
-      min-width: 168px;
+      min-width: 220px;
+      padding: 14px 18px;
+      font-size: 1.15rem;
       position: relative;
     }
     .btn-sync:hover { filter: brightness(1.05); }
@@ -640,7 +654,7 @@
       box-sizing: border-box;
     }
     .hours-toolbar {
-      margin-top: 14px;
+      margin-top: 0;
       display: flex;
       gap: 12px;
       flex-wrap: wrap;
@@ -653,17 +667,17 @@
       align-items: center;
       text-transform: none;
       letter-spacing: 0;
-      font-size: .9rem;
+      font-size: 1.25rem;
       color: var(--muted);
       font-weight: 500;
     }
-    .hours-toolbar .manual-opt input { width: auto; margin: 0; }
+    .hours-toolbar .manual-opt input { width: auto; margin: 0; transform: scale(1.25); }
     .hours-toolbar .sync-stamp {
       margin: 0;
       flex: 1 1 220px;
       min-width: 0;
       color: var(--text);
-      font-size: .9rem;
+      font-size: 1.25rem;
       font-weight: 600;
     }
     .hours-toolbar .sync-stamp.empty { color: var(--muted); font-weight: 500; }
