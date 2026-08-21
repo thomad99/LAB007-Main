@@ -1347,6 +1347,10 @@
       display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 6px;
     }
     .color-triple .color-row { grid-template-columns: 1fr 32px; gap: 4px; }
+    .color-pair {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 6px;
+    }
+    .color-pair .color-row { grid-template-columns: 1fr 32px; gap: 4px; }
     .canvas-el {
       position: absolute; border: 1px dashed transparent; cursor: grab; user-select: none;
       padding: 0; overflow: hidden; box-sizing: border-box;
@@ -2121,6 +2125,27 @@
                       <button type="button" class="btn-secondary" id="elFontPlus" title="Larger">+</button>
                     </div>
                     <p class="hint" style="margin:4px 0 0;">Font and size apply to the selected text item.</p>
+                    <div id="elStatusProps" class="hidden-block" style="margin-top:8px;">
+                      <div class="color-pair">
+                        <div>
+                          <label for="elStatusBoxColor">Box color</label>
+                          <div class="color-row">
+                            <input id="elStatusBoxColor" type="text" value="#FF0000">
+                            <input id="elStatusBoxColorPick" type="color" value="#FF0000">
+                          </div>
+                          <div class="palette-swatches" data-palette-for="statusBox"></div>
+                        </div>
+                        <div>
+                          <label for="elStatusFontColor">Font color</label>
+                          <div class="color-row">
+                            <input id="elStatusFontColor" type="text" value="#000000">
+                            <input id="elStatusFontColorPick" type="color" value="#000000">
+                          </div>
+                          <div class="palette-swatches" data-palette-for="statusFont"></div>
+                        </div>
+                      </div>
+                      <p class="hint" id="elStatusColorHint" style="margin:4px 0 0;">Applies to the OPEN badge on the canvas.</p>
+                    </div>
                   </div>
                   <div id="elTextProps" class="hidden-block">
                     <label for="elText">Text</label>
@@ -2626,6 +2651,8 @@
         } else if (which === 'accent') {
           document.getElementById('accentColor').value = snapped;
           document.getElementById('accentColorPick').value = snapped;
+        } else if (which === 'statusBox' || which === 'statusFont') {
+          applySelectedStatusColor(which, snapped);
         }
         renderPaletteSwatches();
       }
@@ -2634,12 +2661,11 @@
         const colors = paletteColors();
         document.querySelectorAll('[data-palette-for]').forEach((wrap) => {
           const which = wrap.getAttribute('data-palette-for');
-          const current =
-            which === 'bg'
-              ? document.getElementById('bgColor').value
-              : which === 'text'
-                ? document.getElementById('textColor').value
-                : document.getElementById('accentColor').value;
+          let current = document.getElementById('accentColor').value;
+          if (which === 'bg') current = document.getElementById('bgColor').value;
+          else if (which === 'text') current = document.getElementById('textColor').value;
+          else if (which === 'statusBox') current = document.getElementById('elStatusBoxColor').value;
+          else if (which === 'statusFont') current = document.getElementById('elStatusFontColor').value;
           wrap.innerHTML = colors
             .map(
               (c) =>
@@ -3057,6 +3083,76 @@
           return cur >= start && cur < end;
         };
         return inSlot(day.open, day.close) || inSlot(day.open2, day.close2);
+      }
+
+      function editorHours() {
+        const c = selected();
+        if (!c) return defaultHours();
+        return c.useManualHours || !c.googleHours ? (c.hours || defaultHours()) : c.googleHours;
+      }
+
+      function resolveStatusColors(el, design, openNow) {
+        const accent = (design && design.accentColor) || '#FF0000';
+        const fg = (design && design.textColor) || '#000000';
+        const mode = (design && design.statusMode) || 'badge';
+        if (openNow) {
+          return {
+            box: nearestPalette((el && el.boxColor) || accent || '#FF0000'),
+            font: nearestPalette((el && el.fontColor) || (mode === 'text' ? accent : '#000000'))
+          };
+        }
+        return {
+          box: nearestPalette((el && el.closedBoxColor) || '#000000'),
+          font: nearestPalette((el && el.closedFontColor) || (mode === 'text' ? fg : '#FFFFFF'))
+        };
+      }
+
+      function applySelectedStatusColor(which, hex) {
+        const el = selectedLayoutEl();
+        if (!el || el.type !== 'status') return;
+        const snapped = nearestPalette(hex);
+        const openNow = isOpenNow(editorHours());
+        if (which === 'statusBox') {
+          if (openNow) el.boxColor = snapped;
+          else el.closedBoxColor = snapped;
+          document.getElementById('elStatusBoxColor').value = snapped;
+          document.getElementById('elStatusBoxColorPick').value = snapped;
+        } else if (which === 'statusFont') {
+          if (openNow) el.fontColor = snapped;
+          else el.closedFontColor = snapped;
+          document.getElementById('elStatusFontColor').value = snapped;
+          document.getElementById('elStatusFontColorPick').value = snapped;
+        }
+      }
+
+      function syncStatusColorInputs(el, design) {
+        const boxInput = document.getElementById('elStatusBoxColor');
+        const boxPick = document.getElementById('elStatusBoxColorPick');
+        const fontInput = document.getElementById('elStatusFontColor');
+        const fontPick = document.getElementById('elStatusFontColorPick');
+        const hint = document.getElementById('elStatusColorHint');
+        if (!boxInput || !el || el.type !== 'status') return;
+        const openNow = isOpenNow(editorHours());
+        const colors = resolveStatusColors(el, design, openNow);
+        boxInput.value = colors.box;
+        boxPick.value = colors.box;
+        fontInput.value = colors.font;
+        fontPick.value = colors.font;
+        if (hint) {
+          hint.textContent = openNow
+            ? 'Applies to the OPEN badge on the canvas.'
+            : 'Applies to the CLOSED badge on the canvas.';
+        }
+      }
+
+      function snapStatusLayoutColors(design) {
+        ((design && design.layout) || []).forEach((el) => {
+          if (!el || el.type !== 'status') return;
+          if (el.boxColor) el.boxColor = nearestPalette(el.boxColor);
+          if (el.fontColor) el.fontColor = nearestPalette(el.fontColor);
+          if (el.closedBoxColor) el.closedBoxColor = nearestPalette(el.closedBoxColor);
+          if (el.closedFontColor) el.closedFontColor = nearestPalette(el.closedFontColor);
+        });
       }
 
       function normalizeHangRotation(value) {
@@ -3616,6 +3712,7 @@
           suppressPropsSync = true;
           side.value = el.text;
           suppressPropsSync = false;
+          if (el && el.type === 'status') renderPaletteSwatches();
         }
       }
 
@@ -3826,6 +3923,7 @@
         const textProps = document.getElementById('elTextProps');
         const imgProps = document.getElementById('elImageProps');
         const sketchProps = document.getElementById('elSketchProps');
+        const statusProps = document.getElementById('elStatusProps');
         const el = selectedLayoutEl();
         const c = selected();
         const isTextType = el && TEXT_LAYOUT_TYPES.has(el.type);
@@ -3847,6 +3945,7 @@
         textProps.classList.add('hidden-block');
         imgProps.classList.add('hidden-block');
         sketchProps.classList.add('hidden-block');
+        if (statusProps) statusProps.classList.add('hidden-block');
         if (isTextType) {
           ensureElTypography(el, c && c.design);
           typeProps.classList.remove('hidden-block');
@@ -3861,6 +3960,10 @@
             fontSel.appendChild(opt);
           }
           fontSel.value = family;
+          if (el.type === 'status' && statusProps) {
+            statusProps.classList.remove('hidden-block');
+            syncStatusColorInputs(el, c && c.design);
+          }
           if (el.type === 'text') {
             textProps.classList.remove('hidden-block');
             document.getElementById('elText').value = el.text || '';
@@ -3880,6 +3983,7 @@
           document.getElementById('sketchMoveBtn').classList.toggle('active', sketchMode === 'move');
         }
         suppressPropsSync = false;
+        if (el && el.type === 'status') renderPaletteSwatches();
       }
 
       function clearCanvasLayout() {
@@ -3902,14 +4006,27 @@
       function bindColorPair(textId, pickId) {
         const text = document.getElementById(textId);
         const pick = document.getElementById(pickId);
-        const which = textId === 'bgColor' ? 'bg' : textId === 'textColor' ? 'text' : 'accent';
+        const which =
+          textId === 'bgColor'
+            ? 'bg'
+            : textId === 'textColor'
+              ? 'text'
+              : textId === 'elStatusBoxColor'
+                ? 'statusBox'
+                : textId === 'elStatusFontColor'
+                  ? 'statusFont'
+                  : 'accent';
         pick.addEventListener('input', () => {
+          if (suppressPropsSync) return;
           setColorField(which, pick.value);
           renderCanvas();
+          if (which === 'statusBox' || which === 'statusFont') scheduleAutosave(300);
         });
         text.addEventListener('change', () => {
+          if (suppressPropsSync) return;
           setColorField(which, text.value);
           renderCanvas();
+          if (which === 'statusBox' || which === 'statusFont') scheduleAutosave(300);
         });
       }
 
@@ -3972,9 +4089,11 @@
               const preview = openNow ? (openMedia || closedMedia) : (closedMedia || openMedia);
               node.innerHTML = `<img class="preview-slide" src="${escapeHtml(mediaUrl(c, preview))}" alt="${openNow ? 'Open' : 'Closed'}">`;
             } else if (design.statusMode === 'text') {
-              node.innerHTML = `<div class="preview-status" style="font-size:${Math.min(fs, 28)}px;font-family:${ff};color:${openNow ? design.accentColor : design.textColor}">${openNow ? 'Open Now' : 'Closed Now'}</div>`;
+              const colors = resolveStatusColors(el, design, openNow);
+              node.innerHTML = `<div class="preview-status" style="font-size:${Math.min(fs, 28)}px;font-family:${ff};color:${colors.font}">${openNow ? 'Open Now' : 'Closed Now'}</div>`;
             } else {
-              node.innerHTML = `<div class="preview-badge" style="font-size:${fs}px;font-family:${ff};background:${openNow ? design.accentColor : '#000000'};color:${openNow ? '#04120e' : '#FFFFFF'}">${openNow ? 'OPEN' : 'CLOSED'}</div>`;
+              const colors = resolveStatusColors(el, design, openNow);
+              node.innerHTML = `<div class="preview-badge" style="font-size:${fs}px;font-family:${ff};background:${colors.box};color:${colors.font}">${openNow ? 'OPEN' : 'CLOSED'}</div>`;
             }
           } else if (el.type === 'slideshow') {
             if (slideItems.length) {
@@ -5417,6 +5536,8 @@
       bindColorPair('bgColor', 'bgColorPick');
       bindColorPair('textColor', 'textColorPick');
       bindColorPair('accentColor', 'accentColorPick');
+      bindColorPair('elStatusBoxColor', 'elStatusBoxColorPick');
+      bindColorPair('elStatusFontColor', 'elStatusFontColorPick');
 
       document.querySelectorAll('[data-palette-for]').forEach((wrap) => {
         wrap.addEventListener('click', (event) => {
@@ -5450,6 +5571,8 @@
         setColorField('bg', document.getElementById('bgColor').value);
         setColorField('text', document.getElementById('textColor').value);
         setColorField('accent', document.getElementById('accentColor').value);
+        const c = selected();
+        if (c) snapStatusLayoutColors(c.design);
         renderCanvas();
       });
       document.getElementById('einkColorMode').addEventListener('change', () => {
@@ -5457,6 +5580,8 @@
         setColorField('bg', document.getElementById('bgColor').value);
         setColorField('text', document.getElementById('textColor').value);
         setColorField('accent', document.getElementById('accentColor').value);
+        const c = selected();
+        if (c) snapStatusLayoutColors(c.design);
         renderCanvas();
       });
       ['einkWidthDesign', 'einkHeightDesign'].forEach((id) => {

@@ -163,6 +163,22 @@
         return (el && el.fontFamily) || (design && design.fontFamily) || '"DM Sans", system-ui, sans-serif';
       }
 
+      function resolveStatusColors(el, design, openNow) {
+        const accent = (design && design.accentColor) || '#FF0000';
+        const fg = (design && design.textColor) || '#000000';
+        const mode = (design && design.statusMode) || 'badge';
+        if (openNow) {
+          return {
+            box: (el && el.boxColor) || accent,
+            font: (el && el.fontColor) || (mode === 'text' ? accent : '#000000')
+          };
+        }
+        return {
+          box: (el && el.closedBoxColor) || '#000000',
+          font: (el && el.closedFontColor) || (mode === 'text' ? fg : '#FFFFFF')
+        };
+      }
+
       function renderStatus(design, open, el) {
         const mode = design.statusMode || 'badge';
         if (mode === 'image') {
@@ -171,10 +187,11 @@
         }
         const fs = resolveFontSize(el || { type: 'status' }, design);
         const ff = resolveFontFamily(el || { type: 'status' }, design);
+        const colors = resolveStatusColors(el, design, open);
         if (mode === 'text') {
-          return `<div class="status-text" style="font-size:${Math.min(fs, 36)}px;font-family:${escapeHtml(ff)};color:${open ? (design.accentColor || '#FF0000') : '#000000'}">${open ? 'Open Now' : 'Closed Now'}</div>`;
+          return `<div class="status-text" style="font-size:${Math.min(fs, 36)}px;font-family:${escapeHtml(ff)};color:${escapeHtml(colors.font)}">${open ? 'Open Now' : 'Closed Now'}</div>`;
         }
-        return `<div class="status-badge" style="font-size:${fs}px;font-family:${escapeHtml(ff)};background:${open ? (design.accentColor || '#FF0000') : '#000000'};color:${design.backgroundColor || '#FFFFFF'}">${open ? 'OPEN' : 'CLOSED'}</div>`;
+        return `<div class="status-badge" style="font-size:${fs}px;font-family:${escapeHtml(ff)};background:${escapeHtml(colors.box)};color:${escapeHtml(colors.font)}">${open ? 'OPEN' : 'CLOSED'}</div>`;
       }
 
       function refreshStatus() {
@@ -184,7 +201,11 @@
           const el = {
             type: 'status',
             fontSize: Number(node.dataset.fontSize) || undefined,
-            fontFamily: node.dataset.fontFamily || undefined
+            fontFamily: node.dataset.fontFamily || undefined,
+            boxColor: node.dataset.boxColor || '',
+            fontColor: node.dataset.fontColor || '',
+            closedBoxColor: node.dataset.closedBoxColor || '',
+            closedFontColor: node.dataset.closedFontColor || ''
           };
           node.innerHTML = renderStatus(liveDesign, open, el);
           node.dataset.open = open ? '1' : '0';
@@ -264,6 +285,10 @@
             node.dataset.status = '1';
             node.dataset.fontSize = String(resolveFontSize(el, design));
             node.dataset.fontFamily = resolveFontFamily(el, design);
+            node.dataset.boxColor = el.boxColor || '';
+            node.dataset.fontColor = el.fontColor || '';
+            node.dataset.closedBoxColor = el.closedBoxColor || '';
+            node.dataset.closedFontColor = el.closedFontColor || '';
             node.innerHTML = renderStatus(design, open, el);
           } else if (el.type === 'slideshow' && slideUrls.length) {
             node.innerHTML = `<img class="slide-img" data-slideshow-img src="${escapeHtml(slideUrls[0])}" alt="">`;
