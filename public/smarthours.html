@@ -2080,8 +2080,32 @@
                 </div>
               </div>
 
-              <div class="ctrl-block">
-                <p class="block-title">Hours Design</p>
+              <div class="ctrl-block hidden-block" id="elStatusProps">
+                <p class="block-title">Status</p>
+                <div class="color-pair">
+                  <div>
+                    <label for="elStatusBoxColor">Box color</label>
+                    <div class="color-row">
+                      <input id="elStatusBoxColor" type="text" value="#FF0000">
+                      <input id="elStatusBoxColorPick" type="color" value="#FF0000">
+                    </div>
+                    <div class="palette-swatches" data-palette-for="statusBox"></div>
+                  </div>
+                  <div>
+                    <label for="elStatusFontColor">Font color</label>
+                    <div class="color-row">
+                      <input id="elStatusFontColor" type="text" value="#000000">
+                      <input id="elStatusFontColorPick" type="color" value="#000000">
+                    </div>
+                    <div class="palette-swatches" data-palette-for="statusFont"></div>
+                  </div>
+                </div>
+                <p class="hint" id="elStatusColorHint" style="margin:4px 0 0;">Applies to the OPEN badge on the canvas.</p>
+              </div>
+
+              <details class="design-accordion" id="hoursDesignBlock" open>
+                <summary>Hours Design</summary>
+                <div class="design-accordion-body">
                 <div class="color-triple">
                   <div>
                     <label for="bgColor">BG</label>
@@ -2108,7 +2132,8 @@
                     <div class="palette-swatches" data-palette-for="accent"></div>
                   </div>
                 </div>
-              </div>
+                </div>
+              </details>
 
               <details class="design-accordion" id="elPropsBlock">
                 <summary>Selected</summary>
@@ -2125,27 +2150,6 @@
                       <button type="button" class="btn-secondary" id="elFontPlus" title="Larger">+</button>
                     </div>
                     <p class="hint" style="margin:4px 0 0;">Font and size apply to the selected text item.</p>
-                    <div id="elStatusProps" class="hidden-block" style="margin-top:8px;">
-                      <div class="color-pair">
-                        <div>
-                          <label for="elStatusBoxColor">Box color</label>
-                          <div class="color-row">
-                            <input id="elStatusBoxColor" type="text" value="#FF0000">
-                            <input id="elStatusBoxColorPick" type="color" value="#FF0000">
-                          </div>
-                          <div class="palette-swatches" data-palette-for="statusBox"></div>
-                        </div>
-                        <div>
-                          <label for="elStatusFontColor">Font color</label>
-                          <div class="color-row">
-                            <input id="elStatusFontColor" type="text" value="#000000">
-                            <input id="elStatusFontColorPick" type="color" value="#000000">
-                          </div>
-                          <div class="palette-swatches" data-palette-for="statusFont"></div>
-                        </div>
-                      </div>
-                      <p class="hint" id="elStatusColorHint" style="margin:4px 0 0;">Applies to the OPEN badge on the canvas.</p>
-                    </div>
                   </div>
                   <div id="elTextProps" class="hidden-block">
                     <label for="elText">Text</label>
@@ -3928,7 +3932,17 @@
         const c = selected();
         const isTextType = el && TEXT_LAYOUT_TYPES.has(el.type);
         const isOther = el && (el.type === 'image' || el.type === 'sketch');
+        const isStatus = !!(el && el.type === 'status');
         const block = document.getElementById('elPropsBlock');
+        if (statusProps) {
+          const justSelected = isStatus && statusProps.classList.contains('hidden-block');
+          statusProps.classList.toggle('hidden-block', !isStatus);
+          if (justSelected) {
+            const hoursBlock = document.getElementById('hoursDesignBlock');
+            if (hoursBlock && hoursBlock.tagName === 'DETAILS') hoursBlock.open = false;
+            statusProps.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+          }
+        }
         if (block && block.tagName === 'DETAILS' && el && (isTextType || isOther)) {
           block.open = true;
         }
@@ -3945,7 +3959,6 @@
         textProps.classList.add('hidden-block');
         imgProps.classList.add('hidden-block');
         sketchProps.classList.add('hidden-block');
-        if (statusProps) statusProps.classList.add('hidden-block');
         if (isTextType) {
           ensureElTypography(el, c && c.design);
           typeProps.classList.remove('hidden-block');
@@ -3960,10 +3973,7 @@
             fontSel.appendChild(opt);
           }
           fontSel.value = family;
-          if (el.type === 'status' && statusProps) {
-            statusProps.classList.remove('hidden-block');
-            syncStatusColorInputs(el, c && c.design);
-          }
+          if (isStatus) syncStatusColorInputs(el, c && c.design);
           if (el.type === 'text') {
             textProps.classList.remove('hidden-block');
             document.getElementById('elText').value = el.text || '';
