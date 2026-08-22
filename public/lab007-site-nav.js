@@ -12,7 +12,7 @@
     ['Elite Invoices', '/Elite-Invoices'],
     ['Clever-CRM', '/Clever-CRM'],
     ['SmartHours', '/SmartHours'],
-    ['Design Studio', '/design-studio/'],
+    ['Design Studio', '/design-studio'],
     ['Citrix-2-HZ', '/citrix'],
     ['Web-Alerts', '/webalert'],
     ['Contact', '/contact']

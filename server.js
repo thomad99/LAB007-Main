@@ -6402,11 +6402,14 @@ console.log(
     : 'disabled'
 );
 
+const designStudioDir = path.join(__dirname, 'public', 'design-studio');
+const designStudioIndex = path.join(designStudioDir, 'index.html');
 app.get(['/design-studio', '/Design-Studio'], (req, res) => {
-  res.redirect(301, '/design-studio/');
+  res.sendFile(designStudioIndex);
 });
-app.use('/design-studio', express.static(path.join(__dirname, 'public', 'design-studio'), {
-  index: 'index.html'
+app.use('/design-studio', express.static(designStudioDir, {
+  index: false,
+  redirect: false
 }));
 
 app.get('/Elite-Invoices', (req, res) => {
