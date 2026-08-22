@@ -55,6 +55,8 @@ shots/
 !**/clever-crm-assets/**/*.jpg
 !**/smarthours-assets/**/*.png
 !**/smarthours-assets/**/*.jpg
+!**/design-studio/assets/**/*.png
+!**/design-studio/assets/**/*.jpg
 
 # TomoPI uploaded images - server-only, never in git
 tomopi-data/images/
