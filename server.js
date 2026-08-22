@@ -6402,6 +6402,13 @@ console.log(
     : 'disabled'
 );
 
+app.get(['/design-studio', '/Design-Studio'], (req, res) => {
+  res.redirect(301, '/design-studio/');
+});
+app.use('/design-studio', express.static(path.join(__dirname, 'public', 'design-studio'), {
+  index: 'index.html'
+}));
+
 app.get('/Elite-Invoices', (req, res) => {
   eliteInvoicesNoIndexHeaders(res);
   res.sendFile(path.join(__dirname, 'public', 'elite-invoices.html'));
@@ -7278,6 +7285,7 @@ console.log(`========================================`);
 console.log(`Server running on port ${PORT}`);
 console.log(`Main landing page: http://localhost:${PORT}/`);
 console.log(`TomoPI: http://localhost:${PORT}/tomopi`);
+console.log(`Design Studio: http://localhost:${PORT}/design-studio/`);
 console.log(`3D Print: http://localhost:${PORT}/3dprint`);
 console.log(`Citrix: http://localhost:${PORT}/citrix`);
 console.log(`VIN Value: http://localhost:${PORT}/vinvalue`);

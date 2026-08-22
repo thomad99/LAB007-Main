@@ -1,6 +1,7 @@
 (() => {
   const path = location.pathname || '';
   if (/^\/SmartHours(?:\/|$)/i.test(path) || /^\/smarthours(?:\/|$)/i.test(path)) return;
+  if (/^\/design-studio(?:\/|$)/i.test(path)) return;
   const links = [
     ['Home', '/'],
     // ['Web-Dashboard', '/tomopi'],
@@ -11,6 +12,7 @@
     ['Elite Invoices', '/Elite-Invoices'],
     ['Clever-CRM', '/Clever-CRM'],
     ['SmartHours', '/SmartHours'],
+    ['Design Studio', '/design-studio/'],
     ['Citrix-2-HZ', '/citrix'],
     ['Web-Alerts', '/webalert'],
     ['Contact', '/contact']

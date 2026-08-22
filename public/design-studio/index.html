@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Design Studio | LAB007</title>
+  <link rel="icon" type="image/png" href="/images/lab007 Icon.PNG" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=Rajdhani:wght@500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="bg-grid" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <p class="kicker"><a class="home-link" href="/">LAB007</a> · Design Studio</p>
+      <h1 id="title">Robot Eyes</h1>
+    </div>
+
+    <div class="cats" id="cats" role="tablist" aria-label="Categories"></div>
+
+    <div class="tools">
+      <button type="button" id="uploadBtn">Upload</button>
+      <button type="button" id="newCatBtn">New category</button>
+      <button type="button" id="showAll">Show all</button>
+      <button type="button" id="exportBtn">Export</button>
+      <button type="button" id="deleteBtn" hidden>Delete</button>
+    </div>
+  </header>
+
+  <main class="stage" id="stage">
+    <button class="nav nav-prev" type="button" aria-label="Previous">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M15 5l-7 7 7 7" />
+      </svg>
+    </button>
+
+    <section class="viewport">
+      <div class="style-meta">
+        <span class="style-num" id="styleNum">01</span>
+        <span class="style-name" id="styleName">Digital Pixel</span>
+      </div>
+
+      <div class="housing" id="housing" data-count="2"></div>
+      <div class="deck-mount" id="deckMount" hidden></div>
+
+      <div class="empty" id="empty" hidden>
+        <p>This category is empty. Upload a still and pick a motion style.</p>
+        <button type="button" id="emptyUpload">Upload images</button>
+      </div>
+
+      <p class="hint" id="hint">Looks around and blinks — hover to take control</p>
+    </section>
+
+    <button class="nav nav-next" type="button" aria-label="Next">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M9 5l7 7-7 7" />
+      </svg>
+    </button>
+  </main>
+
+  <div class="gallery" id="gallery" hidden></div>
+
+  <footer class="dock">
+    <div class="seg" id="sizeSeg" role="group" aria-label="Output size">
+      <button type="button" data-size="standard" class="on">Standard</button>
+      <button type="button" data-size="pi">Pi Screen</button>
+    </div>
+    <div class="seg" id="extras" role="group" aria-label="Number of eyes">
+      <button type="button" data-count="1">Single</button>
+      <button type="button" data-count="2" class="on">Pair</button>
+      <button type="button" data-count="3">Triple</button>
+    </div>
+    <div class="speed-bar" id="fxBar" hidden>
+      <span class="speed-label">Motion</span>
+      <select id="fxSelect" aria-label="Animation style"></select>
+    </div>
+    <div class="speed-bar" id="speedBar" hidden>
+      <span class="speed-label">Speed <b id="speedVal">1.0×</b></span>
+      <input id="speedSlider" type="range" min="0.1" max="30" step="0.1" value="1" />
+      <div class="speed-ends"><span>Slow</span><span>Fast</span></div>
+    </div>
+    <div class="speed-bar" id="intensityBar" hidden>
+      <span class="speed-label">Intensity <b id="intensityVal">0.4</b></span>
+      <input id="intensitySlider" type="range" min="0.05" max="1.2" step="0.05" value="0.4" />
+    </div>
+    <div class="dots" id="dots" role="tablist" aria-label="Items"></div>
+  </footer>
+
+  <dialog id="exportDlg" class="export-dlg">
+    <form method="dialog">
+      <h2>Export this animation</h2>
+      <p>Drop the HTML widget into another project, or save a still / short clip.</p>
+      <div class="export-actions">
+        <button type="button" data-export="html">HTML widget</button>
+        <button type="button" data-export="png">PNG snapshot</button>
+        <button type="button" data-export="webm">Record 4s WebM</button>
+      </div>
+      <p class="export-status" id="exportStatus"></p>
+      <button class="export-close" value="close">Close</button>
+    </form>
+  </dialog>
+
+  <dialog id="uploadDlg" class="export-dlg studio-dlg">
+    <form id="uploadForm">
+      <h2>Add images</h2>
+      <p>Originals stay full resolution. Choose a category and a motion style — you can change the style later.</p>
+      <button type="button" class="drop" id="dropZone">Drop images here or click to browse</button>
+      <input id="filePick" type="file" accept="image/*" multiple hidden />
+      <ul class="file-list" id="fileList"></ul>
+      <label class="field">
+        Category
+        <select id="uploadCat"></select>
+      </label>
+      <div class="inline-new">
+        <input id="newCatName" type="text" placeholder="Or type a new category" maxlength="42" />
+        <button type="button" id="makeCat">Create</button>
+      </div>
+      <label class="field">
+        Animation style
+        <select id="uploadFx"></select>
+      </label>
+      <p class="export-status" id="uploadStatus"></p>
+      <div class="dlg-actions">
+        <button type="submit" class="primary">Add to studio</button>
+        <button type="button" id="uploadCancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="catDlg" class="export-dlg studio-dlg">
+    <form id="catForm">
+      <h2>New category</h2>
+      <p>A folder for stills you animate. Built-in robot / cassette / tank sets stay as they are.</p>
+      <label class="field">
+        Name
+        <input id="catName" type="text" required maxlength="42" placeholder="e.g. Album covers" />
+      </label>
+      <label class="field">
+        Default motion
+        <select id="catFx"></select>
+      </label>
+      <div class="dlg-actions">
+        <button type="submit" class="primary">Create</button>
+        <button type="button" id="catCancel">Cancel</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="js/studio.js"></script>
+</body>
+</html>
