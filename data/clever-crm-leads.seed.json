@@ -1,0 +1,128 @@
+﻿{
+    "templates":  {
+                      "email":  "",
+                      "phone":  ""
+                  },
+    "leads":  [
+                  {
+                      "lastCall":  "",
+                      "id":  "mobility-city-sarasota",
+                      "manager":  "David",
+                      "address":  "3234 Clark Rd, Sarasota, FL 34231",
+                      "nextStep":  "",
+                      "company":  "Mobility City of Sarasota",
+                      "website":  "https://mobilitycity.com/sarasota-fl/",
+                      "status":  "New lead",
+                      "phone":  "941-210-6283",
+                      "notes":  "Contact: Jamie Houser (owner). Best local first call — sells/rents/services mobility equipment for seniors with in-home service. Pitch: bathroom safety / senior independence demo."
+                  },
+                  {
+                      "lastCall":  "",
+                      "id":  "next-day-access-sarasota",
+                      "manager":  "David",
+                      "address":  "Sarasota, FL service area",
+                      "nextStep":  "",
+                      "company":  "Next Day Access Sarasota",
+                      "website":  "https://www.nextdayaccess.com/sarasota-fl/contact-us/",
+                      "status":  "New lead",
+                      "phone":  "813-519-6599",
+                      "notes":  "No public contact name; use contact form. Strong fit — bathroom safety, grab bars, ramps, patient lifts. Pitch: higher-value powered toilet transfer product."
+                  },
+                  {
+                      "lastCall":  "",
+                      "id":  "101-mobility-sarasota",
+                      "manager":  "David",
+                      "address":  "5975 Cattlemen Lane, Sarasota, FL 34232",
+                      "nextStep":  "",
+                      "company":  "101 Mobility of Sarasota",
+                      "website":  "https://www.101mobility.com/sarasota/",
+                      "status":  "New lead",
+                      "phone":  "941-740-8763",
+                      "notes":  "Aging-in-place dealer with showroom and in-home consults. Pitch: toilet lift pairs with bathroom safety / patient-handling."
+                  },
+                  {
+                      "lastCall":  "",
+                      "id":  "caps-home-accessibility",
+                      "manager":  "David",
+                      "address":  "3671 S Access Rd, Englewood, FL 34224",
+                      "nextStep":  "",
+                      "company":  "CAPS Home Accessibility \u0026 Safety Solutions",
+                      "website":  "https://capshomes.com/",
+                      "status":  "New lead",
+                      "phone":  "941-445-0571 / 941-681-2868",
+                      "notes":  "Certified Aging in Place Specialists (Sarasota–Punta Gorda). Pitch: include in home-safety assessments."
+                  },
+                  {
+                      "lastCall":  "",
+                      "id":  "medical-department-store",
+                      "manager":  "David",
+                      "address":  "14824 S. Tamiami Trl, North Port, FL",
+                      "nextStep":  "",
+                      "company":  "Medical Department Store",
+                      "website":  "https://www.medicaldepartmentstore.com/pages/locations-contact",
+                      "status":  "New lead",
+                      "phone":  "866-218-0902 / 941-282-9676",
+                      "notes":  "Southwest Florida DME/HME retailer (multiple locations). Pitch: demo unit then roll out if it sells."
+                  },
+                  {
+                      "lastCall":  "",
+                      "id":  "florida-mobility-medical-products",
+                      "manager":  "David",
+                      "address":  "8303 S. John Young Parkway, Orlando, FL 32819",
+                      "nextStep":  "",
+                      "company":  "Florida Mobility and Medical Products",
+                      "website":  "https://www.floridamobilityproducts.com/",
+                      "status":  "New lead",
+                      "phone":  "407-363-3535 / 866-363-3535",
+                      "notes":  "Orlando DME since 1998; in-home demos. Pitch: already set up for in-home product demos."
+                  },
+                  {
+                      "lastCall":  "",
+                      "id":  "health-aid-company",
+                      "manager":  "David",
+                      "address":  "Tampa: 4502 N Armenia Ave, Tampa, FL 33603; Largo: 1156 Jasper Street, Largo, FL 33770",
+                      "nextStep":  "",
+                      "company":  "Health Aid Company",
+                      "website":  "https://www.healthaidcompany.com/contactus",
+                      "status":  "New lead",
+                      "phone":  "813-879-7552 / 727-586-2995",
+                      "notes":  "Contacts: sales@healthaidcompany.com; largosales@healthaidcompany.com. DME since 1973; bath aids / grab bars. Pitch: evaluate demo for retail/referral."
+                  },
+                  {
+                      "lastCall":  "",
+                      "id":  "florida-surgical-supply",
+                      "manager":  "David",
+                      "address":  "4500 S Tamiami Trail, Sarasota, FL 34231",
+                      "nextStep":  "",
+                      "company":  "Florida Surgical Supply",
+                      "website":  "https://floridasurgicalsupply.com/",
+                      "status":  "New lead",
+                      "phone":  "941-366-2345",
+                      "notes":  "Sarasota medical supply since 1956; use contact form. Pitch: easy in-person showroom demo."
+                  },
+                  {
+                      "lastCall":  "",
+                      "id":  "baileys-medical-equipment",
+                      "manager":  "David",
+                      "address":  "Multiple Florida locations",
+                      "nextStep":  "",
+                      "company":  "Bailey\u0027s Medical Equipment and Supplies",
+                      "website":  "https://www.baileysmedical.com/locations",
+                      "status":  "New lead",
+                      "phone":  "Vero Beach 772-226-7700; Orlando 407-745-4622; Fort Lauderdale 954-769-1737; St. Petersburg 727-256-1305; Bonita Springs 239-963-9551; Tallahassee 850-765-5795; Oxford 352-571-4928",
+                      "notes":  "Multi-store Florida DME. Pitch: ask who handles new product/vendor onboarding."
+                  },
+                  {
+                      "lastCall":  "",
+                      "id":  "viva-mobility-usa",
+                      "manager":  "David",
+                      "address":  "1170 Tree Swallow Drive, Suite 233, Winter Springs, FL 32708",
+                      "nextStep":  "",
+                      "company":  "VIVA Mobility USA",
+                      "website":  "https://vivamobilityusa.com/pages/contact",
+                      "status":  "New lead",
+                      "phone":  "407-308-2116 / 800-710-3092",
+                      "notes":  "Contacts: info@ / support@ / orders@ / marketing@vivamobilityusa.com. Online + FL appointment sales for lifts/transfer aids. Pitch: evaluate for online and appointment sales."
+                  }
+              ]
+}
