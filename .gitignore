@@ -61,6 +61,11 @@ shots/
 # TomoPI uploaded images - server-only, never in git
 tomopi-data/images/
 
+# Design Studio uploads — Render disk: $LAB007_DATA_DIR/design-studio
+/data/design-studio/files/
+/data/design-studio/library.json
+/data/design-studio/library.json.tmp
+
 # GGPPI Tracker — runtime task JSON (created by server). Use GGPPI_DATA_DIR on a persistent volume in production.
 /data/ggppi-tasks.json
 

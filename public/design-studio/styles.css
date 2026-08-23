@@ -166,6 +166,7 @@ h1 {
   grid-template-columns: 72px 1fr 72px;
   align-items: center;
   min-height: 0;
+  overflow: hidden;
   padding: 12px 8px 8px;
 }
 
@@ -173,8 +174,13 @@ h1 {
   display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 28px;
   min-width: 0;
+  min-height: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
 }
 
 .style-meta {
@@ -290,12 +296,15 @@ body.size-pi .viewport {
 
 .dock {
   position: relative;
-  z-index: 2;
+  z-index: 8;
+  flex-shrink: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 18px;
   padding: 8px 20px 28px;
+  width: 100%;
+  background: var(--bg);
 }
 
 .seg {
@@ -335,6 +344,42 @@ body.size-pi .viewport {
   width: min(360px, 86vw);
   display: grid;
   gap: 6px;
+}
+
+.motion-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  width: min(760px, 92vw);
+}
+
+.motion-row:not(:has(.speed-bar:not([hidden]))) {
+  display: none;
+}
+
+.motion-row .speed-bar {
+  flex: 1 1 240px;
+  width: auto;
+  min-width: 220px;
+}
+
+.slider-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px;
+  width: min(760px, 92vw);
+}
+
+.slider-row:not(:has(.speed-bar:not([hidden]))) {
+  display: none;
+}
+
+.slider-row .speed-bar {
+  flex: 1 1 240px;
+  width: auto;
+  min-width: 220px;
 }
 
 .speed-label {
@@ -657,10 +702,6 @@ body.size-pi .viewport {
     --gap: 18px;
   }
 
-  .stage {
-    grid-template-columns: 52px 1fr 52px;
-  }
-
   .hint {
     display: none;
   }
@@ -671,16 +712,17 @@ body.size-pi .viewport {
     --eye: 88px;
     --gap: 12px;
   }
-
-  .seg button {
-    min-width: 70px;
-    padding: 8px 10px;
-    font-size: 13px;
-  }
 }
 
 .deck-mount {
   width: min(920px, 92vw);
+  max-width: 100%;
+  max-height: 100%;
+  min-height: 0;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   animation: eyeIn 0.42s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
@@ -1066,20 +1108,192 @@ body.size-pi .card-stage .tank-card {
 }
 
 @media (max-width: 900px) {
+  html,
+  body {
+    height: 100dvh;
+    min-height: 100dvh;
+    overflow: hidden;
+  }
+
+  @supports (height: 100svh) {
+    html,
+    body {
+      height: 100svh;
+      min-height: 100svh;
+    }
+  }
+
+  html.show-all,
+  body.show-all {
+    height: auto;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    overflow-y: auto;
+  }
+
   .topbar {
     grid-template-columns: 1fr;
     justify-items: center;
     text-align: center;
+    gap: 8px;
+    padding: 8px 12px 6px;
+    flex-shrink: 0;
   }
 
   .brand,
   .tools {
     justify-self: center;
+    max-width: none;
   }
 
-  .cats,
+  h1 {
+    margin-top: 2px;
+    font-size: 16px;
+  }
+
+  .kicker {
+    font-size: 9px;
+    letter-spacing: 0.28em;
+  }
+
+  .cats {
+    max-width: 100%;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+    touch-action: pan-x;
+  }
+
+  .cats button,
+  .tools button {
+    flex: 0 0 auto;
+    padding: 7px 11px;
+    font-size: 12px;
+  }
+
   .tools {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .stage {
+    grid-template-columns: 1fr;
+    padding: 4px 10px 0;
+    min-height: 0;
+    overflow: hidden;
+    touch-action: pan-x;
+  }
+
+  .nav {
+    display: none;
+  }
+
+  .viewport {
+    gap: 8px;
+  }
+
+  .style-meta {
+    min-height: 0;
+    gap: 8px;
+  }
+
+  .style-num {
+    font-size: 14px;
+  }
+
+  .style-name {
+    font-size: 11px;
+    letter-spacing: 0.12em;
+  }
+
+  .housing {
+    max-width: 100%;
+    max-height: 46svh;
+    padding: 16px 20px;
+  }
+
+  .deck-mount,
+  .deck-mount.is-hdr,
+  .deck-mount.is-tank {
+    width: min(920px, 96vw);
+    max-height: 46svh;
+  }
+
+  .deck-mount .deck,
+  .deck-mount .hdr-card,
+  .deck-mount .tank-card {
+    width: auto;
+    max-width: 100%;
+    max-height: 46svh;
+    height: auto;
+  }
+
+  .deck-mount .deck img,
+  .hdr-card img {
+    width: auto;
+    max-width: 100%;
+    height: auto;
+    max-height: 46svh;
+    object-fit: contain;
+  }
+
+  .hdr-card canvas,
+  .tank-card canvas {
+    object-fit: contain;
+  }
+
+  .dock {
+    gap: 8px;
+    padding: 6px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+    touch-action: manipulation;
+  }
+
+  .seg {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .seg button {
+    min-width: 72px;
+    min-height: 40px;
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  .motion-row,
+  .slider-row {
+    width: 100%;
     max-width: none;
+    gap: 10px;
+  }
+
+  .motion-row .speed-bar,
+  .slider-row .speed-bar,
+  .speed-bar {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .speed-bar input[type="range"] {
+    height: 32px;
+  }
+
+  .speed-label {
+    font-size: 12px;
+  }
+
+  .dots {
+    flex-wrap: wrap;
+    justify-content: center;
+    max-width: 100%;
+    padding: 4px 0;
+  }
+
+  .dots button {
+    width: 10px;
+    height: 10px;
   }
 
   .gallery {

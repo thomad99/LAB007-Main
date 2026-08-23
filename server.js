@@ -20,6 +20,7 @@ const { registerCronTelegramHandlers } = require('./lib/telegramHandlersCron');
 const { startScheduledJobsRunner } = require('./lib/scheduledJobsRunner');
 const { registerTrade007Routes } = require('./lib/trade007');
 const { registerSmartHoursRoutes } = require('./lib/smarthoursRoutes');
+const { registerDesignStudioRoutes } = require('./lib/designStudioRoutes');
 const {
   eliteInvoicesDataPath,
   eliteInvoicesHistoryPath,
@@ -347,6 +348,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 registerSpamblokRoutes(app);
 registerTrade007Routes(app);
 registerSmartHoursRoutes(app);
+registerDesignStudioRoutes(app);
 
 // Add request logging middleware at the very top to catch ALL requests
 app.use((req, res, next) => {

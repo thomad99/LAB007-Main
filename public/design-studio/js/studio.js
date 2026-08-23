@@ -1,7 +1,7 @@
 import { EYE_STYLES, mountEyes, createEyeMotion, bindEyePointer, drawEyes } from "./eyes.js";
 import { DECKS, createDeck } from "./cassettes.js";
 import { VU_UNITS, createVuUnit } from "./vu.js";
-import { HDR_IMAGES, NEON_IMAGES, FX_STYLES, createHdrItem } from "./hdr.js";
+import { HDR_IMAGES, NEON_IMAGES, FX_STYLES, LIVE_SCENES, createHdrItem } from "./hdr.js";
 import { TANKS, createTank } from "./tanks.js";
 import { exportCassetteHTML, exportVuHTML, exportHdrHTML, exportTankHTML, exportEyeHTML, exportPNGFromDeck, recordDeckWebM, recordEyesWebM } from "./export.js";
 import {
@@ -18,6 +18,7 @@ import {
   prettyName,
   newId,
   slugify,
+  migrateBrowserLibrary,
 } from "./library.js";
 
 const BUILTIN = [
@@ -39,6 +40,8 @@ const els = {
   extras: document.getElementById("extras"),
   fxBar: document.getElementById("fxBar"),
   fxSelect: document.getElementById("fxSelect"),
+  sceneBar: document.getElementById("sceneBar"),
+  sceneSelect: document.getElementById("sceneSelect"),
   speedBar: document.getElementById("speedBar"),
   speedSlider: document.getElementById("speedSlider"),
   speedVal: document.getElementById("speedVal"),
@@ -99,6 +102,19 @@ function isImageCat(cat = getCat()) {
   return cat?.kind === "images";
 }
 
+function isPhotoItem(item = current()) {
+  return Boolean(item?.user);
+}
+
+function usesEyeWidget(item = current(), cat = getCat()) {
+  return cat?.kind === "eyes" && item && !item.user;
+}
+
+function defaultFxForCat(cat = getCat()) {
+  if (cat?.kind === "tanks") return "living";
+  return cat?.defaultFx || "kenburns";
+}
+
 function prefKey(item, catId = state.cat) {
   return `${catId}:${item.id}`;
 }
@@ -109,6 +125,7 @@ function decorate(item, catId) {
   return {
     ...item,
     fx: pref.fx ?? item.fx,
+    scene: pref.scene ?? item.scene,
     speed: pref.speed ?? item.speed ?? 1,
     intensity: pref.intensity ?? item.intensity,
     pace: pref.pace ?? item.pace,
@@ -118,10 +135,6 @@ function decorate(item, catId) {
 function rebuildItems() {
   const cat = getCat();
   const seed = (cat.seed || []).map((item) => decorate(item, cat.id));
-  if (cat.kind !== "images") {
-    state.cached = seed;
-    return;
-  }
   const extras = state.userItems.map((item) => ({ ...item }));
   state.cached = [...seed, ...extras].map((item, i) => ({
     ...item,
@@ -146,7 +159,7 @@ function widgetOpts(item = current()) {
 
 function createWidget(item, opts) {
   const kind = getCat().kind;
-  if (kind === "images") return createHdrItem(item, opts);
+  if (item?.user || kind === "images") return createHdrItem(item, opts);
   if (kind === "cassettes") return createDeck(item, opts);
   if (kind === "vu") return createVuUnit(item, opts);
   if (kind === "tanks") return createTank(item, opts);
@@ -174,19 +187,27 @@ function fillFxSelect(select, value = "kenburns") {
   select.value = FX_STYLES.some((fx) => fx.id === value) ? value : "kenburns";
 }
 
+function fillSceneSelect(select, value = "auto") {
+  select.replaceChildren();
+  LIVE_SCENES.forEach((scene) => {
+    const opt = document.createElement("option");
+    opt.value = scene.id;
+    opt.textContent = scene.name;
+    select.appendChild(opt);
+  });
+  select.value = LIVE_SCENES.some((scene) => scene.id === value) ? value : "auto";
+}
+
 function fillUploadCats() {
   els.uploadCat.replaceChildren();
-  catList()
-    .filter((cat) => cat.kind === "images")
-    .forEach((cat) => {
-      const opt = document.createElement("option");
-      opt.value = cat.id;
-      opt.textContent = cat.label;
-      els.uploadCat.appendChild(opt);
-    });
-  const currentId = isImageCat() ? state.cat : "hdr";
-  if ([...els.uploadCat.options].some((o) => o.value === currentId)) {
-    els.uploadCat.value = currentId;
+  catList().forEach((cat) => {
+    const opt = document.createElement("option");
+    opt.value = cat.id;
+    opt.textContent = cat.label;
+    els.uploadCat.appendChild(opt);
+  });
+  if ([...els.uploadCat.options].some((o) => o.value === state.cat)) {
+    els.uploadCat.value = state.cat;
   }
 }
 
@@ -216,7 +237,12 @@ function renderCatBar() {
 }
 
 async function loadUserItems(catId = state.cat) {
-  state.userItems = isImageCat(getCat(catId)) ? await itemsWithUrls(catId) : [];
+  try {
+    state.userItems = await itemsWithUrls(catId);
+  } catch (err) {
+    console.warn(err);
+    state.userItems = [];
+  }
 }
 
 async function selectCat(id) {
@@ -230,10 +256,15 @@ async function selectCat(id) {
 }
 
 function setHint() {
-  if (!items().length && isImageCat()) {
+  const item = current();
+  if (!items().length) {
     els.hint.textContent = "Upload a still to animate — originals stay full resolution";
-  } else if (isImageCat()) {
-    els.hint.textContent = "Change motion any time. Uploads keep their original pixels.";
+  } else if (isPhotoItem(item) || isImageCat()) {
+    if (item?.fx === "living") {
+      els.hint.textContent = "Reads objects inside the still and moves them — pick Swim for a fish tank";
+    } else {
+      els.hint.textContent = "Swipe the still to change images. Motion and speed stay below.";
+    }
   } else if (state.cat === "eyes") {
     els.hint.textContent = "Looks around and blinks — hover to take control";
   } else if (state.cat === "vu") {
@@ -247,14 +278,19 @@ function setHint() {
 
 function syncItemControls() {
   const item = current();
-  const image = isImageCat() && item;
-  els.fxBar.hidden = !image;
-  els.speedBar.hidden = !image;
-  els.intensityBar.hidden = !image;
-  els.extras.hidden = state.cat !== "eyes";
+  const photo = isPhotoItem(item) || (isImageCat() && item);
+  const living = photo && (item.fx || "kenburns") === "living";
+  els.fxBar.hidden = !photo;
+  els.sceneBar.hidden = !living;
+  els.speedBar.hidden = !photo;
+  els.intensityBar.hidden = !photo;
+  els.extras.hidden = getCat().kind !== "eyes" || isPhotoItem(item);
   els.deleteBtn.hidden = !(item?.user || (getCat().custom && !items().length));
-  if (image) {
+  if (photo && item) {
     els.fxSelect.value = item.fx || "kenburns";
+    els.sceneSelect.value = LIVE_SCENES.some((scene) => scene.id === (item.scene || "auto"))
+      ? (item.scene || "auto")
+      : "auto";
     const speed = item.speed ?? 1;
     els.speedSlider.value = String(speed);
     els.speedVal.textContent = `${Number(speed).toFixed(1)}×`;
@@ -275,6 +311,7 @@ async function persistMotion(item) {
     await updateItem({
       id: item.id,
       fx: item.fx,
+      scene: item.scene,
       speed: item.speed,
       intensity: item.intensity,
       pace: item.pace,
@@ -284,6 +321,7 @@ async function persistMotion(item) {
   const pref = {
     key: prefKey(item),
     fx: item.fx,
+    scene: item.scene,
     speed: item.speed ?? 1,
     intensity: item.intensity,
     pace: item.pace,
@@ -346,10 +384,11 @@ function mountSingle() {
   const item = current();
   els.styleNum.textContent = item.num;
   els.styleName.textContent = item.name;
-  els.deckMount.classList.toggle("is-hdr", isImageCat(cat));
-  els.deckMount.classList.toggle("is-tank", cat.kind === "tanks");
+  const photo = isPhotoItem(item);
+  els.deckMount.classList.toggle("is-hdr", isImageCat(cat) || photo);
+  els.deckMount.classList.toggle("is-tank", cat.kind === "tanks" && !photo);
 
-  if (cat.kind === "eyes") {
+  if (usesEyeWidget(item, cat)) {
     els.housing.hidden = false;
     els.housing.classList.remove("eye-swap");
     void els.housing.offsetWidth;
@@ -387,7 +426,7 @@ function mountGallery() {
     stage.className = "card-stage";
     card.appendChild(stage);
 
-    if (getCat().kind === "eyes") {
+    if (usesEyeWidget(item, getCat())) {
       const housing = document.createElement("div");
       housing.className = "housing";
       housing.dataset.count = String(state.eyeCount);
@@ -498,7 +537,7 @@ function openUpload() {
   renderPending();
   els.uploadStatus.textContent = "";
   fillUploadCats();
-  fillFxSelect(els.uploadFx, getCat().defaultFx || (isImageCat() ? current()?.fx : "kenburns") || "kenburns");
+  fillFxSelect(els.uploadFx, defaultFxForCat(getCat(els.uploadCat.value)));
   els.uploadDlg.showModal();
 }
 
@@ -550,6 +589,16 @@ els.fxSelect.addEventListener("change", async () => {
   if (!item) return;
   item.fx = els.fxSelect.value;
   applyToItemDecks(item, (deck) => deck.setFx?.(item.fx));
+  syncItemControls();
+  setHint();
+  await persistMotion(item);
+});
+
+els.sceneSelect.addEventListener("change", async () => {
+  const item = current();
+  if (!item) return;
+  item.scene = els.sceneSelect.value;
+  applyToItemDecks(item, (deck) => deck.setScene?.(item.scene));
   await persistMotion(item);
 });
 
@@ -594,6 +643,7 @@ window.addEventListener(
   "wheel",
   (event) => {
     if (state.showAll) return;
+    if (event.target.closest(".dock, .topbar, dialog, input, select, textarea")) return;
     const dx = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : 0;
     if (!dx) return;
     wheelAcc += dx;
@@ -605,15 +655,30 @@ window.addEventListener(
   { passive: true }
 );
 
-let touchX = null;
-window.addEventListener("touchstart", (event) => {
-  touchX = event.changedTouches[0].clientX;
+function swipeBlocked(target) {
+  return Boolean(target?.closest?.(".dock, .topbar, dialog, input, select, textarea, button, .cats, .tools"));
+}
+
+let touchStart = null;
+els.stage.addEventListener("touchstart", (event) => {
+  if (swipeBlocked(event.target)) {
+    touchStart = null;
+    return;
+  }
+  const touch = event.changedTouches[0];
+  touchStart = { x: touch.clientX, y: touch.clientY };
 }, { passive: true });
-window.addEventListener("touchend", (event) => {
-  if (touchX == null || state.showAll) return;
-  const dx = event.changedTouches[0].clientX - touchX;
-  if (Math.abs(dx) > 48) step(dx < 0 ? 1 : -1);
-  touchX = null;
+els.stage.addEventListener("touchend", (event) => {
+  if (!touchStart || state.showAll) {
+    touchStart = null;
+    return;
+  }
+  const touch = event.changedTouches[0];
+  const dx = touch.clientX - touchStart.x;
+  const dy = touch.clientY - touchStart.y;
+  touchStart = null;
+  if (Math.abs(dx) < 48 || Math.abs(dx) < Math.abs(dy) * 1.15) return;
+  step(dx < 0 ? 1 : -1);
 }, { passive: true });
 
 document.getElementById("exportBtn").addEventListener("click", () => {
@@ -628,12 +693,12 @@ async function runExport(kind) {
   els.exportStatus.textContent = "Exporting…";
   const cat = getCat();
   try {
-    if (cat.kind !== "eyes") {
+    if (isPhotoItem(item) || cat.kind !== "eyes") {
       const inst = state.activeDeck || state.decks[0];
       if (kind === "html") {
         const fitOpts = { fit: state.size, speed: item.speed ?? 1 };
-        if (cat.kind === "vu") await exportVuHTML(item, fitOpts);
-        else if (cat.kind === "images") await exportHdrHTML(item, fitOpts);
+        if (isPhotoItem(item) || cat.kind === "images") await exportHdrHTML(item, fitOpts);
+        else if (cat.kind === "vu") await exportVuHTML(item, fitOpts);
         else if (cat.kind === "tanks") await exportTankHTML(item, fitOpts);
         else await exportCassetteHTML(item, fitOpts);
       }
@@ -668,6 +733,9 @@ document.getElementById("newCatBtn").addEventListener("click", () => {
 document.getElementById("catCancel").addEventListener("click", () => els.catDlg.close());
 
 els.dropZone.addEventListener("click", () => els.filePick.click());
+els.uploadCat.addEventListener("change", () => {
+  fillFxSelect(els.uploadFx, defaultFxForCat(getCat(els.uploadCat.value)));
+});
 els.filePick.addEventListener("change", async () => {
   await addPending(els.filePick.files);
   els.filePick.value = "";
@@ -713,6 +781,7 @@ els.uploadForm.addEventListener("submit", async (event) => {
         catId,
         name: prettyName(pending.file.name),
         fx,
+        scene: fx === "living" ? "auto" : undefined,
         speed: 1,
         intensity: 0.4,
         pace: 0.4,
@@ -729,7 +798,7 @@ els.uploadForm.addEventListener("submit", async (event) => {
     state.index = Math.max(0, items().length - 1);
     refresh();
   } catch (err) {
-    els.uploadStatus.textContent = err.message || "Could not save. The browser may be out of space.";
+    els.uploadStatus.textContent = err.message || "Could not save the image to studio storage.";
   }
 });
 
@@ -763,7 +832,7 @@ let last = performance.now();
 function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000);
   last = now;
-  if (getCat().kind === "eyes" && !state.showAll && items().length) {
+  if (usesEyeWidget() && !state.showAll && items().length) {
     state.motion.tick(now);
     drawEyes(state.eyes, state.motion, els.housing);
   }
@@ -778,7 +847,9 @@ async function boot() {
   fillFxSelect(els.fxSelect);
   fillFxSelect(els.uploadFx);
   fillFxSelect(els.catFx);
+  fillSceneSelect(els.sceneSelect);
   try {
+    await migrateBrowserLibrary();
     state.prefs = await allPrefs();
     state.userCats = (await listCats()).map((cat) => ({ ...cat, custom: true, kind: "images" }));
   } catch (err) {

@@ -125,6 +125,7 @@ export async function exportHdrHTML(item, options = {}) {
     id: item.id,
     name: item.name,
     fx: item.fx,
+    scene: item.scene || "auto",
     intensity: item.intensity,
     pace: item.pace,
   };
