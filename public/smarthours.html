@@ -176,6 +176,23 @@
       display: none !important;
     }
     body.admin-mode.fleet-open #newCustomerBtn { display: none !important; }
+    body.admin-mode.templates-open {
+      overflow: auto;
+      height: auto;
+      min-height: 100dvh;
+    }
+    body.admin-mode.templates-open.has-studio .wrap {
+      height: auto;
+      max-height: none;
+      overflow: visible;
+    }
+    body.admin-mode.templates-open .grid-main {
+      display: grid;
+      grid-template-columns: 1fr !important;
+      overflow: visible;
+    }
+    body.admin-mode.templates-open #newCustomerBtn { display: none !important; }
+    body.admin-mode.fleet-open .templates-page { display: none !important; }
     body.has-studio .editor.open {
       display: flex;
       flex-direction: column;
@@ -366,6 +383,12 @@
     body.admin-mode.readonly textarea {
       pointer-events: none;
       opacity: .88;
+    }
+    body.admin-mode.readonly .templates-page input,
+    body.admin-mode.readonly .templates-page select,
+    body.admin-mode.readonly .templates-page textarea {
+      pointer-events: auto;
+      opacity: 1;
     }
     .onboard {
       width: min(920px, 100%);
@@ -1812,6 +1835,175 @@
         overflow: visible;
       }
     }
+    .seg-toggle {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin: 0 0 8px;
+    }
+    .seg-toggle button {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 10px;
+      padding: 8px 10px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .seg-toggle button.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .slideshow-under-canvas {
+      padding: 10px 12px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(12, 18, 34, .9);
+    }
+    .slideshow-under-canvas .block-title {
+      margin: 0 0 8px;
+      font-size: .72rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 700;
+    }
+    #accessRequest {
+      width: min(920px, 100%);
+      margin: 28px auto 0;
+      text-align: center;
+    }
+    body.admin-mode #accessRequest,
+    body.customer-mode.has-studio #accessRequest { display: none !important; }
+    .access-card {
+      padding: 18px 20px;
+      border-radius: 16px;
+      border: 1px solid rgba(255,255,255,.08);
+      background: rgba(16, 22, 38, .92);
+      text-align: left;
+    }
+    .access-card h3 { margin: 0 0 8px; }
+    .access-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: end;
+    }
+    .access-row input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: #0a1020;
+      color: var(--text);
+      font: inherit;
+    }
+    #imagePicker {
+      position: fixed; inset: 0; z-index: 120;
+      background: rgba(5, 7, 15, .86);
+      display: none;
+      place-items: center;
+      padding: 24px;
+    }
+    #imagePicker.open { display: grid; }
+    .picker-card {
+      width: min(760px, 100%);
+      max-height: min(86vh, 820px);
+      overflow: auto;
+    }
+    .picker-tabs {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 6px;
+      margin: 12px 0;
+    }
+    .picker-tabs button {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 10px;
+      padding: 10px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .picker-tabs button.active {
+      background: var(--accent-dim);
+      color: var(--accent);
+      border-color: var(--accent);
+    }
+    .tpl-cats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0 0 10px;
+    }
+    .tpl-cats button {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 6px 10px;
+      font: inherit;
+      font-size: .8rem;
+      cursor: pointer;
+    }
+    .tpl-cats button.active { color: var(--accent); border-color: var(--accent); }
+    .tpl-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+    }
+    .tpl-tile {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: #0a1020;
+      border-radius: 10px;
+      padding: 0;
+      overflow: hidden;
+      cursor: pointer;
+      color: inherit;
+      text-align: left;
+    }
+    .tpl-tile img { width: 100%; height: 88px; object-fit: cover; display: block; }
+    .tpl-tile span { display: block; padding: 6px 8px; font-size: .75rem; color: var(--muted); }
+    .tpl-tile.pair { grid-column: span 2; }
+    .tpl-tile.pair .pair-imgs { display: grid; grid-template-columns: 1fr 1fr; }
+    .tpl-tile.pair img { height: 88px; }
+    .status-pair-preview {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .status-pair-preview img {
+      width: 100%; height: 72px; object-fit: cover; border-radius: 8px; background: #000;
+    }
+    .templates-page { display: none; }
+    body.admin-mode.templates-open .templates-page { display: block; }
+    body.admin-mode.templates-open .editor,
+    body.admin-mode.templates-open .grid-main > aside { display: none !important; }
+    .tpl-admin-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+    .tpl-admin-card {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      overflow: hidden;
+      background: rgba(10, 16, 32, .8);
+    }
+    .tpl-admin-card img { width: 100%; height: 110px; object-fit: cover; display: block; }
+    .tpl-admin-card .body { padding: 10px; display: grid; gap: 6px; }
+    .battery-ok { color: var(--accent); font-weight: 700; }
+    .battery-low { color: var(--warn); font-weight: 700; }
+    .battery-empty { color: var(--danger); font-weight: 700; }
   </style>
 </head>
 <body class="customer-mode" data-studio-tab="info">
@@ -1835,10 +2027,37 @@
   </div>
   <div id="urlSavedModal">
     <div class="panel url-saved-card">
-      <h2>This Is your unique URL to manage your screen</h2>
+      <h2>Check your email for the secured link</h2>
+      <p class="hint">We also saved a 10-day session on this device. Bookmark this page, and from any other device enter your email to get a new link.</p>
       <a class="manage-url" id="urlSavedLink" href="#" target="_blank" rel="noopener"></a>
-      <p class="please-save">Please Save this page</p>
+      <p class="please-save">Your portal link is valid for 10 days</p>
       <button type="button" class="btn" id="urlSavedOk" style="width:100%;">Continue</button>
+    </div>
+  </div>
+  <div id="imagePicker">
+    <div class="panel picker-card">
+      <h2 id="imagePickerTitle">Choose image</h2>
+      <p class="hint" id="imagePickerHint">Pick a template, upload a file, or take a photo.</p>
+      <div class="picker-tabs">
+        <button type="button" class="active" data-picker-tab="templates">Templates</button>
+        <button type="button" data-picker-tab="upload">Upload</button>
+        <button type="button" data-picker-tab="camera">Camera</button>
+      </div>
+      <div id="pickerTemplates">
+        <div class="tpl-cats" id="pickerCats"></div>
+        <div class="tpl-grid" id="pickerGrid"></div>
+      </div>
+      <div id="pickerUpload" class="hidden-block">
+        <label for="pickerUploadFile">Upload image</label>
+        <input id="pickerUploadFile" type="file" accept="image/*">
+      </div>
+      <div id="pickerCamera" class="hidden-block">
+        <label for="pickerCameraFile">Take a photo</label>
+        <input id="pickerCameraFile" type="file" accept="image/*" capture="environment">
+      </div>
+      <div class="add-row" style="margin-top:14px;">
+        <button type="button" class="btn-secondary" id="imagePickerClose">Cancel</button>
+      </div>
     </div>
   </div>
   <div id="app" class="wrap">
@@ -1855,6 +2074,7 @@
         <button type="button" class="btn-secondary admin-only" id="customersNavBtn">Customers</button>
         <button type="button" class="btn-secondary admin-only" id="newCustomerBtn">New Customer</button>
         <button type="button" class="btn-secondary admin-only" id="deviceMgmtBtn">Devices</button>
+        <button type="button" class="btn-secondary admin-only" id="templatesNavBtn">Templates</button>
         <button type="button" class="btn-secondary admin-only" id="logoutBtn">Log out</button>
       </div>
     </header>
@@ -1899,11 +2119,35 @@
             <a href="https://maps.google.com" target="_blank" rel="noopener">Find your link on Google Maps</a>
           </div>
         </div>
+        <div class="setup-row">
+          <div class="setup-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg>
+          </div>
+          <div class="setup-copy">
+            <label for="onboardEmail">Email address</label>
+            <p>We’ll send your secured 10-day portal link here</p>
+          </div>
+          <input id="onboardEmail" type="email" placeholder="you@business.com" autocomplete="email">
+        </div>
       </div>
       <p class="hint setup-status" id="onboardSlugStatus"></p>
       <p class="slug-preview" id="onboardSlugPreview" hidden></p>
       <p class="hint setup-status" id="onboardMapsStatus"></p>
       <button type="button" class="btn setup-save" id="onboardSaveBtn">Save &amp; Continue →</button>
+    </section>
+    <section class="onboard customer-only" id="accessRequest">
+      <div class="access-card">
+        <h3>Already have a SmartHours display?</h3>
+        <p class="hint" style="margin:0 0 12px;">On a new phone or computer, enter the email used at signup. We’ll send a secured link to your portal. The link stays valid for 10 days.</p>
+        <div class="access-row">
+          <div>
+            <label for="accessEmail">Email address</label>
+            <input id="accessEmail" type="email" placeholder="you@business.com" autocomplete="email">
+          </div>
+          <button type="button" class="btn" id="accessSendBtn">Email my link</button>
+        </div>
+        <p class="hint setup-status" id="accessStatus"></p>
+      </div>
     </section>
     <div class="grid-main">
       <aside class="panel admin-only">
@@ -1971,6 +2215,16 @@
               </div>
               <input id="fieldMapsUrl" type="text" placeholder="https://maps.app.goo.gl/VNM7eFRQ4yyN9RG28">
               <p class="hint" id="studioMapsStatus"></p>
+            </div>
+            <div class="info-field">
+              <div class="info-field-label">
+                <span class="info-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg>
+                </span>
+                <label for="fieldEmail">Email</label>
+              </div>
+              <input id="fieldEmail" type="email" placeholder="you@business.com" autocomplete="email">
+              <p class="hint">Used to send a 10-day secured link if you sign in from another device.</p>
             </div>
             <div class="auto-sync-bar admin-only">
               <div>
@@ -2080,41 +2334,18 @@
                 </div>
               </div>
 
-              <div class="ctrl-block hidden-block" id="elStatusProps">
-                <p class="block-title">Status</p>
-                <div class="color-pair">
-                  <div>
-                    <label for="elStatusBoxColor">Box color</label>
-                    <div class="color-row">
-                      <input id="elStatusBoxColor" type="text" value="#FF0000">
-                      <input id="elStatusBoxColorPick" type="color" value="#FF0000">
-                    </div>
-                    <div class="palette-swatches" data-palette-for="statusBox"></div>
-                  </div>
-                  <div>
-                    <label for="elStatusFontColor">Font color</label>
-                    <div class="color-row">
-                      <input id="elStatusFontColor" type="text" value="#000000">
-                      <input id="elStatusFontColorPick" type="color" value="#000000">
-                    </div>
-                    <div class="palette-swatches" data-palette-for="statusFont"></div>
-                  </div>
+              <div class="ctrl-block" id="bgColorBlock">
+                <p class="block-title">Background</p>
+                <div class="color-row">
+                  <input id="bgColor" type="text" value="#FFFFFF">
+                  <input id="bgColorPick" type="color" value="#FFFFFF">
                 </div>
-                <p class="hint" id="elStatusColorHint" style="margin:4px 0 0;">Applies to the OPEN badge on the canvas.</p>
+                <div class="palette-swatches" data-palette-for="bg"></div>
               </div>
 
-              <details class="design-accordion" id="hoursDesignBlock" open>
-                <summary>Hours Design</summary>
-                <div class="design-accordion-body">
-                <div class="color-triple">
-                  <div>
-                    <label for="bgColor">BG</label>
-                    <div class="color-row">
-                      <input id="bgColor" type="text" value="#FFFFFF">
-                      <input id="bgColorPick" type="color" value="#FFFFFF">
-                    </div>
-                    <div class="palette-swatches" data-palette-for="bg"></div>
-                  </div>
+              <div class="ctrl-block hidden-block" id="hoursDesignBlock">
+                <p class="block-title">Hours</p>
+                <div class="color-pair">
                   <div>
                     <label for="textColor">Days</label>
                     <div class="color-row">
@@ -2132,14 +2363,43 @@
                     <div class="palette-swatches" data-palette-for="accent"></div>
                   </div>
                 </div>
-                </div>
-              </details>
+              </div>
 
-              <details class="design-accordion" id="elPropsBlock">
-                <summary>Selected</summary>
-                <div class="design-accordion-body">
-                <p class="hint" id="elPropsEmptyHint" style="margin:0;">Click an item on the canvas to edit it here.</p>
-                <div id="elProps" class="el-props hidden-block">
+              <div class="ctrl-block hidden-block" id="elStatusProps">
+                <p class="block-title">Status</p>
+                <div class="seg-toggle" id="statusModeToggle">
+                  <button type="button" data-status-mode="badge" class="active">Text</button>
+                  <button type="button" data-status-mode="image">Templates</button>
+                </div>
+                <div id="statusTextControls">
+                  <div class="color-pair">
+                    <div>
+                      <label for="elStatusBoxColor">Box color</label>
+                      <div class="color-row">
+                        <input id="elStatusBoxColor" type="text" value="#FF0000">
+                        <input id="elStatusBoxColorPick" type="color" value="#FF0000">
+                      </div>
+                      <div class="palette-swatches" data-palette-for="statusBox"></div>
+                    </div>
+                    <div>
+                      <label for="elStatusFontColor">Font color</label>
+                      <div class="color-row">
+                        <input id="elStatusFontColor" type="text" value="#000000">
+                        <input id="elStatusFontColorPick" type="color" value="#000000">
+                      </div>
+                      <div class="palette-swatches" data-palette-for="statusFont"></div>
+                    </div>
+                  </div>
+                  <p class="hint" id="elStatusColorHint" style="margin:4px 0 0;">Applies to the OPEN / CLOSED badge.</p>
+                </div>
+                <div id="statusTemplateControls" class="hidden-block">
+                  <button type="button" class="btn-secondary" id="pickStatusPairBtn">Choose open / closed templates</button>
+                  <div class="status-pair-preview" id="statusPairPreview"></div>
+                  <p class="hint" style="margin:6px 0 0;">Pick a paired open and closed image. The display swaps them from your hours.</p>
+                </div>
+              </div>
+
+              <div id="elProps" class="el-props hidden-block">
                   <div id="elTypeProps" class="hidden-block">
                     <label for="elFontFamily">Font</label>
                     <select id="elFontFamily"></select>
@@ -2170,14 +2430,14 @@
                     </div>
                   </div>
                   <div id="elImageProps" class="hidden-block">
-                    <label for="elImageFile">Image</label>
-                    <input id="elImageFile" type="file" accept="image/*">
-                    <p class="hint" style="margin:2px 0 0;">Upload replaces this canvas image.</p>
+                    <button type="button" class="btn-secondary" id="pickImageBtn">Templates, upload, or camera</button>
+                    <p class="hint" style="margin:6px 0 0;">Choose a shared template, upload a file, or take a photo.</p>
                     <label for="elFit">Fit</label>
                     <select id="elFit">
                       <option value="cover">Cover</option>
                       <option value="contain">Contain</option>
                     </select>
+                    <input id="elImageFile" type="file" accept="image/*" hidden>
                   </div>
                   <div id="elSketchProps" class="hidden-block">
                     <div class="form-grid" style="gap:6px;">
@@ -2197,27 +2457,7 @@
                     </div>
                     <p class="hint" style="margin:2px 0 0;">Place the sketch box, then tap the pencil to draw full screen. Save with the disk icon.</p>
                   </div>
-                </div>
-                </div>
-              </details>
-
-              <details class="slideshow-block design-accordion" id="slideshowBlock">
-                <summary>Slideshow</summary>
-                <div class="slideshow-body">
-                  <p class="hint" style="margin:0;">Upload multiple images to rotate on the display. Place a slideshow box with <strong>Slides</strong>.</p>
-                  <div class="form-grid" style="gap:6px;">
-                    <div>
-                      <label for="slideshowIntervalMin">Rotate every (min)</label>
-                      <input id="slideshowIntervalMin" type="number" min="1" max="1440" step="1" value="15" title="Minutes between slide changes on the live display">
-                    </div>
-                    <div>
-                      <label for="slideshowFile">Upload images</label>
-                      <input id="slideshowFile" type="file" accept="image/*" multiple>
-                    </div>
-                  </div>
-                  <div id="slideshowList" class="gallery-list"></div>
-                </div>
-              </details>
+              </div>
 
               <input id="canvasImageFile" type="file" accept="image/*" hidden>
             </div>
@@ -2227,6 +2467,21 @@
                 <div class="tablet-scale-wrap" id="tabletScaleWrap">
                   <div class="tablet-frame" id="tabletFrame"></div>
                 </div>
+              </div>
+              <div class="slideshow-under-canvas hidden-block" id="slideshowBlock">
+                <p class="block-title">Slideshow</p>
+                <p class="hint" style="margin:0 0 8px;">Images in this box rotate on the live display.</p>
+                <div class="form-grid" style="gap:6px;">
+                  <div>
+                    <label for="slideshowIntervalMin">Rotate every (min)</label>
+                    <input id="slideshowIntervalMin" type="number" min="1" max="1440" step="1" value="15" title="Minutes between slide changes on the live display">
+                  </div>
+                  <div>
+                    <label for="slideshowFile">Upload images</label>
+                    <input id="slideshowFile" type="file" accept="image/*" multiple>
+                  </div>
+                </div>
+                <div id="slideshowList" class="gallery-list"></div>
               </div>
             </div>
             <div class="canvas-tools">
@@ -2399,6 +2654,8 @@
                     <th>Status</th>
                     <th>Device</th>
                     <th>WiFi</th>
+                    <th>IP</th>
+                    <th>Battery</th>
                     <th>Customer URL</th>
                     <th>Poll</th>
                     <th>Last check-in</th>
@@ -2406,7 +2663,7 @@
                   </tr>
                 </thead>
                 <tbody id="deviceTableBody">
-                  <tr><td colspan="7" class="hint">No devices have checked in yet.</td></tr>
+                  <tr><td colspan="9" class="hint">No devices have checked in yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2444,6 +2701,7 @@
                 <th>Firmware</th>
                 <th>WiFi</th>
                 <th>IP</th>
+                <th>Battery</th>
                 <th>Customer URL</th>
                 <th>Poll</th>
                 <th>Last check-in</th>
@@ -2451,10 +2709,52 @@
               </tr>
             </thead>
             <tbody id="fleetTableBody">
-              <tr><td colspan="9" class="hint">No devices have checked in yet.</td></tr>
+              <tr><td colspan="10" class="hint">No devices have checked in yet.</td></tr>
             </tbody>
           </table>
         </div>
+      </section>
+      <section class="panel templates-page admin-only" id="templatesPage">
+        <div class="device-card-head" style="margin-bottom:12px;">
+          <span class="device-card-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="m21 15-4.5-4.5-3.5 3.5-2-2L3 17"/></svg>
+          </span>
+          <div>
+            <h2>Image templates</h2>
+            <p>Shared with every customer. Create categories and upload more anytime.</p>
+          </div>
+        </div>
+        <div class="form-grid" style="gap:10px;margin-bottom:14px;">
+          <div>
+            <label for="newCategoryName">New category</label>
+            <div class="add-row">
+              <input id="newCategoryName" type="text" placeholder="e.g. Spring">
+              <button type="button" class="btn-secondary" id="addCategoryBtn">Add</button>
+            </div>
+          </div>
+          <div>
+            <label for="templateUploadFile">Upload image</label>
+            <input id="templateUploadFile" type="file" accept="image/*">
+          </div>
+          <div>
+            <label for="templateUploadCategory">Category</label>
+            <select id="templateUploadCategory"></select>
+          </div>
+          <div>
+            <label for="templateUploadRole">Open / closed pair</label>
+            <select id="templateUploadRole">
+              <option value="">Single image</option>
+              <option value="open">Open image</option>
+              <option value="closed">Closed image</option>
+            </select>
+          </div>
+          <div>
+            <label for="templateUploadPairId">Pair name (optional)</label>
+            <input id="templateUploadPairId" type="text" placeholder="e.g. halloween-status">
+          </div>
+        </div>
+        <div class="tpl-cats" id="adminTplCats"></div>
+        <div class="tpl-admin-grid" id="adminTplGrid"></div>
       </section>
     </div>
   </div>
@@ -2553,6 +2853,8 @@
       let suppressPropsSync = false;
       let syncingScreenFields = false;
       let settings = { autoSyncIntervalHours: 24 };
+      let templateLibrary = { categories: [], templates: [] };
+      let pickerState = { purpose: 'image', categoryId: '' };
       let suppressAutosave = 0;
       let autosaveTimer = null;
       let autosaveInFlight = false;
@@ -2810,7 +3112,7 @@
       }
 
       function apiFetch(url, options) {
-        return fetch(url, Object.assign({ credentials: IS_ADMIN ? 'include' : 'same-origin' }, options || {}));
+        return fetch(url, Object.assign({ credentials: 'include' }, options || {}));
       }
 
       function studioSlugFromLocation() {
@@ -3025,7 +3327,29 @@
       function mediaUrl(customer, mediaItem) {
         if (!customer || !mediaItem) return '';
         if (mediaItem.url) return mediaItem.url;
+        const tpl = (templateLibrary.templates || []).find((t) => t.id === mediaItem.id);
+        if (tpl && tpl.url) return tpl.url;
         return `/api/smarthours/public/${encodeURIComponent(customer.id)}/media/${encodeURIComponent(mediaItem.id)}`;
+      }
+
+      function lookupMedia(customer, id) {
+        const key = String(id || '').trim();
+        if (!key) return null;
+        const owned = ((customer && customer.media) || []).find((m) => m.id === key);
+        if (owned) return owned;
+        const tpl = (templateLibrary.templates || []).find((t) => t.id === key);
+        if (!tpl) return null;
+        return { id: tpl.id, name: tpl.name, url: tpl.url };
+      }
+
+      function applyTemplateLibrary(data) {
+        if (!data) return;
+        if (Array.isArray(data.templates) || Array.isArray(data.templateCategories)) {
+          templateLibrary = {
+            categories: data.templateCategories || data.categories || templateLibrary.categories || [],
+            templates: data.templates || templateLibrary.templates || []
+          };
+        }
       }
 
       function slideshowIntervalMinutesFromSec(sec) {
@@ -3917,42 +4241,215 @@
       }
 
       function fillElMediaSelect() {
-        // Image elements use direct file upload — no gallery picker.
+        // Image picker modal handles templates / upload / camera.
+      }
+
+      function statusPairs() {
+        const templates = templateLibrary.templates || [];
+        const byPair = new Map();
+        templates.forEach((t) => {
+          if (!t.pairId || !t.pairRole) return;
+          const row = byPair.get(t.pairId) || { pairId: t.pairId, name: t.pairId, open: null, closed: null };
+          if (t.pairRole === 'open') row.open = t;
+          if (t.pairRole === 'closed') row.closed = t;
+          byPair.set(t.pairId, row);
+        });
+        return [...byPair.values()].filter((p) => p.open || p.closed);
+      }
+
+      function renderStatusPairPreview() {
+        const wrap = document.getElementById('statusPairPreview');
+        if (!wrap) return;
+        const c = selected();
+        const design = c && c.design;
+        const openM = lookupMedia(c, design && design.openMediaId);
+        const closedM = lookupMedia(c, design && design.closedMediaId);
+        if (!openM && !closedM) {
+          wrap.innerHTML = '<p class="hint" style="margin:0;grid-column:1/-1;">No open/closed templates selected yet.</p>';
+          return;
+        }
+        wrap.innerHTML =
+          (openM ? `<div><img src="${escapeHtml(mediaUrl(c, openM))}" alt="Open"><span class="hint">Open</span></div>` : '<div class="hint">Open not set</div>') +
+          (closedM ? `<div><img src="${escapeHtml(mediaUrl(c, closedM))}" alt="Closed"><span class="hint">Closed</span></div>` : '<div class="hint">Closed not set</div>');
+      }
+
+      function setStatusMode(mode) {
+        const c = selected();
+        if (!c || !c.design) return;
+        c.design.statusMode = mode === 'image' ? 'image' : 'badge';
+        syncElPropsPanel();
+        renderCanvas();
+        scheduleAutosave(200);
+      }
+
+      function openImagePicker(purpose) {
+        pickerState.purpose = purpose || 'image';
+        pickerState.categoryId = '';
+        const modal = document.getElementById('imagePicker');
+        const title = document.getElementById('imagePickerTitle');
+        const hint = document.getElementById('imagePickerHint');
+        if (purpose === 'status-pair') {
+          title.textContent = 'Open / closed templates';
+          hint.textContent = 'Choose a paired open and closed image, or pick two singles.';
+        } else {
+          title.textContent = 'Choose image';
+          hint.textContent = 'Pick a template, upload a file, or take a photo.';
+        }
+        setPickerTab('templates');
+        renderPicker();
+        modal.classList.add('open');
+      }
+
+      function closeImagePicker() {
+        const modal = document.getElementById('imagePicker');
+        if (modal) modal.classList.remove('open');
+      }
+
+      function setPickerTab(tab) {
+        document.querySelectorAll('#imagePicker .picker-tabs button').forEach((btn) => {
+          btn.classList.toggle('active', btn.dataset.pickerTab === tab);
+        });
+        document.getElementById('pickerTemplates').classList.toggle('hidden-block', tab !== 'templates');
+        document.getElementById('pickerUpload').classList.toggle('hidden-block', tab !== 'upload');
+        document.getElementById('pickerCamera').classList.toggle('hidden-block', tab !== 'camera');
+      }
+
+      function renderPicker() {
+        const cats = document.getElementById('pickerCats');
+        const grid = document.getElementById('pickerGrid');
+        if (!cats || !grid) return;
+        const categories = [{ id: '', name: 'All' }, ...(templateLibrary.categories || [])];
+        cats.innerHTML = categories.map((cat) =>
+          `<button type="button" class="${pickerState.categoryId === cat.id ? 'active' : ''}" data-cat="${escapeHtml(cat.id)}">${escapeHtml(cat.name)}</button>`
+        ).join('');
+        cats.querySelectorAll('button').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            pickerState.categoryId = btn.dataset.cat || '';
+            renderPicker();
+          });
+        });
+        const templates = (templateLibrary.templates || []).filter((t) =>
+          !pickerState.categoryId || t.categoryId === pickerState.categoryId
+        );
+        if (pickerState.purpose === 'status-pair') {
+          const pairs = statusPairs().filter((p) => {
+            if (!pickerState.categoryId) return true;
+            return (p.open && p.open.categoryId === pickerState.categoryId) ||
+              (p.closed && p.closed.categoryId === pickerState.categoryId);
+          });
+          const pairHtml = pairs.map((p) => `
+            <button type="button" class="tpl-tile pair" data-pair="${escapeHtml(p.pairId)}">
+              <div class="pair-imgs">
+                <img src="${escapeHtml((p.open && p.open.url) || '')}" alt="Open">
+                <img src="${escapeHtml((p.closed && p.closed.url) || '')}" alt="Closed">
+              </div>
+              <span>${escapeHtml((p.open && p.open.name) || (p.closed && p.closed.name) || p.pairId)} · open / closed</span>
+            </button>
+          `).join('');
+          const singles = templates.map((t) => `
+            <button type="button" class="tpl-tile" data-tpl="${escapeHtml(t.id)}">
+              <img src="${escapeHtml(t.url || '')}" alt="">
+              <span>${escapeHtml(t.name || t.id)}${t.pairRole ? ' · ' + t.pairRole : ''}</span>
+            </button>
+          `).join('');
+          grid.innerHTML = (pairHtml || '') + singles || '<p class="hint">No templates yet.</p>';
+          grid.querySelectorAll('[data-pair]').forEach((btn) => {
+            btn.addEventListener('click', () => applyStatusPair(btn.dataset.pair));
+          });
+          grid.querySelectorAll('[data-tpl]').forEach((btn) => {
+            btn.addEventListener('click', () => applyStatusTemplate(btn.dataset.tpl));
+          });
+          return;
+        }
+        grid.innerHTML = templates.length
+          ? templates.map((t) => `
+            <button type="button" class="tpl-tile" data-tpl="${escapeHtml(t.id)}">
+              <img src="${escapeHtml(t.url || '')}" alt="">
+              <span>${escapeHtml(t.name || t.id)}</span>
+            </button>
+          `).join('')
+          : '<p class="hint">No templates in this category yet.</p>';
+        grid.querySelectorAll('[data-tpl]').forEach((btn) => {
+          btn.addEventListener('click', () => applyCanvasTemplate(btn.dataset.tpl));
+        });
+      }
+
+      function applyCanvasTemplate(templateId) {
+        const c = selected();
+        if (!c) return;
+        let el = selectedLayoutEl();
+        if (!el || el.type !== 'image') {
+          addLayoutElement('image', { mediaId: templateId });
+        } else {
+          el.mediaId = templateId;
+          renderCanvas();
+          scheduleAutosave(200);
+        }
+        closeImagePicker();
+        setStatus('Template applied.');
+      }
+
+      function applyStatusPair(pairId) {
+        const c = selected();
+        if (!c || !c.design) return;
+        const pair = statusPairs().find((p) => p.pairId === pairId);
+        if (!pair) return;
+        c.design.statusMode = 'image';
+        c.design.openMediaId = (pair.open && pair.open.id) || c.design.openMediaId || '';
+        c.design.closedMediaId = (pair.closed && pair.closed.id) || c.design.closedMediaId || '';
+        closeImagePicker();
+        syncElPropsPanel();
+        renderCanvas();
+        scheduleAutosave(200);
+      }
+
+      function applyStatusTemplate(templateId) {
+        const c = selected();
+        if (!c || !c.design) return;
+        const tpl = (templateLibrary.templates || []).find((t) => t.id === templateId);
+        if (!tpl) return;
+        c.design.statusMode = 'image';
+        if (tpl.pairRole === 'closed' || (!c.design.openMediaId && c.design.closedMediaId)) {
+          c.design.closedMediaId = tpl.id;
+        } else if (!c.design.openMediaId || tpl.pairRole === 'open') {
+          c.design.openMediaId = tpl.id;
+        } else {
+          c.design.closedMediaId = tpl.id;
+        }
+        closeImagePicker();
+        syncElPropsPanel();
+        renderCanvas();
+        scheduleAutosave(200);
       }
 
       function syncElPropsPanel() {
         const props = document.getElementById('elProps');
-        const emptyHint = document.getElementById('elPropsEmptyHint');
         const typeProps = document.getElementById('elTypeProps');
         const textProps = document.getElementById('elTextProps');
         const imgProps = document.getElementById('elImageProps');
         const sketchProps = document.getElementById('elSketchProps');
         const statusProps = document.getElementById('elStatusProps');
+        const hoursBlock = document.getElementById('hoursDesignBlock');
+        const slideshowBlock = document.getElementById('slideshowBlock');
         const el = selectedLayoutEl();
         const c = selected();
-        const isTextType = el && TEXT_LAYOUT_TYPES.has(el.type);
-        const isOther = el && (el.type === 'image' || el.type === 'sketch');
+        const isHours = !!(el && el.type === 'hours');
         const isStatus = !!(el && el.type === 'status');
-        const block = document.getElementById('elPropsBlock');
-        if (statusProps) {
-          const justSelected = isStatus && statusProps.classList.contains('hidden-block');
-          statusProps.classList.toggle('hidden-block', !isStatus);
-          if (justSelected) {
-            const hoursBlock = document.getElementById('hoursDesignBlock');
-            if (hoursBlock && hoursBlock.tagName === 'DETAILS') hoursBlock.open = false;
-            statusProps.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-          }
-        }
-        if (block && block.tagName === 'DETAILS' && el && (isTextType || isOther)) {
-          block.open = true;
-        }
-        if (!el || (!isTextType && !isOther)) {
-          props.classList.add('hidden-block');
-          if (emptyHint) emptyHint.classList.remove('hidden-block');
+        const isText = !!(el && el.type === 'text');
+        const isTitle = !!(el && el.type === 'title');
+        const isImage = !!(el && el.type === 'image');
+        const isSketch = !!(el && el.type === 'sketch');
+        const isSlideshow = !!(el && el.type === 'slideshow');
+        const isTextType = el && TEXT_LAYOUT_TYPES.has(el.type);
+        if (hoursBlock) hoursBlock.classList.toggle('hidden-block', !isHours);
+        if (statusProps) statusProps.classList.toggle('hidden-block', !isStatus);
+        if (slideshowBlock) slideshowBlock.classList.toggle('hidden-block', !isSlideshow);
+        const showProps = isText || isTitle || isImage || isSketch || isHours || isStatus;
+        if (props) props.classList.toggle('hidden-block', !showProps);
+        if (!el || !showProps) {
+          suppressPropsSync = false;
           return;
         }
-        props.classList.remove('hidden-block');
-        if (emptyHint) emptyHint.classList.add('hidden-block');
         suppressPropsSync = true;
         fillFontFamilySelect();
         typeProps.classList.add('hidden-block');
@@ -3974,26 +4471,38 @@
           }
           fontSel.value = family;
           if (isStatus) syncStatusColorInputs(el, c && c.design);
-          if (el.type === 'text') {
+          if (isText) {
             textProps.classList.remove('hidden-block');
             document.getElementById('elText').value = el.text || '';
             document.getElementById('elAlign').value = el.align || 'center';
             const color = el.color || (c && c.design && c.design.textColor) || '#f6f8ff';
             document.getElementById('elColor').value = /^#/.test(color) ? color : '#f6f8ff';
           }
-        } else if (el.type === 'image') {
+        }
+        if (isImage) {
           imgProps.classList.remove('hidden-block');
-          document.getElementById('elImageFile').value = '';
           document.getElementById('elFit').value = el.fit === 'contain' ? 'contain' : 'cover';
-        } else if (el.type === 'sketch') {
+        }
+        if (isSketch) {
           sketchProps.classList.remove('hidden-block');
           document.getElementById('sketchPenColor').value = nearestPalette(el.penColor || '#000000');
           document.getElementById('sketchPenSize').value = el.penSize || 3;
           document.getElementById('sketchDrawBtn').classList.toggle('active', sketchMode === 'draw');
           document.getElementById('sketchMoveBtn').classList.toggle('active', sketchMode === 'move');
         }
+        if (isStatus && c && c.design) {
+          const mode = c.design.statusMode === 'image' ? 'image' : 'badge';
+          document.querySelectorAll('#statusModeToggle [data-status-mode]').forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.statusMode === mode);
+          });
+          const textControls = document.getElementById('statusTextControls');
+          const tplControls = document.getElementById('statusTemplateControls');
+          if (textControls) textControls.classList.toggle('hidden-block', mode === 'image');
+          if (tplControls) tplControls.classList.toggle('hidden-block', mode !== 'image');
+          renderStatusPairPreview();
+        }
         suppressPropsSync = false;
-        if (el && el.type === 'status') renderPaletteSwatches();
+        if (isStatus || isHours) renderPaletteSwatches();
       }
 
       function clearCanvasLayout() {
@@ -4061,9 +4570,9 @@
         const hours = c.useManualHours || !c.googleHours ? (c.hours || defaultHours()) : c.googleHours;
         const logoSrc = logoDataUrl || design.logoUrl || '';
         const mediaById = new Map((c.media || []).map((m) => [m.id, m]));
-        const openMedia = design.openMediaId ? mediaById.get(design.openMediaId) : null;
-        const closedMedia = design.closedMediaId ? mediaById.get(design.closedMediaId) : null;
-        const slideItems = (design.slideshowMediaIds || []).map((id) => mediaById.get(id)).filter(Boolean);
+        const openMedia = lookupMedia(c, design.openMediaId);
+        const closedMedia = lookupMedia(c, design.closedMediaId);
+        const slideItems = (design.slideshowMediaIds || []).map((id) => lookupMedia(c, id)).filter(Boolean);
 
         tabletFrame.style.background = design.backgroundColor;
         tabletFrame.style.color = design.textColor;
@@ -4159,7 +4668,7 @@
             });
             node.appendChild(editor);
           } else if (el.type === 'image') {
-            const media = el.mediaId ? mediaById.get(el.mediaId) : null;
+            const media = lookupMedia(c, el.mediaId);
             if (media) {
               node.innerHTML = `<img class="preview-slide" style="object-fit:${el.fit === 'contain' ? 'contain' : 'cover'}" src="${escapeHtml(mediaUrl(c, media))}" alt="">`;
             } else {
@@ -4385,6 +4894,8 @@
         if (customer.slug) slugEl.dataset.touched = '1';
         else delete slugEl.dataset.touched;
         document.getElementById('fieldMapsUrl').value = customer.googleMapsUrl || customer.googlePlaceId || '';
+        const emailEl = document.getElementById('fieldEmail');
+        if (emailEl) emailEl.value = customer.email || '';
         showMapsLinkStatus(
           document.getElementById('fieldMapsUrl'),
           document.getElementById('studioMapsStatus')
@@ -4418,14 +4929,25 @@
 
       async function loadStudio(slug) {
         setStatus('Loading…', false, true);
-        const res = await apiFetch('/api/smarthours/studio/' + encodeURIComponent(slug));
+        const params = new URLSearchParams(location.search);
+        const k = params.get('k') || params.get('token') || '';
+        const url = '/api/smarthours/studio/' + encodeURIComponent(slug) + (k ? ('?k=' + encodeURIComponent(k)) : '');
+        const res = await apiFetch(url);
         if (res.status === 404) {
           document.body.classList.remove('has-studio');
-          setStatus('No page found for that URL. Create one below.', true);
+          setStatus('No page found for that URL. Enter your email below to request a secured link, or create a new page.', true);
+          return false;
+        }
+        if (res.status === 401) {
+          document.body.classList.remove('has-studio');
+          const accessEmail = document.getElementById('accessEmail');
+          if (accessEmail) accessEmail.focus();
+          setStatus('This portal is secured. Enter the email used at signup and we’ll send a 10-day link.', true);
           return false;
         }
         if (!res.ok) throw new Error('Failed to load your page');
         const data = await res.json();
+        applyTemplateLibrary(data);
         customers = data.customer ? [data.customer] : [];
         devices = data.devices || [];
         selectedId = data.customer && data.customer.id;
@@ -4433,6 +4955,9 @@
         if (data.customer) {
           rememberStudioSlug(data.customer.slug);
           fillEditor(data.customer);
+        }
+        if (k) {
+          history.replaceState(null, '', '/SmartHours/' + encodeURIComponent(data.customer.slug));
         }
         setStatus(
           data.googlePlacesApiConfigured
@@ -4454,6 +4979,7 @@
         }
         if (!res.ok) throw new Error('Failed to load customers');
         const data = await res.json();
+        applyTemplateLibrary(data);
         customers = data.customers || [];
         devices = data.devices || devices;
         settings = data.settings || settings;
@@ -4512,7 +5038,20 @@
 
       function formatPollInterval(d) {
         const n = devicePollMinutes(d);
-        return n ? n + ' min' : '—';
+        const server = n ? n + ' min' : '—';
+        const reported = Number(d && d.reportedPollMinutes);
+        if (Number.isFinite(reported) && reported > 0) {
+          if (n && reported === n) return server + ' · device ok';
+          return server + ' · device ' + reported + ' min';
+        }
+        return server;
+      }
+
+      function formatBattery(d) {
+        const n = Number(d && d.batteryPercent);
+        if (!Number.isFinite(n)) return '—';
+        const cls = n <= 15 ? 'battery-empty' : n <= 35 ? 'battery-low' : 'battery-ok';
+        return `<span class="${cls}">${n}%</span>`;
       }
 
       function visibleDevices() {
@@ -4550,7 +5089,7 @@
         if (!list.length) {
           const table = document.getElementById('deviceTable');
           if (table) table.classList.add('is-empty');
-          body.innerHTML = `<tr><td colspan="7">
+          body.innerHTML = `<tr><td colspan="9">
             <div class="device-empty">
               <svg viewBox="0 0 88 72" aria-hidden="true">
                 <rect x="18" y="22" width="34" height="28" rx="3"/>
@@ -4572,6 +5111,8 @@
             <td class="${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
             <td data-label="Device"><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span>${d.fwVersion ? `<br><span class="hint">${escapeHtml(d.fwVersion)}</span>` : ''}</td>
             <td data-label="WiFi">${escapeHtml(d.wifiSsid || '—')}</td>
+            <td data-label="IP">${escapeHtml(d.ip || '—')}</td>
+            <td data-label="Battery">${formatBattery(d)}</td>
             <td data-label="Customer URL">${escapeHtml(deviceUrlCode(d) || '—')}</td>
             <td data-label="Poll">${escapeHtml(formatPollInterval(d))}</td>
             <td data-label="Last check-in">${escapeHtml(formatCheckin(d.lastSeen))}</td>
@@ -4593,7 +5134,7 @@
             : 'No devices have checked in yet';
         }
         if (!list.length) {
-          body.innerHTML = '<tr><td colspan="9" class="hint">No devices have checked in yet.</td></tr>';
+          body.innerHTML = '<tr><td colspan="10" class="hint">No devices have checked in yet.</td></tr>';
           return;
         }
         body.innerHTML = list.map((d) => {
@@ -4604,6 +5145,7 @@
             <td data-label="Firmware">${escapeHtml(d.fwVersion || '—')}</td>
             <td data-label="WiFi">${escapeHtml(d.wifiSsid || '—')}</td>
             <td data-label="IP">${escapeHtml(d.ip || '—')}</td>
+            <td data-label="Battery">${formatBattery(d)}</td>
             <td data-label="Customer URL">${escapeHtml(deviceUrlCode(d) || '—')}</td>
             <td data-label="Poll">${escapeHtml(formatPollInterval(d))}</td>
             <td data-label="Last check-in">${escapeHtml(formatCheckin(d.lastSeen))}</td>
@@ -4653,7 +5195,7 @@
       }
 
       function closeFleetView() {
-        document.body.classList.remove('fleet-open');
+        document.body.classList.remove('fleet-open', 'templates-open');
         if (IS_ADMIN && selected()) {
           document.body.classList.add('has-studio');
           editor.classList.add('open');
@@ -4677,8 +5219,112 @@
       }
 
       function openDeviceMgmt() {
+        document.body.classList.remove('templates-open');
         document.body.classList.add('fleet-open');
         loadDevices().catch((err) => setStatus(err.message, true));
+      }
+
+      function openTemplatesPage() {
+        document.body.classList.remove('fleet-open');
+        document.body.classList.add('templates-open');
+        renderAdminTemplates();
+      }
+
+      function renderAdminTemplates() {
+        const catSel = document.getElementById('templateUploadCategory');
+        const cats = templateLibrary.categories || [];
+        const tpls = templateLibrary.templates || [];
+        if (catSel) {
+          catSel.innerHTML = '<option value="">Uncategorized</option>' +
+            cats.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('');
+        }
+        const catBar = document.getElementById('adminTplCats');
+        if (catBar) {
+          catBar.innerHTML = cats.map((c) =>
+            `<button type="button" data-del-cat="${escapeHtml(c.id)}">${escapeHtml(c.name)} ×</button>`
+          ).join('') || '<p class="hint">No categories yet.</p>';
+          catBar.querySelectorAll('[data-del-cat]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+              if (!confirm('Remove this category? Images stay, they just become uncategorized.')) return;
+              apiFetch('/api/smarthours/admin/template-categories/' + encodeURIComponent(btn.dataset.delCat), { method: 'DELETE' })
+                .then(async (res) => {
+                  const data = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(data.error || 'Could not delete category');
+                  applyTemplateLibrary(data);
+                  renderAdminTemplates();
+                })
+                .catch((err) => setStatus(err.message, true));
+            });
+          });
+        }
+        const grid = document.getElementById('adminTplGrid');
+        if (!grid) return;
+        if (!tpls.length) {
+          grid.innerHTML = '<p class="hint">No templates yet. Upload images above.</p>';
+          return;
+        }
+        const catName = (id) => {
+          const c = cats.find((x) => x.id === id);
+          return c ? c.name : 'Uncategorized';
+        };
+        grid.innerHTML = tpls.map((t) => `
+          <div class="tpl-admin-card" data-id="${escapeHtml(t.id)}">
+            <img src="${escapeHtml(t.url || '')}" alt="">
+            <div class="body">
+              <strong>${escapeHtml(t.name || t.id)}</strong>
+              <span class="hint">${escapeHtml(catName(t.categoryId))}${t.pairRole ? ' · ' + t.pairRole : ''}${t.pairId ? ' · pair ' + t.pairId : ''}</span>
+              <label>Category
+                <select data-tpl-cat="${escapeHtml(t.id)}">
+                  <option value="">Uncategorized</option>
+                  ${cats.map((c) => `<option value="${escapeHtml(c.id)}" ${c.id === t.categoryId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+                </select>
+              </label>
+              <label>Role
+                <select data-tpl-role="${escapeHtml(t.id)}">
+                  <option value="" ${!t.pairRole ? 'selected' : ''}>Single</option>
+                  <option value="open" ${t.pairRole === 'open' ? 'selected' : ''}>Open</option>
+                  <option value="closed" ${t.pairRole === 'closed' ? 'selected' : ''}>Closed</option>
+                </select>
+              </label>
+              <label>Pair id
+                <input data-tpl-pair="${escapeHtml(t.id)}" type="text" value="${escapeHtml(t.pairId || '')}" placeholder="same id on both images">
+              </label>
+              <button type="button" class="btn-danger" data-del-tpl="${escapeHtml(t.id)}">Delete</button>
+            </div>
+          </div>
+        `).join('');
+        grid.querySelectorAll('[data-tpl-cat], [data-tpl-role], [data-tpl-pair]').forEach((el) => {
+          const save = async () => {
+            const id = el.dataset.tplCat || el.dataset.tplRole || el.dataset.tplPair;
+            const card = el.closest('.tpl-admin-card');
+            const res = await apiFetch('/api/smarthours/admin/templates/' + encodeURIComponent(id), {
+              method: 'PUT',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                categoryId: card.querySelector('[data-tpl-cat]').value,
+                pairRole: card.querySelector('[data-tpl-role]').value,
+                pairId: card.querySelector('[data-tpl-pair]').value
+              })
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Could not update template');
+            applyTemplateLibrary(data);
+          };
+          el.addEventListener('change', () => save().catch((err) => setStatus(err.message, true)));
+        });
+        grid.querySelectorAll('[data-del-tpl]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            if (!confirm('Delete this template for all customers?')) return;
+            apiFetch('/api/smarthours/admin/templates/' + encodeURIComponent(btn.dataset.delTpl), { method: 'DELETE' })
+              .then(async (res) => {
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.error || 'Could not delete');
+                applyTemplateLibrary(data);
+                renderAdminTemplates();
+              })
+              .catch((err) => setStatus(err.message, true));
+          });
+        });
       }
 
       function collectPayload() {
@@ -4698,6 +5344,7 @@
           googlePlaceId: looksLikePlaceId ? googleRef.replace(/^places\//i, '') : (c && c.googlePlaceId) || '',
           googleMapsUrl: looksLikePlaceId ? '' : googleRef,
           useManualHours: document.getElementById('fieldManual').checked,
+          email: (document.getElementById('fieldEmail') && document.getElementById('fieldEmail').value.trim()) || '',
           hours: readHoursFromForm(),
           design,
           designs: c.designs.map((slot) => ({
@@ -4868,6 +5515,8 @@
       });
 
       document.getElementById('deviceMgmtBtn').addEventListener('click', () => openDeviceMgmt());
+      const templatesNavBtn = document.getElementById('templatesNavBtn');
+      if (templatesNavBtn) templatesNavBtn.addEventListener('click', () => openTemplatesPage());
       const customersNavBtn = document.getElementById('customersNavBtn');
       if (customersNavBtn) {
         customersNavBtn.addEventListener('click', () => showCustomerListView());
@@ -5304,16 +5953,15 @@
           setStatus('Save the customer first, then add an image.', true);
           return;
         }
-        document.getElementById('canvasImageFile').click();
+        openImagePicker('image');
       });
       document.getElementById('addHoursBtn').addEventListener('click', () => addLayoutElement('hours'));
       document.getElementById('addStatusBtn').addEventListener('click', () => addLayoutElement('status'));
       document.getElementById('addTitleBtn').addEventListener('click', () => addLayoutElement('title'));
       document.getElementById('addSlideshowBtn').addEventListener('click', () => {
         addLayoutElement('slideshow');
-        const block = document.getElementById('slideshowBlock');
-        if (block) block.open = true;
-        setStatus('Slideshow box added. Expand Slideshow to upload rotating images.');
+        syncElPropsPanel();
+        setStatus('Slideshow added. Upload rotating images under the canvas.');
       });
       document.getElementById('fillScreenBtn').addEventListener('click', () => fillSelectedToScreen());
       document.getElementById('clearCanvasBtn').addEventListener('click', () => clearCanvasLayout());
@@ -5496,7 +6144,7 @@
         });
       });
 
-      ['fieldName','slideshowIntervalMin'].forEach((id) => {
+      ['fieldName','fieldEmail','slideshowIntervalMin'].forEach((id) => {
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('input', () => {
@@ -5754,6 +6402,7 @@
         const nameEl = document.getElementById('onboardName');
         const slugEl = document.getElementById('onboardSlug');
         const mapsEl = document.getElementById('onboardMaps');
+        const emailEl = document.getElementById('onboardEmail');
         const saveEl = document.getElementById('onboardSaveBtn');
         const statusEl = document.getElementById('onboardSlugStatus');
         const previewEl = document.getElementById('onboardSlugPreview');
@@ -5804,15 +6453,21 @@
             setStatus(mapsCheck.error, true);
             return;
           }
+          const email = emailEl ? emailEl.value.trim() : '';
+          if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+            if (showNameError) setStatus('Enter the email address where we should send your secured portal link.', true);
+            return;
+          }
           onboardCreating = true;
           try {
-            setStatus('Creating your page…', false, true);
+            setStatus('Creating your page and emailing your link…', false, true);
             const res = await apiFetch('/api/smarthours/customers', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({
                 name,
                 slug,
+                email,
                 googleMapsUrl: (mapsEl && mapsEl.value.trim()) || '',
                 eink: { orientation: 'portrait' }
               })
@@ -5822,7 +6477,11 @@
             rememberStudioSlug(data.slug || slug);
             await loadStudio(data.slug || slug);
             showUrlSavedModal(data.slug || slug);
-            setStatus('Your unique URL is ready — design your screen in the tabs above.');
+            setStatus(
+              data.emailSent
+                ? 'Check your email for the 10-day portal link. This device is signed in for 10 days.'
+                : (data.emailError || 'Your page is ready. We could not send email — use Email my link below if needed.')
+            );
           } finally {
             onboardCreating = false;
           }
@@ -5830,6 +6489,36 @@
         saveEl.addEventListener('click', () => {
           createOnboardPage(true).catch((err) => setStatus(err.message || 'Could not create your page', true));
         });
+        const accessBtn = document.getElementById('accessSendBtn');
+        const accessEmail = document.getElementById('accessEmail');
+        const accessStatus = document.getElementById('accessStatus');
+        if (accessBtn && accessEmail) {
+          accessBtn.addEventListener('click', async () => {
+            const email = accessEmail.value.trim();
+            if (!email) {
+              if (accessStatus) accessStatus.textContent = 'Enter the email used at signup.';
+              return;
+            }
+            accessBtn.disabled = true;
+            if (accessStatus) accessStatus.textContent = 'Sending…';
+            try {
+              const res = await apiFetch('/api/smarthours/auth/request-link', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+              });
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) throw new Error(data.error || 'Could not send the link');
+              if (accessStatus) accessStatus.textContent = data.message || 'If that email is on file, a 10-day link is on its way.';
+              setStatus(data.message || 'Check your email for the secured portal link.');
+            } catch (err) {
+              if (accessStatus) accessStatus.textContent = err.message;
+              setStatus(err.message, true);
+            } finally {
+              accessBtn.disabled = false;
+            }
+          });
+        }
       }
 
       async function checkAdminAuth() {
@@ -5885,6 +6574,115 @@
         });
       }
       wireOnboard();
+
+      document.querySelectorAll('#imagePicker .picker-tabs button').forEach((btn) => {
+        btn.addEventListener('click', () => setPickerTab(btn.dataset.pickerTab));
+      });
+      const pickerClose = document.getElementById('imagePickerClose');
+      if (pickerClose) pickerClose.addEventListener('click', () => closeImagePicker());
+      const pickImageBtn = document.getElementById('pickImageBtn');
+      if (pickImageBtn) pickImageBtn.addEventListener('click', () => openImagePicker('image'));
+      const pickStatusPairBtn = document.getElementById('pickStatusPairBtn');
+      if (pickStatusPairBtn) pickStatusPairBtn.addEventListener('click', () => openImagePicker('status-pair'));
+      document.querySelectorAll('#statusModeToggle [data-status-mode]').forEach((btn) => {
+        btn.addEventListener('click', () => setStatusMode(btn.dataset.statusMode));
+      });
+      const pickerUpload = document.getElementById('pickerUploadFile');
+      if (pickerUpload) {
+        pickerUpload.addEventListener('change', (event) => {
+          const file = event.target.files && event.target.files[0];
+          event.target.value = '';
+          if (!file) return;
+          if (pickerState.purpose === 'status-pair') {
+            uploadMediaFile(file).then((result) => {
+              const c = selected();
+              if (!c || !c.design) return;
+              c.design.statusMode = 'image';
+              if (!c.design.openMediaId) c.design.openMediaId = result.mediaId;
+              else c.design.closedMediaId = result.mediaId;
+              closeImagePicker();
+              syncElPropsPanel();
+              renderCanvas();
+              scheduleAutosave(200);
+            }).catch((err) => setStatus(err.message, true));
+            return;
+          }
+          uploadCanvasImageFile(file, { replaceSelected: true }).then(() => closeImagePicker()).catch((err) => setStatus(err.message, true));
+        });
+      }
+      const pickerCamera = document.getElementById('pickerCameraFile');
+      if (pickerCamera) {
+        pickerCamera.addEventListener('change', (event) => {
+          const file = event.target.files && event.target.files[0];
+          event.target.value = '';
+          if (!file) return;
+          if (pickerState.purpose === 'status-pair') {
+            uploadMediaFile(file).then((result) => {
+              const c = selected();
+              if (!c || !c.design) return;
+              c.design.statusMode = 'image';
+              if (!c.design.openMediaId) c.design.openMediaId = result.mediaId;
+              else c.design.closedMediaId = result.mediaId;
+              closeImagePicker();
+              syncElPropsPanel();
+              renderCanvas();
+              scheduleAutosave(200);
+            }).catch((err) => setStatus(err.message, true));
+            return;
+          }
+          uploadCanvasImageFile(file, { replaceSelected: true })
+            .then(() => closeImagePicker())
+            .catch((err) => setStatus(err.message, true));
+        });
+      }
+      const addCategoryBtn = document.getElementById('addCategoryBtn');
+      if (addCategoryBtn) {
+        addCategoryBtn.addEventListener('click', () => {
+          const name = (document.getElementById('newCategoryName') && document.getElementById('newCategoryName').value.trim()) || '';
+          if (!name) return;
+          apiFetch('/api/smarthours/admin/template-categories', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name })
+          }).then(async (res) => {
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) throw new Error(data.error || 'Could not add category');
+            applyTemplateLibrary(data);
+            document.getElementById('newCategoryName').value = '';
+            renderAdminTemplates();
+          }).catch((err) => setStatus(err.message, true));
+        });
+      }
+      const templateUploadFile = document.getElementById('templateUploadFile');
+      if (templateUploadFile) {
+        templateUploadFile.addEventListener('change', (event) => {
+          const file = event.target.files && event.target.files[0];
+          event.target.value = '';
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            apiFetch('/api/smarthours/admin/templates', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                dataUrl: String(reader.result || ''),
+                name: file.name,
+                categoryId: document.getElementById('templateUploadCategory').value,
+                pairRole: document.getElementById('templateUploadRole').value,
+                pairId: document.getElementById('templateUploadPairId').value
+              })
+            }).then(async (res) => {
+              const data = await res.json().catch(() => ({}));
+              if (!res.ok) throw new Error(data.error || 'Upload failed');
+              applyTemplateLibrary(data);
+              renderAdminTemplates();
+              setStatus('Template uploaded.');
+            }).catch((err) => setStatus(err.message, true));
+          };
+          reader.onerror = () => setStatus('Could not read that image.', true);
+          reader.readAsDataURL(file);
+        });
+      }
 
       (async function boot() {
         if (IS_ADMIN) {
