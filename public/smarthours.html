@@ -2656,7 +2656,7 @@
                     <th>Signal</th>
                     <th>IP</th>
                     <th>Battery</th>
-                    <th>Customer URL</th>
+                    <th>Customer ID</th>
                     <th>Poll</th>
                     <th>Last check-in</th>
                     <th></th>
@@ -2703,7 +2703,7 @@
                 <th>Signal</th>
                 <th>IP</th>
                 <th>Battery</th>
-                <th>Customer URL</th>
+                <th>Customer ID</th>
                 <th>Poll</th>
                 <th>Last check-in</th>
                 <th></th>
@@ -5138,7 +5138,7 @@
             <td data-label="Signal">${formatWifiSignal(d)}</td>
             <td data-label="IP">${escapeHtml(d.ip || '—')}</td>
             <td data-label="Battery">${formatBattery(d)}</td>
-            <td data-label="Customer URL">${escapeHtml(deviceUrlCode(d) || '—')}</td>
+            <td data-label="Customer ID">${escapeHtml(deviceUrlCode(d) || '—')}</td>
             <td data-label="Poll">${escapeHtml(formatPollInterval(d))}</td>
             <td data-label="Last check-in">${escapeHtml(formatCheckin(d.lastSeen))}</td>
             <td>${deviceActionHtml(d)}</td>
@@ -5172,7 +5172,7 @@
             <td data-label="Signal">${formatWifiSignal(d)}</td>
             <td data-label="IP">${escapeHtml(d.ip || '—')}</td>
             <td data-label="Battery">${formatBattery(d)}</td>
-            <td data-label="Customer URL">${escapeHtml(deviceUrlCode(d) || '—')}</td>
+            <td data-label="Customer ID">${escapeHtml(deviceUrlCode(d) || '—')}</td>
             <td data-label="Poll">${escapeHtml(formatPollInterval(d))}</td>
             <td data-label="Last check-in">${escapeHtml(formatCheckin(d.lastSeen))}</td>
             <td>${deviceActionHtml(d)}</td>
