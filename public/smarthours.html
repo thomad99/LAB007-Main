@@ -5047,13 +5047,7 @@
 
       function formatPollInterval(d) {
         const n = devicePollMinutes(d);
-        const server = n ? n + ' min' : '—';
-        const reported = Number(d && d.reportedPollMinutes);
-        if (Number.isFinite(reported) && reported > 0) {
-          if (n && reported === n) return server + ' · device ok';
-          return server + ' · device ' + reported + ' min';
-        }
-        return server;
+        return n ? n + ' min' : '—';
       }
 
       function formatBattery(d) {
