@@ -2004,6 +2004,8 @@
     .battery-ok { color: var(--accent); font-weight: 700; }
     .battery-low { color: var(--warn); font-weight: 700; }
     .battery-empty { color: var(--danger); font-weight: 700; }
+    .wifi-cell { line-height: 1.35; }
+    .wifi-bars { letter-spacing: .04em; font-weight: 700; }
   </style>
 </head>
 <body class="customer-mode" data-studio-tab="info">
@@ -2654,6 +2656,7 @@
                     <th>Status</th>
                     <th>Device</th>
                     <th>WiFi</th>
+                    <th>Signal</th>
                     <th>IP</th>
                     <th>Battery</th>
                     <th>Customer URL</th>
@@ -2663,7 +2666,7 @@
                   </tr>
                 </thead>
                 <tbody id="deviceTableBody">
-                  <tr><td colspan="9" class="hint">No devices have checked in yet.</td></tr>
+                  <tr><td colspan="10" class="hint">No devices have checked in yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -2700,6 +2703,7 @@
                 <th>Device</th>
                 <th>Firmware</th>
                 <th>WiFi</th>
+                <th>Signal</th>
                 <th>IP</th>
                 <th>Battery</th>
                 <th>Customer URL</th>
@@ -2709,7 +2713,7 @@
               </tr>
             </thead>
             <tbody id="fleetTableBody">
-              <tr><td colspan="10" class="hint">No devices have checked in yet.</td></tr>
+              <tr><td colspan="11" class="hint">No devices have checked in yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -5049,9 +5053,30 @@
 
       function formatBattery(d) {
         const n = Number(d && d.batteryPercent);
+        const mv = Number(d && d.batteryMv);
         if (!Number.isFinite(n)) return '—';
+        if (n === 0 && (!Number.isFinite(mv) || mv < 500)) return '—';
         const cls = n <= 15 ? 'battery-empty' : n <= 35 ? 'battery-low' : 'battery-ok';
-        return `<span class="${cls}">${n}%</span>`;
+        const extra = Number.isFinite(mv) && mv >= 500 ? ` <span class="hint">${(mv / 1000).toFixed(2)} V</span>` : '';
+        return `<span class="${cls}">${n}%</span>${extra}`;
+      }
+
+      function wifiBars(n) {
+        const filled = n >= -55 ? 4 : n >= -67 ? 3 : n >= -80 ? 2 : 1;
+        return '▂▄▆█'.slice(0, filled);
+      }
+
+      function formatWifiSignal(d) {
+        const n = Number(d && d.wifiRssi);
+        if (!Number.isFinite(n) || n >= 0 || n < -120) return '<span class="hint">—</span>';
+        const cls = n >= -60 ? 'battery-ok' : n >= -75 ? 'battery-low' : 'battery-empty';
+        const label = n >= -60 ? 'Strong' : n >= -75 ? 'Fair' : 'Weak';
+        return `<span class="${cls}"><span class="wifi-bars">${wifiBars(n)}</span> ${n} dBm</span><br><span class="hint">${label}</span>`;
+      }
+
+      function formatWifi(d) {
+        const ssid = escapeHtml(d.wifiSsid || '—');
+        return `<div class="wifi-cell"><strong>${ssid}</strong><br>${formatWifiSignal(d)}</div>`;
       }
 
       function visibleDevices() {
@@ -5089,7 +5114,7 @@
         if (!list.length) {
           const table = document.getElementById('deviceTable');
           if (table) table.classList.add('is-empty');
-          body.innerHTML = `<tr><td colspan="9">
+          body.innerHTML = `<tr><td colspan="10">
             <div class="device-empty">
               <svg viewBox="0 0 88 72" aria-hidden="true">
                 <rect x="18" y="22" width="34" height="28" rx="3"/>
@@ -5110,7 +5135,8 @@
           return `<tr>
             <td class="${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
             <td data-label="Device"><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span>${d.fwVersion ? `<br><span class="hint">${escapeHtml(d.fwVersion)}</span>` : ''}</td>
-            <td data-label="WiFi">${escapeHtml(d.wifiSsid || '—')}</td>
+            <td data-label="WiFi">${formatWifi(d)}</td>
+            <td data-label="Signal">${formatWifiSignal(d)}</td>
             <td data-label="IP">${escapeHtml(d.ip || '—')}</td>
             <td data-label="Battery">${formatBattery(d)}</td>
             <td data-label="Customer URL">${escapeHtml(deviceUrlCode(d) || '—')}</td>
@@ -5134,7 +5160,7 @@
             : 'No devices have checked in yet';
         }
         if (!list.length) {
-          body.innerHTML = '<tr><td colspan="10" class="hint">No devices have checked in yet.</td></tr>';
+          body.innerHTML = '<tr><td colspan="11" class="hint">No devices have checked in yet.</td></tr>';
           return;
         }
         body.innerHTML = list.map((d) => {
@@ -5143,7 +5169,8 @@
             <td class="${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
             <td data-label="Device"><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span></td>
             <td data-label="Firmware">${escapeHtml(d.fwVersion || '—')}</td>
-            <td data-label="WiFi">${escapeHtml(d.wifiSsid || '—')}</td>
+            <td data-label="WiFi">${formatWifi(d)}</td>
+            <td data-label="Signal">${formatWifiSignal(d)}</td>
             <td data-label="IP">${escapeHtml(d.ip || '—')}</td>
             <td data-label="Battery">${formatBattery(d)}</td>
             <td data-label="Customer URL">${escapeHtml(deviceUrlCode(d) || '—')}</td>
