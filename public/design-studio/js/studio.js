@@ -112,6 +112,7 @@ function usesEyeWidget(item = current(), cat = getCat()) {
 
 function defaultFxForCat(cat = getCat()) {
   if (cat?.kind === "tanks") return "living";
+  if (cat?.kind === "cassettes") return "cassette";
   return cat?.defaultFx || "kenburns";
 }
 
@@ -262,6 +263,8 @@ function setHint() {
   } else if (isPhotoItem(item) || isImageCat()) {
     if (item?.fx === "living") {
       els.hint.textContent = "Reads objects inside the still and moves them — pick Swim for a fish tank";
+    } else if (item?.fx === "cassette") {
+      els.hint.textContent = "Spins the tape reels in the still and bounces any graphic EQ / VU bars";
     } else {
       els.hint.textContent = "Swipe the still to change images. Motion and speed stay below.";
     }
@@ -783,8 +786,8 @@ els.uploadForm.addEventListener("submit", async (event) => {
         fx,
         scene: fx === "living" ? "auto" : undefined,
         speed: 1,
-        intensity: 0.4,
-        pace: 0.4,
+        intensity: fx === "cassette" ? 0.7 : 0.4,
+        pace: fx === "cassette" ? 1 : 0.4,
         w: info.w,
         h: info.h,
         mime: pending.file.type,
