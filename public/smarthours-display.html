@@ -188,9 +188,6 @@
         const fs = resolveFontSize(el || { type: 'status' }, design);
         const ff = resolveFontFamily(el || { type: 'status' }, design);
         const colors = resolveStatusColors(el, design, open);
-        if (mode === 'text') {
-          return `<div class="status-text" style="font-size:${Math.min(fs, 36)}px;font-family:${escapeHtml(ff)};color:${escapeHtml(colors.font)}">${open ? 'Open Now' : 'Closed Now'}</div>`;
-        }
         return `<div class="status-badge" style="font-size:${fs}px;font-family:${escapeHtml(ff)};background:${escapeHtml(colors.box)};color:${escapeHtml(colors.font)}">${open ? 'OPEN' : 'CLOSED'}</div>`;
       }
 

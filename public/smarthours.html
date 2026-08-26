@@ -3438,12 +3438,19 @@
         };
       }
 
+      function statusLayoutEl() {
+        const picked = selectedLayoutEl();
+        if (picked && picked.type === 'status') return picked;
+        const c = selected();
+        return ((c && c.design && c.design.layout) || []).find((e) => e && e.type === 'status') || null;
+      }
+
       function applySelectedStatusColor(which, hex) {
-        const el = selectedLayoutEl();
+        const el = statusLayoutEl();
         const c = selected();
         if (!el || el.type !== 'status') return;
         const snapped = nearestPalette(hex);
-        if (c && c.design && c.design.statusMode === 'image') {
+        if (c && c.design) {
           c.design.statusMode = 'badge';
         }
         if (which === 'statusBox') {
@@ -3457,6 +3464,7 @@
           document.getElementById('elStatusFontColor').value = snapped;
           document.getElementById('elStatusFontColorPick').value = snapped;
         }
+        if (el.id) selectedElId = el.id;
       }
 
       function syncStatusColorInputs(el, design) {
@@ -3709,7 +3717,7 @@
         design.hoursFontSize = Number(design.hoursFontSize) || 18;
         design.statusFontSize = Number(design.statusFontSize) || 36;
         // Status presentation is controlled on-canvas (+ Status); keep stored mode/media ids.
-        design.statusMode = design.statusMode || 'badge';
+        design.statusMode = design.statusMode === 'image' ? 'image' : 'badge';
         design.openMediaId = design.openMediaId || '';
         design.closedMediaId = design.closedMediaId || '';
         design.slideshowIntervalSec = readSlideshowIntervalSecFromForm();
@@ -4616,11 +4624,10 @@
             if (design.statusMode === 'image' && (openMedia || closedMedia)) {
               const preview = openNow ? (openMedia || closedMedia) : (closedMedia || openMedia);
               node.innerHTML = `<img class="preview-slide" src="${escapeHtml(mediaUrl(c, preview))}" alt="${openNow ? 'Open' : 'Closed'}">`;
-            } else if (design.statusMode === 'text') {
-              const colors = resolveStatusColors(el, design, openNow);
-              node.innerHTML = `<div class="preview-status" style="font-size:${Math.min(fs, 28)}px;font-family:${ff};color:${colors.font}">${openNow ? 'Open Now' : 'Closed Now'}</div>`;
             } else {
               const colors = resolveStatusColors(el, design, openNow);
+              node.style.background = colors.box;
+              node.style.color = colors.font;
               node.innerHTML = `<div class="preview-badge" style="font-size:${fs}px;font-family:${ff};background:${colors.box};color:${colors.font}">${openNow ? 'OPEN' : 'CLOSED'}</div>`;
             }
           } else if (el.type === 'slideshow') {
