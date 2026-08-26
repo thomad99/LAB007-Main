@@ -2003,8 +2003,6 @@
     .battery-ok { color: var(--accent); font-weight: 700; }
     .battery-low { color: var(--warn); font-weight: 700; }
     .battery-empty { color: var(--danger); font-weight: 700; }
-    .wifi-cell { line-height: 1.35; }
-    .wifi-bars { letter-spacing: .04em; font-weight: 700; }
   </style>
 </head>
 <body class="customer-mode" data-studio-tab="info">
@@ -5068,22 +5066,16 @@
         return `<span class="${cls}">${n}%</span>${extra}`;
       }
 
-      function wifiBars(n) {
-        const filled = n >= -55 ? 4 : n >= -67 ? 3 : n >= -80 ? 2 : 1;
-        return '▂▄▆█'.slice(0, filled);
-      }
-
       function formatWifiSignal(d) {
         const n = Number(d && d.wifiRssi);
         if (!Number.isFinite(n) || n >= 0 || n < -120) return '<span class="hint">—</span>';
         const cls = n >= -60 ? 'battery-ok' : n >= -75 ? 'battery-low' : 'battery-empty';
         const label = n >= -60 ? 'Strong' : n >= -75 ? 'Fair' : 'Weak';
-        return `<span class="${cls}"><span class="wifi-bars">${wifiBars(n)}</span> ${n} dBm</span><br><span class="hint">${label}</span>`;
+        return `<span class="${cls}">${label}</span><br><span class="hint">${n} dBm</span>`;
       }
 
       function formatWifi(d) {
-        const ssid = escapeHtml(d.wifiSsid || '—');
-        return `<div class="wifi-cell"><strong>${ssid}</strong><br>${formatWifiSignal(d)}</div>`;
+        return escapeHtml(d.wifiSsid || '—');
       }
 
       function visibleDevices() {
