@@ -151,7 +151,7 @@
 
       function resolveFontSize(el, design) {
         const n = Number(el && el.fontSize);
-        if (Number.isFinite(n) && n > 0) return Math.max(10, Math.min(120, Math.round(n)));
+        if (Number.isFinite(n) && n > 0) return Math.max(10, Math.min(220, Math.round(n)));
         const d = design || {};
         if (el && el.type === 'title') return Number(d.titleFontSize) || 28;
         if (el && el.type === 'hours') return Number(d.hoursFontSize) || 18;

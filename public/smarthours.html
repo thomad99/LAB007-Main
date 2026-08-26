@@ -3304,8 +3304,8 @@
 
       function resolveElFontSize(el, design) {
         const n = Number(el && el.fontSize);
-        if (Number.isFinite(n) && n > 0) return Math.max(10, Math.min(120, Math.round(n)));
-        return Math.max(10, Math.min(120, defaultFontSizeForType(el && el.type, design)));
+        if (Number.isFinite(n) && n > 0) return Math.max(10, Math.min(220, Math.round(n)));
+        return Math.max(10, Math.min(220, defaultFontSizeForType(el && el.type, design)));
       }
 
       function resolveElFontFamily(el, design) {
@@ -6113,7 +6113,7 @@
         const c = selected();
         if (!el || !c || !TEXT_LAYOUT_TYPES.has(el.type)) return;
         ensureElTypography(el, c.design);
-        el.fontSize = Math.max(10, Math.min(120, resolveElFontSize(el, c.design) + delta));
+        el.fontSize = Math.max(10, Math.min(220, resolveElFontSize(el, c.design) + delta));
         // Keep design-level fallbacks in sync for older display paths
         if (el.type === 'title') c.design.titleFontSize = el.fontSize;
         if (el.type === 'hours') c.design.hoursFontSize = el.fontSize;
