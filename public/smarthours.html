@@ -963,6 +963,18 @@
       overflow-wrap: normal;
       word-break: normal;
     }
+    .device-table .device-name-input {
+      width: 12.5rem;
+      max-width: 100%;
+      min-height: 38px;
+      padding: 6px 10px;
+      font-weight: 700;
+      font-size: 1rem;
+    }
+    #tab-devices .device-table .device-name-input,
+    .fleet-page .device-table .device-name-input {
+      width: 12.5rem;
+    }
     .device-table .hint { margin-top: 0; }
     .pill-on { color: #34d399; font-weight: 700; }
     .pill-off { color: var(--muted); }
@@ -1126,16 +1138,22 @@
     }
     @media (max-width: 900px) {
       .design-layout {
-        grid-template-columns: 1fr;
+        grid-template-columns: minmax(0, 1fr);
         grid-template-rows: auto;
         overflow: visible;
         height: auto;
       }
-      .design-layout > .controls,
-      .design-layout > .design-canvas-col,
+      .design-layout > .design-canvas-col {
+        grid-column: 1;
+        grid-row: 1;
+      }
       .design-layout > .canvas-tools {
-        grid-column: auto;
-        grid-row: auto;
+        grid-column: 1;
+        grid-row: 2;
+      }
+      .design-layout > .controls {
+        grid-column: 1;
+        grid-row: 3;
       }
     }
     .design-canvas-col {
@@ -1207,16 +1225,16 @@
     }
     @media (max-width: 720px) {
       .canvas-tools .elements-grid {
-        display: flex;
-        overflow-x: auto;
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        overflow: visible;
         gap: 8px;
-        padding-bottom: 4px;
-        -webkit-overflow-scrolling: touch;
+        padding-bottom: 0;
       }
       .el-add-btn {
-        flex: 0 0 76px;
-        width: 76px;
-        min-height: 78px;
+        flex: none;
+        width: 100%;
+        min-height: 72px;
       }
       .canvas-tools-footer {
         display: grid;
@@ -1327,6 +1345,7 @@
       align-items: center;
       justify-content: center;
       border-radius: 6px;
+      max-width: 100%;
       /* Match design BG so the screen reads edge-to-edge (no black letterbox) */
       background: #ffffff;
       box-shadow:
@@ -1596,16 +1615,19 @@
     @media (max-width: 720px) {
       body.has-studio,
       body.has-studio[data-studio-tab="design"] {
-        overflow: auto !important;
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
         height: auto !important;
         min-height: 100dvh;
       }
       body.has-studio .wrap,
       body.has-studio[data-studio-tab="design"] .wrap {
         width: calc(100% - 12px);
+        max-width: 100%;
         height: auto !important;
         max-height: none !important;
-        overflow: visible !important;
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
         padding: 8px 0 28px;
       }
       body.has-studio .grid-main,
@@ -1621,8 +1643,10 @@
         display: block !important;
         height: auto !important;
         max-height: none !important;
-        overflow: visible !important;
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
         padding: 10px;
+        max-width: 100%;
       }
       body.customer-mode header,
       body.customer-mode.has-studio header {
@@ -1830,29 +1854,206 @@
         flex-direction: column;
         height: auto !important;
         overflow: visible !important;
+        max-width: 100%;
       }
       .design-layout {
-        display: flex;
-        flex-direction: column;
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
         height: auto !important;
         overflow: visible;
         gap: 12px;
+        max-width: 100%;
       }
-      .design-canvas-col {
-        overflow: visible;
-      }
-      .canvas-stage {
-        flex: none;
-        height: min(62vh, 420px);
-        min-height: 240px;
+      .design-layout > .design-canvas-col {
+        grid-column: 1;
+        grid-row: 1;
         overflow: hidden;
-        padding: 8px;
+        max-width: 100%;
       }
-      .controls {
+      .design-layout > .canvas-tools {
+        grid-column: 1;
+        grid-row: 2;
+      }
+      .design-layout > .controls {
+        grid-column: 1;
+        grid-row: 3;
         height: auto;
         max-height: none;
         overflow: visible;
       }
+      .canvas-stage {
+        flex: none;
+        width: 100%;
+        max-width: 100%;
+        height: auto !important;
+        min-height: 0 !important;
+        overflow: hidden;
+        padding: 8px;
+      }
+      .tablet-scale-wrap {
+        max-width: 100%;
+        overflow: hidden;
+      }
+    }
+
+    /* Phones in landscape: keep the preview full-width at the top, then tools. */
+    @media (orientation: landscape) and (max-height: 580px) {
+      body.has-studio[data-studio-tab="design"] {
+        overflow-x: hidden !important;
+        overflow-y: auto !important;
+        height: auto !important;
+        min-height: 100dvh;
+      }
+      body.has-studio[data-studio-tab="design"] .wrap {
+        width: calc(100% - 10px);
+        max-width: 100%;
+        height: auto !important;
+        max-height: none !important;
+        overflow-x: hidden !important;
+        overflow-y: visible !important;
+        padding: 4px 0 12px;
+      }
+      body.has-studio[data-studio-tab="design"] header {
+        margin-bottom: 2px;
+        gap: 8px;
+      }
+      body.has-studio[data-studio-tab="design"] .brand-logo,
+      body.customer-mode.has-studio[data-studio-tab="design"] .brand-logo {
+        width: min(112px, 20vw);
+      }
+      body.has-studio[data-studio-tab="design"] .toolbar .btn-secondary {
+        min-height: 32px;
+        padding: 4px 8px;
+        font-size: .75rem;
+      }
+      body.has-studio[data-studio-tab="design"] .status {
+        min-height: 0;
+        margin-bottom: 2px;
+        font-size: .78rem;
+      }
+      body.has-studio[data-studio-tab="design"] .grid-main {
+        flex: 0 0 auto;
+        min-height: 0;
+        overflow: visible !important;
+        align-items: start;
+      }
+      body.admin-mode.has-studio[data-studio-tab="design"] .grid-main {
+        grid-template-columns: 1fr;
+      }
+      body.admin-mode.has-studio[data-studio-tab="design"] .grid-main > aside {
+        display: none;
+      }
+      body.has-studio[data-studio-tab="design"] .editor.open {
+        display: flex !important;
+        flex-direction: column;
+        flex: 0 0 auto;
+        min-height: 0;
+        height: auto !important;
+        max-height: none !important;
+        overflow: visible !important;
+        padding: 6px !important;
+        gap: 6px;
+        max-width: 100%;
+      }
+      body.has-studio[data-studio-tab="design"] .tabs,
+      body.admin-mode.has-studio[data-studio-tab="design"] .tabs {
+        position: sticky;
+        top: 0;
+        z-index: 80;
+        gap: 4px;
+        margin: 0 0 4px;
+        padding: 4px 0 6px;
+        background: rgba(8, 12, 22, .94);
+        border: 0;
+        backdrop-filter: blur(14px);
+      }
+      body.has-studio[data-studio-tab="design"] .tabs .tab-btn {
+        min-height: 40px;
+        padding: 4px 2px 6px;
+        gap: 2px;
+        font-size: .58rem;
+        border-radius: 8px;
+      }
+      body.has-studio[data-studio-tab="design"] .tabs .tab-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+      #tab-design.active {
+        display: flex !important;
+        flex-direction: column;
+        flex: 0 0 auto;
+        min-height: 0;
+        height: auto !important;
+        overflow: visible !important;
+        max-width: 100%;
+      }
+      .design-layout {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
+        height: auto !important;
+        overflow: visible !important;
+        gap: 8px;
+        flex: 0 0 auto;
+        min-height: 0;
+        max-width: 100%;
+      }
+      .design-layout > .design-canvas-col {
+        grid-column: 1;
+        grid-row: 1;
+        min-height: 0;
+        overflow: hidden;
+        max-width: 100%;
+      }
+      .design-layout > .canvas-tools {
+        grid-column: 1;
+        grid-row: 2;
+        overflow: visible;
+        padding: 8px;
+        gap: 6px;
+      }
+      .design-layout > .controls {
+        grid-column: 1;
+        grid-row: 3;
+        max-height: none;
+        height: auto;
+        overflow: visible;
+        padding: 8px 10px;
+      }
+      .canvas-stage {
+        flex: none;
+        width: 100%;
+        max-width: 100%;
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 4px;
+        overflow: hidden;
+      }
+      .tablet-scale-wrap {
+        max-width: 100%;
+        overflow: hidden;
+      }
+      .canvas-screen-meta { font-size: 10px; }
+      .canvas-tools .elements-grid {
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        overflow: visible;
+        padding-bottom: 0;
+      }
+      .el-add-btn {
+        flex: none;
+        width: 100%;
+        min-height: 48px;
+        padding: 6px 4px;
+        font-size: .62rem;
+      }
+      .canvas-tools-footer {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 6px;
+      }
+      .canvas-tools-footer > button { width: 100%; min-height: 36px; font-size: .72rem; }
     }
     .seg-toggle {
       display: grid;
@@ -2661,7 +2862,7 @@
               </span>
               <div>
                 <h2>Device Check-ins</h2>
-                <p>See your displays and their status.</p>
+                <p>See your displays and their status. Rename a display to Front Door, Back Door, and so on.</p>
               </div>
               <button type="button" class="btn-secondary" id="refreshDevicesBtn">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -3671,31 +3872,62 @@
         const stage = document.getElementById('canvasStage') || (wrap && wrap.parentElement);
         const meta = document.getElementById('canvasScreenMeta');
         if (!stage) return;
-        const pad = 12;
+        const phone = window.matchMedia('(max-width: 900px)').matches || window.innerWidth < 900;
+        const shortLandscape = window.matchMedia('(orientation: landscape) and (max-height: 580px)').matches;
+        const pad = phone ? 8 : 12;
         const metaH = (meta && meta.offsetHeight) || 18;
-        const mobile = window.innerWidth < 720;
-        const maxW = Math.max(160, stage.clientWidth - pad);
+        const viewW = Math.min(
+          document.documentElement.clientWidth || window.innerWidth,
+          (window.visualViewport && window.visualViewport.width) || window.innerWidth
+        );
+        const viewH = (window.visualViewport && window.visualViewport.height) || window.innerHeight;
+        const maxW = Math.max(120, Math.min(stage.clientWidth - pad, viewW - (phone ? 16 : 24)));
         const naturalH = stage.clientHeight - metaH - pad;
-        const maxH = Math.max(mobile ? 220 : 160, mobile ? Math.max(naturalH, Math.min(window.innerHeight * 0.52, 380)) : naturalH);
         const rot = canvasOutputRotation();
         canvasPreviewRotation = rot;
         const swap = rot === 90 || rot === 270;
         const boxW = swap ? TABLET.height : TABLET.width;
         const boxH = swap ? TABLET.width : TABLET.height;
-        const fitContain = Math.min(maxW / boxW, maxH / boxH);
-        const scale = Math.max(0.25, Math.min(fitContain, 4));
+        let scale;
+        if (phone) {
+          const scaleW = maxW / boxW;
+          if (shortLandscape) {
+            const availH = Math.max(80, viewH - 96 - metaH);
+            scale = Math.min(scaleW, availH / boxH);
+          } else {
+            scale = scaleW;
+          }
+          scale = Math.max(0.2, Math.min(scale, 4));
+        } else {
+          const maxH = Math.max(160, naturalH);
+          scale = Math.max(0.25, Math.min(Math.min(maxW / boxW, maxH / boxH), 4));
+        }
         canvasPreviewScale = scale;
         const scaledW = Math.max(1, Math.round(boxW * scale));
         const scaledH = Math.max(1, Math.round(boxH * scale));
 
         tabletFrame.style.width = TABLET.width + 'px';
         tabletFrame.style.height = TABLET.height + 'px';
-        tabletFrame.style.transform = rot ? `rotate(${rot}deg) scale(${scale})` : `scale(${scale})`;
         tabletFrame.style.margin = '0';
+        if (phone) {
+          tabletFrame.style.position = 'absolute';
+          tabletFrame.style.left = '50%';
+          tabletFrame.style.top = '50%';
+          tabletFrame.style.transform = rot
+            ? `translate(-50%, -50%) rotate(${rot}deg) scale(${scale})`
+            : `translate(-50%, -50%) scale(${scale})`;
+        } else {
+          tabletFrame.style.position = '';
+          tabletFrame.style.left = '';
+          tabletFrame.style.top = '';
+          tabletFrame.style.transform = rot ? `rotate(${rot}deg) scale(${scale})` : `scale(${scale})`;
+        }
 
         if (wrap) {
           wrap.style.width = scaledW + 'px';
+          wrap.style.maxWidth = '100%';
           wrap.style.height = scaledH + 'px';
+          wrap.style.overflow = phone ? 'hidden' : '';
           const bg = (tabletFrame.style.background || '#ffffff').trim() || '#ffffff';
           wrap.style.background = bg;
         }
@@ -5141,6 +5373,35 @@
             queueDeviceReset(btn.dataset.resetDevice).catch((err) => setStatus(err.message, true));
           });
         });
+        root.querySelectorAll('[data-device-name]').forEach((input) => {
+          const id = input.dataset.deviceName;
+          const revert = () => {
+            const row = (devices || []).find((d) => d.id === id);
+            input.value = row ? String(row.customName || row.name || '').trim() : input.value;
+          };
+          input.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter') {
+              ev.preventDefault();
+              input.blur();
+            } else if (ev.key === 'Escape') {
+              ev.preventDefault();
+              revert();
+              input.blur();
+            }
+          });
+          input.addEventListener('blur', () => {
+            saveDeviceCustomName(id, input.value).catch((err) => {
+              revert();
+              setStatus(err.message, true);
+            });
+          });
+        });
+      }
+
+      function deviceNameInputHtml(d) {
+        const shown = String((d && (d.customName || d.name)) || '').trim();
+        const placeholder = d && d.customName && d.name ? d.name : 'Front Door';
+        return `<input type="text" class="device-name-input" data-device-name="${escapeHtml(d.id)}" value="${escapeHtml(shown)}" placeholder="${escapeHtml(placeholder)}" maxlength="40" aria-label="Device name" autocomplete="off">`;
       }
 
       function deviceActionHtml(d) {
@@ -5177,7 +5438,7 @@
           const on = deviceOnline(d.lastSeen);
           return `<tr>
             <td class="${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
-            <td data-label="Device"><span class="cell-stack"><strong class="device-name">${escapeHtml(d.name || d.id)}</strong><span class="hint nowrap">${escapeHtml(d.id)}</span>${d.fwVersion ? `<span class="hint nowrap">${escapeHtml(d.fwVersion)}</span>` : ''}</span></td>
+            <td data-label="Device"><span class="cell-stack">${deviceNameInputHtml(d)}<span class="hint nowrap">${escapeHtml(d.id)}</span>${d.fwVersion ? `<span class="hint nowrap">${escapeHtml(d.fwVersion)}</span>` : ''}</span></td>
             <td data-label="WiFi">${formatWifi(d)}</td>
             <td data-label="Signal">${formatWifiSignal(d)}</td>
             <td data-label="IP"><span class="nowrap">${escapeHtml(d.ip || '—')}</span></td>
@@ -5210,7 +5471,7 @@
           const on = deviceOnline(d.lastSeen);
           return `<tr>
             <td class="${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
-            <td data-label="Device"><span class="cell-stack"><strong class="device-name">${escapeHtml(d.name || d.id)}</strong><span class="hint nowrap">${escapeHtml(d.id)}</span></span></td>
+            <td data-label="Device"><span class="cell-stack">${deviceNameInputHtml(d)}<span class="hint nowrap">${escapeHtml(d.id)}</span></span></td>
             <td data-label="Firmware">${escapeHtml(d.fwVersion || '—')}</td>
             <td data-label="WiFi">${formatWifi(d)}</td>
             <td data-label="Signal">${formatWifiSignal(d)}</td>
@@ -5242,6 +5503,27 @@
         const data = await res.json();
         devices = data.devices || [];
         renderDevices();
+      }
+
+      async function saveDeviceCustomName(id, value) {
+        const row = (devices || []).find((d) => d.id === id);
+        if (!row) return;
+        const hardware = String(row.name || '').trim();
+        let customName = String(value || '').trim().slice(0, 40);
+        if (customName === hardware) customName = '';
+        if (customName === String(row.customName || '').trim()) return;
+        const res = await apiFetch('/api/smarthours/devices/' + encodeURIComponent(id), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ customName })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not save device name');
+        row.customName = customName;
+        document.querySelectorAll('[data-device-name="' + CSS.escape(id) + '"]').forEach((input) => {
+          if (document.activeElement !== input) input.value = customName || hardware;
+        });
+        setStatus(customName ? 'Saved as “' + customName + '”.' : 'Using the display’s default name.');
       }
 
       async function queueDeviceReset(id) {
@@ -6466,6 +6748,9 @@
         }
       });
       window.addEventListener('resize', scaleTablet);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', scaleTablet);
+      }
       if (typeof ResizeObserver !== 'undefined') {
         const stage = document.getElementById('canvasStage');
         if (stage) new ResizeObserver(() => scaleTablet()).observe(stage);
