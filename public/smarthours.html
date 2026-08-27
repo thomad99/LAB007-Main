@@ -787,7 +787,7 @@
       font-weight: 650;
       color: var(--text);
     }
-    #tab-devices input,
+    #tab-devices input:not(.device-name-input),
     #tab-devices select {
       padding: 10px 12px;
       font-size: .98rem;
@@ -941,13 +941,16 @@
       text-transform: uppercase;
       color: var(--muted);
     }
-    .device-table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+    .device-table { width: 100%; min-width: 1080px; border-collapse: collapse; margin-top: 18px; }
     .device-table th, .device-table td {
-      padding: 14px 10px; border-bottom: 1px solid rgba(255,255,255,.08);
-      text-align: left; font-size: 1.15rem; vertical-align: middle;
-      overflow-wrap: break-word; word-break: normal;
+      padding: 12px 10px; border-bottom: 1px solid rgba(255,255,255,.08);
+      text-align: left; font-size: 1.05rem; vertical-align: middle;
+      white-space: nowrap;
+      overflow-wrap: normal;
+      word-break: keep-all;
+      hyphens: none;
     }
-    .device-table th { color: var(--muted); font-size: 1.05rem; letter-spacing: .06em; text-transform: uppercase; }
+    .device-table th { color: var(--muted); font-size: .92rem; letter-spacing: .06em; text-transform: uppercase; }
     .device-table select { min-width: 140px; font-size: 1.1rem; min-height: 44px; }
     .device-table .cell-stack {
       display: flex;
@@ -961,19 +964,79 @@
       white-space: nowrap;
       hyphens: none;
       overflow-wrap: normal;
-      word-break: normal;
+      word-break: keep-all;
+    }
+    .device-name-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      min-width: 0;
+      max-width: 100%;
     }
     .device-table .device-name-input {
-      width: 12.5rem;
+      width: 11.5rem;
       max-width: 100%;
-      min-height: 38px;
+      min-height: 40px;
       padding: 6px 10px;
       font-weight: 700;
       font-size: 1rem;
+      border: 1px solid rgba(125, 180, 255, .4);
+      background: rgba(8, 14, 28, .92);
     }
     #tab-devices .device-table .device-name-input,
     .fleet-page .device-table .device-name-input {
-      width: 12.5rem;
+      width: 11.5rem;
+    }
+    .device-rename-btn {
+      flex: 0 0 auto;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      min-height: 40px;
+      padding: 6px 10px;
+      border-radius: 10px;
+      border: 1px solid rgba(125, 180, 255, .35);
+      background: rgba(90, 140, 255, .12);
+      color: #9ec4ff;
+      font-size: .82rem;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .device-rename-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .device-actions {
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      gap: 8px;
+      min-width: 9.5rem;
+    }
+    .device-actions .btn-secondary,
+    .device-actions .btn-danger {
+      width: 100%;
+      min-height: 38px;
+      padding: 8px 12px;
+      font-size: .88rem;
+      white-space: nowrap;
+    }
+    .device-actions .btn-secondary svg {
+      width: 14px;
+      height: 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex: 0 0 auto;
     }
     .device-table .hint { margin-top: 0; }
     .pill-on { color: #34d399; font-weight: 700; }
@@ -1612,6 +1675,92 @@
     .sketch-pad-tools input[type="number"] { width: 72px; min-height: 40px; }
     .canvas-el.selected { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 
+    /* Device table: stack into cards before columns start wrapping mid-value. */
+    @media (max-width: 1280px) {
+      .device-table-wrap, .fleet-table-wrap { overflow: visible; }
+      .device-table { min-width: 0; }
+      .device-table thead { display: none; }
+      .device-table, .device-table tbody { display: block; width: 100%; }
+      .device-table tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px 16px;
+        margin: 0 0 12px;
+        padding: 14px;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        background: rgba(255,255,255,.03);
+        white-space: normal;
+      }
+      .device-table th, .device-table td {
+        border: 0;
+        padding: 0;
+        font-size: 1rem;
+        display: block;
+        min-width: 0;
+        white-space: normal;
+        overflow-wrap: normal;
+        word-break: keep-all;
+      }
+      .device-table td[data-label="Device"],
+      .device-table td[data-label="Actions"] {
+        grid-column: 1 / -1;
+      }
+      .device-table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 4px;
+        font-size: .7rem;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .device-table .nowrap,
+      .device-table .device-name-input {
+        white-space: nowrap;
+      }
+      .device-name-row { width: 100%; }
+      #tab-devices .device-table .device-name-input,
+      .fleet-page .device-table .device-name-input {
+        width: 100%;
+        max-width: 22rem;
+        flex: 1 1 auto;
+      }
+      .device-actions {
+        flex-direction: row;
+        flex-wrap: wrap;
+        min-width: 0;
+      }
+      .device-actions .btn-secondary,
+      .device-actions .btn-danger {
+        width: auto;
+        flex: 1 1 140px;
+      }
+      .device-table select { min-width: 0; width: 100%; }
+      #tab-devices .device-table.is-empty thead { display: table-header-group; }
+      #tab-devices .device-table.is-empty { display: table; width: 100%; min-width: 0; table-layout: fixed; }
+      #tab-devices .device-table.is-empty tbody { display: table-row-group; }
+      #tab-devices .device-table.is-empty tr {
+        display: table-row;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        background: transparent;
+      }
+      #tab-devices .device-table.is-empty th,
+      #tab-devices .device-table.is-empty td {
+        display: table-cell;
+        padding: 8px 4px;
+        font-size: .62rem;
+        border-bottom: 1px solid rgba(255,255,255,.08);
+      }
+      #tab-devices .device-table.is-empty td {
+        text-align: center;
+        padding: 20px 8px 8px;
+        font-size: .9rem;
+      }
+    }
+
     @media (max-width: 720px) {
       body.has-studio,
       body.has-studio[data-studio-tab="design"] {
@@ -1707,7 +1856,7 @@
         padding: 0;
       }
       #tab-devices label { font-size: 1rem; margin-bottom: 6px; }
-      #tab-devices input,
+      #tab-devices input:not(.device-name-input),
       #tab-devices select {
         font-size: 1.05rem;
         min-height: 44px;
@@ -1786,7 +1935,7 @@
         max-width: none;
       }
       #tab-devices label { font-size: .78rem; margin-bottom: 6px; }
-      #tab-devices input,
+      #tab-devices input:not(.device-name-input),
       #tab-devices select {
         font-size: .92rem;
         min-height: 42px;
@@ -1796,59 +1945,7 @@
       .device-card { padding: 14px; }
       .device-card-head h2 { font-size: 1rem; }
       .info-card { padding: 16px 14px; gap: 20px; }
-      .device-table-wrap, .fleet-table-wrap { overflow: visible; }
-      .device-table thead { display: none; }
-      .device-table, .device-table tbody { display: block; width: 100%; }
-      .device-table tr {
-        display: grid;
-        gap: 8px;
-        margin: 0 0 12px;
-        padding: 12px;
-        border: 1px solid var(--line);
-        border-radius: 12px;
-        background: rgba(255,255,255,.03);
-      }
-      .device-table th, .device-table td {
-        border: 0;
-        padding: 0;
-        font-size: 1rem;
-        display: block;
-        min-width: 0;
-        overflow-wrap: break-word;
-        word-break: normal;
-      }
-      .device-table td[data-label]::before {
-        content: attr(data-label);
-        display: block;
-        margin-bottom: 2px;
-        font-size: .7rem;
-        letter-spacing: .06em;
-        text-transform: uppercase;
-        color: var(--muted);
-      }
-      .device-table select { min-width: 0; width: 100%; }
-      #tab-devices .device-table.is-empty thead { display: table-header-group; }
-      #tab-devices .device-table.is-empty { display: table; width: 100%; table-layout: fixed; }
-      #tab-devices .device-table.is-empty tbody { display: table-row-group; }
-      #tab-devices .device-table.is-empty tr {
-        display: table-row;
-        margin: 0;
-        padding: 0;
-        border: 0;
-        background: transparent;
-      }
-      #tab-devices .device-table.is-empty th,
-      #tab-devices .device-table.is-empty td {
-        display: table-cell;
-        padding: 8px 4px;
-        font-size: .62rem;
-        border-bottom: 1px solid rgba(255,255,255,.08);
-      }
-      #tab-devices .device-table.is-empty td {
-        text-align: center;
-        padding: 20px 8px 8px;
-        font-size: .9rem;
-      }
+      .device-table tr { grid-template-columns: 1fr; }
       #tab-design.active {
         display: flex !important;
         flex-direction: column;
@@ -2882,7 +2979,7 @@
                     <th>Customer ID</th>
                     <th>Poll</th>
                     <th>Last check-in</th>
-                    <th></th>
+                    <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="deviceTableBody">
@@ -2929,7 +3026,7 @@
                 <th>Customer ID</th>
                 <th>Poll</th>
                 <th>Last check-in</th>
-                <th></th>
+                <th>Actions</th>
               </tr>
             </thead>
             <tbody id="fleetTableBody">
@@ -5351,7 +5448,7 @@
       }
 
       function formatWifi(d) {
-        return escapeHtml(d.wifiSsid || '—');
+        return `<span class="nowrap">${escapeHtml(d.wifiSsid || '—')}</span>`;
       }
 
       function visibleDevices() {
@@ -5371,6 +5468,14 @@
         root.querySelectorAll('[data-reset-device]').forEach((btn) => {
           btn.addEventListener('click', () => {
             queueDeviceReset(btn.dataset.resetDevice).catch((err) => setStatus(err.message, true));
+          });
+        });
+        root.querySelectorAll('[data-rename-device]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const input = root.querySelector('[data-device-name="' + CSS.escape(btn.dataset.renameDevice) + '"]');
+            if (!input) return;
+            input.focus();
+            input.select();
           });
         });
         root.querySelectorAll('[data-device-name]').forEach((input) => {
@@ -5401,14 +5506,15 @@
       function deviceNameInputHtml(d) {
         const shown = String((d && (d.customName || d.name)) || '').trim();
         const placeholder = d && d.customName && d.name ? d.name : 'Front Door';
-        return `<input type="text" class="device-name-input" data-device-name="${escapeHtml(d.id)}" value="${escapeHtml(shown)}" placeholder="${escapeHtml(placeholder)}" maxlength="40" aria-label="Device name" autocomplete="off">`;
+        return `<span class="device-name-row"><input type="text" class="device-name-input" data-device-name="${escapeHtml(d.id)}" value="${escapeHtml(shown)}" placeholder="${escapeHtml(placeholder)}" maxlength="40" aria-label="Device name" autocomplete="off"></span>`;
       }
 
       function deviceActionHtml(d) {
+        const rename = `<button type="button" class="btn-secondary" data-rename-device="${escapeHtml(d.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Rename</button>`;
         if (d.pendingReset) {
-          return '<span class="hint">Reset queued — waiting for next check-in</span>';
+          return `<div class="device-actions">${rename}<span class="hint">Reset queued — waiting for next check-in</span></div>`;
         }
-        return `<button type="button" class="btn-danger" data-reset-device="${escapeHtml(d.id)}">Reset to setup</button>`;
+        return `<div class="device-actions">${rename}<button type="button" class="btn-danger" data-reset-device="${escapeHtml(d.id)}">Reset to setup</button></div>`;
       }
 
       function renderCustomerDevices() {
@@ -5443,10 +5549,10 @@
             <td data-label="Signal">${formatWifiSignal(d)}</td>
             <td data-label="IP"><span class="nowrap">${escapeHtml(d.ip || '—')}</span></td>
             <td data-label="Battery">${formatBattery(d)}</td>
-            <td data-label="Customer ID">${escapeHtml(deviceUrlCode(d) || '—')}</td>
+            <td data-label="Customer ID"><span class="nowrap">${escapeHtml(deviceUrlCode(d) || '—')}</span></td>
             <td data-label="Poll">${formatPollInterval(d)}</td>
             <td data-label="Last check-in">${formatCheckin(d.lastSeen)}</td>
-            <td>${deviceActionHtml(d)}</td>
+            <td data-label="Actions">${deviceActionHtml(d)}</td>
           </tr>`;
         }).join('');
         bindDeviceResetButtons(body);
@@ -5477,10 +5583,10 @@
             <td data-label="Signal">${formatWifiSignal(d)}</td>
             <td data-label="IP"><span class="nowrap">${escapeHtml(d.ip || '—')}</span></td>
             <td data-label="Battery">${formatBattery(d)}</td>
-            <td data-label="Customer ID">${escapeHtml(deviceUrlCode(d) || '—')}</td>
+            <td data-label="Customer ID"><span class="nowrap">${escapeHtml(deviceUrlCode(d) || '—')}</span></td>
             <td data-label="Poll">${formatPollInterval(d)}</td>
             <td data-label="Last check-in">${formatCheckin(d.lastSeen)}</td>
-            <td>${deviceActionHtml(d)}</td>
+            <td data-label="Actions">${deviceActionHtml(d)}</td>
           </tr>`;
         }).join('');
         bindDeviceResetButtons(body);
