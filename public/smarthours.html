@@ -942,9 +942,28 @@
       color: var(--muted);
     }
     .device-table { width: 100%; border-collapse: collapse; margin-top: 18px; }
-    .device-table th, .device-table td { padding: 14px 10px; border-bottom: 1px solid rgba(255,255,255,.08); text-align: left; font-size: 1.15rem; vertical-align: middle; }
+    .device-table th, .device-table td {
+      padding: 14px 10px; border-bottom: 1px solid rgba(255,255,255,.08);
+      text-align: left; font-size: 1.15rem; vertical-align: middle;
+      overflow-wrap: break-word; word-break: normal;
+    }
     .device-table th { color: var(--muted); font-size: 1.05rem; letter-spacing: .06em; text-transform: uppercase; }
     .device-table select { min-width: 140px; font-size: 1.1rem; min-height: 44px; }
+    .device-table .cell-stack {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      min-width: 0;
+    }
+    .device-table .device-name,
+    .device-table .nowrap {
+      white-space: nowrap;
+      hyphens: none;
+      overflow-wrap: normal;
+      word-break: normal;
+    }
+    .device-table .hint { margin-top: 0; }
     .pill-on { color: #34d399; font-weight: 700; }
     .pill-off { color: var(--muted); }
     .btn-sync {
@@ -1771,7 +1790,8 @@
         font-size: 1rem;
         display: block;
         min-width: 0;
-        overflow-wrap: anywhere;
+        overflow-wrap: break-word;
+        word-break: normal;
       }
       .device-table td[data-label]::before {
         content: attr(data-label);
@@ -2112,11 +2132,11 @@
           </div>
           <div class="setup-copy">
             <label for="onboardMaps">Google Business Link</label>
-            <p>Paste your Google Maps link</p>
+            <p>Open Maps → your listing → Share → copy link</p>
           </div>
           <div class="setup-maps-wrap">
-            <input id="onboardMaps" type="text" placeholder="Paste link here..." autocomplete="off">
-            <a href="https://maps.google.com" target="_blank" rel="noopener">Find your link on Google Maps</a>
+            <input id="onboardMaps" type="text" placeholder="https://www.google.com/maps/place/Your+Business/..." autocomplete="off">
+            <a href="https://maps.google.com" target="_blank" rel="noopener">Open Google Maps</a>
           </div>
         </div>
         <div class="setup-row">
@@ -2211,9 +2231,10 @@
                 <label for="fieldMapsUrl">Google business link</label>
               </div>
               <div class="maps-help">
-                <a href="https://maps.google.com" target="_blank" rel="noopener">Find your business on Google Maps</a>
+                <a href="https://maps.google.com" target="_blank" rel="noopener">Open your listing in Google Maps</a>
               </div>
-              <input id="fieldMapsUrl" type="text" placeholder="https://maps.app.goo.gl/VNM7eFRQ4yyN9RG28">
+              <input id="fieldMapsUrl" type="text" placeholder="https://www.google.com/maps/place/Your+Business/...">
+              <p class="hint">Open the business on Google Maps, tap Share, and paste that link. A URL with /maps/place/ in it works best.</p>
               <p class="hint" id="studioMapsStatus"></p>
             </div>
             <div class="info-field">
@@ -3171,12 +3192,26 @@
       function mapsShareLinkCheck(value) {
         const raw = String(value || '').trim();
         if (!raw) return { empty: true, ok: true };
+        if (/^ChIJ[\w-]+$/i.test(raw) || /^places\/ChIJ/i.test(raw)) {
+          return { empty: false, ok: true };
+        }
         try {
           const withProto = /^https?:\/\//i.test(raw) ? raw : 'https://' + raw;
           const u = new URL(withProto);
           const host = u.hostname.replace(/^www\./i, '').toLowerCase();
-          const id = u.pathname.replace(/^\/+|\/+$/g, '');
-          if (host === 'maps.app.goo.gl' && /^[A-Za-z0-9_-]{8,}$/.test(id)) {
+          if (host === 'maps.app.goo.gl' || host === 'share.google' || host === 'goo.gl') {
+            return { empty: false, ok: true };
+          }
+          if (/google\./i.test(host) && /\/maps\/place\//i.test(u.pathname)) {
+            return { empty: false, ok: true };
+          }
+          if (/google\./i.test(host) && (u.searchParams.get('cid') || u.searchParams.get('ludocid') || u.searchParams.get('query_place_id'))) {
+            return { empty: false, ok: true };
+          }
+          if (/google\./i.test(host) && /\/maps\//i.test(u.pathname + u.search)) {
+            return { empty: false, ok: true };
+          }
+          if (/google\./i.test(host) && /^\/search/i.test(u.pathname) && (u.searchParams.get('q') || u.searchParams.get('kgmid'))) {
             return { empty: false, ok: true };
           }
         } catch {
@@ -3185,7 +3220,7 @@
         return {
           empty: false,
           ok: false,
-          error: 'That link looks incorrect. It should look like https://maps.app.goo.gl/VNM7eFRQ4yyN9RG28 — open Google Maps, find your business, tap Share, and paste that link.'
+          error: 'Open Google Maps, tap your business listing, tap Share, and paste that link. Best is a link that contains /maps/place/…'
         };
       }
 
@@ -5027,14 +5062,14 @@
       function formatCheckin(iso) {
         if (!iso) return 'Never';
         const t = new Date(iso);
-        if (Number.isNaN(t.getTime())) return iso;
+        if (Number.isNaN(t.getTime())) return escapeHtml(String(iso));
         const mins = Math.round((Date.now() - t.getTime()) / 60000);
         const abs = Math.abs(mins);
         let rel = t.toLocaleString();
         if (abs < 1) rel = 'just now';
         else if (abs < 60) rel = abs + ' min ago';
         else if (abs < 48 * 60) rel = Math.round(abs / 60) + ' hr ago';
-        return rel + ' · ' + t.toLocaleString();
+        return `<span class="cell-stack"><span class="nowrap">${escapeHtml(rel)}</span><span class="hint nowrap">${escapeHtml(t.toLocaleString())}</span></span>`;
       }
 
       function deviceOnline(iso) {
@@ -5059,7 +5094,7 @@
 
       function formatPollInterval(d) {
         const n = devicePollMinutes(d);
-        return n ? n + ' min' : '—';
+        return n ? `<span class="nowrap">${n}&nbsp;min</span>` : '—';
       }
 
       function formatBattery(d) {
@@ -5068,8 +5103,11 @@
         if (!Number.isFinite(n)) return '—';
         if (n === 0 && (!Number.isFinite(mv) || mv < 500)) return '—';
         const cls = n <= 15 ? 'battery-empty' : n <= 35 ? 'battery-low' : 'battery-ok';
-        const extra = Number.isFinite(mv) && mv >= 500 ? ` <span class="hint">${(mv / 1000).toFixed(2)} V</span>` : '';
-        return `<span class="${cls}">${n}%</span>${extra}`;
+        const volts = Number.isFinite(mv) && mv >= 500
+          ? `<span class="hint nowrap">${(mv / 1000).toFixed(2)}&nbsp;V</span>`
+          : '';
+        if (!volts) return `<span class="${cls}">${n}%</span>`;
+        return `<span class="cell-stack"><span class="${cls}">${n}%</span>${volts}</span>`;
       }
 
       function formatWifiSignal(d) {
@@ -5077,7 +5115,7 @@
         if (!Number.isFinite(n) || n >= 0 || n < -120) return '<span class="hint">—</span>';
         const cls = n >= -60 ? 'battery-ok' : n >= -75 ? 'battery-low' : 'battery-empty';
         const label = n >= -60 ? 'Strong' : n >= -75 ? 'Fair' : 'Weak';
-        return `<span class="${cls}">${label}</span><br><span class="hint">${n} dBm</span>`;
+        return `<span class="cell-stack"><span class="${cls}">${label}</span><span class="hint nowrap">${n}&nbsp;dBm</span></span>`;
       }
 
       function formatWifi(d) {
@@ -5139,14 +5177,14 @@
           const on = deviceOnline(d.lastSeen);
           return `<tr>
             <td class="${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
-            <td data-label="Device"><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span>${d.fwVersion ? `<br><span class="hint">${escapeHtml(d.fwVersion)}</span>` : ''}</td>
+            <td data-label="Device"><span class="cell-stack"><strong class="device-name">${escapeHtml(d.name || d.id)}</strong><span class="hint nowrap">${escapeHtml(d.id)}</span>${d.fwVersion ? `<span class="hint nowrap">${escapeHtml(d.fwVersion)}</span>` : ''}</span></td>
             <td data-label="WiFi">${formatWifi(d)}</td>
             <td data-label="Signal">${formatWifiSignal(d)}</td>
-            <td data-label="IP">${escapeHtml(d.ip || '—')}</td>
+            <td data-label="IP"><span class="nowrap">${escapeHtml(d.ip || '—')}</span></td>
             <td data-label="Battery">${formatBattery(d)}</td>
             <td data-label="Customer ID">${escapeHtml(deviceUrlCode(d) || '—')}</td>
-            <td data-label="Poll">${escapeHtml(formatPollInterval(d))}</td>
-            <td data-label="Last check-in">${escapeHtml(formatCheckin(d.lastSeen))}</td>
+            <td data-label="Poll">${formatPollInterval(d)}</td>
+            <td data-label="Last check-in">${formatCheckin(d.lastSeen)}</td>
             <td>${deviceActionHtml(d)}</td>
           </tr>`;
         }).join('');
@@ -5172,15 +5210,15 @@
           const on = deviceOnline(d.lastSeen);
           return `<tr>
             <td class="${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
-            <td data-label="Device"><strong>${escapeHtml(d.name || d.id)}</strong><br><span class="hint">${escapeHtml(d.id)}</span></td>
+            <td data-label="Device"><span class="cell-stack"><strong class="device-name">${escapeHtml(d.name || d.id)}</strong><span class="hint nowrap">${escapeHtml(d.id)}</span></span></td>
             <td data-label="Firmware">${escapeHtml(d.fwVersion || '—')}</td>
             <td data-label="WiFi">${formatWifi(d)}</td>
             <td data-label="Signal">${formatWifiSignal(d)}</td>
-            <td data-label="IP">${escapeHtml(d.ip || '—')}</td>
+            <td data-label="IP"><span class="nowrap">${escapeHtml(d.ip || '—')}</span></td>
             <td data-label="Battery">${formatBattery(d)}</td>
             <td data-label="Customer ID">${escapeHtml(deviceUrlCode(d) || '—')}</td>
-            <td data-label="Poll">${escapeHtml(formatPollInterval(d))}</td>
-            <td data-label="Last check-in">${escapeHtml(formatCheckin(d.lastSeen))}</td>
+            <td data-label="Poll">${formatPollInterval(d)}</td>
+            <td data-label="Last check-in">${formatCheckin(d.lastSeen)}</td>
             <td>${deviceActionHtml(d)}</td>
           </tr>`;
         }).join('');
