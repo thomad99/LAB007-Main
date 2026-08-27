@@ -2429,11 +2429,11 @@
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
           </div>
           <div class="setup-copy">
-            <label for="onboardMaps">Google Business Link</label>
-            <p>Open Maps → your listing → Share → copy link</p>
+            <label for="onboardMaps">Website or Google Maps</label>
+            <p>Paste your website, or Share from your Maps listing</p>
           </div>
           <div class="setup-maps-wrap">
-            <input id="onboardMaps" type="text" placeholder="https://www.google.com/maps/place/Your+Business/..." autocomplete="off">
+            <input id="onboardMaps" type="text" placeholder="yourbusiness.com or Google Maps link" autocomplete="url">
             <a href="https://maps.google.com" target="_blank" rel="noopener">Open Google Maps</a>
           </div>
         </div>
@@ -2526,13 +2526,13 @@
                 <span class="info-icon info-icon-pin" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><path d="M12 2c-3.9 0-7 3-7 7.1C5 14.2 12 22 12 22s7-7.8 7-12.9C19 5 15.9 2 12 2z"/><circle cx="12" cy="9.2" r="2.6"/></svg>
                 </span>
-                <label for="fieldMapsUrl">Google business link</label>
+                <label for="fieldMapsUrl">Google Maps or website</label>
               </div>
               <div class="maps-help">
                 <a href="https://maps.google.com" target="_blank" rel="noopener">Open your listing in Google Maps</a>
               </div>
-              <input id="fieldMapsUrl" type="text" placeholder="https://www.google.com/maps/place/Your+Business/...">
-              <p class="hint">Open the business on Google Maps, tap Share, and paste that link. A URL with /maps/place/ in it works best.</p>
+              <input id="fieldMapsUrl" type="text" placeholder="yourbusiness.com or Google Maps link">
+              <p class="hint">Paste your website (yourbusiness.com) or a Google Maps listing. We’ll look up Google hours for that site.</p>
               <p class="hint" id="studioMapsStatus"></p>
             </div>
             <div class="info-field">
@@ -3512,13 +3512,18 @@
           if (/google\./i.test(host) && /^\/search/i.test(u.pathname) && (u.searchParams.get('q') || u.searchParams.get('kgmid'))) {
             return { empty: false, ok: true };
           }
+          const webHost = host.replace(/^www\./i, '');
+          const sharedWeb = /^(facebook|instagram|twitter|x|youtube|youtu|tiktok)\./.test(webHost) || webHost === 'linktr.ee' || webHost === 'bit.ly';
+          if (webHost.includes('.') && !/google\./i.test(webHost) && webHost !== 'share.google' && !sharedWeb) {
+            return { empty: false, ok: true };
+          }
         } catch {
           /* ignore parse errors */
         }
         return {
           empty: false,
           ok: false,
-          error: 'Open Google Maps, tap your business listing, tap Share, and paste that link. Best is a link that contains /maps/place/…'
+          error: 'Paste your website (yourbusiness.com) or a Google Maps listing. Best is a link with /maps/place/…'
         };
       }
 
@@ -6007,7 +6012,7 @@
         renderList();
         fillEditor(temp);
         document.getElementById('fieldName').focus();
-        setStatus('Enter a customer name, paste a Maps place URL, then Save.');
+        setStatus('Enter a customer name, paste a website or Maps link, then Save.');
       });
 
       customerList.addEventListener('click', (event) => {
