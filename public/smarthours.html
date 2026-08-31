@@ -584,31 +584,106 @@
     }
     .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 12px; }
     .form-grid > .full { grid-column: 1 / -1; }
-    .info-card {
-      border: 1px solid var(--line);
-      border-radius: 16px;
-      background: rgba(12, 18, 34, .9);
-      padding: 18px 16px 20px;
-      display: grid;
-      gap: 22px;
-    }
-    .info-field { min-width: 0; }
-    .info-field-label {
+    .info-page { display: grid; gap: 16px; }
+    .info-page-head {
       display: flex;
       align-items: center;
-      gap: 10px;
-      margin: 0 0 10px;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
     }
-    .info-field-label label { margin: 0; }
-    .info-icon {
-      flex: 0 0 auto;
-      width: 22px;
-      height: 22px;
+    .info-page-title {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+    .info-page-title h2 {
+      margin: 0;
+      font-size: 1.15rem;
+      letter-spacing: -.02em;
+    }
+    .info-page-title p {
+      margin: 2px 0 0;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+    .info-page-mark {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
       color: var(--accent);
+      background: rgba(118, 244, 197, .12);
+      flex: 0 0 auto;
     }
-    .info-icon svg {
+    .info-page-mark svg {
       width: 22px;
       height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .info-save-continue {
+      min-height: 44px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      gap: 8px;
+    }
+    .info-save-continue svg {
+      width: 16px;
+      height: 16px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .info-tiles {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .info-tile {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      padding: 22px 16px 16px;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: rgba(10, 16, 32, .92);
+      min-height: 268px;
+    }
+    .info-tile-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      margin: 0 0 12px;
+      color: var(--accent);
+      background: rgba(118, 244, 197, .14);
+    }
+    .info-tile-url .info-tile-icon {
+      color: #7eb6ff;
+      background: rgba(90, 140, 255, .18);
+    }
+    .info-tile-maps .info-tile-icon {
+      color: #c4b5fd;
+      background: rgba(167, 139, 250, .18);
+    }
+    .info-tile-email .info-tile-icon {
+      color: #f2d27b;
+      background: rgba(242, 210, 123, .16);
+    }
+    .info-tile-icon svg {
+      width: 26px;
+      height: 26px;
       display: block;
       fill: none;
       stroke: currentColor;
@@ -616,43 +691,94 @@
       stroke-linecap: round;
       stroke-linejoin: round;
     }
-    .info-icon.info-icon-pin svg { fill: #ea4335; stroke: none; }
-    .info-icon.info-icon-pin circle { fill: #fff; }
-    #tab-info label {
-      margin-bottom: 0;
-      font-size: .72rem;
-      letter-spacing: .08em;
-      text-transform: uppercase;
+    .info-tile-maps .info-tile-icon svg { fill: currentColor; stroke: none; }
+    .info-tile-maps .info-tile-icon circle { fill: rgba(10, 16, 32, .95); }
+    .info-tile h3 {
+      margin: 0 0 6px;
+      font-size: 1.02rem;
       font-weight: 700;
-      color: var(--muted);
+      letter-spacing: 0;
+      text-transform: none;
+      color: var(--text);
     }
+    .info-tile h3 label {
+      display: inline;
+      margin: 0;
+      font: inherit;
+      letter-spacing: inherit;
+      text-transform: none;
+      color: inherit;
+      cursor: pointer;
+    }
+    .info-tile-copy {
+      margin: 0 0 18px;
+      color: var(--muted);
+      font-size: .86rem;
+      line-height: 1.4;
+      max-width: 24ch;
+    }
+    .info-tile-value {
+      margin-top: auto;
+      width: 100%;
+      position: relative;
+    }
+    .info-tile-value.has-check input {
+      padding-right: 40px;
+    }
+    .info-check {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      width: 22px;
+      height: 22px;
+      margin-top: -11px;
+      color: var(--accent);
+    }
+    .info-check[hidden] { display: none; }
+    .info-check svg {
+      width: 22px;
+      height: 22px;
+      display: block;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .info-check circle { fill: rgba(118, 244, 197, .16); }
     #tab-info input:not([type="checkbox"]):not([type="number"]) {
-      padding: 12px 14px;
+      padding: 11px 14px;
       border-radius: 12px;
-      font-size: 1.05rem;
+      font-size: 1rem;
       min-height: 46px;
     }
-    #tab-info #fieldSlug[readonly] {
+    #tab-info .info-tile-url #fieldSlug[readonly] {
       font-size: 1.28rem;
       font-weight: 800;
-      padding: 0;
+      padding: 4px 0 2px;
       min-height: 0;
+      text-align: center;
+      color: var(--accent);
     }
     #tab-info #fieldMapsUrl {
       overflow-wrap: anywhere;
       word-break: break-all;
-      font-size: .92rem;
+      font-size: .86rem;
     }
     #tab-info .slug-preview,
     #tab-info a.slug-preview {
-      margin-top: 8px;
-      font-size: .9rem;
+      margin-top: 6px;
+      font-size: .8rem;
       font-weight: 650;
       text-decoration: none;
       color: var(--accent);
+      line-height: 1.35;
     }
     #tab-info a.slug-preview:hover { text-decoration: underline; }
-    #tab-info .maps-help { margin: 0 0 10px; }
+    #tab-info .maps-help {
+      margin: 0 0 10px;
+      justify-content: center;
+    }
     #tab-info .maps-help a {
       color: var(--accent);
       font-size: .9rem;
@@ -672,22 +798,28 @@
       -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E") center / contain no-repeat;
       mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E") center / contain no-repeat;
     }
-    #tab-info .hint { margin: 8px 0 0; font-size: .86rem; }
+    #tab-info .hint { margin: 8px 0 0; font-size: .8rem; }
     #tab-info .auto-sync-bar {
       max-width: none;
-      padding: 10px 0 0;
-      gap: 8px;
-      border-top: 1px solid rgba(255,255,255,.08);
+      padding: 14px 16px;
+      gap: 10px;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(10, 16, 32, .92);
     }
     #tab-info .auto-sync-bar input {
       width: 56px;
       height: 30px;
       padding: 4px 8px;
     }
-    #tab-info .info-admin-actions { margin-top: 14px; }
-    body.admin-mode #tab-info .maps-help,
-    body.admin-mode #tab-info .full > p.hint:not(#studioMapsStatus) {
-      display: none;
+    #tab-info .info-admin-actions { margin-top: 2px; }
+    @media (max-width: 1180px) {
+      .info-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+    @media (max-width: 640px) {
+      .info-tiles { grid-template-columns: 1fr; }
+      .info-page-head { align-items: stretch; }
+      .info-save-continue { width: 100%; }
     }
     .device-card {
       border: 1px solid var(--line);
@@ -1837,17 +1969,15 @@
       .tabs .tab-btn .tab-label-full { display: none; }
       .tabs .tab-btn .tab-label-short { display: inline; }
       .tabs .tab-btn svg { width: 20px; height: 20px; }
-      #tab-info .form-grid { grid-template-columns: 1fr; gap: 14px; }
-      #tab-info label { font-size: .7rem; }
       #tab-info input:not([type="checkbox"]):not([type="number"]) {
         font-size: 1.02rem;
         min-height: 44px;
         padding: 10px 12px;
       }
-      #tab-info #fieldSlug[readonly] {
+      #tab-info .info-tile-url #fieldSlug[readonly] {
         font-size: 1.18rem;
         min-height: 0;
-        padding: 0;
+        padding: 4px 0 2px;
       }
       #tab-info .slug-preview,
       #tab-info a.slug-preview {
@@ -1944,7 +2074,7 @@
       #tab-devices .device-note { font-size: .88rem; }
       .device-card { padding: 14px; }
       .device-card-head h2 { font-size: 1rem; }
-      .info-card { padding: 16px 14px; gap: 20px; }
+      .info-tile { min-height: 0; padding: 18px 14px 14px; }
       .device-table tr { grid-template-columns: 1fr; }
       #tab-design.active {
         display: flex !important;
@@ -2322,6 +2452,152 @@
     .battery-ok { color: var(--accent); font-weight: 700; }
     .battery-low { color: var(--warn); font-weight: 700; }
     .battery-empty { color: var(--danger); font-weight: 700; }
+    .battery-link {
+      appearance: none;
+      display: inline-flex;
+      align-items: flex-start;
+      margin: 0;
+      padding: 2px 0;
+      border: 0;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+      text-align: left;
+      cursor: pointer;
+      min-height: 40px;
+    }
+    .battery-link:hover .battery-ok,
+    .battery-link:hover .battery-low,
+    .battery-link:hover .battery-empty {
+      text-decoration: underline;
+      text-underline-offset: 3px;
+    }
+    .battery-link:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+      border-radius: 6px;
+    }
+    #batteryModal {
+      position: fixed; inset: 0; z-index: 96;
+      background: rgba(5, 7, 15, .86);
+      display: none;
+      place-items: center;
+      padding: 24px;
+    }
+    #batteryModal.open { display: grid; }
+    .battery-card {
+      width: min(720px, 100%);
+      max-height: min(86vh, 860px);
+      overflow: auto;
+    }
+    .battery-card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+    .battery-card-head h2 { margin: 0; font-size: 1.25rem; }
+    .battery-card-meta { margin: 0 0 12px; color: var(--muted); }
+    .battery-summary {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+      gap: 8px;
+      margin: 0 0 14px;
+    }
+    .battery-stat {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #0a1020;
+    }
+    .battery-stat span {
+      display: block;
+      color: var(--muted);
+      font-size: .72rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .battery-stat strong {
+      display: block;
+      margin-top: 4px;
+      font-size: 1.15rem;
+    }
+    .battery-chart {
+      display: flex;
+      align-items: flex-end;
+      gap: 4px;
+      height: 120px;
+      margin: 0 0 16px;
+      padding: 8px 6px 0;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #0a1020;
+      overflow: auto hidden;
+    }
+    .battery-chart[hidden] { display: none; }
+    .battery-bar {
+      flex: 1 0 10px;
+      min-width: 8px;
+      height: 100%;
+      display: flex;
+      align-items: flex-end;
+    }
+    .battery-bar span {
+      display: block;
+      width: 100%;
+      min-height: 2px;
+      border-radius: 3px 3px 0 0;
+      background: var(--accent);
+    }
+    .battery-bar.is-low span { background: var(--warn); }
+    .battery-bar.is-empty span { background: var(--danger); }
+    .battery-days-table {
+      width: 100%;
+      min-width: 0;
+      border-collapse: collapse;
+      margin-top: 0;
+    }
+    .battery-days-table th, .battery-days-table td {
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(255,255,255,.08);
+      text-align: left;
+      font-size: .98rem;
+    }
+    .battery-days-table th {
+      color: var(--muted);
+      font-size: .78rem;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+    .battery-days-table .battery-used { color: var(--warn); font-weight: 700; }
+    .battery-days-table .battery-gained { color: var(--accent); font-weight: 700; }
+    @media (max-width: 560px) {
+      .battery-days-table thead { display: none; }
+      .battery-days-table, .battery-days-table tbody { display: block; width: 100%; }
+      .battery-days-table tr {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px 12px;
+        margin: 0 0 10px;
+        padding: 12px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+      .battery-days-table td {
+        border: 0;
+        padding: 0;
+      }
+      .battery-days-table td[data-label]::before {
+        content: attr(data-label);
+        display: block;
+        margin-bottom: 3px;
+        font-size: .68rem;
+        letter-spacing: .06em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+    }
   </style>
 </head>
 <body class="customer-mode" data-studio-tab="info">
@@ -2350,6 +2626,34 @@
       <a class="manage-url" id="urlSavedLink" href="#" target="_blank" rel="noopener"></a>
       <p class="please-save">Your portal link is valid for 10 days</p>
       <button type="button" class="btn" id="urlSavedOk" style="width:100%;">Continue</button>
+    </div>
+  </div>
+  <div id="batteryModal">
+    <div class="panel battery-card" role="dialog" aria-modal="true" aria-labelledby="batteryModalTitle">
+      <div class="battery-card-head">
+        <div>
+          <h2 id="batteryModalTitle">Battery life</h2>
+          <p class="hint battery-card-meta" id="batteryModalMeta"></p>
+        </div>
+        <button type="button" class="btn-secondary" id="batteryModalClose">Close</button>
+      </div>
+      <div class="battery-summary" id="batteryModalSummary"></div>
+      <div class="battery-chart" id="batteryModalChart" hidden></div>
+      <div class="device-table-wrap">
+        <table class="battery-days-table">
+          <thead>
+            <tr>
+              <th>Day</th>
+              <th>Average</th>
+              <th>Change</th>
+              <th>Voltage</th>
+            </tr>
+          </thead>
+          <tbody id="batteryModalBody">
+            <tr><td colspan="4" class="hint">No daily averages yet.</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
   </div>
   <div id="imagePicker">
@@ -2500,50 +2804,75 @@
         </div>
 
         <div class="tab-panel active" id="tab-info">
-          <div class="info-card">
-            <div class="info-field">
-              <div class="info-field-label">
-                <span class="info-icon" aria-hidden="true">
+          <div class="info-page">
+            <div class="info-page-head">
+              <div class="info-page-title">
+                <span class="info-page-mark" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.2c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/></svg>
                 </span>
-                <label for="fieldName">Customer name</label>
+                <div>
+                  <h2>Customer Info</h2>
+                  <p>Basic details about your business</p>
+                </div>
               </div>
-              <input id="fieldName" type="text">
+              <button type="button" class="btn info-save-continue" id="infoSaveContinueBtn">
+                Save &amp; Continue
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
+              </button>
             </div>
-            <div class="info-field">
-              <div class="info-field-label">
-                <span class="info-icon" aria-hidden="true">
+            <div class="info-tiles">
+              <article class="info-tile info-tile-name">
+                <span class="info-tile-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.2c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/></svg>
+                </span>
+                <h3><label for="fieldName">Customer Name</label></h3>
+                <p class="info-tile-copy">Your business name as you want it displayed.</p>
+                <div class="info-tile-value has-check">
+                  <input id="fieldName" type="text">
+                  <span class="info-check" id="fieldNameCheck" hidden>
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12.5 10.8 15.2 16.2 9.5"/></svg>
+                  </span>
+                </div>
+              </article>
+              <article class="info-tile info-tile-url" id="infoSlugTile">
+                <span class="info-tile-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.07 0l1.41-1.41a5 5 0 0 0-7.07-7.07L10 5.93"/><path d="M14 11a5 5 0 0 0-7.07 0L5.52 12.41a5 5 0 0 0 7.07 7.07L14 18.07"/></svg>
                 </span>
-                <label for="fieldSlug">URL name</label>
-              </div>
-              <input id="fieldSlug" type="text" placeholder="acme-cafe" autocomplete="off" readonly>
-              <a class="slug-preview" id="studioSlugPreview" target="_blank" rel="noopener"></a>
-              <p class="hint" id="studioSlugStatus"></p>
-            </div>
-            <div class="info-field">
-              <div class="info-field-label">
-                <span class="info-icon info-icon-pin" aria-hidden="true">
-                  <svg viewBox="0 0 24 24"><path d="M12 2c-3.9 0-7 3-7 7.1C5 14.2 12 22 12 22s7-7.8 7-12.9C19 5 15.9 2 12 2z"/><circle cx="12" cy="9.2" r="2.6"/></svg>
+                <h3><label for="fieldSlug">Unique URL</label></h3>
+                <p class="info-tile-copy">Your unique link to access and manage your display.</p>
+                <div class="info-tile-value">
+                  <input id="fieldSlug" type="text" placeholder="acme-cafe" autocomplete="off" readonly>
+                  <a class="slug-preview" id="studioSlugPreview" target="_blank" rel="noopener"></a>
+                  <p class="hint" id="studioSlugStatus"></p>
+                </div>
+              </article>
+              <article class="info-tile info-tile-maps">
+                <span class="info-tile-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="M12 21s7-7.2 7-12.2A7 7 0 0 0 5 8.8C5 13.8 12 21 12 21z"/><circle cx="12" cy="8.8" r="2.3"/></svg>
                 </span>
-                <label for="fieldMapsUrl">Google Maps or website</label>
-              </div>
-              <div class="maps-help">
-                <a href="https://maps.google.com" target="_blank" rel="noopener">Open your listing in Google Maps</a>
-              </div>
-              <input id="fieldMapsUrl" type="text" placeholder="yourbusiness.com or Google Maps link">
-              <p class="hint">Paste your website (yourbusiness.com) or a Google Maps listing. We’ll look up Google hours for that site.</p>
-              <p class="hint" id="studioMapsStatus"></p>
-            </div>
-            <div class="info-field">
-              <div class="info-field-label">
-                <span class="info-icon" aria-hidden="true">
+                <h3><label for="fieldMapsUrl">Google Maps or Website</label></h3>
+                <p class="info-tile-copy">We’ll look up Google hours from this site.</p>
+                <div class="info-tile-value">
+                  <div class="maps-help">
+                    <a href="https://maps.google.com" target="_blank" rel="noopener">Open your listing in Google Maps</a>
+                  </div>
+                  <input id="fieldMapsUrl" type="text" placeholder="yourbusiness.com or Google Maps link">
+                  <p class="hint" id="studioMapsStatus"></p>
+                </div>
+              </article>
+              <article class="info-tile info-tile-email">
+                <span class="info-tile-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg>
                 </span>
-                <label for="fieldEmail">Email</label>
-              </div>
-              <input id="fieldEmail" type="email" placeholder="you@business.com" autocomplete="email">
-              <p class="hint">Used to send a 10-day secured link if you sign in from another device.</p>
+                <h3><label for="fieldEmail">Email Address</label></h3>
+                <p class="info-tile-copy">Used to send a 10-day secured link if you sign in elsewhere.</p>
+                <div class="info-tile-value has-check">
+                  <input id="fieldEmail" type="email" placeholder="you@business.com" autocomplete="email">
+                  <span class="info-check" id="fieldEmailCheck" hidden>
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12.5 10.8 15.2 16.2 9.5"/></svg>
+                  </span>
+                </div>
+              </article>
             </div>
             <div class="auto-sync-bar admin-only">
               <div>
@@ -3559,14 +3888,25 @@
       function lockSlugField(locked) {
         const slugEl = document.getElementById('fieldSlug');
         const statusEl = document.getElementById('studioSlugStatus');
+        const tile = document.getElementById('infoSlugTile');
         if (!slugEl) return;
         slugEl.readOnly = !!locked;
         slugEl.tabIndex = locked ? -1 : 0;
         if (locked) slugEl.dataset.touched = '1';
+        if (tile) tile.classList.toggle('is-locked', !!locked);
         if (statusEl) {
           statusEl.style.display = locked ? 'none' : '';
           if (locked) statusEl.textContent = '';
         }
+      }
+
+      function syncInfoTileChecks() {
+        const name = document.getElementById('fieldName');
+        const email = document.getElementById('fieldEmail');
+        const nameCheck = document.getElementById('fieldNameCheck');
+        const emailCheck = document.getElementById('fieldEmailCheck');
+        if (nameCheck) nameCheck.hidden = !(name && name.value.trim());
+        if (emailCheck) emailCheck.hidden = !(email && email.value.trim());
       }
 
       async function checkSlugAvailable(slug, exceptId) {
@@ -5286,6 +5626,7 @@
         document.getElementById('fieldMapsUrl').value = customer.googleMapsUrl || customer.googlePlaceId || '';
         const emailEl = document.getElementById('fieldEmail');
         if (emailEl) emailEl.value = customer.email || '';
+        syncInfoTileChecks();
         showMapsLinkStatus(
           document.getElementById('fieldMapsUrl'),
           document.getElementById('studioMapsStatus')
@@ -5440,8 +5781,10 @@
         const volts = Number.isFinite(mv) && mv >= 500
           ? `<span class="hint nowrap">${(mv / 1000).toFixed(2)}&nbsp;V</span>`
           : '';
-        if (!volts) return `<span class="${cls}">${n}%</span>`;
-        return `<span class="cell-stack"><span class="${cls}">${n}%</span>${volts}</span>`;
+        const inner = volts
+          ? `<span class="cell-stack"><span class="${cls}">${n}%</span>${volts}</span>`
+          : `<span class="${cls}">${n}%</span>`;
+        return `<button type="button" class="battery-link" data-battery-device="${escapeHtml(d.id)}" title="View daily battery averages">${inner}</button>`;
       }
 
       function formatWifiSignal(d) {
@@ -5481,6 +5824,11 @@
             if (!input) return;
             input.focus();
             input.select();
+          });
+        });
+        root.querySelectorAll('[data-battery-device]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            openBatteryHistory(btn.dataset.batteryDevice).catch((err) => setStatus(err.message, true));
           });
         });
         root.querySelectorAll('[data-device-name]').forEach((input) => {
@@ -5651,6 +5999,116 @@
         if (!res.ok) throw new Error(data.error || 'Could not queue reset');
         setStatus('Reset queued. The display will enter setup mode on its next check-in.');
         await loadDevices();
+      }
+
+      function closeBatteryModal() {
+        const modal = document.getElementById('batteryModal');
+        if (modal) modal.classList.remove('open');
+      }
+
+      function formatBatteryDay(dateStr) {
+        const t = new Date(String(dateStr || '') + 'T12:00:00');
+        if (Number.isNaN(t.getTime())) return escapeHtml(String(dateStr || ''));
+        return escapeHtml(t.toLocaleDateString(undefined, {
+          weekday: 'short',
+          month: 'short',
+          day: 'numeric',
+          year: 'numeric'
+        }));
+      }
+
+      function formatBatteryChange(n) {
+        if (n == null || !Number.isFinite(Number(n))) return '<span class="hint">—</span>';
+        const v = Number(n);
+        if (v === 0) return '<span class="hint">0%</span>';
+        if (v > 0) return `<span class="battery-used">−${v}%</span>`;
+        return `<span class="battery-gained">+${Math.abs(v)}%</span>`;
+      }
+
+      function batteryCls(n) {
+        if (n <= 15) return 'battery-empty';
+        if (n <= 35) return 'battery-low';
+        return 'battery-ok';
+      }
+
+      function renderBatteryHistory(data) {
+        const title = document.getElementById('batteryModalTitle');
+        const meta = document.getElementById('batteryModalMeta');
+        const summaryEl = document.getElementById('batteryModalSummary');
+        const chartEl = document.getElementById('batteryModalChart');
+        const body = document.getElementById('batteryModalBody');
+        const device = data && data.device ? data.device : {};
+        const days = Array.isArray(data && data.days) ? data.days : [];
+        const summary = (data && data.summary) || {};
+        const name = String(device.customName || device.name || device.id || 'Device').trim();
+        if (title) title.textContent = name + ' battery';
+        if (meta) {
+          const current = Number.isFinite(Number(device.batteryPercent))
+            ? Number(device.batteryPercent) + '% now'
+            : 'No current reading';
+          meta.textContent = current + ' · daily averages, not each check-in';
+        }
+        if (summaryEl) {
+          const drain = summary.avgDailyDrainPercent;
+          const left = summary.estimatedDaysRemaining;
+          const tracked = Number(summary.daysTracked) || 0;
+          summaryEl.innerHTML = [
+            `<div class="battery-stat"><span>Days tracked</span><strong>${tracked || '—'}</strong></div>`,
+            `<div class="battery-stat"><span>Avg use / day</span><strong>${drain != null ? drain + '%' : '—'}</strong></div>`,
+            `<div class="battery-stat"><span>Est. remaining</span><strong>${left != null ? left + ' day' + (left === 1 ? '' : 's') : '—'}</strong></div>`
+          ].join('');
+        }
+        if (chartEl) {
+          const chartDays = days.slice(0, 30).slice().reverse();
+          if (!chartDays.length) {
+            chartEl.hidden = true;
+            chartEl.innerHTML = '';
+          } else {
+            chartEl.hidden = false;
+            chartEl.innerHTML = chartDays.map((d) => {
+              const pct = Math.max(0, Math.min(100, Number(d.avgPercent) || 0));
+              const cls = pct <= 15 ? 'is-empty' : pct <= 35 ? 'is-low' : '';
+              return `<div class="battery-bar ${cls}" title="${escapeHtml(d.date)} · ${pct}%"><span style="height:${pct}%"></span></div>`;
+            }).join('');
+          }
+        }
+        if (!body) return;
+        if (!days.length) {
+          body.innerHTML = '<tr><td colspan="4" class="hint">No daily averages yet. Battery is logged on each check-in; come back after the display has checked in.</td></tr>';
+          return;
+        }
+        body.innerHTML = days.map((d) => {
+          const pct = Number(d.avgPercent);
+          const mv = Number(d.avgMv);
+          const volts = Number.isFinite(mv) && mv >= 500
+            ? `${(mv / 1000).toFixed(2)}&nbsp;V`
+            : '—';
+          return `<tr>
+            <td data-label="Day">${formatBatteryDay(d.date)}</td>
+            <td data-label="Average"><span class="${batteryCls(pct)}">${Number.isFinite(pct) ? pct : '—'}%</span></td>
+            <td data-label="Change">${formatBatteryChange(d.changePercent)}</td>
+            <td data-label="Voltage">${volts}</td>
+          </tr>`;
+        }).join('');
+      }
+
+      async function openBatteryHistory(id) {
+        if (!id) return;
+        const modal = document.getElementById('batteryModal');
+        const title = document.getElementById('batteryModalTitle');
+        const meta = document.getElementById('batteryModalMeta');
+        const body = document.getElementById('batteryModalBody');
+        const row = (devices || []).find((d) => d.id === id);
+        if (title) title.textContent = String((row && (row.customName || row.name)) || 'Device') + ' battery';
+        if (meta) meta.textContent = 'Loading daily averages…';
+        if (body) body.innerHTML = '<tr><td colspan="4" class="hint">Loading…</td></tr>';
+        if (modal) modal.classList.add('open');
+        const res = await apiFetch(
+          '/api/smarthours/devices/' + encodeURIComponent(id) + '/battery?tzOffset=' + encodeURIComponent(String(new Date().getTimezoneOffset()))
+        );
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not load battery history');
+        renderBatteryHistory(data);
       }
 
       async function saveDeviceSlug(id) {
@@ -6054,6 +6512,18 @@
       document.getElementById('saveBtn').addEventListener('click', () => {
         saveCustomer().catch((err) => setStatus(err.message, true));
       });
+      const infoSaveContinueBtn = document.getElementById('infoSaveContinueBtn');
+      if (infoSaveContinueBtn) {
+        infoSaveContinueBtn.addEventListener('click', () => {
+          saveCustomer()
+            .then((saved) => {
+              if (!saved) return;
+              const hoursBtn = document.querySelector('.tabs [data-tab="hours"]');
+              if (hoursBtn) hoursBtn.click();
+            })
+            .catch((err) => setStatus(err.message, true));
+        });
+      }
       editor.addEventListener('input', (event) => {
         const t = event.target;
         if (!t || t.closest('.hidden-block') || t.type === 'file') return;
@@ -6614,6 +7084,7 @@
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('input', () => {
+          if (id === 'fieldName' || id === 'fieldEmail') syncInfoTileChecks();
           const c = selected();
           if (c && id === 'fieldName') {
             c.name = el.value;
@@ -7034,6 +7505,19 @@
           if (modal) modal.classList.remove('open');
         });
       }
+      const batteryModal = document.getElementById('batteryModal');
+      const batteryModalClose = document.getElementById('batteryModalClose');
+      if (batteryModalClose) batteryModalClose.addEventListener('click', () => closeBatteryModal());
+      if (batteryModal) {
+        batteryModal.addEventListener('click', (ev) => {
+          if (ev.target === batteryModal) closeBatteryModal();
+        });
+      }
+      document.addEventListener('keydown', (ev) => {
+        if (ev.key === 'Escape' && batteryModal && batteryModal.classList.contains('open')) {
+          closeBatteryModal();
+        }
+      });
       const logoutBtn = document.getElementById('logoutBtn');
       if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
