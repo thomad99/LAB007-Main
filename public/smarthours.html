@@ -1046,9 +1046,81 @@
       text-transform: uppercase;
     }
     .hours-table input[type="time"] { padding: 10px 12px; font-size: 1.25rem; min-height: 48px; }
-    .hours-table input[type="checkbox"] { width: 22px; height: 22px; }
-    .hours-table tr.is-closed { opacity: .55; }
-    .hours-table tr.is-closed td { color: var(--muted); }
+    .hours-table td:nth-child(2) { width: 1%; white-space: nowrap; vertical-align: middle; }
+    .hours-toggle {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin: 0;
+      cursor: pointer;
+      user-select: none;
+    }
+    .hours-toggle input {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      opacity: 0;
+      cursor: pointer;
+      z-index: 1;
+    }
+    .hours-toggle-track {
+      position: relative;
+      flex: 0 0 auto;
+      width: 52px;
+      height: 30px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: #1a2338;
+      transition: background .18s ease, border-color .18s ease;
+    }
+    .hours-toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background: #c5cdd8;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, .35);
+      transition: transform .18s ease, background .18s ease;
+    }
+    .hours-toggle input:checked + .hours-toggle-track {
+      background: var(--accent);
+      border-color: var(--accent);
+    }
+    .hours-toggle input:checked + .hours-toggle-track::after {
+      transform: translateX(22px);
+      background: #04120e;
+    }
+    .hours-toggle input:focus-visible + .hours-toggle-track {
+      outline: 2px solid var(--accent);
+      outline-offset: 3px;
+    }
+    .hours-toggle-state {
+      min-width: 2.4em;
+      font-size: .78rem;
+      font-weight: 700;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .hours-toggle-state::after { content: attr(data-off); }
+    .hours-toggle input:checked ~ .hours-toggle-state {
+      color: var(--accent);
+    }
+    .hours-toggle input:checked ~ .hours-toggle-state::after { content: attr(data-on); }
+    body.admin-mode.readonly .hours-toggle { pointer-events: none; }
+    body.admin-mode.readonly .hours-toggle input { opacity: 0; }
+    .hours-table tr.is-closed { opacity: 1; }
+    .hours-table tr.is-closed > td:first-child,
+    .hours-table tr.is-closed .closed-label { color: var(--muted); }
+    .hours-table tr.is-closed .hours-toggle input:checked ~ .hours-toggle-state {
+      color: var(--accent);
+    }
     .hours-table .closed-label {
       display: none;
       font-weight: 600;
@@ -1173,6 +1245,7 @@
     .device-table .hint { margin-top: 0; }
     .pill-on { color: #34d399; font-weight: 700; }
     .pill-off { color: var(--muted); }
+    .device-table .device-summary { display: none; }
     .btn-sync {
       background: linear-gradient(135deg, #5eead4, #34d399);
       color: #042f2e;
@@ -1816,13 +1889,17 @@
       .device-table tr {
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: 10px 16px;
-        margin: 0 0 12px;
-        padding: 14px;
+        gap: 8px;
+        margin: 0 0 10px;
+        padding: 10px;
         border: 1px solid var(--line);
-        border-radius: 14px;
-        background: rgba(255,255,255,.03);
+        border-radius: 16px;
+        background: rgba(10, 16, 32, .92);
         white-space: normal;
+      }
+      .device-table tr:not(.is-expanded) {
+        grid-template-columns: 1fr;
+        padding: 6px 10px;
       }
       .device-table th, .device-table td {
         border: 0;
@@ -1833,6 +1910,126 @@
         white-space: normal;
         overflow-wrap: normal;
         word-break: keep-all;
+      }
+      .device-table .device-summary {
+        display: block;
+        grid-column: 1 / -1;
+      }
+      .device-table td.device-summary::before { content: none !important; }
+      .device-summary-bar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 8px;
+        min-width: 0;
+      }
+      .device-summary-btn {
+        appearance: none;
+        width: auto;
+        min-width: 0;
+        max-width: 100%;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin: 0;
+        padding: 4px 0;
+        border: 0;
+        background: transparent;
+        color: inherit;
+        font: inherit;
+        text-align: left;
+        cursor: pointer;
+        min-height: 48px;
+      }
+      .device-summary-status {
+        flex: 0 0 auto;
+        font-size: .68rem;
+        font-weight: 800;
+        letter-spacing: .05em;
+        text-transform: uppercase;
+        padding: 5px 8px;
+        border-radius: 999px;
+      }
+      .device-summary-status.is-on {
+        color: #04120e;
+        background: #34d399;
+      }
+      .device-summary-status.is-off {
+        color: var(--muted);
+        background: rgba(255,255,255,.08);
+      }
+      .device-summary-copy {
+        flex: 1 1 auto;
+        min-width: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 2px;
+      }
+      .device-summary-copy strong {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 1rem;
+      }
+      .device-summary-copy .hint {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: .78rem;
+      }
+      .device-summary-battery {
+        flex: 0 0 auto;
+        max-width: 5.5rem;
+      }
+      .device-summary-battery .cell-stack { align-items: flex-end; }
+      .device-summary-status,
+      .device-summary-battery,
+      .device-summary-chevron-btn { flex-shrink: 0; }
+      .device-summary-chevron-btn {
+        appearance: none;
+        flex: 0 0 auto;
+        display: grid;
+        place-items: center;
+        width: 40px;
+        height: 40px;
+        margin: 0;
+        padding: 0;
+        border: 0;
+        border-radius: 10px;
+        background: transparent;
+        color: inherit;
+        cursor: pointer;
+      }
+      .device-summary-chevron {
+        flex: 0 0 auto;
+        width: 22px;
+        height: 22px;
+        color: var(--muted);
+        transition: transform .18s ease, color .18s ease;
+      }
+      .device-summary-chevron svg {
+        width: 22px;
+        height: 22px;
+        display: block;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 2.2;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      .device-table tr.is-expanded .device-summary-chevron {
+        transform: rotate(180deg);
+        color: var(--accent);
+      }
+      .device-table tr:not(.is-expanded) td.device-detail,
+      .device-table td.device-detail[data-label="Status"] {
+        display: none !important;
+      }
+      .device-table td.device-detail {
+        padding: 8px 10px;
+        border: 1px solid var(--line);
+        border-radius: 10px;
+        background: rgba(8, 14, 28, .88);
       }
       .device-table td[data-label="Device"],
       .device-table td[data-label="Actions"] {
@@ -1954,6 +2151,7 @@
       }
       body.admin-mode .tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
       .tabs .tab-btn {
+        min-width: 0;
         min-height: 58px;
         padding: 8px 4px 10px;
         font-size: .68rem;
@@ -2064,6 +2262,24 @@
         gap: 12px 10px;
         max-width: none;
       }
+      .device-settings-grid > div,
+      .device-settings-grid input,
+      .device-settings-grid select {
+        min-width: 0;
+        max-width: 100%;
+      }
+      #tab-devices,
+      #tab-devices .device-card,
+      #tab-devices .device-table-wrap,
+      #tab-devices .device-table,
+      #tab-devices .device-summary-bar {
+        max-width: 100%;
+        min-width: 0;
+      }
+      #tab-devices label {
+        overflow-wrap: anywhere;
+        line-height: 1.25;
+      }
       #tab-devices label { font-size: .78rem; margin-bottom: 6px; }
       #tab-devices input:not(.device-name-input),
       #tab-devices select {
@@ -2072,10 +2288,127 @@
         padding: 8px 10px;
       }
       #tab-devices .device-note { font-size: .88rem; }
-      .device-card { padding: 14px; }
+      .device-card { padding: 12px; }
+      .device-card-head { margin-bottom: 10px; gap: 8px; }
       .device-card-head h2 { font-size: 1rem; }
+      .device-card-head p { font-size: .8rem; }
+      #tab-devices .device-card-head #refreshDevicesBtn {
+        font-size: 0;
+        gap: 0;
+        width: 40px;
+        min-width: 40px;
+        padding: 8px;
+      }
       .info-tile { min-height: 0; padding: 18px 14px 14px; }
-      .device-table tr { grid-template-columns: 1fr; }
+      .device-table-wrap,
+      .fleet-table-wrap { margin-top: 2px; }
+      .device-table:not(.is-empty) tbody {
+        display: flex;
+        flex-direction: column;
+        gap: 0;
+        border: 1px solid var(--line);
+        border-radius: 14px;
+        overflow: hidden;
+        background: rgba(8, 14, 28, .78);
+      }
+      .device-table:not(.is-empty) tr {
+        gap: 6px;
+        margin: 0;
+        padding: 8px;
+        border: 0;
+        border-bottom: 1px solid var(--line);
+        border-radius: 0;
+        background: transparent;
+      }
+      .device-table:not(.is-empty) tr:last-child { border-bottom: 0; }
+      .device-table:not(.is-empty) tr:not(.is-expanded) {
+        padding: 0 8px;
+      }
+      .device-table:not(.is-empty) tr.is-expanded {
+        padding: 6px 8px 10px;
+        background: rgba(118, 244, 197, .05);
+      }
+      .device-summary-bar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        align-items: center;
+        gap: 6px;
+        width: 100%;
+        min-width: 0;
+      }
+      .device-summary-btn {
+        width: auto;
+        max-width: 100%;
+        min-width: 0;
+        min-height: 44px;
+        gap: 8px;
+        padding: 2px 0;
+        overflow: hidden;
+      }
+      .device-summary-status {
+        flex-shrink: 0;
+        font-size: .62rem;
+        padding: 4px 7px;
+      }
+      .device-summary-copy {
+        min-width: 0;
+        overflow: hidden;
+      }
+      .device-summary-copy strong,
+      .device-summary-copy .hint {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .device-summary-copy strong { font-size: .92rem; }
+      .device-summary-copy .hint { font-size: .72rem; }
+      .device-summary-battery {
+        flex: 0 0 auto;
+        max-width: 3rem;
+      }
+      .device-summary-battery .battery-link { min-height: 0; }
+      .device-summary-battery .hint { display: none; }
+      .device-summary-chevron-btn {
+        flex: 0 0 36px;
+        width: 36px;
+        height: 36px;
+        background: rgba(255,255,255,.05);
+      }
+      .device-table td.device-detail {
+        padding: 6px 8px;
+        border-radius: 9px;
+        background: rgba(10, 16, 32, .94);
+      }
+      .device-table td.device-detail[data-label="Battery"] {
+        display: none !important;
+      }
+      .device-table td[data-label]::before {
+        margin-bottom: 1px;
+        font-size: .6rem;
+        letter-spacing: .05em;
+      }
+      .device-table td.device-detail,
+      .device-table .device-name,
+      .device-table .nowrap {
+        font-size: .86rem;
+      }
+      .device-table .hint { font-size: .7rem; }
+      #tab-devices .device-table .device-name-input,
+      .fleet-page .device-table .device-name-input {
+        width: 100%;
+        max-width: none;
+        min-height: 34px;
+        padding: 4px 8px;
+        font-size: .9rem;
+      }
+      .device-actions { gap: 6px; }
+      .device-actions .btn-secondary,
+      .device-actions .btn-danger {
+        min-height: 34px;
+        padding: 6px 8px;
+        font-size: .78rem;
+        flex: 1 1 0;
+      }
       #tab-design.active {
         display: flex !important;
         flex-direction: column;
@@ -3491,6 +3824,7 @@
 
       let customers = [];
       let devices = [];
+      const expandedDevices = new Set();
       let selectedId = null;
       let selectedElId = null;
       let editingDesignId = null;
@@ -4405,7 +4739,13 @@
           const d = h[day] || emptyDay();
           return `<tr data-day="${day}" class="${d.closed ? 'is-closed' : ''}">
             <td>${DAY_LABELS[day]}</td>
-            <td><input type="checkbox" data-f="closed" ${d.closed ? 'checked' : ''} aria-label="${DAY_LABELS[day]} closed"></td>
+            <td>
+              <label class="hours-toggle">
+                <input type="checkbox" data-f="closed" ${d.closed ? 'checked' : ''} aria-label="${DAY_LABELS[day]} closed">
+                <span class="hours-toggle-track" aria-hidden="true"></span>
+                <span class="hours-toggle-state" data-off="Off" data-on="On"></span>
+              </label>
+            </td>
             <td>
               <span class="closed-label">Closed</span>
               <span class="hours-times">
@@ -5747,6 +6087,18 @@
         return `<span class="cell-stack"><span class="nowrap">${escapeHtml(rel)}</span><span class="hint nowrap">${escapeHtml(t.toLocaleString())}</span></span>`;
       }
 
+      function formatCheckinRel(iso) {
+        if (!iso) return 'Never checked in';
+        const t = new Date(iso);
+        if (Number.isNaN(t.getTime())) return String(iso);
+        const mins = Math.round((Date.now() - t.getTime()) / 60000);
+        const abs = Math.abs(mins);
+        if (abs < 1) return 'just now';
+        if (abs < 60) return abs + ' min ago';
+        if (abs < 48 * 60) return Math.round(abs / 60) + ' hr ago';
+        return t.toLocaleDateString();
+      }
+
       function deviceOnline(iso) {
         if (!iso) return false;
         const t = new Date(iso).getTime();
@@ -5826,6 +6178,31 @@
             input.select();
           });
         });
+        root.querySelectorAll('[data-expand-device]').forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const id = btn.dataset.expandDevice;
+            const row = btn.closest('tr[data-device-row]');
+            const open = !expandedDevices.has(id);
+            if (open) {
+              if (window.matchMedia('(max-width: 720px)').matches) {
+                expandedDevices.clear();
+                root.querySelectorAll('tr.is-expanded').forEach((other) => {
+                  other.classList.remove('is-expanded');
+                  other.querySelectorAll('[data-expand-device]').forEach((b) => {
+                    b.setAttribute('aria-expanded', 'false');
+                  });
+                });
+              }
+              expandedDevices.add(id);
+            } else {
+              expandedDevices.delete(id);
+            }
+            if (row) row.classList.toggle('is-expanded', open);
+            root.querySelectorAll('[data-expand-device="' + CSS.escape(id) + '"]').forEach((b) => {
+              b.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+          });
+        });
         root.querySelectorAll('[data-battery-device]').forEach((btn) => {
           btn.addEventListener('click', () => {
             openBatteryHistory(btn.dataset.batteryDevice).catch((err) => setStatus(err.message, true));
@@ -5870,6 +6247,52 @@
         return `<div class="device-actions">${rename}<button type="button" class="btn-danger" data-reset-device="${escapeHtml(d.id)}">Reset to setup</button></div>`;
       }
 
+      function deviceDisplayName(d) {
+        return String((d && (d.customName || d.name)) || (d && d.id) || 'Device').trim();
+      }
+
+      function deviceRowHtml(d, options) {
+        const opts = options || {};
+        const on = deviceOnline(d.lastSeen);
+        const expanded = expandedDevices.has(d.id);
+        const firmwareCell = opts.firmware
+          ? `<td class="device-detail" data-label="Firmware">${escapeHtml(d.fwVersion || '—')}</td>`
+          : '';
+        const fwHint = !opts.firmware && d.fwVersion
+          ? `<span class="hint nowrap">${escapeHtml(d.fwVersion)}</span>`
+          : '';
+        return `<tr class="device-row${expanded ? ' is-expanded' : ''}" data-device-row="${escapeHtml(d.id)}">
+          <td class="device-summary">
+            <div class="device-summary-bar">
+              <button type="button" class="device-summary-btn" data-expand-device="${escapeHtml(d.id)}" aria-expanded="${expanded ? 'true' : 'false'}">
+                <span class="device-summary-status ${on ? 'is-on' : 'is-off'}">${on ? 'Online' : 'Offline'}</span>
+                <span class="device-summary-copy">
+                  <strong>${escapeHtml(deviceDisplayName(d))}</strong>
+                  <span class="hint">${escapeHtml(formatCheckinRel(d.lastSeen))}</span>
+                </span>
+              </button>
+              <div class="device-summary-battery">${formatBattery(d)}</div>
+              <button type="button" class="device-summary-chevron-btn" data-expand-device="${escapeHtml(d.id)}" aria-expanded="${expanded ? 'true' : 'false'}" aria-label="Show device details">
+                <span class="device-summary-chevron" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                </span>
+              </button>
+            </div>
+          </td>
+          <td class="device-detail ${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
+          <td class="device-detail" data-label="Device"><span class="cell-stack">${deviceNameInputHtml(d)}<span class="hint nowrap">${escapeHtml(d.id)}</span>${fwHint}</span></td>
+          ${firmwareCell}
+          <td class="device-detail" data-label="WiFi">${formatWifi(d)}</td>
+          <td class="device-detail" data-label="Signal">${formatWifiSignal(d)}</td>
+          <td class="device-detail" data-label="IP"><span class="nowrap">${escapeHtml(d.ip || '—')}</span></td>
+          <td class="device-detail" data-label="Battery">${formatBattery(d)}</td>
+          <td class="device-detail" data-label="Customer ID"><span class="nowrap">${escapeHtml(deviceUrlCode(d) || '—')}</span></td>
+          <td class="device-detail" data-label="Poll">${formatPollInterval(d)}</td>
+          <td class="device-detail" data-label="Last check-in">${formatCheckin(d.lastSeen)}</td>
+          <td class="device-detail" data-label="Actions">${deviceActionHtml(d)}</td>
+        </tr>`;
+      }
+
       function renderCustomerDevices() {
         const body = document.getElementById('deviceTableBody');
         if (!body) return;
@@ -5893,21 +6316,7 @@
         }
         const table = document.getElementById('deviceTable');
         if (table) table.classList.remove('is-empty');
-        body.innerHTML = list.map((d) => {
-          const on = deviceOnline(d.lastSeen);
-          return `<tr>
-            <td class="${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
-            <td data-label="Device"><span class="cell-stack">${deviceNameInputHtml(d)}<span class="hint nowrap">${escapeHtml(d.id)}</span>${d.fwVersion ? `<span class="hint nowrap">${escapeHtml(d.fwVersion)}</span>` : ''}</span></td>
-            <td data-label="WiFi">${formatWifi(d)}</td>
-            <td data-label="Signal">${formatWifiSignal(d)}</td>
-            <td data-label="IP"><span class="nowrap">${escapeHtml(d.ip || '—')}</span></td>
-            <td data-label="Battery">${formatBattery(d)}</td>
-            <td data-label="Customer ID"><span class="nowrap">${escapeHtml(deviceUrlCode(d) || '—')}</span></td>
-            <td data-label="Poll">${formatPollInterval(d)}</td>
-            <td data-label="Last check-in">${formatCheckin(d.lastSeen)}</td>
-            <td data-label="Actions">${deviceActionHtml(d)}</td>
-          </tr>`;
-        }).join('');
+        body.innerHTML = list.map((d) => deviceRowHtml(d)).join('');
         bindDeviceResetButtons(body);
       }
 
@@ -5926,22 +6335,7 @@
           body.innerHTML = '<tr><td colspan="11" class="hint">No devices have checked in yet.</td></tr>';
           return;
         }
-        body.innerHTML = list.map((d) => {
-          const on = deviceOnline(d.lastSeen);
-          return `<tr>
-            <td class="${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
-            <td data-label="Device"><span class="cell-stack">${deviceNameInputHtml(d)}<span class="hint nowrap">${escapeHtml(d.id)}</span></span></td>
-            <td data-label="Firmware">${escapeHtml(d.fwVersion || '—')}</td>
-            <td data-label="WiFi">${formatWifi(d)}</td>
-            <td data-label="Signal">${formatWifiSignal(d)}</td>
-            <td data-label="IP"><span class="nowrap">${escapeHtml(d.ip || '—')}</span></td>
-            <td data-label="Battery">${formatBattery(d)}</td>
-            <td data-label="Customer ID"><span class="nowrap">${escapeHtml(deviceUrlCode(d) || '—')}</span></td>
-            <td data-label="Poll">${formatPollInterval(d)}</td>
-            <td data-label="Last check-in">${formatCheckin(d.lastSeen)}</td>
-            <td data-label="Actions">${deviceActionHtml(d)}</td>
-          </tr>`;
-        }).join('');
+        body.innerHTML = list.map((d) => deviceRowHtml(d, { firmware: true })).join('');
         bindDeviceResetButtons(body);
       }
 

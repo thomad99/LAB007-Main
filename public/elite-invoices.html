@@ -2231,7 +2231,15 @@
       }
 
       function refreshLineItemEditorTotals() {
-        renderLineItemEditor(readLineItemEditor());
+        const items = readLineItemEditor();
+        lineItemRows.querySelectorAll('tr[data-index]').forEach((row, index) => {
+          const item = items[index];
+          if (!item) return;
+          const lineTotal = Math.max(0, Number(item.qty || 0) * Number(item.amount || 0));
+          const totalCell = row.querySelector('.total-col');
+          if (totalCell) totalCell.textContent = formatMoney(lineTotal);
+        });
+        lineItemsTotal.textContent = formatMoney(sumLineItems(items));
       }
 
       async function saveLineItemsEditor() {
@@ -2596,7 +2604,9 @@
         items.splice(index, 1);
         renderLineItemEditor(items);
       });
-      lineItemRows.addEventListener('input', () => {
+      lineItemRows.addEventListener('input', (event) => {
+        const field = event.target && event.target.dataset && event.target.dataset.field;
+        if (field !== 'qty' && field !== 'amount') return;
         clearTimeout(lineItemRows._timer);
         lineItemRows._timer = setTimeout(refreshLineItemEditorTotals, 120);
       });
