@@ -817,9 +817,34 @@
       .info-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
     @media (max-width: 640px) {
-      .info-tiles { grid-template-columns: 1fr; }
-      .info-page-head { align-items: stretch; }
-      .info-save-continue { width: 100%; }
+      .info-page { gap: 10px; }
+      .info-tiles { grid-template-columns: 1fr; gap: 10px; }
+      .info-page-head { align-items: stretch; gap: 10px; }
+      .info-page-title p { display: none; }
+      .info-page-mark { width: 34px; height: 34px; }
+      .info-page-mark svg { width: 18px; height: 18px; }
+      .info-page-title h2 { font-size: 1.02rem; }
+      .info-save-continue { width: 100%; min-height: 42px; }
+      .info-tile {
+        min-height: 0;
+        padding: 12px 14px;
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: center;
+        text-align: left;
+        gap: 10px;
+        border-radius: 14px;
+      }
+      .info-tile-icon {
+        width: 34px;
+        height: 34px;
+        margin: 0;
+      }
+      .info-tile-icon svg { width: 18px; height: 18px; }
+      .info-tile h3 { margin: 0; flex: 1 1 auto; font-size: .95rem; }
+      .info-tile-copy { display: none; }
+      .info-tile-value { margin-top: 0; flex: 1 1 100%; }
+      .info-tile-maps .maps-help { margin: 0 0 8px; justify-content: flex-start; }
     }
     .device-card {
       border: 1px solid var(--line);
@@ -1113,8 +1138,27 @@
       color: var(--accent);
     }
     .hours-toggle input:checked ~ .hours-toggle-state::after { content: attr(data-on); }
-    body.admin-mode.readonly .hours-toggle { pointer-events: none; }
-    body.admin-mode.readonly .hours-toggle input { opacity: 0; }
+    .hours-toggle-lg .hours-toggle-track {
+      width: 58px;
+      height: 34px;
+    }
+    .hours-toggle-lg .hours-toggle-track::after {
+      width: 26px;
+      height: 26px;
+    }
+    .hours-toggle-lg input:checked + .hours-toggle-track::after {
+      transform: translateX(24px);
+    }
+    .hours-toggle-lg .hours-toggle-state {
+      min-width: 2.8em;
+      font-size: .92rem;
+    }
+    .hours-toolbar .manual-opt .hours-toggle { flex: 0 0 auto; }
+    .hours-toolbar .manual-opt-label {
+      font-size: 1.05rem;
+      font-weight: 650;
+      color: var(--text);
+    }
     .hours-table tr.is-closed { opacity: 1; }
     .hours-table tr.is-closed > td:first-child,
     .hours-table tr.is-closed .closed-label { color: var(--muted); }
@@ -1597,6 +1641,20 @@
       min-height: 0;
       flex: 1 1 auto;
       touch-action: none;
+    }
+    .canvas-topbar {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      width: 100%;
+    }
+    .canvas-save-fab,
+    .editor-sheet-handle,
+    #editorMoreTools,
+    .editor-more-btn {
+      display: none;
     }
     .canvas-screen-meta {
       flex: 0 0 auto;
@@ -2207,15 +2265,23 @@
         border-radius: 14px;
         background: rgba(16, 24, 42, .92);
       }
-      .hours-sync-card { flex-wrap: wrap; }
-      .btn-sync { min-width: 0; width: auto; flex: 1 1 160px; font-size: .95rem; padding: 12px 14px; }
+      .hours-sync-card {
+        flex-direction: column;
+        flex-wrap: nowrap;
+        align-items: stretch;
+        text-align: center;
+      }
+      .btn-sync { min-width: 0; width: 100%; flex: none; font-size: .95rem; padding: 12px 14px; }
       .hours-toolbar .sync-stamp {
-        flex: 1 1 140px;
-        font-size: .92rem;
+        flex: none;
+        width: 100%;
+        text-align: center;
+        font-size: .88rem;
         font-weight: 600;
+        line-height: 1.35;
       }
       .hours-toolbar .manual-opt { font-size: 1.05rem; color: var(--text); }
-      .hours-toolbar .manual-opt input { transform: scale(1.35); }
+      .hours-toolbar .manual-opt input { transform: none; }
       .hours-table { margin-top: 8px; width: 100%; table-layout: fixed; }
       .hours-table thead { display: table-header-group; }
       .hours-table tbody { display: table-row-group; }
@@ -2614,6 +2680,239 @@
         gap: 6px;
       }
       .canvas-tools-footer > button { width: 100%; min-height: 36px; font-size: .72rem; }
+    }
+
+    /* Phone canvas: lock to the viewport like a photo editor. One bottom bar; panels only when drilling down. */
+    @media (max-width: 900px) {
+      body.has-studio[data-studio-tab="design"] {
+        overflow: hidden !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        min-height: 0 !important;
+        overscroll-behavior: none;
+        touch-action: manipulation;
+      }
+      body.has-studio[data-studio-tab="design"] .wrap {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100dvh !important;
+        max-height: 100dvh !important;
+        overflow: hidden !important;
+        padding: 0 !important;
+      }
+      body.has-studio[data-studio-tab="design"] header {
+        display: none !important;
+      }
+      body.has-studio[data-studio-tab="design"] .status:not(.err) {
+        display: none;
+      }
+      body.has-studio[data-studio-tab="design"] .status.err {
+        margin: 0;
+        padding: 4px 10px;
+        font-size: .78rem;
+      }
+      body.has-studio[data-studio-tab="design"] .grid-main,
+      body.has-studio[data-studio-tab="design"] .editor.open,
+      body.has-studio[data-studio-tab="design"] #tab-design.active {
+        display: flex !important;
+        flex-direction: column;
+        flex: 1 1 auto !important;
+        min-height: 0 !important;
+        height: auto !important;
+        max-height: none !important;
+        overflow: hidden !important;
+        padding: 0 !important;
+        gap: 0 !important;
+        max-width: 100%;
+      }
+      body.has-studio[data-studio-tab="design"] .tabs,
+      body.admin-mode.has-studio[data-studio-tab="design"] .tabs {
+        position: relative;
+        top: auto;
+        z-index: 80;
+        flex: 0 0 auto;
+        margin: 0;
+        padding: 6px 8px max(6px, env(safe-area-inset-top));
+        gap: 4px;
+        background: rgba(8, 12, 22, .96);
+        border: 0;
+        backdrop-filter: blur(14px);
+      }
+      body.has-studio[data-studio-tab="design"] .tabs .tab-btn {
+        min-height: 44px;
+        padding: 4px 2px 6px;
+        font-size: .58rem;
+        gap: 2px;
+        border-radius: 8px;
+      }
+      body.has-studio[data-studio-tab="design"] .tabs .tab-btn svg {
+        width: 16px;
+        height: 16px;
+      }
+      body.has-studio[data-studio-tab="design"] .design-layout {
+        position: relative;
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: minmax(0, 1fr) auto;
+        flex: 1 1 auto;
+        min-height: 0 !important;
+        height: auto !important;
+        overflow: hidden !important;
+        gap: 0;
+        max-width: 100%;
+      }
+      body.has-studio[data-studio-tab="design"] .design-layout > .design-canvas-col {
+        grid-column: 1;
+        grid-row: 1;
+        min-height: 0;
+        overflow: hidden;
+        max-width: 100%;
+        display: flex;
+        flex-direction: column;
+      }
+      body.has-studio[data-studio-tab="design"] .design-layout > .canvas-tools {
+        grid-column: 1;
+        grid-row: 2;
+        z-index: 60;
+        margin: 0;
+        padding: 4px 6px max(8px, env(safe-area-inset-bottom));
+        gap: 0;
+        border: 0;
+        border-top: 1px solid var(--line);
+        border-radius: 0;
+        background: rgba(8, 12, 22, .98);
+      }
+      body.has-studio[data-studio-tab="design"] .design-layout > .controls {
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: calc(64px + env(safe-area-inset-bottom));
+        grid-column: 1;
+        grid-row: auto;
+        z-index: 55;
+        max-height: min(46dvh, 360px);
+        height: auto;
+        overflow: auto;
+        padding: 8px 12px 12px;
+        border-radius: 16px;
+        transform: translateY(120%);
+        opacity: 0;
+        pointer-events: none;
+        transition: transform .22s ease, opacity .18s ease;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, .45);
+      }
+      body.editor-sheet-open.has-studio[data-studio-tab="design"] .design-layout > .controls {
+        transform: translateY(0);
+        opacity: 1;
+        pointer-events: auto;
+      }
+      .editor-sheet-handle {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 100%;
+        min-height: 22px;
+        margin: 0 0 6px;
+        padding: 0;
+        border: 0;
+        background: transparent;
+        cursor: pointer;
+      }
+      .editor-sheet-handle span {
+        display: block;
+        width: 42px;
+        height: 4px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, .28);
+      }
+      #editorMoreTools { display: none; }
+      body[data-editor-sheet="more"] #editorMoreTools { display: grid; }
+      body[data-editor-sheet="more"] #elProps,
+      body[data-editor-sheet="more"] #elStatusProps,
+      body[data-editor-sheet="more"] #hoursDesignBlock {
+        display: none;
+      }
+      body[data-editor-sheet="props"] .canvas-settings-head,
+      body[data-editor-sheet="props"] #canvasPickBlock,
+      body[data-editor-sheet="props"] #editorMoreTools,
+      body[data-editor-sheet="props"] #bgColorBlock {
+        display: none;
+      }
+      .editor-more-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 8px;
+      }
+      .editor-more-grid .el-add-btn { min-height: 64px; }
+      .editor-more-actions { margin-top: 4px; }
+      body.has-studio[data-studio-tab="design"] .canvas-tools .tools-label,
+      body.has-studio[data-studio-tab="design"] .canvas-tools-footer,
+      body.has-studio[data-studio-tab="design"] .editor-extra-tool {
+        display: none !important;
+      }
+      body.has-studio[data-studio-tab="design"] .canvas-tools .elements-grid {
+        display: grid;
+        grid-template-columns: repeat(5, minmax(0, 1fr));
+        gap: 6px;
+        overflow: visible;
+        padding: 0;
+      }
+      body.has-studio[data-studio-tab="design"] .el-add-btn {
+        min-height: 54px;
+        padding: 6px 2px 4px;
+        font-size: .62rem;
+        border-radius: 12px;
+      }
+      body.has-studio[data-studio-tab="design"] .el-add-btn[aria-pressed="true"],
+      body.has-studio[data-studio-tab="design"] .el-add-btn.is-active {
+        border-color: var(--accent);
+        color: var(--accent);
+        background: var(--accent-dim);
+      }
+      .editor-more-btn { display: flex; }
+      body.has-studio[data-studio-tab="design"] .canvas-stage {
+        flex: 1 1 auto;
+        width: 100%;
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 6px 8px 8px;
+        border-radius: 0;
+        border: 0;
+      }
+      body.has-studio[data-studio-tab="design"] .canvas-topbar {
+        padding: 0 2px;
+      }
+      body.has-studio[data-studio-tab="design"] .canvas-save-fab {
+        display: inline-flex;
+        flex: 0 0 auto;
+        min-height: 34px;
+        padding: 6px 12px;
+        font-size: .82rem;
+        border-radius: 999px;
+        gap: 6px;
+      }
+      body.has-studio[data-studio-tab="design"] .canvas-save-fab svg {
+        width: 14px;
+        height: 14px;
+        fill: none;
+        stroke: currentColor;
+        stroke-width: 1.8;
+        stroke-linecap: round;
+        stroke-linejoin: round;
+      }
+      body.has-studio[data-studio-tab="design"] .slideshow-under-canvas {
+        position: absolute;
+        left: 8px;
+        right: 8px;
+        bottom: calc(64px + env(safe-area-inset-bottom));
+        z-index: 54;
+        max-height: min(40dvh, 280px);
+        overflow: auto;
+      }
+      body.has-studio[data-studio-tab="design"] .canvas-settings-head p { display: none; }
+      body.admin-mode.has-studio[data-studio-tab="design"] .grid-main > aside {
+        display: none;
+      }
     }
     .seg-toggle {
       display: grid;
@@ -3159,7 +3458,6 @@
                   <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.2c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/></svg>
                 </span>
                 <h3><label for="fieldName">Customer Name</label></h3>
-                <p class="info-tile-copy">Your business name as you want it displayed.</p>
                 <div class="info-tile-value has-check">
                   <input id="fieldName" type="text">
                   <span class="info-check" id="fieldNameCheck" hidden>
@@ -3198,7 +3496,6 @@
                   <svg viewBox="0 0 24 24"><path d="M4 6h16v12H4z"/><path d="m4 7 8 6 8-6"/></svg>
                 </span>
                 <h3><label for="fieldEmail">Email Address</label></h3>
-                <p class="info-tile-copy">Used to send a 10-day secured link if you sign in elsewhere.</p>
                 <div class="info-tile-value has-check">
                   <input id="fieldEmail" type="email" placeholder="you@business.com" autocomplete="email">
                   <span class="info-check" id="fieldEmailCheck" hidden>
@@ -3227,7 +3524,12 @@
               <p class="sync-stamp empty" id="syncMeta"></p>
             </div>
             <label class="manual-opt">
-              <input id="fieldManual" type="checkbox"> Manual hours
+              <span class="manual-opt-label">Manual hours</span>
+              <span class="hours-toggle hours-toggle-lg">
+                <input id="fieldManual" type="checkbox">
+                <span class="hours-toggle-track" aria-hidden="true"></span>
+                <span class="hours-toggle-state" data-off="Off" data-on="On"></span>
+              </span>
             </label>
           </div>
           <table class="hours-table">
@@ -3244,7 +3546,32 @@
 
         <div class="tab-panel" id="tab-design">
           <div class="design-layout">
-            <div class="controls">
+            <div class="controls" id="canvasControls">
+              <button type="button" class="editor-sheet-handle" id="editorSheetClose" aria-label="Close editor panel">
+                <span></span>
+              </button>
+              <div class="ctrl-block" id="editorMoreTools">
+                <p class="block-title">More tools</p>
+                <div class="editor-more-grid">
+                  <button type="button" class="el-add-btn" data-trigger="addSketchBtn">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                    <span>Sketch</span>
+                  </button>
+                  <button type="button" class="el-add-btn" data-trigger="addTitleBtn">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 18 8-13 8 13M7.5 13h9"/></svg>
+                    <span>Title</span>
+                  </button>
+                  <button type="button" class="el-add-btn" data-trigger="addSlideshowBtn">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="13" rx="1.5"/><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4H19a1.5 1.5 0 0 1 1.5 1.5V14A1.5 1.5 0 0 1 19 15.5H16"/></svg>
+                    <span>Slides</span>
+                  </button>
+                </div>
+                <div class="add-row editor-more-actions">
+                  <button type="button" class="btn-secondary" data-trigger="fillScreenBtn">Fill Screen</button>
+                  <button type="button" class="btn-danger" data-trigger="clearCanvasBtn">Clear</button>
+                  <button type="button" class="btn-secondary mutate-only" data-trigger="saveDesignAsBtn">Save As</button>
+                </div>
+              </div>
               <div class="device-card-head canvas-settings-head">
                 <span class="device-card-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><circle cx="4" cy="12" r="2"/><circle cx="12" cy="10" r="2"/><circle cx="20" cy="14" r="2"/></svg>
@@ -3444,7 +3771,13 @@
             </div>
             <div class="design-canvas-col">
               <div class="canvas-stage" id="canvasStage">
-                <div class="canvas-screen-meta" id="canvasScreenMeta">Preview (800 × 480)</div>
+                <div class="canvas-topbar">
+                  <div class="canvas-screen-meta" id="canvasScreenMeta">Preview (800 × 480)</div>
+                  <button type="button" class="btn canvas-save-fab mutate-only" id="canvasSaveFab" title="Save design">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                    Save
+                  </button>
+                </div>
                 <div class="tablet-scale-wrap" id="tabletScaleWrap">
                   <div class="tablet-frame" id="tabletFrame"></div>
                 </div>
@@ -3468,33 +3801,37 @@
             <div class="canvas-tools">
               <p class="tools-label">Add Elements</p>
               <div class="elements-grid">
-                <button type="button" class="el-add-btn" id="addTextBtn">
+                <button type="button" class="el-add-btn" id="addTextBtn" data-dock="text">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 6h14M12 6v13"/></svg>
                   <span>Text</span>
                 </button>
-                <button type="button" class="el-add-btn" id="addSketchBtn">
+                <button type="button" class="el-add-btn editor-extra-tool" id="addSketchBtn">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                   <span>Sketch</span>
                 </button>
-                <button type="button" class="el-add-btn" id="addImageBtn">
+                <button type="button" class="el-add-btn" id="addImageBtn" data-dock="image">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="m21 15-4.5-4.5-3.5 3.5-2-2L3 17"/></svg>
                   <span>Image</span>
                 </button>
-                <button type="button" class="el-add-btn" id="addHoursBtn">
+                <button type="button" class="el-add-btn" id="addHoursBtn" data-dock="hours">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 1.7"/></svg>
                   <span>Hours</span>
                 </button>
-                <button type="button" class="el-add-btn" id="addStatusBtn">
+                <button type="button" class="el-add-btn" id="addStatusBtn" data-dock="status">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg>
                   <span>Status</span>
                 </button>
-                <button type="button" class="el-add-btn" id="addTitleBtn">
+                <button type="button" class="el-add-btn editor-extra-tool" id="addTitleBtn">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 18 8-13 8 13M7.5 13h9"/></svg>
                   <span>Title</span>
                 </button>
-                <button type="button" class="el-add-btn" id="addSlideshowBtn">
+                <button type="button" class="el-add-btn editor-extra-tool" id="addSlideshowBtn">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="13" rx="1.5"/><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4H19a1.5 1.5 0 0 1 1.5 1.5V14A1.5 1.5 0 0 1 19 15.5H16"/></svg>
                   <span>Slides</span>
+                </button>
+                <button type="button" class="el-add-btn editor-more-btn" id="editorMoreBtn" data-dock="more">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="6" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none"/><circle cx="18" cy="12" r="1.6" fill="currentColor" stroke="none"/></svg>
+                  <span>More</span>
                 </button>
               </div>
               <div class="canvas-tools-footer">
@@ -4649,9 +4986,9 @@
         const meta = document.getElementById('canvasScreenMeta');
         if (!stage) return;
         const phone = window.matchMedia('(max-width: 900px)').matches || window.innerWidth < 900;
-        const shortLandscape = window.matchMedia('(orientation: landscape) and (max-height: 580px)').matches;
         const pad = phone ? 8 : 12;
-        const metaH = (meta && meta.offsetHeight) || 18;
+        const topbar = stage.querySelector('.canvas-topbar');
+        const metaH = (topbar && topbar.offsetHeight) || (meta && meta.offsetHeight) || 18;
         const viewW = Math.min(
           document.documentElement.clientWidth || window.innerWidth,
           (window.visualViewport && window.visualViewport.width) || window.innerWidth
@@ -4667,12 +5004,8 @@
         let scale;
         if (phone) {
           const scaleW = maxW / boxW;
-          if (shortLandscape) {
-            const availH = Math.max(80, viewH - 96 - metaH);
-            scale = Math.min(scaleW, availH / boxH);
-          } else {
-            scale = scaleW;
-          }
+          const availH = Math.max(80, naturalH > 40 ? naturalH : Math.max(120, viewH * 0.42));
+          scale = Math.min(scaleW, availH / boxH);
           scale = Math.max(0.2, Math.min(scale, 4));
         } else {
           const maxH = Math.max(160, naturalH);
@@ -5035,6 +5368,35 @@
         return c.design.layout;
       }
 
+      function isPhoneCanvas() {
+        return window.matchMedia('(max-width: 900px)').matches;
+      }
+
+      function syncEditorDockButtons(mode) {
+        const type = (selectedLayoutEl() || {}).type;
+        const active = mode || (type === 'title' || type === 'sketch' || type === 'slideshow' ? 'more' : type);
+        document.querySelectorAll('.canvas-tools [data-dock]').forEach((btn) => {
+          const on = btn.dataset.dock === active && document.body.classList.contains('editor-sheet-open');
+          btn.classList.toggle('is-active', on);
+          btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+      }
+
+      function openEditorSheet(mode) {
+        if (!isPhoneCanvas()) return;
+        document.body.classList.add('editor-sheet-open');
+        document.body.dataset.editorSheet = mode || 'props';
+        syncEditorDockButtons(mode);
+        requestAnimationFrame(scaleTablet);
+      }
+
+      function closeEditorSheet() {
+        document.body.classList.remove('editor-sheet-open');
+        delete document.body.dataset.editorSheet;
+        syncEditorDockButtons('');
+        requestAnimationFrame(scaleTablet);
+      }
+
       function addLayoutElement(type, extras) {
         const c = selected();
         if (!c) return;
@@ -5046,6 +5408,7 @@
             selectedElId = existing.id;
             syncShowCheckboxes(c.design);
             renderCanvas();
+            if (isPhoneCanvas()) openEditorSheet('props');
             return;
           }
         }
@@ -5064,6 +5427,7 @@
         renderCanvas();
         if (type === 'text') startTextEdit(el.id);
         scheduleAutosave(400);
+        if (isPhoneCanvas()) openEditorSheet('props');
       }
 
       function removeLayoutType(type) {
@@ -5795,12 +6159,14 @@
             if (textEditor && editingTextId === el.id) {
               selectedElId = el.id;
               syncElPropsPanel();
+              if (isPhoneCanvas()) openEditorSheet('props');
               return;
             }
             event.preventDefault();
             event.stopPropagation();
             selectedElId = el.id;
             syncElPropsPanel();
+            if (isPhoneCanvas()) openEditorSheet('props');
             const capturePointer = () => {
               try { node.setPointerCapture(event.pointerId); } catch {}
             };
@@ -6897,6 +7263,8 @@
               scaleTablet();
               requestAnimationFrame(scaleTablet);
             });
+          } else {
+            closeEditorSheet();
           }
           if (btn.dataset.tab === 'preview') refreshEinkPanel();
           if (btn.dataset.tab === 'devices') loadDevices().catch((err) => setStatus(err.message, true));
@@ -7292,6 +7660,32 @@
         addLayoutElement('slideshow');
         syncElPropsPanel();
         setStatus('Slideshow added. Upload rotating images under the canvas.');
+      });
+      const editorMoreBtn = document.getElementById('editorMoreBtn');
+      if (editorMoreBtn) {
+        editorMoreBtn.addEventListener('click', () => {
+          if (!isPhoneCanvas()) return;
+          if (document.body.classList.contains('editor-sheet-open') && document.body.dataset.editorSheet === 'more') {
+            closeEditorSheet();
+            return;
+          }
+          openEditorSheet('more');
+        });
+      }
+      const editorSheetClose = document.getElementById('editorSheetClose');
+      if (editorSheetClose) editorSheetClose.addEventListener('click', closeEditorSheet);
+      const canvasSaveFab = document.getElementById('canvasSaveFab');
+      if (canvasSaveFab) {
+        canvasSaveFab.addEventListener('click', () => {
+          const saveBtn = document.getElementById('saveDesignBtn');
+          if (saveBtn) saveBtn.click();
+        });
+      }
+      document.querySelectorAll('#editorMoreTools [data-trigger]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const target = document.getElementById(btn.dataset.trigger);
+          if (target) target.click();
+        });
       });
       document.getElementById('fillScreenBtn').addEventListener('click', () => fillSelectedToScreen());
       document.getElementById('clearCanvasBtn').addEventListener('click', () => clearCanvasLayout());
