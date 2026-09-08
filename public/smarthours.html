@@ -1231,36 +1231,6 @@
       border: 1px solid rgba(125, 180, 255, .4);
       background: rgba(8, 14, 28, .92);
     }
-    #tab-devices .device-table .device-name-input,
-    .fleet-page .device-table .device-name-input {
-      width: 11.5rem;
-    }
-    .device-rename-btn {
-      flex: 0 0 auto;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      min-height: 40px;
-      padding: 6px 10px;
-      border-radius: 10px;
-      border: 1px solid rgba(125, 180, 255, .35);
-      background: rgba(90, 140, 255, .12);
-      color: #9ec4ff;
-      font-size: .82rem;
-      font-weight: 700;
-      cursor: pointer;
-      white-space: nowrap;
-    }
-    .device-rename-btn svg {
-      width: 14px;
-      height: 14px;
-      fill: none;
-      stroke: currentColor;
-      stroke-width: 2;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
     .device-actions {
       display: flex;
       flex-direction: column;
@@ -1852,6 +1822,9 @@
     }
     .preview-slide {
       width: 100%; height: 100%; object-fit: cover; object-position: center; border-radius: 0; background: #000; display: block;
+    }
+    .preview-symbol {
+      width: 100%; height: 100%; object-fit: contain; object-position: center; border-radius: 0; background: transparent; display: block;
     }
     .el-props { margin-top: 0; display: grid; gap: 6px; }
     .hidden-block { display: none !important; }
@@ -2990,6 +2963,44 @@
       padding: 24px;
     }
     #imagePicker.open { display: grid; }
+    #symbolPicker {
+      position: fixed; inset: 0; z-index: 120;
+      background: rgba(5, 7, 15, .86);
+      display: none;
+      place-items: center;
+      padding: 24px;
+    }
+    #symbolPicker.open { display: grid; }
+    .symbol-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(108px, 1fr));
+      gap: 10px;
+    }
+    .symbol-tile {
+      appearance: none;
+      border: 1px solid var(--line);
+      background: #f4f6fb;
+      border-radius: 10px;
+      padding: 10px 8px 8px;
+      cursor: pointer;
+      color: inherit;
+      text-align: center;
+    }
+    .symbol-tile img {
+      width: 100%;
+      height: 72px;
+      object-fit: contain;
+      display: block;
+      background: #fff;
+      border-radius: 6px;
+    }
+    .symbol-tile span {
+      display: block;
+      margin-top: 6px;
+      font-size: .75rem;
+      color: var(--muted);
+    }
+    .symbol-tile.active { border-color: var(--accent); }
     .picker-card {
       width: min(760px, 100%);
       max-height: min(86vh, 820px);
@@ -3035,6 +3046,15 @@
       cursor: pointer;
     }
     .tpl-cats button.active { color: var(--accent); border-color: var(--accent); }
+    .tpl-filter-label {
+      display: block;
+      font-size: .7rem;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      color: var(--muted);
+      margin: 10px 0 6px;
+    }
+    .tpl-filter-label:first-child { margin-top: 0; }
     .tpl-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
@@ -3051,7 +3071,8 @@
       color: inherit;
       text-align: left;
     }
-    .tpl-tile img { width: 100%; height: 88px; object-fit: cover; display: block; }
+    .tpl-tile img { width: 100%; height: 88px; object-fit: contain; background: #070c16; display: block; }
+    .tpl-tile.portrait img { height: 132px; }
     .tpl-tile span { display: block; padding: 6px 8px; font-size: .75rem; color: var(--muted); }
     .tpl-tile.pair { grid-column: span 2; }
     .tpl-tile.pair .pair-imgs { display: grid; grid-template-columns: 1fr 1fr; }
@@ -3080,7 +3101,8 @@
       overflow: hidden;
       background: rgba(10, 16, 32, .8);
     }
-    .tpl-admin-card img { width: 100%; height: 110px; object-fit: cover; display: block; }
+    .tpl-admin-card img { width: 100%; height: 110px; object-fit: contain; background: #070c16; display: block; }
+    .tpl-admin-card.portrait img { height: 150px; }
     .tpl-admin-card .body { padding: 10px; display: grid; gap: 6px; }
     .tpl-admin-card [data-tpl-name] { font-weight: 700; }
     .battery-ok { color: var(--accent); font-weight: 700; }
@@ -3300,6 +3322,9 @@
         <button type="button" data-picker-tab="camera">Camera</button>
       </div>
       <div id="pickerTemplates">
+        <span class="tpl-filter-label">Orientation</span>
+        <div class="tpl-cats" id="pickerOrients"></div>
+        <span class="tpl-filter-label">Category</span>
         <div class="tpl-cats" id="pickerCats"></div>
         <div class="tpl-grid" id="pickerGrid"></div>
       </div>
@@ -3313,6 +3338,16 @@
       </div>
       <div class="add-row" style="margin-top:14px;">
         <button type="button" class="btn-secondary" id="imagePickerClose">Cancel</button>
+      </div>
+    </div>
+  </div>
+  <div id="symbolPicker">
+    <div class="panel picker-card">
+      <h2>Choose symbol</h2>
+      <p class="hint">Line-art icons you can place and resize on the canvas.</p>
+      <div class="symbol-grid" id="symbolPickerGrid"></div>
+      <div class="add-row" style="margin-top:14px;">
+        <button type="button" class="btn-secondary" id="symbolPickerClose">Cancel</button>
       </div>
     </div>
   </div>
@@ -3567,6 +3602,10 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="13" rx="1.5"/><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4H19a1.5 1.5 0 0 1 1.5 1.5V14A1.5 1.5 0 0 1 19 15.5H16"/></svg>
                     <span>Slides</span>
                   </button>
+                  <button type="button" class="el-add-btn" data-trigger="addSymbolBtn">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.1 6.5H21l-5.4 3.9 2.1 6.6L12 16.9 6.3 20l2.1-6.6L3 9.5h6.9z"/></svg>
+                    <span>Symbols</span>
+                  </button>
                 </div>
                 <div class="add-row editor-more-actions">
                   <button type="button" class="btn-secondary" data-trigger="fillScreenBtn">Fill Screen</button>
@@ -3767,6 +3806,10 @@
                     </div>
                     <p class="hint" style="margin:2px 0 0;">Place the sketch box, then tap the pencil to draw full screen. Save with the disk icon.</p>
                   </div>
+                  <div id="elSymbolProps" class="hidden-block">
+                    <button type="button" class="btn-secondary" id="pickSymbolBtn">Change symbol</button>
+                    <p class="hint" style="margin:6px 0 0;" id="elSymbolName">No symbol selected.</p>
+                  </div>
               </div>
 
               <input id="canvasImageFile" type="file" accept="image/*" hidden>
@@ -3814,6 +3857,10 @@
                 <button type="button" class="el-add-btn" id="addImageBtn" data-dock="image">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="m21 15-4.5-4.5-3.5 3.5-2-2L3 17"/></svg>
                   <span>Image</span>
+                </button>
+                <button type="button" class="el-add-btn editor-extra-tool" id="addSymbolBtn">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.1 6.5H21l-5.4 3.9 2.1 6.6L12 16.9 6.3 20l2.1-6.6L3 9.5h6.9z"/></svg>
+                  <span>Symbols</span>
                 </button>
                 <button type="button" class="el-add-btn" id="addHoursBtn" data-dock="hours">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4.5l3 1.7"/></svg>
@@ -3964,7 +4011,7 @@
               </span>
               <div>
                 <h2>Device Check-ins</h2>
-                <p>See your displays and their status. Rename a display to Front Door, Back Door, and so on.</p>
+                <p>See your displays and their status. Type a name such as Front Door or Back Door.</p>
               </div>
               <button type="button" class="btn-secondary" id="refreshDevicesBtn">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -4047,7 +4094,7 @@
           </span>
           <div>
             <h2>Image templates</h2>
-            <p>Shared with every customer. Create categories and upload more anytime.</p>
+            <p>Shared with every customer. Indexed by category and portrait/landscape — amend names or orientation here anytime.</p>
           </div>
         </div>
         <div class="form-grid" style="gap:10px;margin-bottom:14px;">
@@ -4071,6 +4118,14 @@
             <select id="templateUploadCategory"></select>
           </div>
           <div>
+            <label for="templateUploadOrientation">Orientation</label>
+            <select id="templateUploadOrientation">
+              <option value="">Auto (from image)</option>
+              <option value="portrait">Portrait</option>
+              <option value="landscape">Landscape</option>
+            </select>
+          </div>
+          <div>
             <label for="templateUploadRole">Open / closed pair</label>
             <select id="templateUploadRole">
               <option value="">Single image</option>
@@ -4083,6 +4138,8 @@
             <input id="templateUploadPairId" type="text" placeholder="e.g. halloween-status">
           </div>
         </div>
+        <span class="tpl-filter-label">Orientation</span>
+        <div class="tpl-cats" id="adminTplOrients"></div>
         <div class="tpl-cats" id="adminTplCats"></div>
         <div class="tpl-admin-grid" id="adminTplGrid"></div>
       </section>
@@ -4185,7 +4242,22 @@
       let syncingScreenFields = false;
       let settings = { autoSyncIntervalHours: 24 };
       let templateLibrary = { categories: [], templates: [] };
-      let pickerState = { purpose: 'image', categoryId: '' };
+      let symbolLibrary = [
+        { id: 'hanger', name: 'Hanger', url: '/SmartHours/assets/symbols/hanger.png' },
+        { id: 'shoe', name: 'Shoe', url: '/SmartHours/assets/symbols/shoe.png' },
+        { id: 'airplane', name: 'Airplane', url: '/SmartHours/assets/symbols/airplane.png' },
+        { id: 'cloud', name: 'Cloud', url: '/SmartHours/assets/symbols/cloud.png' },
+        { id: 'glasses', name: 'Glasses', url: '/SmartHours/assets/symbols/glasses.png' },
+        { id: 'house', name: 'House', url: '/SmartHours/assets/symbols/house.png' },
+        { id: 'tooth', name: 'Tooth', url: '/SmartHours/assets/symbols/tooth.png' },
+        { id: 'pin', name: 'Pin', url: '/SmartHours/assets/symbols/pin.png' },
+        { id: 'tooth-2', name: 'Tooth 2', url: '/SmartHours/assets/symbols/tooth-2.png' },
+        { id: 'brain', name: 'Brain', url: '/SmartHours/assets/symbols/brain.png' },
+        { id: 'diamond', name: 'Diamond', url: '/SmartHours/assets/symbols/diamond.png' },
+        { id: 'books', name: 'Books', url: '/SmartHours/assets/symbols/books.png' }
+      ];
+      let pickerState = { purpose: 'image', categoryId: '', orientation: 'portrait' };
+      let adminTplOrientFilter = '';
       let suppressAutosave = 0;
       let autosaveTimer = null;
       let autosaveInFlight = false;
@@ -4392,6 +4464,9 @@
         if (c && c.design && Array.isArray(c.design.layout) && (oldW !== design.width || oldH !== design.height)) {
           c.design.layout = remapLayoutForCanvasSize(c.design.layout, oldW, oldH, design.width, design.height);
         }
+        pickerState.orientation = currentScreenOrientation();
+        const modal = document.getElementById('imagePicker');
+        if (modal && modal.classList.contains('open')) renderPicker();
       }
 
       function remapLayoutForCanvasSize(layout, oldW, oldH, newW, newH) {
@@ -4717,6 +4792,18 @@
             templates: data.templates || templateLibrary.templates || []
           };
         }
+        if (Array.isArray(data.symbols) && data.symbols.length) {
+          symbolLibrary = data.symbols;
+        }
+      }
+
+      function lookupSymbol(id) {
+        return (symbolLibrary || []).find((s) => s.id === id) || null;
+      }
+
+      function symbolUrl(id) {
+        const s = lookupSymbol(id);
+        return (s && s.url) || '';
       }
 
       function slideshowIntervalMinutesFromSec(sec) {
@@ -5174,6 +5261,13 @@
             dataUrl: '',
             penColor: '#000000',
             penSize: 3
+          },
+          symbol: {
+            x: Math.round(w * 0.35),
+            y: Math.round(h * 0.06),
+            w: Math.round(w * 0.3),
+            h: Math.round(h * 0.22),
+            symbolId: 'hanger'
           }
         };
         const base = map[type] || map.text;
@@ -5773,6 +5867,7 @@
       function openImagePicker(purpose) {
         pickerState.purpose = purpose || 'image';
         pickerState.categoryId = '';
+        pickerState.orientation = currentScreenOrientation();
         const modal = document.getElementById('imagePicker');
         const title = document.getElementById('imagePickerTitle');
         const hint = document.getElementById('imagePickerHint');
@@ -5781,7 +5876,7 @@
           hint.textContent = 'Choose a paired open and closed image, or pick two singles.';
         } else {
           title.textContent = 'Choose image';
-          hint.textContent = 'Pick a template, upload a file, or take a photo.';
+          hint.textContent = 'Matching ' + pickerState.orientation + ' templates for this screen. Switch filters if you need the other orientation.';
         }
         setPickerTab('templates');
         renderPicker();
@@ -5793,6 +5888,49 @@
         if (modal) modal.classList.remove('open');
       }
 
+      let symbolPickerMode = 'add';
+
+      function openSymbolPicker(mode) {
+        symbolPickerMode = mode === 'replace' ? 'replace' : 'add';
+        const modal = document.getElementById('symbolPicker');
+        const grid = document.getElementById('symbolPickerGrid');
+        if (!modal || !grid) return;
+        const current = selectedLayoutEl();
+        const selectedId = current && current.type === 'symbol' ? current.symbolId : '';
+        grid.innerHTML = (symbolLibrary || []).map((s) => `
+          <button type="button" class="symbol-tile ${s.id === selectedId ? 'active' : ''}" data-symbol="${escapeHtml(s.id)}">
+            <img src="${escapeHtml(s.url || '')}" alt="">
+            <span>${escapeHtml(s.name || s.id)}</span>
+          </button>
+        `).join('') || '<p class="hint">No symbols yet.</p>';
+        grid.querySelectorAll('[data-symbol]').forEach((btn) => {
+          btn.addEventListener('click', () => applySymbol(btn.dataset.symbol));
+        });
+        modal.classList.add('open');
+      }
+
+      function closeSymbolPicker() {
+        const modal = document.getElementById('symbolPicker');
+        if (modal) modal.classList.remove('open');
+      }
+
+      function applySymbol(symbolId) {
+        const c = selected();
+        if (!c || !lookupSymbol(symbolId)) return;
+        const current = selectedLayoutEl();
+        if (symbolPickerMode === 'replace' && current && current.type === 'symbol') {
+          current.symbolId = symbolId;
+          renderCanvas();
+          scheduleAutosave(200);
+          setStatus('Symbol updated.');
+        } else {
+          addLayoutElement('symbol', { symbolId });
+          setStatus('Symbol added.');
+        }
+        closeSymbolPicker();
+        syncElPropsPanel();
+      }
+
       function setPickerTab(tab) {
         document.querySelectorAll('#imagePicker .picker-tabs button').forEach((btn) => {
           btn.classList.toggle('active', btn.dataset.pickerTab === tab);
@@ -5802,10 +5940,40 @@
         document.getElementById('pickerCamera').classList.toggle('hidden-block', tab !== 'camera');
       }
 
+      function currentScreenOrientation() {
+        const el = document.getElementById('screenOrientation') || document.getElementById('einkOrientation');
+        return el && el.value === 'landscape' ? 'landscape' : 'portrait';
+      }
+
+      function templateMatchesOrientation(t, orientation) {
+        if (!orientation) return true;
+        if (!t || !t.orientation) return true;
+        return t.orientation === orientation;
+      }
+
+      function renderOrientChips(container, selected, onChange) {
+        if (!container) return;
+        const opts = [
+          { id: 'portrait', name: 'Portrait' },
+          { id: 'landscape', name: 'Landscape' },
+          { id: '', name: 'All' }
+        ];
+        container.innerHTML = opts.map((o) =>
+          `<button type="button" class="${selected === o.id ? 'active' : ''}" data-orient="${escapeHtml(o.id)}">${escapeHtml(o.name)}</button>`
+        ).join('');
+        container.querySelectorAll('button').forEach((btn) => {
+          btn.addEventListener('click', () => onChange(btn.dataset.orient || ''));
+        });
+      }
+
       function renderPicker() {
         const cats = document.getElementById('pickerCats');
         const grid = document.getElementById('pickerGrid');
         if (!cats || !grid) return;
+        renderOrientChips(document.getElementById('pickerOrients'), pickerState.orientation || '', (orient) => {
+          pickerState.orientation = orient;
+          renderPicker();
+        });
         const categories = [{ id: '', name: 'All' }, ...(templateLibrary.categories || [])];
         cats.innerHTML = categories.map((cat) =>
           `<button type="button" class="${pickerState.categoryId === cat.id ? 'active' : ''}" data-cat="${escapeHtml(cat.id)}">${escapeHtml(cat.name)}</button>`
@@ -5817,13 +5985,19 @@
           });
         });
         const templates = (templateLibrary.templates || []).filter((t) =>
-          !pickerState.categoryId || t.categoryId === pickerState.categoryId
+          (!pickerState.categoryId || t.categoryId === pickerState.categoryId) &&
+          templateMatchesOrientation(t, pickerState.orientation)
         );
+        const tileClass = (t) => t && t.orientation === 'portrait' ? 'tpl-tile portrait' : 'tpl-tile landscape';
         if (pickerState.purpose === 'status-pair') {
           const pairs = statusPairs().filter((p) => {
-            if (!pickerState.categoryId) return true;
-            return (p.open && p.open.categoryId === pickerState.categoryId) ||
-              (p.closed && p.closed.categoryId === pickerState.categoryId);
+            if (pickerState.categoryId &&
+              !(p.open && p.open.categoryId === pickerState.categoryId) &&
+              !(p.closed && p.closed.categoryId === pickerState.categoryId)) {
+              return false;
+            }
+            return templateMatchesOrientation(p.open || p.closed, pickerState.orientation) ||
+              templateMatchesOrientation(p.closed, pickerState.orientation);
           });
           const pairHtml = pairs.map((p) => `
             <button type="button" class="tpl-tile pair" data-pair="${escapeHtml(p.pairId)}">
@@ -5835,7 +6009,7 @@
             </button>
           `).join('');
           const singles = templates.map((t) => `
-            <button type="button" class="tpl-tile" data-tpl="${escapeHtml(t.id)}">
+            <button type="button" class="${tileClass(t)}" data-tpl="${escapeHtml(t.id)}">
               <img src="${escapeHtml(t.url || '')}" alt="">
               <span>${escapeHtml(t.name || t.id)}${t.pairRole ? ' · ' + t.pairRole : ''}</span>
             </button>
@@ -5851,12 +6025,12 @@
         }
         grid.innerHTML = templates.length
           ? templates.map((t) => `
-            <button type="button" class="tpl-tile" data-tpl="${escapeHtml(t.id)}">
+            <button type="button" class="${tileClass(t)}" data-tpl="${escapeHtml(t.id)}">
               <img src="${escapeHtml(t.url || '')}" alt="">
               <span>${escapeHtml(t.name || t.id)}</span>
             </button>
           `).join('')
-          : '<p class="hint">No templates in this category yet.</p>';
+          : '<p class="hint">No templates match this orientation and category. Try All, or pick another category.</p>';
         grid.querySelectorAll('[data-tpl]').forEach((btn) => {
           btn.addEventListener('click', () => applyCanvasTemplate(btn.dataset.tpl));
         });
@@ -5916,6 +6090,7 @@
         const textProps = document.getElementById('elTextProps');
         const imgProps = document.getElementById('elImageProps');
         const sketchProps = document.getElementById('elSketchProps');
+        const symbolProps = document.getElementById('elSymbolProps');
         const statusProps = document.getElementById('elStatusProps');
         const hoursBlock = document.getElementById('hoursDesignBlock');
         const slideshowBlock = document.getElementById('slideshowBlock');
@@ -5927,12 +6102,13 @@
         const isTitle = !!(el && el.type === 'title');
         const isImage = !!(el && el.type === 'image');
         const isSketch = !!(el && el.type === 'sketch');
+        const isSymbol = !!(el && el.type === 'symbol');
         const isSlideshow = !!(el && el.type === 'slideshow');
         const isTextType = el && TEXT_LAYOUT_TYPES.has(el.type);
         if (hoursBlock) hoursBlock.classList.toggle('hidden-block', !isHours);
         if (statusProps) statusProps.classList.toggle('hidden-block', !isStatus);
         if (slideshowBlock) slideshowBlock.classList.toggle('hidden-block', !isSlideshow);
-        const showProps = isText || isTitle || isImage || isSketch || isHours || isStatus;
+        const showProps = isText || isTitle || isImage || isSketch || isSymbol || isHours || isStatus;
         if (props) props.classList.toggle('hidden-block', !showProps);
         if (!el || !showProps) {
           suppressPropsSync = false;
@@ -5944,6 +6120,7 @@
         textProps.classList.add('hidden-block');
         imgProps.classList.add('hidden-block');
         sketchProps.classList.add('hidden-block');
+        if (symbolProps) symbolProps.classList.add('hidden-block');
         if (isTextType) {
           ensureElTypography(el, c && c.design);
           typeProps.classList.remove('hidden-block');
@@ -5977,6 +6154,12 @@
           document.getElementById('sketchPenSize').value = el.penSize || 3;
           document.getElementById('sketchDrawBtn').classList.toggle('active', sketchMode === 'draw');
           document.getElementById('sketchMoveBtn').classList.toggle('active', sketchMode === 'move');
+        }
+        if (isSymbol) {
+          if (symbolProps) symbolProps.classList.remove('hidden-block');
+          const named = lookupSymbol(el.symbolId);
+          const nameEl = document.getElementById('elSymbolName');
+          if (nameEl) nameEl.textContent = named ? named.name : 'No symbol selected.';
         }
         if (isStatus && c && c.design) {
           const mode = c.design.statusMode === 'image' ? 'image' : 'badge';
@@ -6169,6 +6352,13 @@
               node.innerHTML = `<div class="preview-sketch-empty">Tap pencil to draw</div>`;
             }
             if (el.type === 'sketch' && sketchMode === 'draw') node.classList.add('sketching');
+          } else if (el.type === 'symbol') {
+            const url = symbolUrl(el.symbolId);
+            if (url) {
+              node.innerHTML = `<img class="preview-symbol" src="${escapeHtml(url)}" alt="">`;
+            } else {
+              node.innerHTML = `<div style="height:100%;display:grid;place-items:center;opacity:.55;border:1px dashed ${design.accentColor}">Pick symbol</div>`;
+            }
           }
 
           if (el.type === 'sketch') {
@@ -6600,14 +6790,6 @@
             queueDeviceReset(btn.dataset.resetDevice).catch((err) => setStatus(err.message, true));
           });
         });
-        root.querySelectorAll('[data-rename-device]').forEach((btn) => {
-          btn.addEventListener('click', () => {
-            const input = root.querySelector('[data-device-name="' + CSS.escape(btn.dataset.renameDevice) + '"]');
-            if (!input) return;
-            input.focus();
-            input.select();
-          });
-        });
         root.querySelectorAll('[data-expand-device]').forEach((btn) => {
           btn.addEventListener('click', () => {
             const id = btn.dataset.expandDevice;
@@ -6670,11 +6852,10 @@
       }
 
       function deviceActionHtml(d) {
-        const rename = `<button type="button" class="btn-secondary" data-rename-device="${escapeHtml(d.id)}"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg> Rename</button>`;
         if (d.pendingReset) {
-          return `<div class="device-actions">${rename}<span class="hint">Reset queued — waiting for next check-in</span></div>`;
+          return `<div class="device-actions"><span class="hint">Reset queued — waiting for next check-in</span></div>`;
         }
-        return `<div class="device-actions">${rename}<button type="button" class="btn-danger" data-reset-device="${escapeHtml(d.id)}">Reset to setup</button></div>`;
+        return `<div class="device-actions"><button type="button" class="btn-danger" data-reset-device="${escapeHtml(d.id)}">Reset to setup</button></div>`;
       }
 
       function deviceDisplayName(d) {
@@ -6983,6 +7164,10 @@
           catSel.innerHTML = '<option value="">Uncategorized</option>' +
             cats.map((c) => `<option value="${escapeHtml(c.id)}">${escapeHtml(c.name)}</option>`).join('');
         }
+        renderOrientChips(document.getElementById('adminTplOrients'), adminTplOrientFilter, (orient) => {
+          adminTplOrientFilter = orient;
+          renderAdminTemplates();
+        });
         const catBar = document.getElementById('adminTplCats');
         if (catBar) {
           catBar.innerHTML = cats.map((c) =>
@@ -7004,26 +7189,35 @@
         }
         const grid = document.getElementById('adminTplGrid');
         if (!grid) return;
-        if (!tpls.length) {
-          grid.innerHTML = '<p class="hint">No templates yet. Upload images above.</p>';
+        const visible = tpls.filter((t) => templateMatchesOrientation(t, adminTplOrientFilter));
+        if (!visible.length) {
+          grid.innerHTML = tpls.length
+            ? '<p class="hint">No templates in this orientation. Switch to All to see everything.</p>'
+            : '<p class="hint">No templates yet. Upload images above.</p>';
           return;
         }
         const catName = (id) => {
           const c = cats.find((x) => x.id === id);
           return c ? c.name : 'Uncategorized';
         };
-        grid.innerHTML = tpls.map((t) => `
-          <div class="tpl-admin-card" data-id="${escapeHtml(t.id)}">
+        grid.innerHTML = visible.map((t) => `
+          <div class="tpl-admin-card ${t.orientation === 'portrait' ? 'portrait' : 'landscape'}" data-id="${escapeHtml(t.id)}">
             <img src="${escapeHtml(t.url || '')}" alt="">
             <div class="body">
               <label>Name
                 <input data-tpl-name="${escapeHtml(t.id)}" type="text" maxlength="80" value="${escapeHtml(t.name || t.id)}">
               </label>
-              <span class="hint">${escapeHtml(catName(t.categoryId))}${t.pairRole ? ' · ' + t.pairRole : ''}${t.pairId ? ' · pair ' + t.pairId : ''}</span>
+              <span class="hint">${escapeHtml(catName(t.categoryId))}${t.orientation ? ' · ' + t.orientation : ''}${t.pairRole ? ' · ' + t.pairRole : ''}${t.pairId ? ' · pair ' + t.pairId : ''}</span>
               <label>Category
                 <select data-tpl-cat="${escapeHtml(t.id)}">
                   <option value="">Uncategorized</option>
                   ${cats.map((c) => `<option value="${escapeHtml(c.id)}" ${c.id === t.categoryId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')}
+                </select>
+              </label>
+              <label>Orientation
+                <select data-tpl-orient="${escapeHtml(t.id)}">
+                  <option value="portrait" ${t.orientation === 'portrait' ? 'selected' : ''}>Portrait</option>
+                  <option value="landscape" ${t.orientation !== 'portrait' ? 'selected' : ''}>Landscape</option>
                 </select>
               </label>
               <label>Role
@@ -7040,9 +7234,9 @@
             </div>
           </div>
         `).join('');
-        grid.querySelectorAll('[data-tpl-name], [data-tpl-cat], [data-tpl-role], [data-tpl-pair]').forEach((el) => {
+        grid.querySelectorAll('[data-tpl-name], [data-tpl-cat], [data-tpl-orient], [data-tpl-role], [data-tpl-pair]').forEach((el) => {
           const save = async () => {
-            const id = el.dataset.tplName || el.dataset.tplCat || el.dataset.tplRole || el.dataset.tplPair;
+            const id = el.dataset.tplName || el.dataset.tplCat || el.dataset.tplOrient || el.dataset.tplRole || el.dataset.tplPair;
             const card = el.closest('.tpl-admin-card');
             const res = await apiFetch('/api/smarthours/admin/templates/' + encodeURIComponent(id), {
               method: 'PUT',
@@ -7050,6 +7244,7 @@
               body: JSON.stringify({
                 name: card.querySelector('[data-tpl-name]').value,
                 categoryId: card.querySelector('[data-tpl-cat]').value,
+                orientation: card.querySelector('[data-tpl-orient]').value,
                 pairRole: card.querySelector('[data-tpl-role]').value,
                 pairId: card.querySelector('[data-tpl-pair]').value
               })
@@ -7057,6 +7252,7 @@
             const data = await res.json().catch(() => ({}));
             if (!res.ok) throw new Error(data.error || 'Could not update template');
             applyTemplateLibrary(data);
+            if (el.dataset.tplOrient) renderAdminTemplates();
           };
           el.addEventListener('change', () => save().catch((err) => setStatus(err.message, true)));
         });
@@ -7725,6 +7921,10 @@
           return;
         }
         openImagePicker('image');
+      });
+      document.getElementById('addSymbolBtn').addEventListener('click', () => {
+        if (!selected()) return;
+        openSymbolPicker('add');
       });
       document.getElementById('addHoursBtn').addEventListener('click', () => addLayoutElement('hours'));
       document.getElementById('addStatusBtn').addEventListener('click', () => addLayoutElement('status'));
@@ -8424,6 +8624,10 @@
       if (pickerClose) pickerClose.addEventListener('click', () => closeImagePicker());
       const pickImageBtn = document.getElementById('pickImageBtn');
       if (pickImageBtn) pickImageBtn.addEventListener('click', () => openImagePicker('image'));
+      const pickSymbolBtn = document.getElementById('pickSymbolBtn');
+      if (pickSymbolBtn) pickSymbolBtn.addEventListener('click', () => openSymbolPicker('replace'));
+      const symbolPickerClose = document.getElementById('symbolPickerClose');
+      if (symbolPickerClose) symbolPickerClose.addEventListener('click', () => closeSymbolPicker());
       const pickStatusPairBtn = document.getElementById('pickStatusPairBtn');
       if (pickStatusPairBtn) pickStatusPairBtn.addEventListener('click', () => openImagePicker('status-pair'));
       document.querySelectorAll('#statusModeToggle [data-status-mode]').forEach((btn) => {
@@ -8510,6 +8714,7 @@
                 dataUrl: String(reader.result || ''),
                 name: (document.getElementById('templateUploadName') && document.getElementById('templateUploadName').value.trim()) || file.name,
                 categoryId: document.getElementById('templateUploadCategory').value,
+                orientation: document.getElementById('templateUploadOrientation').value,
                 pairRole: document.getElementById('templateUploadRole').value,
                 pairId: document.getElementById('templateUploadPairId').value
               })

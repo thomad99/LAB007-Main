@@ -307,6 +307,8 @@
             node.innerHTML = `<img class="custom-img" style="object-fit:${fitMode}" src="${escapeHtml(el.imageUrl)}" alt="">`;
           } else if (el.type === 'sketch' && el.dataUrl) {
             node.innerHTML = `<img class="custom-img" style="object-fit:contain;background:transparent" src="${escapeHtml(el.dataUrl)}" alt="Sketch">`;
+          } else if (el.type === 'symbol' && el.imageUrl) {
+            node.innerHTML = `<img class="custom-img" style="object-fit:contain;background:transparent" src="${escapeHtml(el.imageUrl)}" alt="">`;
           }
           tablet.appendChild(node);
         });
