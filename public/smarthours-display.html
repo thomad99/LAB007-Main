@@ -12,6 +12,22 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;600;700&family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;600;700&family=Sora:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
   <style>
+    @font-face {
+      font-family: "SmartHours";
+      src: url("/SmartHours/assets/fonts/SmartHours-Light.woff2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Light.woff") format("woff");
+      font-weight: 300;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "SmartHours";
+      src: url("/SmartHours/assets/fonts/SmartHours-Regular.woff2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Regular.woff") format("woff");
+      font-weight: 400 900;
+      font-style: normal;
+      font-display: swap;
+    }
     * { box-sizing: border-box; }
     html, body {
       margin: 0;
@@ -19,6 +35,7 @@
       height: 100%;
       overflow: hidden;
       background: #FFFFFF;
+      font-synthesis: none;
     }
     #stage {
       width: 100vw;
@@ -166,6 +183,13 @@
         return (el && el.fontFamily) || (design && design.fontFamily) || '"DM Sans", system-ui, sans-serif';
       }
 
+      function resolveFontWeight(el, design) {
+        const family = resolveFontFamily(el, design);
+        const bold = !(el && el.bold === false);
+        if (/SmartHours/i.test(family)) return bold ? '400' : '300';
+        return bold ? '700' : '400';
+      }
+
       function resolveStatusColors(el, design, openNow) {
         const accent = (design && design.accentColor) || '#FF0000';
         const fg = (design && design.textColor) || '#000000';
@@ -191,7 +215,7 @@
         const fs = resolveFontSize(el || { type: 'status' }, design);
         const ff = resolveFontFamily(el || { type: 'status' }, design);
         const colors = resolveStatusColors(el, design, open);
-        return `<div class="status-badge" style="font-size:${fs}px;font-family:${escapeHtml(ff)};background:${escapeHtml(colors.box)};color:${escapeHtml(colors.font)}">${open ? 'OPEN' : 'CLOSED'}</div>`;
+        return `<div class="status-badge" style="font-size:${fs}px;font-family:${escapeHtml(ff)};font-weight:${resolveFontWeight(el || { type: 'status' }, design)};background:${escapeHtml(colors.box)};color:${escapeHtml(colors.font)}">${open ? 'OPEN' : 'CLOSED'}</div>`;
       }
 
       function refreshStatus() {
@@ -280,7 +304,7 @@
           } else if (el.type === 'title') {
             const fs = resolveFontSize(el, design);
             const ff = resolveFontFamily(el, design);
-            node.innerHTML = `<div class="title" style="font-size:${fs}px;font-family:${escapeHtml(ff)}">${escapeHtml(data.name)}</div>`;
+            node.innerHTML = `<div class="title" style="font-size:${fs}px;font-family:${escapeHtml(ff)};font-weight:${resolveFontWeight(el, design)}">${escapeHtml(data.name)}</div>`;
           } else if (el.type === 'status') {
             node.dataset.status = '1';
             node.dataset.fontSize = String(resolveFontSize(el, design));
@@ -295,7 +319,7 @@
           } else if (el.type === 'hours') {
             const fs = resolveFontSize(el, design);
             const ff = resolveFontFamily(el, design);
-            node.innerHTML = `<div class="hours" style="font-size:${fs}px;font-family:${escapeHtml(ff)}">${
+            node.innerHTML = `<div class="hours" style="font-size:${fs}px;font-family:${escapeHtml(ff)};font-weight:${resolveFontWeight(el, design)}">${
               days.map((day) => `<div class="row"><span>${escapeHtml(labels[day] || day)}</span><span style="color:${design.accentColor || '#FF0000'}">${escapeHtml(formatDay(hours[day]))}</span></div>`).join('')
             }</div>`;
           } else if (el.type === 'text') {
@@ -304,7 +328,7 @@
             const color = el.color || design.textColor || '#000000';
             const fs = resolveFontSize(el, design);
             const ff = resolveFontFamily(el, design);
-            node.innerHTML = `<div class="custom-text" style="justify-content:${justify};text-align:${align};font-size:${fs}px;font-family:${escapeHtml(ff)};color:${escapeHtml(color)};font-weight:${el.bold === false ? 400 : 700}">${escapeHtml(el.text || '')}</div>`;
+            node.innerHTML = `<div class="custom-text" style="justify-content:${justify};text-align:${align};font-size:${fs}px;font-family:${escapeHtml(ff)};color:${escapeHtml(color)};font-weight:${resolveFontWeight(el, design)}">${escapeHtml(el.text || '')}</div>`;
           } else if (el.type === 'image' && el.imageUrl) {
             const fitMode = el.fit === 'contain' ? 'contain' : 'cover';
             node.innerHTML = `<img class="custom-img" style="object-fit:${fitMode}" src="${escapeHtml(el.imageUrl)}" alt="">`;

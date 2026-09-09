@@ -28,6 +28,24 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;600;700&family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    @font-face {
+      font-family: "SmartHours";
+      src: url("/SmartHours/assets/fonts/SmartHours-Light.woff2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Light.woff") format("woff");
+      font-weight: 300;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "SmartHours";
+      src: url("/SmartHours/assets/fonts/SmartHours-Regular.woff2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Regular.woff") format("woff");
+      font-weight: 400 900;
+      font-style: normal;
+      font-display: swap;
+    }
+  </style>
   <script>
     (function () {
       try {
@@ -1953,6 +1971,7 @@
       transform-origin: center center;
       box-shadow: none;
       touch-action: none;
+      font-synthesis: none;
     }
     .tablet-frame::before {
       content: '';
@@ -4710,6 +4729,7 @@
       const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
       const TEXT_LAYOUT_TYPES = new Set(['title', 'hours', 'status', 'text']);
       const FONT_OPTIONS = [
+        { label: 'SmartHours-Font', value: '"SmartHours", sans-serif' },
         { label: 'DM Sans', value: '"DM Sans", system-ui, sans-serif' },
         { label: 'Outfit', value: 'Outfit, system-ui, sans-serif' },
         { label: 'Plus Jakarta Sans', value: '"Plus Jakarta Sans", system-ui, sans-serif' },
@@ -4723,7 +4743,11 @@
         { label: 'Impact', value: 'Impact, Haettenschweiler, sans-serif' },
         { label: 'Courier', value: '"Courier New", monospace' }
       ];
-      const DEFAULT_FONT = FONT_OPTIONS[0].value;
+      const DEFAULT_FONT = '"DM Sans", system-ui, sans-serif';
+      if (document.fonts && document.fonts.load) {
+        document.fonts.load('300 48px "SmartHours"').catch(() => {});
+        document.fonts.load('400 48px "SmartHours"').catch(() => {});
+      }
       const DAY_LABELS = {
         monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday', thursday:'Thursday',
         friday:'Friday', saturday:'Saturday', sunday:'Sunday'
@@ -4762,18 +4786,38 @@
       let settings = { autoSyncIntervalHours: 24 };
       let templateLibrary = { categories: [], templates: [] };
       let symbolLibrary = [
-        { id: 'hanger', name: 'Hanger', url: '/SmartHours/assets/symbols/hanger.png' },
-        { id: 'shoe', name: 'Shoe', url: '/SmartHours/assets/symbols/shoe.png' },
-        { id: 'airplane', name: 'Airplane', url: '/SmartHours/assets/symbols/airplane.png' },
-        { id: 'cloud', name: 'Cloud', url: '/SmartHours/assets/symbols/cloud.png' },
-        { id: 'glasses', name: 'Glasses', url: '/SmartHours/assets/symbols/glasses.png' },
-        { id: 'house', name: 'House', url: '/SmartHours/assets/symbols/house.png' },
-        { id: 'tooth', name: 'Tooth', url: '/SmartHours/assets/symbols/tooth.png' },
-        { id: 'pin', name: 'Pin', url: '/SmartHours/assets/symbols/pin.png' },
-        { id: 'tooth-2', name: 'Tooth 2', url: '/SmartHours/assets/symbols/tooth-2.png' },
-        { id: 'brain', name: 'Brain', url: '/SmartHours/assets/symbols/brain.png' },
-        { id: 'diamond', name: 'Diamond', url: '/SmartHours/assets/symbols/diamond.png' },
-        { id: 'books', name: 'Books', url: '/SmartHours/assets/symbols/books.png' }
+        { id: 'hanger', name: 'Hanger', url: '/SmartHours/assets/symbols/hanger.png?v=2' },
+        { id: 'shoe', name: 'Shoe', url: '/SmartHours/assets/symbols/shoe.png?v=2' },
+        { id: 'airplane', name: 'Airplane', url: '/SmartHours/assets/symbols/airplane.png?v=2' },
+        { id: 'cloud', name: 'Cloud', url: '/SmartHours/assets/symbols/cloud.png?v=2' },
+        { id: 'glasses', name: 'Glasses', url: '/SmartHours/assets/symbols/glasses.png?v=2' },
+        { id: 'house', name: 'House', url: '/SmartHours/assets/symbols/house.png?v=2' },
+        { id: 'tooth', name: 'Tooth', url: '/SmartHours/assets/symbols/tooth.png?v=2' },
+        { id: 'pin', name: 'Pin', url: '/SmartHours/assets/symbols/pin.png?v=2' },
+        { id: 'tooth-2', name: 'Tooth 2', url: '/SmartHours/assets/symbols/tooth-2.png?v=2' },
+        { id: 'brain', name: 'Brain', url: '/SmartHours/assets/symbols/brain.png?v=2' },
+        { id: 'diamond', name: 'Diamond', url: '/SmartHours/assets/symbols/diamond.png?v=2' },
+        { id: 'books', name: 'Books', url: '/SmartHours/assets/symbols/books.png?v=2' },
+        { id: 'coffee-cup', name: 'Coffee cup', url: '/SmartHours/assets/symbols/coffee-cup.png?v=2' },
+        { id: 'clock', name: 'Clock', url: '/SmartHours/assets/symbols/clock.png?v=2' },
+        { id: 'bag', name: 'Bag', url: '/SmartHours/assets/symbols/bag.png?v=2' },
+        { id: 'ice-cream', name: 'Ice cream', url: '/SmartHours/assets/symbols/ice-cream.png?v=2' },
+        { id: 'dog', name: 'Dog', url: '/SmartHours/assets/symbols/dog.png?v=2' },
+        { id: 'cat', name: 'Cat', url: '/SmartHours/assets/symbols/cat.png?v=2' },
+        { id: 'scissors', name: 'Scissors', url: '/SmartHours/assets/symbols/scissors.png?v=2' },
+        { id: 'knife', name: 'Knife', url: '/SmartHours/assets/symbols/knife.png?v=2' },
+        { id: 'fork', name: 'Fork', url: '/SmartHours/assets/symbols/fork.png?v=2' },
+        { id: 'spoon', name: 'Spoon', url: '/SmartHours/assets/symbols/spoon.png?v=2' },
+        { id: 'pizza', name: 'Pizza', url: '/SmartHours/assets/symbols/pizza.png?v=2' },
+        { id: 'flower', name: 'Flower', url: '/SmartHours/assets/symbols/flower.png?v=2' },
+        { id: 'bicycle', name: 'Bicycle', url: '/SmartHours/assets/symbols/bicycle.png?v=2' },
+        { id: 'gift', name: 'Gift', url: '/SmartHours/assets/symbols/gift.png?v=2' },
+        { id: 'bread', name: 'Bread', url: '/SmartHours/assets/symbols/bread.png?v=2' },
+        { id: 'camera', name: 'Camera', url: '/SmartHours/assets/symbols/camera.png?v=2' },
+        { id: 'phone', name: 'Phone', url: '/SmartHours/assets/symbols/phone.png?v=2' },
+        { id: 'wine-glass', name: 'Wine glass', url: '/SmartHours/assets/symbols/wine-glass.png?v=2' },
+        { id: 'key', name: 'Key', url: '/SmartHours/assets/symbols/key.png?v=2' },
+        { id: 'chef-hat', name: 'Chef hat', url: '/SmartHours/assets/symbols/chef-hat.png?v=2' }
       ];
       let pickerState = { purpose: 'image', categoryId: '', orientation: 'portrait' };
       let adminTplOrientFilter = '';
@@ -5279,6 +5323,16 @@
         if (fromEl) return fromEl;
         const fromDesign = design && design.fontFamily ? String(design.fontFamily).trim() : '';
         return fromDesign || DEFAULT_FONT;
+      }
+
+      function isSmartHoursFont(family) {
+        return /SmartHours/i.test(String(family || ''));
+      }
+
+      function resolveElFontWeight(el, design) {
+        const bold = !(el && el.bold === false);
+        if (isSmartHoursFont(resolveElFontFamily(el, design))) return bold ? '400' : '300';
+        return bold ? '700' : '400';
       }
 
       function fillFontFamilySelect() {
@@ -6797,11 +6851,13 @@
           } else if (el.type === 'title') {
             const fs = resolveElFontSize(el, design);
             const ff = resolveElFontFamily(el, design);
-            node.innerHTML = `<div class="preview-title" style="font-size:${fs}px;font-family:${ff};color:${design.textColor}">${escapeHtml(c.name)}</div>`;
+            const fw = resolveElFontWeight(el, design);
+            node.innerHTML = `<div class="preview-title" style="font-size:${fs}px;font-family:${ff};font-weight:${fw};color:${design.textColor}">${escapeHtml(c.name)}</div>`;
           } else if (el.type === 'status') {
             const openNow = isOpenNow(hours);
             const fs = resolveElFontSize(el, design);
             const ff = resolveElFontFamily(el, design);
+            const fw = resolveElFontWeight(el, design);
             if (design.statusMode === 'image' && (openMedia || closedMedia)) {
               const preview = openNow ? (openMedia || closedMedia) : (closedMedia || openMedia);
               node.innerHTML = `<img class="preview-slide" src="${escapeHtml(mediaUrl(c, preview))}" alt="${openNow ? 'Open' : 'Closed'}">`;
@@ -6809,7 +6865,7 @@
               const colors = resolveStatusColors(el, design, openNow);
               node.style.background = colors.box;
               node.style.color = colors.font;
-              node.innerHTML = `<div class="preview-badge" style="font-size:${fs}px;font-family:${ff};background:${colors.box};color:${colors.font}">${openNow ? 'OPEN' : 'CLOSED'}</div>`;
+              node.innerHTML = `<div class="preview-badge" style="font-size:${fs}px;font-family:${ff};font-weight:${fw};background:${colors.box};color:${colors.font}">${openNow ? 'OPEN' : 'CLOSED'}</div>`;
             }
           } else if (el.type === 'slideshow') {
             if (slideItems.length) {
@@ -6820,7 +6876,7 @@
           } else if (el.type === 'hours') {
             const fs = resolveElFontSize(el, design);
             const ff = resolveElFontFamily(el, design);
-            node.innerHTML = `<div class="preview-hours" style="font-size:${fs}px;font-family:${ff}">${
+            node.innerHTML = `<div class="preview-hours" style="font-size:${fs}px;font-family:${ff};font-weight:${resolveElFontWeight(el, design)}">${
               DAYS.map((day) => `<div class="row"><span>${DAY_LABELS[day]}</span><span style="color:${design.accentColor}">${escapeHtml(formatDay(hours[day]))}</span></div>`).join('')
             }</div>`;
           } else if (el.type === 'text') {
@@ -6840,7 +6896,7 @@
             editor.style.fontSize = fs + 'px';
             editor.style.fontFamily = ff;
             editor.style.color = color;
-            editor.style.fontWeight = el.bold === false ? '400' : '700';
+            editor.style.fontWeight = resolveElFontWeight(el, design);
             editor.textContent = el.text || '';
             editor.addEventListener('input', () => {
               if (suppressPropsSync) return;

@@ -1,0 +1,11 @@
+SmartHours original font files and glyph source — version 1.0
+
+Permission is granted to use, copy, modify, embed, host and redistribute these
+font files and the included original source, including in commercial websites,
+customer text editors, apps, displays, image exports and printed materials.
+No attribution is required. No third-party font outlines were incorporated.
+
+The files are provided as-is, without warranty.
+No claim of trademark registration or exclusive rights in the name or general
+letter shapes is made. Third-party build tools retain their own licenses and
+are not bundled with this package.
