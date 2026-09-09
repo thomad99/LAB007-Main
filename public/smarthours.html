@@ -556,8 +556,8 @@
       background: var(--wash);
       color: var(--tab-text);
       font-size: .95rem;
-      font-weight: 650;
-      font-family: inherit;
+      font-weight: 600;
+      font-family: "SmartHours", var(--font);
       line-height: 1.15;
       white-space: nowrap;
       box-sizing: border-box;
@@ -1023,7 +1023,9 @@
       font-size: 1rem;
       min-height: 46px;
     }
-    #tab-info .info-tile-url #fieldSlug[readonly],
+    #tab-info .info-tile-url.is-locked #fieldSlug {
+      display: none;
+    }
     #tab-info .info-tile-name #fieldName[readonly] {
       font-size: 1.28rem;
       font-weight: 800;
@@ -1031,9 +1033,6 @@
       min-height: 0;
       text-align: center;
       color: var(--accent);
-    }
-    #tab-info .info-tile-name #fieldName[readonly] {
-      padding-right: 0;
     }
     #tab-info #fieldMapsUrl,
     #tab-info #fieldEmail {
@@ -1055,6 +1054,13 @@
       text-decoration: none;
       color: var(--accent);
       line-height: 1.35;
+    }
+    #tab-info .info-tile-url.is-locked a.slug-preview {
+      margin-top: 0;
+      font-size: .95rem;
+      font-weight: 650;
+      overflow-wrap: anywhere;
+      word-break: break-word;
     }
     #tab-info a.slug-preview:hover { text-decoration: underline; }
     #tab-info .maps-help {
@@ -1467,6 +1473,27 @@
       color: var(--accent);
     }
     .hours-toggle input:checked ~ .hours-toggle-state::after { content: attr(data-on); }
+    .el-bold-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-top: 8px;
+    }
+    .el-bold-row > span {
+      font-size: .82rem;
+      font-weight: 650;
+      color: var(--text);
+    }
+    .hours-toggle.el-bold-toggle .hours-toggle-state {
+      display: inline;
+    }
+    .hours-toggle.el-bold-toggle .hours-toggle-state::after {
+      content: attr(data-off);
+    }
+    .hours-toggle.el-bold-toggle input:checked ~ .hours-toggle-state::after {
+      content: attr(data-on);
+    }
     .hours-toggle-lg .hours-toggle-track {
       width: 58px;
       height: 34px;
@@ -2168,7 +2195,7 @@
     }
     .preview-badge {
       width: 100%; height: 100%; display: grid; place-items: center; border-radius: 16px;
-      font-weight: 900; letter-spacing: .08em; text-transform: uppercase;
+      letter-spacing: .08em; text-transform: uppercase;
     }
     .preview-slide {
       width: 100%; height: 100%; object-fit: cover; object-position: center; border-radius: 0; background: #000; display: block;
@@ -2584,11 +2611,13 @@
         min-height: 44px;
         padding: 10px 12px;
       }
-      #tab-info .info-tile-url #fieldSlug[readonly],
       #tab-info .info-tile-name #fieldName[readonly] {
         font-size: 1.18rem;
         min-height: 0;
         padding: 4px 0 2px;
+      }
+      #tab-info .info-tile-url.is-locked a.slug-preview {
+        font-size: .9rem;
       }
       #tab-info .slug-preview,
       #tab-info a.slug-preview {
@@ -4123,10 +4152,6 @@
                     <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                     <span>Sketch</span>
                   </button>
-                  <button type="button" class="el-add-btn" data-trigger="addTitleBtn">
-                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 18 8-13 8 13M7.5 13h9"/></svg>
-                    <span>Title</span>
-                  </button>
                   <button type="button" class="el-add-btn" data-trigger="addSlideshowBtn">
                     <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="13" rx="1.5"/><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4H19a1.5 1.5 0 0 1 1.5 1.5V14A1.5 1.5 0 0 1 19 15.5H16"/></svg>
                     <span>Slides</span>
@@ -4184,7 +4209,7 @@
                 <div class="screen-settings">
                   <div>
                     <label for="screenHangRotation">Hang Rotation</label>
-                    <select id="screenHangRotation" title="Extra rotation if the panel is mounted upside-down or sideways">
+                    <select id="screenHangRotation" title="Buttons facing up is 0° upright">
                       <option value="0">0° upright</option>
                       <option value="90">90° CW</option>
                       <option value="180">180°</option>
@@ -4269,6 +4294,14 @@
                     </div>
                   </div>
                   <p class="hint" id="elStatusColorHint" style="margin:4px 0 0;">Box and font colors apply to the badge on the canvas.</p>
+                  <div class="el-bold-row">
+                    <span>Bold</span>
+                    <label class="hours-toggle el-bold-toggle">
+                      <input id="elStatusBold" type="checkbox" checked aria-label="Status text bold">
+                      <span class="hours-toggle-track" aria-hidden="true"></span>
+                      <span class="hours-toggle-state" data-off="Off" data-on="On"></span>
+                    </label>
+                  </div>
                 </div>
                 <div id="statusTemplateControls" class="hidden-block">
                   <button type="button" class="btn-secondary" id="pickStatusPairBtn">Choose open / closed templates</button>
@@ -4305,6 +4338,14 @@
                         <label for="elColor">Color</label>
                         <input id="elColor" type="color" value="#f6f8ff">
                       </div>
+                    </div>
+                    <div class="el-bold-row">
+                      <span>Bold</span>
+                      <label class="hours-toggle el-bold-toggle">
+                        <input id="elTextBold" type="checkbox" checked aria-label="Text bold">
+                        <span class="hours-toggle-track" aria-hidden="true"></span>
+                        <span class="hours-toggle-state" data-off="Off" data-on="On"></span>
+                      </label>
                     </div>
                   </div>
                   <div id="elImageProps" class="hidden-block">
@@ -4405,10 +4446,6 @@
                   <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.2" fill="currentColor" stroke="none"/></svg>
                   <span>Status</span>
                 </button>
-                <button type="button" class="el-add-btn editor-extra-tool" id="addTitleBtn">
-                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m4 18 8-13 8 13M7.5 13h9"/></svg>
-                  <span>Title</span>
-                </button>
                 <button type="button" class="el-add-btn editor-extra-tool" id="addSlideshowBtn">
                   <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="13" height="13" rx="1.5"/><path d="M8 7V5.5A1.5 1.5 0 0 1 9.5 4H19a1.5 1.5 0 0 1 1.5 1.5V14A1.5 1.5 0 0 1 19 15.5H16"/></svg>
                   <span>Slides</span>
@@ -4497,7 +4534,7 @@
                   <option value="180">180° upside down</option>
                   <option value="270">270° clockwise</option>
                 </select>
-                <p class="field-hint">Rotate the display if mounted.</p>
+                <p class="field-hint">Buttons facing up is 0° upright.</p>
               </div>
               <div>
                 <label for="fieldDeepSleep">Deep Sleep</label>
@@ -5377,7 +5414,7 @@
           statusFontSize: 36,
           logoUrl: '',
           showLogo: false,
-          showTitle: true,
+          showTitle: false,
           showStatus: true,
           showHours: true,
           showSlideshow: false,
@@ -5387,8 +5424,8 @@
           slideshowIntervalSec: 900,
           slideshowMediaIds: [],
           layout: [
-            { id: 'title', type: 'title', x: 24, y: Math.round(h * 0.16), w: w - 48, h: Math.max(36, Math.round(h * 0.1)), fontSize: 28, fontFamily: DEFAULT_FONT },
-            { id: 'status', type: 'status', x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.max(56, Math.round(h * 0.16)), fontSize: 36, fontFamily: DEFAULT_FONT, boxColor: '#FF0000', fontColor: '#000000', closedBoxColor: '#000000', closedFontColor: '#FFFFFF' },
+            { id: 'name', type: 'text', x: 24, y: Math.round(h * 0.16), w: w - 48, h: Math.max(36, Math.round(h * 0.1)), fontSize: 28, fontFamily: DEFAULT_FONT, text: 'Business name', align: 'center', bold: true, color: '' },
+            { id: 'status', type: 'status', x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.max(56, Math.round(h * 0.16)), fontSize: 36, fontFamily: DEFAULT_FONT, boxColor: '#FF0000', fontColor: '#000000', closedBoxColor: '#000000', closedFontColor: '#FFFFFF', bold: true },
             { id: 'hours', type: 'hours', x: 24, y: Math.round(h * 0.48), w: w - 48, h: Math.max(120, h - Math.round(h * 0.48) - 16), fontSize: 18, fontFamily: DEFAULT_FONT }
           ]
         };
@@ -5940,7 +5977,7 @@
         const map = {
           logo: { x: Math.round(w * 0.25), y: 12, w: Math.round(w * 0.5), h: Math.max(48, Math.round(h * 0.12)) },
           title: { x: 24, y: Math.round(h * 0.16), w: w - 48, h: Math.max(36, Math.round(h * 0.1)), fontSize: 28, fontFamily: DEFAULT_FONT },
-          status: { x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.max(56, Math.round(h * 0.16)), fontSize: 36, fontFamily: DEFAULT_FONT, boxColor: '#FF0000', fontColor: '#000000', closedBoxColor: '#000000', closedFontColor: '#FFFFFF' },
+          status: { x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.max(56, Math.round(h * 0.16)), fontSize: 36, fontFamily: DEFAULT_FONT, boxColor: '#FF0000', fontColor: '#000000', closedBoxColor: '#000000', closedFontColor: '#FFFFFF', bold: true },
           slideshow: { x: 24, y: Math.round(h * 0.28), w: w - 48, h: Math.round(h * 0.35) },
           hours: { x: 24, y: Math.round(h * 0.48), w: w - 48, h: Math.max(120, h - Math.round(h * 0.48) - 16), fontSize: 18, fontFamily: DEFAULT_FONT },
           text: { x: 40, y: 40, w: Math.min(480, w - 80), h: 56, text: 'New text', fontSize: 28, fontFamily: DEFAULT_FONT, color: '', align: 'center', bold: true },
@@ -6826,13 +6863,19 @@
             fontSel.appendChild(opt);
           }
           fontSel.value = family;
-          if (isStatus) syncStatusColorInputs(el, c && c.design);
+          if (isStatus) {
+            syncStatusColorInputs(el, c && c.design);
+            const statusBold = document.getElementById('elStatusBold');
+            if (statusBold) statusBold.checked = el.bold !== false;
+          }
           if (isText) {
             textProps.classList.remove('hidden-block');
             document.getElementById('elText').value = el.text || '';
             document.getElementById('elAlign').value = el.align || 'center';
             const color = el.color || (c && c.design && c.design.textColor) || '#f6f8ff';
             document.getElementById('elColor').value = /^#/.test(color) ? color : '#f6f8ff';
+            const textBold = document.getElementById('elTextBold');
+            if (textBold) textBold.checked = el.bold !== false;
           }
         }
         if (isImage) {
@@ -8701,7 +8744,6 @@
       });
       document.getElementById('addHoursBtn').addEventListener('click', () => addLayoutElement('hours'));
       document.getElementById('addStatusBtn').addEventListener('click', () => addLayoutElement('status'));
-      document.getElementById('addTitleBtn').addEventListener('click', () => addLayoutElement('title'));
       document.getElementById('addSlideshowBtn').addEventListener('click', () => {
         addLayoutElement('slideshow');
         syncElPropsPanel();
@@ -8898,6 +8940,23 @@
         renderCanvas();
         scheduleAutosave(300);
       });
+
+      function applySelectedBold(input, type) {
+        if (suppressPropsSync) return;
+        const el = selectedLayoutEl();
+        if (!el || el.type !== type || !input) return;
+        el.bold = !!input.checked;
+        renderCanvas();
+        scheduleAutosave(300);
+      }
+      const elTextBold = document.getElementById('elTextBold');
+      if (elTextBold) {
+        elTextBold.addEventListener('change', () => applySelectedBold(elTextBold, 'text'));
+      }
+      const elStatusBold = document.getElementById('elStatusBold');
+      if (elStatusBold) {
+        elStatusBold.addEventListener('change', () => applySelectedBold(elStatusBold, 'status'));
+      }
 
       ['elText', 'elAlign', 'elColor', 'elFit'].forEach((id) => {
         const input = document.getElementById(id);
