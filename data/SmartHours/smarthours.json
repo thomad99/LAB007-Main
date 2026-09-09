@@ -1,0 +1,478 @@
+{
+  "version": 1,
+  "settings": {
+    "autoSyncIntervalHours": 24,
+    "customerConfigVersion": 2
+  },
+  "customers": [],
+  "devices": [],
+  "templateCategories": [
+    {
+      "id": "cat-fall",
+      "name": "Fall"
+    },
+    {
+      "id": "cat-halloween",
+      "name": "Halloween"
+    },
+    {
+      "id": "cat-christmas",
+      "name": "Christmas"
+    },
+    {
+      "id": "cat-easter",
+      "name": "Easter"
+    },
+    {
+      "id": "cat-shops",
+      "name": "Shops"
+    },
+    {
+      "id": "cat-wallpapers",
+      "name": "Wallpapers"
+    }
+  ],
+  "templates": [
+    {
+      "id": "tpl-fall",
+      "name": "Fall",
+      "categoryId": "cat-fall",
+      "fileName": "fall.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-fall-2",
+      "name": "Fall 2",
+      "categoryId": "cat-fall",
+      "fileName": "fall-2.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-fall-classic",
+      "name": "Fall Classic",
+      "categoryId": "cat-fall",
+      "fileName": "fall-classic.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-fall-neon",
+      "name": "Fall Neon",
+      "categoryId": "cat-fall",
+      "fileName": "fall-neon.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-halloween-classic",
+      "name": "Halloween Classic",
+      "categoryId": "cat-halloween",
+      "fileName": "halloween-classic.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-halloween-neon",
+      "name": "Halloween Neon",
+      "categoryId": "cat-halloween",
+      "fileName": "halloween-neon.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-christmas-landscape",
+      "name": "Christmas Landscape",
+      "categoryId": "cat-christmas",
+      "fileName": "christmas-landscape.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-xmas",
+      "name": "Christmas",
+      "categoryId": "cat-christmas",
+      "fileName": "xmas.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-easter",
+      "name": "Easter",
+      "categoryId": "cat-easter",
+      "fileName": "easter.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-barber-1",
+      "name": "Barber 1",
+      "categoryId": "cat-shops",
+      "fileName": "barber-1.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-barber-2",
+      "name": "Barber 2",
+      "categoryId": "cat-shops",
+      "fileName": "barber-2.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-barber-3",
+      "name": "Barber 3",
+      "categoryId": "cat-shops",
+      "fileName": "barber-3.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-bike-shop",
+      "name": "Bike Shop",
+      "categoryId": "cat-shops",
+      "fileName": "bike-shop.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-coffee",
+      "name": "Coffee",
+      "categoryId": "cat-shops",
+      "fileName": "coffee.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-florist",
+      "name": "Florist",
+      "categoryId": "cat-shops",
+      "fileName": "florist.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-gift-shop",
+      "name": "Gift Shop",
+      "categoryId": "cat-shops",
+      "fileName": "gift-shop.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-gift-shop-2",
+      "name": "Gift Shop 2",
+      "categoryId": "cat-shops",
+      "fileName": "gift-shop-2.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-ice-cream",
+      "name": "Ice Cream",
+      "categoryId": "cat-shops",
+      "fileName": "ice-cream.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-nails",
+      "name": "Nails",
+      "categoryId": "cat-shops",
+      "fileName": "nails.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-nails-2",
+      "name": "Nails 2",
+      "categoryId": "cat-shops",
+      "fileName": "nails-2.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-nails-3",
+      "name": "Nails 3",
+      "categoryId": "cat-shops",
+      "fileName": "nails-3.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-pet-groomer",
+      "name": "Pet Groomer",
+      "categoryId": "cat-shops",
+      "fileName": "pet-groomer.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-pizza",
+      "name": "Pizza",
+      "categoryId": "cat-shops",
+      "fileName": "pizza.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-tattoo-shop",
+      "name": "Tattoo Shop",
+      "categoryId": "cat-shops",
+      "fileName": "tattoo-shop.png",
+      "orientation": "portrait",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-opticians",
+      "name": "Opticians",
+      "categoryId": "cat-shops",
+      "fileName": "opticians.png",
+      "orientation": "portrait",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-opticians-landscape",
+      "name": "Opticians",
+      "categoryId": "cat-shops",
+      "fileName": "opticians-landscape.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-dry-cleaners",
+      "name": "Dry Cleaners",
+      "categoryId": "cat-shops",
+      "fileName": "dry-cleaners.png",
+      "orientation": "portrait",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-dry-cleaners-landscape",
+      "name": "Dry Cleaners",
+      "categoryId": "cat-shops",
+      "fileName": "dry-cleaners-landscape.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-phone-repairs",
+      "name": "Phone Repairs",
+      "categoryId": "cat-shops",
+      "fileName": "phone-repairs.png",
+      "orientation": "portrait",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:25:04.253Z",
+      "updatedAt": "2026-09-08T22:25:04.253Z"
+    },
+    {
+      "id": "tpl-halloween-night",
+      "name": "Halloween Night",
+      "categoryId": "cat-halloween",
+      "fileName": "halloween-night.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:28:03.089Z",
+      "updatedAt": "2026-09-08T22:28:03.089Z"
+    },
+    {
+      "id": "tpl-christmas-frame",
+      "name": "Christmas Frame",
+      "categoryId": "cat-christmas",
+      "fileName": "christmas-frame.jpg",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:28:03.089Z",
+      "updatedAt": "2026-09-08T22:28:03.089Z"
+    },
+    {
+      "id": "tpl-fall-hills",
+      "name": "Fall Hills",
+      "categoryId": "cat-fall",
+      "fileName": "fall-hills.jpg",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:28:03.089Z",
+      "updatedAt": "2026-09-08T22:28:03.089Z"
+    },
+    {
+      "id": "tpl-fall-harvest",
+      "name": "Fall Harvest",
+      "categoryId": "cat-fall",
+      "fileName": "fall-harvest.jpg",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:28:03.089Z",
+      "updatedAt": "2026-09-08T22:28:03.089Z"
+    },
+    {
+      "id": "tpl-wallpaper-road",
+      "name": "Road",
+      "categoryId": "cat-wallpapers",
+      "fileName": "wallpaper-road.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:28:03.089Z",
+      "updatedAt": "2026-09-08T22:28:03.089Z"
+    },
+    {
+      "id": "tpl-wallpaper-snow",
+      "name": "Snow",
+      "categoryId": "cat-wallpapers",
+      "fileName": "wallpaper-snow.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:28:03.089Z",
+      "updatedAt": "2026-09-08T22:28:03.089Z"
+    },
+    {
+      "id": "tpl-wallpaper-sun",
+      "name": "Sunrise",
+      "categoryId": "cat-wallpapers",
+      "fileName": "wallpaper-sun.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:28:03.089Z",
+      "updatedAt": "2026-09-08T22:28:03.089Z"
+    },
+    {
+      "id": "tpl-wallpaper-space",
+      "name": "Space",
+      "categoryId": "cat-wallpapers",
+      "fileName": "wallpaper-space.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:28:03.089Z",
+      "updatedAt": "2026-09-08T22:28:03.089Z"
+    },
+    {
+      "id": "tpl-wallpaper-grass",
+      "name": "Meadow",
+      "categoryId": "cat-wallpapers",
+      "fileName": "wallpaper-grass.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:28:03.089Z",
+      "updatedAt": "2026-09-08T22:28:03.089Z"
+    },
+    {
+      "id": "tpl-wallpaper-hills",
+      "name": "Blue Hills",
+      "categoryId": "cat-wallpapers",
+      "fileName": "wallpaper-hills.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:28:03.089Z",
+      "updatedAt": "2026-09-08T22:28:03.089Z"
+    },
+    {
+      "id": "tpl-wallpaper-rain",
+      "name": "Rain",
+      "categoryId": "cat-wallpapers",
+      "fileName": "wallpaper-rain.png",
+      "orientation": "landscape",
+      "pairId": "",
+      "pairRole": "",
+      "createdAt": "2026-09-08T22:28:03.089Z",
+      "updatedAt": "2026-09-08T22:28:03.089Z"
+    }
+  ],
+  "updatedAt": "2026-09-08T22:28:03.205Z"
+}
