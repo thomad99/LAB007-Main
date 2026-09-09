@@ -87,6 +87,30 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&display=swap" rel="stylesheet">
   <style>
+    @font-face {
+      font-family: "SmartHours";
+      src: url("/SmartHours/assets/fonts/SmartHours-Light.woff2?v=2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Light.woff?v=2") format("woff");
+      font-weight: 300;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "SmartHours";
+      src: url("/SmartHours/assets/fonts/SmartHours-Regular.woff2?v=2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Regular.woff?v=2") format("woff");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "SmartHours";
+      src: url("/SmartHours/assets/fonts/SmartHours-Regular.woff2?v=2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Regular.woff?v=2") format("woff");
+      font-weight: 700;
+      font-style: normal;
+      font-display: swap;
+    }
     :root {
       --bg: #f7f9fc;
       --surface: #ffffff;
@@ -187,6 +211,7 @@
     }
     .intro h1 {
       margin: 0 0 8px;
+      font-family: "SmartHours", Manrope, "Segoe UI", sans-serif;
       font-size: clamp(1.8rem, 4.2vw, 2.7rem);
       letter-spacing: -.04em;
       line-height: 1.1;
@@ -325,6 +350,7 @@
     }
     .cta h2 {
       margin: 0 0 4px;
+      font-family: "SmartHours", Manrope, "Segoe UI", sans-serif;
       font-size: 1.25rem;
       letter-spacing: -.02em;
     }

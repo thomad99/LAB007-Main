@@ -31,17 +31,41 @@
   <style>
     @font-face {
       font-family: "SmartHours";
-      src: url("/SmartHours/assets/fonts/SmartHours-Light.woff2") format("woff2"),
-           url("/SmartHours/assets/fonts/SmartHours-Light.woff") format("woff");
+      src: url("/SmartHours/assets/fonts/SmartHours-Light.woff2?v=2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Light.woff?v=2") format("woff");
       font-weight: 300;
       font-style: normal;
       font-display: swap;
     }
     @font-face {
       font-family: "SmartHours";
-      src: url("/SmartHours/assets/fonts/SmartHours-Regular.woff2") format("woff2"),
-           url("/SmartHours/assets/fonts/SmartHours-Regular.woff") format("woff");
-      font-weight: 400 900;
+      src: url("/SmartHours/assets/fonts/SmartHours-Regular.woff2?v=2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Regular.woff?v=2") format("woff");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "SmartHours";
+      src: url("/SmartHours/assets/fonts/SmartHours-Regular.woff2?v=2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Regular.woff?v=2") format("woff");
+      font-weight: 500;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "SmartHours";
+      src: url("/SmartHours/assets/fonts/SmartHours-Regular.woff2?v=2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Regular.woff?v=2") format("woff");
+      font-weight: 600;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "SmartHours";
+      src: url("/SmartHours/assets/fonts/SmartHours-Regular.woff2?v=2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Regular.woff?v=2") format("woff");
+      font-weight: 700;
       font-style: normal;
       font-display: swap;
     }
@@ -150,7 +174,14 @@
       display: flex; flex-wrap: wrap; gap: 14px; align-items: center;
       justify-content: space-between; margin-bottom: 18px;
     }
-    h1 { margin: 0; font-size: clamp(1.6rem, 3vw, 2.2rem); letter-spacing: -.03em; }
+    h1 {
+      margin: 0;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      letter-spacing: -.03em;
+    }
+    h1, h2, .brand-text {
+      font-family: "SmartHours", var(--font);
+    }
     .brand {
       display: flex; align-items: center; gap: 14px; min-width: 0;
     }
@@ -259,6 +290,16 @@
     }
     body.customer-mode .wrap > header {
       padding-left: 52px;
+    }
+    body[data-studio-tab="design"] .site-settings {
+      display: none;
+    }
+    body[data-studio-tab="design"].admin-mode .wrap > header,
+    body[data-studio-tab="design"].customer-mode .wrap > header {
+      padding-right: 0;
+    }
+    body[data-studio-tab="design"].customer-mode .wrap > header {
+      padding-left: 0;
     }
     .btn, .btn-secondary, .btn-danger {
       appearance: none; border-radius: 10px; border: 1px solid transparent;
@@ -2132,8 +2173,13 @@
     .preview-slide {
       width: 100%; height: 100%; object-fit: cover; object-position: center; border-radius: 0; background: #000; display: block;
     }
-    .preview-symbol {
-      width: 100%; height: 100%; object-fit: contain; object-position: center; border-radius: 0; background: transparent; display: block;
+    .preview-symbol,
+    .symbol-glyph {
+      width: 100%; height: 100%; display: block; background-color: #000000;
+      -webkit-mask-size: contain; mask-size: contain;
+      -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+      -webkit-mask-position: center; mask-position: center;
+      -webkit-mask-mode: alpha; mask-mode: alpha;
     }
     .el-props { margin-top: 0; display: grid; gap: 6px; }
     .hidden-block { display: none !important; }
@@ -3356,12 +3402,13 @@
       color: inherit;
       text-align: center;
     }
-    .symbol-tile img {
+    .symbol-tile img,
+    .symbol-tile .symbol-glyph {
       width: 100%;
       height: 72px;
       object-fit: contain;
       display: block;
-      background: #fff;
+      background-color: #1a1c22;
       border-radius: 6px;
     }
     .symbol-tile span {
@@ -3824,7 +3871,7 @@
   <div id="symbolPicker">
     <div class="panel picker-card">
       <h2>Choose symbol</h2>
-      <p class="hint">Line-art icons you can place and resize on the canvas.</p>
+      <p class="hint">Transparent line-art you can place on any background. Color is set after you add it.</p>
       <div class="symbol-grid" id="symbolPickerGrid"></div>
       <div class="add-row" style="margin-top:14px;">
         <button type="button" class="btn-secondary" id="symbolPickerClose">Cancel</button>
@@ -4291,6 +4338,12 @@
                   <div id="elSymbolProps" class="hidden-block">
                     <button type="button" class="btn-secondary" id="pickSymbolBtn">Change symbol</button>
                     <p class="hint" style="margin:6px 0 0;" id="elSymbolName">No symbol selected.</p>
+                    <label for="elSymbolColor" style="margin-top:8px;">Color</label>
+                    <div class="color-row">
+                      <input id="elSymbolColor" type="text" value="#000000">
+                      <input id="elSymbolColorPick" type="color" value="#000000">
+                    </div>
+                    <div class="palette-swatches" data-palette-for="symbol"></div>
                   </div>
               </div>
 
@@ -4729,7 +4782,7 @@
       const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
       const TEXT_LAYOUT_TYPES = new Set(['title', 'hours', 'status', 'text']);
       const FONT_OPTIONS = [
-        { label: 'SmartHours-Font', value: '"SmartHours", sans-serif' },
+        { label: 'SmartHours', value: '"SmartHours", sans-serif' },
         { label: 'DM Sans', value: '"DM Sans", system-ui, sans-serif' },
         { label: 'Outfit', value: 'Outfit, system-ui, sans-serif' },
         { label: 'Plus Jakarta Sans', value: '"Plus Jakarta Sans", system-ui, sans-serif' },
@@ -4743,10 +4796,11 @@
         { label: 'Impact', value: 'Impact, Haettenschweiler, sans-serif' },
         { label: 'Courier', value: '"Courier New", monospace' }
       ];
-      const DEFAULT_FONT = '"DM Sans", system-ui, sans-serif';
+      const DEFAULT_FONT = '"SmartHours", sans-serif';
       if (document.fonts && document.fonts.load) {
         document.fonts.load('300 48px "SmartHours"').catch(() => {});
         document.fonts.load('400 48px "SmartHours"').catch(() => {});
+        document.fonts.load('700 48px "SmartHours"').catch(() => {});
       }
       const DAY_LABELS = {
         monday:'Monday', tuesday:'Tuesday', wednesday:'Wednesday', thursday:'Thursday',
@@ -4786,38 +4840,38 @@
       let settings = { autoSyncIntervalHours: 24 };
       let templateLibrary = { categories: [], templates: [] };
       let symbolLibrary = [
-        { id: 'hanger', name: 'Hanger', url: '/SmartHours/assets/symbols/hanger.png?v=2' },
-        { id: 'shoe', name: 'Shoe', url: '/SmartHours/assets/symbols/shoe.png?v=2' },
-        { id: 'airplane', name: 'Airplane', url: '/SmartHours/assets/symbols/airplane.png?v=2' },
-        { id: 'cloud', name: 'Cloud', url: '/SmartHours/assets/symbols/cloud.png?v=2' },
-        { id: 'glasses', name: 'Glasses', url: '/SmartHours/assets/symbols/glasses.png?v=2' },
-        { id: 'house', name: 'House', url: '/SmartHours/assets/symbols/house.png?v=2' },
-        { id: 'tooth', name: 'Tooth', url: '/SmartHours/assets/symbols/tooth.png?v=2' },
-        { id: 'pin', name: 'Pin', url: '/SmartHours/assets/symbols/pin.png?v=2' },
-        { id: 'tooth-2', name: 'Tooth 2', url: '/SmartHours/assets/symbols/tooth-2.png?v=2' },
-        { id: 'brain', name: 'Brain', url: '/SmartHours/assets/symbols/brain.png?v=2' },
-        { id: 'diamond', name: 'Diamond', url: '/SmartHours/assets/symbols/diamond.png?v=2' },
-        { id: 'books', name: 'Books', url: '/SmartHours/assets/symbols/books.png?v=2' },
-        { id: 'coffee-cup', name: 'Coffee cup', url: '/SmartHours/assets/symbols/coffee-cup.png?v=2' },
-        { id: 'clock', name: 'Clock', url: '/SmartHours/assets/symbols/clock.png?v=2' },
-        { id: 'bag', name: 'Bag', url: '/SmartHours/assets/symbols/bag.png?v=2' },
-        { id: 'ice-cream', name: 'Ice cream', url: '/SmartHours/assets/symbols/ice-cream.png?v=2' },
-        { id: 'dog', name: 'Dog', url: '/SmartHours/assets/symbols/dog.png?v=2' },
-        { id: 'cat', name: 'Cat', url: '/SmartHours/assets/symbols/cat.png?v=2' },
-        { id: 'scissors', name: 'Scissors', url: '/SmartHours/assets/symbols/scissors.png?v=2' },
-        { id: 'knife', name: 'Knife', url: '/SmartHours/assets/symbols/knife.png?v=2' },
-        { id: 'fork', name: 'Fork', url: '/SmartHours/assets/symbols/fork.png?v=2' },
-        { id: 'spoon', name: 'Spoon', url: '/SmartHours/assets/symbols/spoon.png?v=2' },
-        { id: 'pizza', name: 'Pizza', url: '/SmartHours/assets/symbols/pizza.png?v=2' },
-        { id: 'flower', name: 'Flower', url: '/SmartHours/assets/symbols/flower.png?v=2' },
-        { id: 'bicycle', name: 'Bicycle', url: '/SmartHours/assets/symbols/bicycle.png?v=2' },
-        { id: 'gift', name: 'Gift', url: '/SmartHours/assets/symbols/gift.png?v=2' },
-        { id: 'bread', name: 'Bread', url: '/SmartHours/assets/symbols/bread.png?v=2' },
-        { id: 'camera', name: 'Camera', url: '/SmartHours/assets/symbols/camera.png?v=2' },
-        { id: 'phone', name: 'Phone', url: '/SmartHours/assets/symbols/phone.png?v=2' },
-        { id: 'wine-glass', name: 'Wine glass', url: '/SmartHours/assets/symbols/wine-glass.png?v=2' },
-        { id: 'key', name: 'Key', url: '/SmartHours/assets/symbols/key.png?v=2' },
-        { id: 'chef-hat', name: 'Chef hat', url: '/SmartHours/assets/symbols/chef-hat.png?v=2' }
+        { id: 'hanger', name: 'Hanger', url: '/SmartHours/assets/symbols/hanger.png?v=3' },
+        { id: 'shoe', name: 'Shoe', url: '/SmartHours/assets/symbols/shoe.png?v=3' },
+        { id: 'airplane', name: 'Airplane', url: '/SmartHours/assets/symbols/airplane.png?v=3' },
+        { id: 'cloud', name: 'Cloud', url: '/SmartHours/assets/symbols/cloud.png?v=3' },
+        { id: 'glasses', name: 'Glasses', url: '/SmartHours/assets/symbols/glasses.png?v=3' },
+        { id: 'house', name: 'House', url: '/SmartHours/assets/symbols/house.png?v=3' },
+        { id: 'tooth', name: 'Tooth', url: '/SmartHours/assets/symbols/tooth.png?v=3' },
+        { id: 'pin', name: 'Pin', url: '/SmartHours/assets/symbols/pin.png?v=3' },
+        { id: 'tooth-2', name: 'Tooth 2', url: '/SmartHours/assets/symbols/tooth-2.png?v=3' },
+        { id: 'brain', name: 'Brain', url: '/SmartHours/assets/symbols/brain.png?v=3' },
+        { id: 'diamond', name: 'Diamond', url: '/SmartHours/assets/symbols/diamond.png?v=3' },
+        { id: 'books', name: 'Books', url: '/SmartHours/assets/symbols/books.png?v=3' },
+        { id: 'coffee-cup', name: 'Coffee cup', url: '/SmartHours/assets/symbols/coffee-cup.png?v=3' },
+        { id: 'clock', name: 'Clock', url: '/SmartHours/assets/symbols/clock.png?v=3' },
+        { id: 'bag', name: 'Bag', url: '/SmartHours/assets/symbols/bag.png?v=3' },
+        { id: 'ice-cream', name: 'Ice cream', url: '/SmartHours/assets/symbols/ice-cream.png?v=3' },
+        { id: 'dog', name: 'Dog', url: '/SmartHours/assets/symbols/dog.png?v=3' },
+        { id: 'cat', name: 'Cat', url: '/SmartHours/assets/symbols/cat.png?v=3' },
+        { id: 'scissors', name: 'Scissors', url: '/SmartHours/assets/symbols/scissors.png?v=3' },
+        { id: 'knife', name: 'Knife', url: '/SmartHours/assets/symbols/knife.png?v=3' },
+        { id: 'fork', name: 'Fork', url: '/SmartHours/assets/symbols/fork.png?v=3' },
+        { id: 'spoon', name: 'Spoon', url: '/SmartHours/assets/symbols/spoon.png?v=3' },
+        { id: 'pizza', name: 'Pizza', url: '/SmartHours/assets/symbols/pizza.png?v=3' },
+        { id: 'flower', name: 'Flower', url: '/SmartHours/assets/symbols/flower.png?v=3' },
+        { id: 'bicycle', name: 'Bicycle', url: '/SmartHours/assets/symbols/bicycle.png?v=3' },
+        { id: 'gift', name: 'Gift', url: '/SmartHours/assets/symbols/gift.png?v=3' },
+        { id: 'bread', name: 'Bread', url: '/SmartHours/assets/symbols/bread.png?v=3' },
+        { id: 'camera', name: 'Camera', url: '/SmartHours/assets/symbols/camera.png?v=3' },
+        { id: 'phone', name: 'Phone', url: '/SmartHours/assets/symbols/phone.png?v=3' },
+        { id: 'wine-glass', name: 'Wine glass', url: '/SmartHours/assets/symbols/wine-glass.png?v=3' },
+        { id: 'key', name: 'Key', url: '/SmartHours/assets/symbols/key.png?v=3' },
+        { id: 'chef-hat', name: 'Chef hat', url: '/SmartHours/assets/symbols/chef-hat.png?v=3' }
       ];
       let pickerState = { purpose: 'image', categoryId: '', orientation: 'portrait' };
       let adminTplOrientFilter = '';
@@ -4918,6 +4972,39 @@
         return best;
       }
 
+      function hexLuminance(hex) {
+        const m = String(hex || '').trim().match(/^#?([0-9a-f]{6})$/i);
+        if (!m) return 128;
+        const n = parseInt(m[1], 16);
+        const r = (n >> 16) & 255;
+        const g = (n >> 8) & 255;
+        const b = n & 255;
+        return 0.299 * r + 0.587 * g + 0.114 * b;
+      }
+
+      function contrastingInk(backgroundHex) {
+        return nearestPalette(hexLuminance(backgroundHex) < 128 ? '#FFFFFF' : '#000000');
+      }
+
+      function autoSymbolColor(design) {
+        const bg =
+          (design && design.backgroundColor) ||
+          (document.getElementById('bgColor') && document.getElementById('bgColor').value) ||
+          '#FFFFFF';
+        return contrastingInk(bg);
+      }
+
+      function cssMaskUrl(url) {
+        return String(url || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      }
+
+      function symbolGlyphHtml(url, color, className) {
+        const c = nearestPalette(color || '#000000');
+        const u = cssMaskUrl(url);
+        const cls = className || 'symbol-glyph';
+        return `<div class="${cls}" style="background-color:${escapeHtml(c)};-webkit-mask-image:url('${u}');mask-image:url('${u}')"></div>`;
+      }
+
       function setColorField(which, hex) {
         const snapped = nearestPalette(hex);
         if (which === 'bg') {
@@ -4931,6 +5018,8 @@
           document.getElementById('accentColorPick').value = snapped;
         } else if (which === 'statusBox' || which === 'statusFont') {
           applySelectedStatusColor(which, snapped);
+        } else if (which === 'symbol') {
+          applySelectedSymbolColor(snapped);
         }
         renderPaletteSwatches();
       }
@@ -4944,6 +5033,7 @@
           else if (which === 'text') current = document.getElementById('textColor').value;
           else if (which === 'statusBox') current = document.getElementById('elStatusBoxColor').value;
           else if (which === 'statusFont') current = document.getElementById('elStatusFontColor').value;
+          else if (which === 'symbol') current = document.getElementById('elSymbolColor').value;
           wrap.innerHTML = colors
             .map(
               (c) =>
@@ -5529,6 +5619,24 @@
           if (el.fontColor) el.fontColor = nearestPalette(el.fontColor);
           if (el.closedBoxColor) el.closedBoxColor = nearestPalette(el.closedBoxColor);
           if (el.closedFontColor) el.closedFontColor = nearestPalette(el.closedFontColor);
+        });
+      }
+
+      function applySelectedSymbolColor(hex) {
+        const el = selectedLayoutEl();
+        if (!el || el.type !== 'symbol') return;
+        const snapped = nearestPalette(hex);
+        el.color = snapped;
+        const text = document.getElementById('elSymbolColor');
+        const pick = document.getElementById('elSymbolColorPick');
+        if (text) text.value = snapped;
+        if (pick) pick.value = snapped;
+      }
+
+      function snapSymbolLayoutColors(design) {
+        ((design && design.layout) || []).forEach((el) => {
+          if (!el || el.type !== 'symbol') return;
+          el.color = nearestPalette(el.color || autoSymbolColor(design));
         });
       }
 
@@ -6142,6 +6250,9 @@
           const first = (c.media || [])[0];
           if (first) el.mediaId = first.id;
         }
+        if (type === 'symbol' && !el.color) {
+          el.color = autoSymbolColor(c.design);
+        }
         // Paint later items on top. Full-canvas images go to the back so the
         // design is built over a background photo.
         const fullBleed = type === 'image' && el.x === 0 && el.y === 0 && el.w >= TABLET.width && el.h >= TABLET.height;
@@ -6482,7 +6593,7 @@
         const selectedId = current && current.type === 'symbol' ? current.symbolId : '';
         grid.innerHTML = (symbolLibrary || []).map((s) => `
           <button type="button" class="symbol-tile ${s.id === selectedId ? 'active' : ''}" data-symbol="${escapeHtml(s.id)}">
-            <img src="${escapeHtml(s.url || '')}" alt="">
+            ${symbolGlyphHtml(s.url || '', '#000000', 'symbol-glyph')}
             <span>${escapeHtml(s.name || s.id)}</span>
           </button>
         `).join('') || '<p class="hint">No symbols yet.</p>';
@@ -6506,7 +6617,7 @@
           renderCanvas();
           scheduleAutosave(200);
         } else {
-          addLayoutElement('symbol', { symbolId });
+          addLayoutElement('symbol', { symbolId, color: autoSymbolColor(c.design) });
         }
         closeSymbolPicker();
         syncElPropsPanel();
@@ -6740,6 +6851,12 @@
           const named = lookupSymbol(el.symbolId);
           const nameEl = document.getElementById('elSymbolName');
           if (nameEl) nameEl.textContent = named ? named.name : 'No symbol selected.';
+          const color = nearestPalette(el.color || autoSymbolColor(c && c.design));
+          if (!el.color) el.color = color;
+          const colorInput = document.getElementById('elSymbolColor');
+          const colorPick = document.getElementById('elSymbolColorPick');
+          if (colorInput) colorInput.value = color;
+          if (colorPick) colorPick.value = color;
         }
         if (isStatus && c && c.design) {
           const mode = c.design.statusMode === 'image' ? 'image' : 'badge';
@@ -6753,7 +6870,7 @@
           renderStatusPairPreview();
         }
         suppressPropsSync = false;
-        if (isStatus || isHours) renderPaletteSwatches();
+        if (isStatus || isHours || isSymbol) renderPaletteSwatches();
       }
 
       function clearCanvasLayout() {
@@ -6785,18 +6902,20 @@
                 ? 'statusBox'
                 : textId === 'elStatusFontColor'
                   ? 'statusFont'
-                  : 'accent';
+                  : textId === 'elSymbolColor'
+                    ? 'symbol'
+                    : 'accent';
         pick.addEventListener('input', () => {
           if (suppressPropsSync) return;
           setColorField(which, pick.value);
           renderCanvas();
-          if (which === 'statusBox' || which === 'statusFont') scheduleAutosave(300);
+          if (which === 'statusBox' || which === 'statusFont' || which === 'symbol') scheduleAutosave(300);
         });
         text.addEventListener('change', () => {
           if (suppressPropsSync) return;
           setColorField(which, text.value);
           renderCanvas();
-          if (which === 'statusBox' || which === 'statusFont') scheduleAutosave(300);
+          if (which === 'statusBox' || which === 'statusFont' || which === 'symbol') scheduleAutosave(300);
         });
       }
 
@@ -6937,7 +7056,7 @@
           } else if (el.type === 'symbol') {
             const url = symbolUrl(el.symbolId);
             if (url) {
-              node.innerHTML = `<img class="preview-symbol" src="${escapeHtml(url)}" alt="">`;
+              node.innerHTML = symbolGlyphHtml(url, el.color || autoSymbolColor(design), 'preview-symbol');
             } else {
               node.innerHTML = `<div style="height:100%;display:grid;place-items:center;opacity:.55;border:1px dashed ${design.accentColor}">Pick symbol</div>`;
             }
@@ -7357,7 +7476,10 @@
       function formatDaysLeft(d) {
         const n = Number(d && d.estimatedDaysRemaining);
         if (!Number.isFinite(n) || n < 0) return '—';
-        return `<span class="nowrap" title="Estimated from recent battery use">${n}&nbsp;day${n === 1 ? '' : 's'}</span>`;
+        const title = d && d.batteryDrainIsDefault
+          ? 'Default estimate of 1% per day until this display has enough history'
+          : 'Estimated from recent battery use';
+        return `<span class="nowrap" title="${title}">${n}&nbsp;day${n === 1 ? '' : 's'}</span>`;
       }
 
       function formatWifi(d) {
@@ -7645,18 +7767,23 @@
           const current = Number.isFinite(Number(device.batteryPercent))
             ? Number(device.batteryPercent) + '% now'
             : 'No current reading';
-          meta.textContent = summary.sinceCharge
-            ? current + ' · average use since last charge'
-            : current + ' · daily averages, not each check-in';
+          if (summary.usedDefaultDrain) {
+            meta.textContent = current + ' · default 1% per day until enough history';
+          } else if (summary.sinceCharge) {
+            meta.textContent = current + ' · average use since last charge';
+          } else {
+            meta.textContent = current + ' · daily averages, not each check-in';
+          }
         }
         if (summaryEl) {
           const drain = summary.avgDailyDrainPercent;
           const left = summary.estimatedDaysRemaining;
           const tracked = Number(summary.daysTracked) || 0;
-          const daysLabel = summary.sinceCharge ? 'Days since charge' : 'Days tracked';
+          const daysLabel = summary.sinceCharge && !summary.usedDefaultDrain ? 'Days since charge' : 'Days tracked';
+          const drainLabel = summary.usedDefaultDrain ? drain + '% default' : drain != null ? drain + '%' : '—';
           summaryEl.innerHTML = [
             `<div class="battery-stat"><span>${daysLabel}</span><strong>${tracked || '—'}</strong></div>`,
-            `<div class="battery-stat"><span>Avg use / day</span><strong>${drain != null ? drain + '%' : '—'}</strong></div>`,
+            `<div class="battery-stat"><span>Avg use / day</span><strong>${drainLabel}</strong></div>`,
             `<div class="battery-stat"><span>Est. remaining</span><strong>${left != null ? left + ' day' + (left === 1 ? '' : 's') : '—'}</strong></div>`
           ].join('');
         }
@@ -8151,7 +8278,13 @@
           btn.classList.add('active');
           document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
           document.body.dataset.studioTab = nextTab;
-          if (btn.dataset.tab === 'design') {
+          if (nextTab === 'design') {
+            const settings = document.getElementById('siteSettings');
+            if (settings) {
+              settings.classList.remove('open');
+              const settingsBtn = document.getElementById('siteSettingsBtn');
+              if (settingsBtn) settingsBtn.setAttribute('aria-expanded', 'false');
+            }
             closeEditorSheet();
             setEditorDock(selectedElId ? 'edit' : 'add');
             renderCanvas();
@@ -8863,6 +8996,7 @@
       bindColorPair('accentColor', 'accentColorPick');
       bindColorPair('elStatusBoxColor', 'elStatusBoxColorPick');
       bindColorPair('elStatusFontColor', 'elStatusFontColorPick');
+      bindColorPair('elSymbolColor', 'elSymbolColorPick');
 
       document.querySelectorAll('[data-palette-for]').forEach((wrap) => {
         wrap.addEventListener('click', (event) => {
@@ -8897,7 +9031,10 @@
         setColorField('text', document.getElementById('textColor').value);
         setColorField('accent', document.getElementById('accentColor').value);
         const c = selected();
-        if (c) snapStatusLayoutColors(c.design);
+        if (c) {
+          snapStatusLayoutColors(c.design);
+          snapSymbolLayoutColors(c.design);
+        }
         renderCanvas();
       });
       document.getElementById('einkColorMode').addEventListener('change', () => {
@@ -8905,8 +9042,11 @@
         setColorField('bg', document.getElementById('bgColor').value);
         setColorField('text', document.getElementById('textColor').value);
         setColorField('accent', document.getElementById('accentColor').value);
-        const c = selected();
-        if (c) snapStatusLayoutColors(c.design);
+        const c2 = selected();
+        if (c2) {
+          snapStatusLayoutColors(c2.design);
+          snapSymbolLayoutColors(c2.design);
+        }
         renderCanvas();
       });
       ['einkWidthDesign', 'einkHeightDesign'].forEach((id) => {

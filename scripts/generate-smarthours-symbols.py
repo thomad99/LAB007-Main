@@ -68,9 +68,12 @@ def arc(d: ImageDraw.ImageDraw, cx: float, cy: float, rx: float, ry: float, star
 
 
 def save(name: str, mask: Image.Image) -> str:
+    # White silhouette, fully transparent elsewhere (RGB 0 where alpha is 0)
+    # so CSS masks work in both alpha and luminance modes.
     alpha = mask.resize((OUT, OUT), Image.Resampling.LANCZOS)
-    img = Image.new("RGBA", (OUT, OUT), (22, 22, 24, 255))
-    img.putalpha(alpha)
+    white = Image.new("RGBA", (OUT, OUT), (255, 255, 255, 255))
+    clear = Image.new("RGBA", (OUT, OUT), (0, 0, 0, 0))
+    img = Image.composite(white, clear, alpha)
     os.makedirs(OUT_DIR, exist_ok=True)
     path = os.path.join(OUT_DIR, f"{name}.png")
     img.save(path, "PNG", optimize=True)

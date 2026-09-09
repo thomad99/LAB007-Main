@@ -14,17 +14,25 @@
   <style>
     @font-face {
       font-family: "SmartHours";
-      src: url("/SmartHours/assets/fonts/SmartHours-Light.woff2") format("woff2"),
-           url("/SmartHours/assets/fonts/SmartHours-Light.woff") format("woff");
+      src: url("/SmartHours/assets/fonts/SmartHours-Light.woff2?v=2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Light.woff?v=2") format("woff");
       font-weight: 300;
       font-style: normal;
       font-display: swap;
     }
     @font-face {
       font-family: "SmartHours";
-      src: url("/SmartHours/assets/fonts/SmartHours-Regular.woff2") format("woff2"),
-           url("/SmartHours/assets/fonts/SmartHours-Regular.woff") format("woff");
-      font-weight: 400 900;
+      src: url("/SmartHours/assets/fonts/SmartHours-Regular.woff2?v=2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Regular.woff?v=2") format("woff");
+      font-weight: 400;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: "SmartHours";
+      src: url("/SmartHours/assets/fonts/SmartHours-Regular.woff2?v=2") format("woff2"),
+           url("/SmartHours/assets/fonts/SmartHours-Regular.woff?v=2") format("woff");
+      font-weight: 700;
       font-style: normal;
       font-display: swap;
     }
@@ -77,6 +85,13 @@
     .custom-img {
       width: 100%; height: 100%; display: block; object-fit: cover; object-position: center;
     }
+    .symbol-glyph {
+      width: 100%; height: 100%; display: block; background-color: #000000;
+      -webkit-mask-size: contain; mask-size: contain;
+      -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat;
+      -webkit-mask-position: center; mask-position: center;
+      -webkit-mask-mode: alpha; mask-mode: alpha;
+    }
     .custom-text {
       width: 100%; height: 100%;
       display: flex; align-items: center;
@@ -123,6 +138,26 @@
           .replace(/</g, '&lt;')
           .replace(/>/g, '&gt;')
           .replace(/"/g, '&quot;');
+      }
+
+      function cssMaskUrl(url) {
+        return String(url || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+      }
+
+      function symbolGlyphHtml(url, color) {
+        const c = /^#([0-9a-fA-F]{6})$/.test(String(color || '').trim()) ? String(color).trim() : '#000000';
+        const u = cssMaskUrl(url);
+        return `<div class="symbol-glyph" style="background-color:${escapeHtml(c)};-webkit-mask-image:url('${u}');mask-image:url('${u}')"></div>`;
+      }
+
+      function hexLooksDark(hex) {
+        const m = String(hex || '').trim().match(/^#?([0-9a-f]{6})$/i);
+        if (!m) return false;
+        const n = parseInt(m[1], 16);
+        const r = (n >> 16) & 255;
+        const g = (n >> 8) & 255;
+        const b = n & 255;
+        return 0.299 * r + 0.587 * g + 0.114 * b < 128;
       }
 
       function formatDay(day) {
@@ -180,7 +215,7 @@
       }
 
       function resolveFontFamily(el, design) {
-        return (el && el.fontFamily) || (design && design.fontFamily) || '"DM Sans", system-ui, sans-serif';
+        return (el && el.fontFamily) || (design && design.fontFamily) || '"SmartHours", sans-serif';
       }
 
       function resolveFontWeight(el, design) {
@@ -284,7 +319,7 @@
         document.documentElement.style.background = bg;
         document.body.style.background = bg;
         tablet.style.color = design.textColor || '#000000';
-        tablet.style.fontFamily = design.fontFamily || '"DM Sans", system-ui, sans-serif';
+        tablet.style.fontFamily = design.fontFamily || '"SmartHours", sans-serif';
         tablet.innerHTML = '';
         slideUrls = Array.isArray(design.slideshowUrls) ? design.slideshowUrls.slice() : [];
         slideIndex = 0;
@@ -335,7 +370,8 @@
           } else if (el.type === 'sketch' && el.dataUrl) {
             node.innerHTML = `<img class="custom-img" style="object-fit:contain;background:transparent" src="${escapeHtml(el.dataUrl)}" alt="Sketch">`;
           } else if (el.type === 'symbol' && el.imageUrl) {
-            node.innerHTML = `<img class="custom-img" style="object-fit:contain;background:transparent" src="${escapeHtml(el.imageUrl)}" alt="">`;
+            const color = el.color || (hexLooksDark(design.backgroundColor) ? '#FFFFFF' : '#000000');
+            node.innerHTML = symbolGlyphHtml(el.imageUrl, color);
           }
           tablet.appendChild(node);
         });
