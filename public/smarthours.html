@@ -1,12 +1,30 @@
 <!doctype html>
-<html lang="en" data-theme="dark">
+<html lang="en" data-theme="white">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
   <title>SmartHours | LAB007</title>
-  <link rel="icon" type="image/png" href="/SmartHours/assets/smarthours-logo.png?v=3">
-  <link rel="apple-touch-icon" href="/SmartHours/assets/smarthours-logo.png?v=3">
+  <meta name="description" content="Window-mounted e-ink that keeps opening hours accurate — update from your phone and auto-sync from Google.">
+  <meta name="theme-color" content="#0b1f3a">
+  <link rel="icon" href="/SmartHours/assets/smarthours-favicon.ico?v=6" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/SmartHours/assets/icons/navy/favicon-32x32.png?v=6">
+  <link rel="icon" type="image/png" sizes="16x16" href="/SmartHours/assets/icons/navy/favicon-16x16.png?v=6">
+  <link rel="apple-touch-icon" href="/SmartHours/assets/smarthours-apple-touch.png?v=6">
+  <link rel="manifest" href="/SmartHours/assets/smarthours-manifest.json?v=6">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="SmartHours">
+  <meta property="og:title" content="SmartHours">
+  <meta property="og:description" content="Window-mounted e-ink that keeps opening hours accurate — update from your phone and auto-sync from Google.">
+  <meta property="og:image" content="https://www.lab007.ai/SmartHours/assets/smarthours-share.jpg?v=7">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="SmartHours — Opening hours, made simple">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="SmartHours">
+  <meta name="twitter:description" content="Window-mounted e-ink that keeps opening hours accurate — update from your phone and auto-sync from Google.">
+  <meta name="twitter:image" content="https://www.lab007.ai/SmartHours/assets/smarthours-share.jpg?v=7">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;600;700&family=Outfit:wght@400;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@400;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,10 +32,10 @@
     (function () {
       try {
         var t = localStorage.getItem('smarthours-theme');
-        if (t !== 'white' && t !== 'color') t = 'dark';
+        if (t !== 'white' && t !== 'color' && t !== 'dark') t = 'white';
         document.documentElement.setAttribute('data-theme', t);
       } catch (_) {
-        document.documentElement.setAttribute('data-theme', 'dark');
+        document.documentElement.setAttribute('data-theme', 'white');
       }
     })();
   </script>
@@ -69,7 +87,7 @@
       --font: "Plus Jakarta Sans", Inter, system-ui, sans-serif;
       --radius: 18px;
       --radius-sm: 14px;
-      --logo-pad: #0b1220;
+      --logo-pad: transparent;
       --bg-grad: linear-gradient(180deg, #f7f8fa, #eef0f3);
     }
     html[data-theme="color"] {
@@ -92,7 +110,7 @@
       --font: Outfit, "Segoe UI", sans-serif;
       --radius: 20px;
       --radius-sm: 14px;
-      --logo-pad: #0a1628;
+      --logo-pad: transparent;
       --bg-grad:
         radial-gradient(800px 380px at 8% -8%, rgba(43, 127, 255, .16), transparent 55%),
         radial-gradient(640px 320px at 92% 0%, rgba(96, 165, 250, .18), transparent 50%),
@@ -123,36 +141,105 @@
       height: auto;
       border-radius: 0;
       flex: 0 0 auto;
-      background: var(--logo-pad);
+      background: transparent;
       padding: 0;
     }
-    html[data-theme="white"] .brand-logo,
-    html[data-theme="color"] .brand-logo {
-      padding: 8px 12px;
-      border-radius: 14px;
-    }
+    html[data-theme="dark"] .brand-logo-light,
+    html[data-theme="white"] .brand-logo-dark,
+    html[data-theme="color"] .brand-logo-dark { display: none; }
     .brand-text { min-width: 0; }
     .sub { margin: 4px 0 0; color: var(--muted); }
     .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
-    .theme-picker {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
+    .site-settings {
+      position: fixed;
+      top: max(10px, env(safe-area-inset-top));
+      right: max(14px, env(safe-area-inset-right));
+      z-index: 91;
     }
-    .theme-picker-label {
-      font-size: .72rem;
-      letter-spacing: .06em;
+    body.customer-mode:not(.has-studio) .site-settings {
+      right: max(14px, env(safe-area-inset-right), calc((100vw - min(960px, 100vw - 28px)) / 2));
+    }
+    body.admin-mode:not(.has-studio) .site-settings {
+      right: max(14px, env(safe-area-inset-right), calc((100vw - min(1480px, 100vw - 28px)) / 2));
+    }
+    .site-settings-btn {
+      appearance: none;
+      width: 42px;
+      height: 42px;
+      margin: 0;
+      padding: 0;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+    }
+    .site-settings-btn svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .site-settings-btn:hover,
+    .site-settings.open .site-settings-btn {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+    .site-settings-menu {
+      display: none;
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      min-width: 188px;
+      padding: 8px;
+      border-radius: 14px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+    .site-settings.open .site-settings-menu { display: grid; gap: 4px; }
+    .site-settings-heading {
+      margin: 0;
+      padding: 6px 10px 4px;
+      font-size: .68rem;
+      letter-spacing: .08em;
       text-transform: uppercase;
       color: var(--muted);
       font-weight: 700;
     }
-    .theme-picker select {
-      width: auto;
-      min-width: 148px;
+    .site-settings-menu button {
+      appearance: none;
+      width: 100%;
       margin: 0;
-      padding: 8px 12px;
+      padding: 10px 12px;
+      border: 0;
       border-radius: 10px;
+      background: transparent;
+      color: var(--text);
+      font: inherit;
       font-weight: 600;
+      text-align: left;
+      cursor: pointer;
+    }
+    .site-settings-menu button:hover {
+      background: var(--wash);
+    }
+    .site-settings-menu button.is-active {
+      background: var(--accent-dim);
+      color: var(--accent);
+    }
+    body.admin-mode .wrap > header,
+    body.customer-mode .wrap > header {
+      padding-right: 52px;
+    }
+    body.customer-mode .wrap > header {
+      padding-left: 52px;
     }
     .btn, .btn-secondary, .btn-danger {
       appearance: none; border-radius: 10px; border: 1px solid transparent;
@@ -464,18 +551,18 @@
       gap: 16px;
     }
     body.customer-mode .brand-logo {
-      width: min(420px, 90vw);
+      width: min(420px, 100%);
       height: auto;
       border-radius: 0;
       padding: 0;
       box-shadow: none;
-      background: var(--logo-pad);
+      background: transparent;
     }
     body.customer-mode .brand-text { display: none; }
     .about-link { display: none !important; }
     body.admin-mode .about-link { display: inline-flex !important; }
-    body.customer-mode .toolbar { justify-content: center; }
-    body.customer-mode .wrap { padding-top: 28px; }
+    body.customer-mode .toolbar { display: none; }
+    body.customer-mode .wrap { padding-top: 64px; }
     body.customer-mode .grid-main { grid-template-columns: 1fr; }
     body.customer-mode aside.admin-only { display: none; }
     body.customer-mode:not(.has-studio) .grid-main { display: none; }
@@ -493,9 +580,13 @@
       pointer-events: none;
       opacity: .88;
     }
-    body.admin-mode.readonly .theme-picker select {
-      pointer-events: auto;
+    body.admin-mode.readonly #fieldName[readonly],
+    body.admin-mode.readonly #fieldSlug[readonly] {
       opacity: 1;
+    }
+    body.admin-mode.readonly .hours-toggle input[data-deep-sleep] {
+      pointer-events: auto;
+      opacity: 0;
     }
     body.admin-mode.readonly .templates-page input,
     body.admin-mode.readonly .templates-page select,
@@ -617,7 +708,7 @@
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 28px 0 40px;
+      padding: 64px 0 40px;
     }
     body.customer-mode:not(.has-studio) .brand-logo {
       width: min(280px, 72vw);
@@ -625,7 +716,8 @@
     body.customer-mode:not(.has-studio) header { margin-bottom: 8px; }
     .slug-preview { margin: 6px 0 0; color: var(--accent); font-size: .82rem; overflow-wrap: anywhere; word-break: break-word; }
     a.slug-preview { display: block; max-width: 100%; font-weight: 600; text-decoration: underline; line-height: 1.35; }
-    #fieldSlug[readonly] {
+    #fieldSlug[readonly],
+    #fieldName[readonly] {
       border: 0;
       background: transparent;
       padding: 2px 0;
@@ -634,6 +726,7 @@
       pointer-events: none;
       font-weight: 650;
     }
+    .info-tile.is-locked h3 label { cursor: default; }
     .maps-help {
       display: flex; flex-wrap: wrap; gap: 10px 14px; align-items: baseline;
       margin: 0 0 8px;
@@ -867,13 +960,17 @@
       font-size: 1rem;
       min-height: 46px;
     }
-    #tab-info .info-tile-url #fieldSlug[readonly] {
+    #tab-info .info-tile-url #fieldSlug[readonly],
+    #tab-info .info-tile-name #fieldName[readonly] {
       font-size: 1.28rem;
       font-weight: 800;
       padding: 4px 0 2px;
       min-height: 0;
       text-align: center;
       color: var(--accent);
+    }
+    #tab-info .info-tile-name #fieldName[readonly] {
+      padding-right: 0;
     }
     #tab-info #fieldMapsUrl {
       overflow-wrap: anywhere;
@@ -1014,7 +1111,7 @@
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
       gap: 16px 18px;
-      align-items: start;
+      align-items: stretch;
     }
     @media (max-width: 800px) {
       .device-settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -1022,14 +1119,41 @@
     @media (max-width: 380px) {
       .device-settings-grid { grid-template-columns: 1fr; }
     }
-    .device-settings-grid > div { min-width: 0; }
+    .device-settings-grid > div {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+    .device-settings-grid > div > label,
+    .device-settings-grid .settings-toggle-label {
+      display: flex;
+      align-items: flex-end;
+      min-height: 2.6em;
+      line-height: 1.25;
+    }
     .device-settings-grid .field-hint {
       margin: 6px 0 0;
       color: var(--muted);
       font-size: .78rem;
       line-height: 1.35;
+      min-height: 2.7em;
     }
-    .field-with-icon { position: relative; }
+    .device-battery-field { grid-column: 1 / -1; }
+    .settings-toggle-label {
+      display: block;
+      font-size: .82rem;
+      letter-spacing: 0;
+      text-transform: none;
+      font-weight: 650;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+    .device-settings-grid .hours-toggle {
+      margin-top: 0;
+      min-height: 44px;
+      align-items: center;
+    }
+    .field-with-icon { position: relative; flex: 0 0 auto; }
     .field-with-icon input { width: 100%; padding-right: 42px; }
     .field-icon {
       position: absolute;
@@ -1271,6 +1395,18 @@
       font-size: .92rem;
     }
     .hours-toolbar .manual-opt .hours-toggle { flex: 0 0 auto; }
+    .device-table .hours-toggle { gap: 0; }
+    .device-table .hours-toggle-track {
+      width: 44px;
+      height: 26px;
+    }
+    .device-table .hours-toggle-track::after {
+      width: 18px;
+      height: 18px;
+    }
+    .device-table .hours-toggle input:checked + .hours-toggle-track::after {
+      transform: translateX(18px);
+    }
     .hours-toolbar .manual-opt-label {
       font-size: 1.05rem;
       font-weight: 650;
@@ -2226,26 +2362,21 @@
         flex: 1 1 140px;
       }
       .device-table select { min-width: 0; width: 100%; }
-      #tab-devices .device-table.is-empty thead { display: table-header-group; }
-      #tab-devices .device-table.is-empty { display: table; width: 100%; min-width: 0; table-layout: fixed; }
-      #tab-devices .device-table.is-empty tbody { display: table-row-group; }
-      #tab-devices .device-table.is-empty tr {
-        display: table-row;
+      #tab-devices .device-table.is-empty thead { display: none; }
+      #tab-devices .device-table.is-empty { display: block; width: 100%; min-width: 0; }
+      #tab-devices .device-table.is-empty tbody,
+      #tab-devices .device-table.is-empty tr,
+      #tab-devices .device-table.is-empty td {
+        display: block;
+        width: 100%;
         margin: 0;
         padding: 0;
         border: 0;
         background: transparent;
       }
-      #tab-devices .device-table.is-empty th,
-      #tab-devices .device-table.is-empty td {
-        display: table-cell;
-        padding: 8px 4px;
-        font-size: .62rem;
-        border-bottom: 1px solid var(--hairline);
-      }
       #tab-devices .device-table.is-empty td {
         text-align: center;
-        padding: 20px 8px 8px;
+        padding: 12px 8px 4px;
         font-size: .9rem;
       }
     }
@@ -2332,7 +2463,8 @@
         min-height: 44px;
         padding: 10px 12px;
       }
-      #tab-info .info-tile-url #fieldSlug[readonly] {
+      #tab-info .info-tile-url #fieldSlug[readonly],
+      #tab-info .info-tile-name #fieldName[readonly] {
         font-size: 1.18rem;
         min-height: 0;
         padding: 4px 0 2px;
@@ -2343,7 +2475,8 @@
         min-height: 0;
         padding: 0;
       }
-      #tab-devices label { font-size: 1rem; margin-bottom: 6px; }
+      #tab-devices label,
+      #tab-devices .settings-toggle-label { font-size: 1rem; margin-bottom: 6px; }
       #tab-devices input:not(.device-name-input),
       #tab-devices select {
         font-size: 1.05rem;
@@ -2429,12 +2562,26 @@
         grid-template-columns: 1fr 1fr;
         gap: 12px 10px;
         max-width: none;
+        align-items: stretch;
       }
       .device-settings-grid > div,
       .device-settings-grid input,
       .device-settings-grid select {
         min-width: 0;
         max-width: 100%;
+      }
+      .device-settings-grid > div > label,
+      .device-settings-grid .settings-toggle-label {
+        min-height: 2.8em;
+        margin-bottom: 6px;
+      }
+      .device-settings-grid .field-hint { min-height: 3.2em; }
+      .device-battery-field .field-hint { min-height: 0; }
+      @media (max-width: 430px) {
+        .device-settings-grid { grid-template-columns: 1fr; }
+        .device-settings-grid > div > label,
+        .device-settings-grid .settings-toggle-label { min-height: 0; }
+        .device-settings-grid .field-hint { min-height: 0; }
       }
       #tab-devices,
       #tab-devices .device-card,
@@ -2448,7 +2595,8 @@
         overflow-wrap: anywhere;
         line-height: 1.25;
       }
-      #tab-devices label { font-size: .78rem; margin-bottom: 6px; }
+      #tab-devices label,
+      #tab-devices .settings-toggle-label { font-size: .78rem; margin-bottom: 6px; }
       #tab-devices input:not(.device-name-input),
       #tab-devices select {
         font-size: .92rem;
@@ -3386,9 +3534,9 @@
     }
     html[data-theme="white"] body.customer-mode .brand-logo,
     html[data-theme="color"] body.customer-mode .brand-logo {
-      padding: 8px 12px;
-      border-radius: 14px;
-      background: var(--logo-pad);
+      padding: 0;
+      border-radius: 0;
+      background: transparent;
     }
     html[data-theme="white"] .info-tile {
       min-height: 244px;
@@ -3487,6 +3635,20 @@
       if (admin) document.body.classList.add('readonly');
     })();
   </script>
+  <div class="site-settings" id="siteSettings">
+    <button type="button" class="site-settings-btn" id="siteSettingsBtn" aria-label="Settings" aria-haspopup="true" aria-expanded="false">
+      <svg viewBox="0 0 24 24" aria-hidden="true">
+        <circle cx="12" cy="12" r="3"/>
+        <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.2a1.7 1.7 0 0 0-1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.2a1.7 1.7 0 0 0 1.5-1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.2a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9c.3.6.9 1 1.5 1H21a2 2 0 1 1 0 4h-.2a1.7 1.7 0 0 0-1.5 1z"/>
+      </svg>
+    </button>
+    <div class="site-settings-menu" id="siteSettingsMenu" role="menu" aria-label="Theme">
+      <p class="site-settings-heading">Theme</p>
+      <button type="button" role="menuitem" data-theme-choice="dark">Dark Theme</button>
+      <button type="button" role="menuitem" data-theme-choice="white">White Theme</button>
+      <button type="button" role="menuitem" data-theme-choice="color">Color Theme</button>
+    </div>
+  </div>
   <div id="adminGate">
     <form class="panel login-card" id="adminLoginForm">
       <h2>SmartHours Admin</h2>
@@ -3576,21 +3738,14 @@
   <div id="app" class="wrap">
     <header>
       <div class="brand">
-        <img class="brand-logo" src="/SmartHours/assets/smarthours-lockup.png?v=4" width="640" height="180" alt="SmartHours" onerror="this.onerror=null;this.src='/SmartHours/assets/smarthours-logo.png?v=4'">
+        <img class="brand-logo brand-logo-light" src="/SmartHours/assets/smarthours-lockup.png?v=5" width="640" height="180" alt="SmartHours">
+        <img class="brand-logo brand-logo-dark" src="/SmartHours/assets/smarthours-logo-white.png?v=5" width="640" height="180" alt="SmartHours">
         <div class="brand-text">
           <h1 id="pageTitle">SmartHours</h1>
           <p class="sub" id="pageSub">Set up your hours display</p>
         </div>
       </div>
       <div class="toolbar">
-        <label class="theme-picker">
-          <span class="theme-picker-label">Theme</span>
-          <select id="siteTheme" aria-label="Site theme">
-            <option value="dark">Dark Theme</option>
-            <option value="white">White Theme</option>
-            <option value="color">Color Theme</option>
-          </select>
-        </label>
         <a class="btn-secondary about-link admin-only" href="/SmartHours/about">About</a>
         <button type="button" class="btn-secondary admin-only" id="customersNavBtn">Customers</button>
         <button type="button" class="btn-secondary admin-only" id="newCustomerBtn">New Customer</button>
@@ -3720,13 +3875,13 @@
               </button>
             </div>
             <div class="info-tiles">
-              <article class="info-tile info-tile-name">
+              <article class="info-tile info-tile-name" id="infoNameTile">
                 <span class="info-tile-icon" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="3.2"/><path d="M5.5 19.2c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5"/></svg>
                 </span>
                 <h3><label for="fieldName">Customer Name</label></h3>
                 <div class="info-tile-value has-check">
-                  <input id="fieldName" type="text">
+                  <input id="fieldName" type="text" autocomplete="off">
                   <span class="info-check" id="fieldNameCheck" hidden>
                     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12.5 10.8 15.2 16.2 9.5"/></svg>
                   </span>
@@ -3884,7 +4039,7 @@
                 <p class="block-title">Screen</p>
                 <div class="screen-settings">
                   <div>
-                    <label for="screenHangRotation">Hang rotate</label>
+                    <label for="screenHangRotation">Hang Rotation</label>
                     <select id="screenHangRotation" title="Extra rotation if the panel is mounted upside-down or sideways">
                       <option value="0">0° upright</option>
                       <option value="90">90° CW</option>
@@ -4182,9 +4337,10 @@
                   <option value="landscape">Landscape</option>
                   <option value="portrait" selected>Portrait</option>
                 </select>
+                <p class="field-hint">Portrait or landscape on the wall.</p>
               </div>
               <div>
-                <label for="einkHangRotation">Hang Rotate</label>
+                <label for="einkHangRotation">Hang Rotation</label>
                 <select id="einkHangRotation">
                   <option value="0">0° upright</option>
                   <option value="90">90° clockwise</option>
@@ -4192,6 +4348,15 @@
                   <option value="270">270° clockwise</option>
                 </select>
                 <p class="field-hint">Rotate the display if mounted.</p>
+              </div>
+              <div class="device-battery-field">
+                <span class="settings-toggle-label">Low Battery Alert</span>
+                <label class="hours-toggle hours-toggle-lg" for="fieldLowBatteryAlert">
+                  <input id="fieldLowBatteryAlert" type="checkbox" checked>
+                  <span class="hours-toggle-track" aria-hidden="true"></span>
+                  <span class="hours-toggle-state" data-off="Off" data-on="On"></span>
+                </label>
+                <p class="field-hint">Email you when a display drops below 10%. Uses the email on Customer Info.</p>
               </div>
               <div class="admin-only">
                 <label for="einkWidth">Panel width (px)</label>
@@ -4241,7 +4406,7 @@
               </span>
               <div>
                 <h2>Device Check-ins</h2>
-                <p>See your displays and their status. Type a name such as Front Door or Back Door.</p>
+                <p>See your displays and their status. Type a name such as Front Door or Back Door. Deep Sleep stays on the poll interval until 2 hours after closing, then sleeps until 2 hours before the next opening. Buttons still wake the display for a live check.</p>
               </div>
               <button type="button" class="btn-secondary" id="refreshDevicesBtn">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -4261,12 +4426,13 @@
                     <th>Days left</th>
                     <th>Customer ID</th>
                     <th>Poll</th>
+                    <th>Deep sleep</th>
                     <th>Last check-in</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="deviceTableBody">
-                  <tr><td colspan="11" class="hint">No devices have checked in yet.</td></tr>
+                  <tr><td colspan="12" class="hint">No devices have checked in yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -4309,12 +4475,13 @@
                 <th>Days left</th>
                 <th>Customer ID</th>
                 <th>Poll</th>
+                <th>Deep sleep</th>
                 <th>Last check-in</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="fleetTableBody">
-              <tr><td colspan="12" class="hint">No devices have checked in yet.</td></tr>
+              <tr><td colspan="13" class="hint">No devices have checked in yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -4421,23 +4588,43 @@
         }
       }
       function applySiteTheme(theme) {
-        if (theme !== 'white' && theme !== 'color') theme = 'dark';
+        if (theme !== 'white' && theme !== 'color' && theme !== 'dark') theme = 'white';
         document.documentElement.setAttribute('data-theme', theme);
         try { localStorage.setItem('smarthours-theme', theme); } catch (_) {}
-        const sel = document.getElementById('siteTheme');
-        if (sel && sel.value !== theme) sel.value = theme;
+        document.querySelectorAll('[data-theme-choice]').forEach((btn) => {
+          btn.classList.toggle('is-active', btn.dataset.themeChoice === theme);
+        });
       }
       try {
         applySiteTheme(localStorage.getItem('smarthours-theme'));
       } catch (_) {
-        applySiteTheme('dark');
+        applySiteTheme('white');
       }
-      const siteTheme = document.getElementById('siteTheme');
-      if (siteTheme) {
-        siteTheme.addEventListener('change', function () {
-          applySiteTheme(siteTheme.value);
+      (function bindSiteSettings() {
+        const root = document.getElementById('siteSettings');
+        const btn = document.getElementById('siteSettingsBtn');
+        if (!root || !btn) return;
+        const setOpen = (open) => {
+          root.classList.toggle('open', open);
+          btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+        };
+        btn.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          setOpen(!root.classList.contains('open'));
         });
-      }
+        root.querySelectorAll('[data-theme-choice]').forEach((choice) => {
+          choice.addEventListener('click', () => {
+            applySiteTheme(choice.dataset.themeChoice);
+            setOpen(false);
+          });
+        });
+        document.addEventListener('click', (ev) => {
+          if (!root.contains(ev.target)) setOpen(false);
+        });
+        document.addEventListener('keydown', (ev) => {
+          if (ev.key === 'Escape') setOpen(false);
+        });
+      })();
       const DAYS = ['monday','tuesday','wednesday','thursday','friday','saturday','sunday'];
       const TEXT_LAYOUT_TYPES = new Set(['title', 'hours', 'status', 'text']);
       const FONT_OPTIONS = [
@@ -4908,12 +5095,23 @@
         }
       }
 
+      function lockNameField(locked) {
+        const nameEl = document.getElementById('fieldName');
+        const tile = document.getElementById('infoNameTile');
+        const nameCheck = document.getElementById('fieldNameCheck');
+        if (!nameEl) return;
+        nameEl.readOnly = !!locked;
+        nameEl.tabIndex = locked ? -1 : 0;
+        if (tile) tile.classList.toggle('is-locked', !!locked);
+        if (nameCheck && locked) nameCheck.hidden = true;
+      }
+
       function syncInfoTileChecks() {
         const name = document.getElementById('fieldName');
         const email = document.getElementById('fieldEmail');
         const nameCheck = document.getElementById('fieldNameCheck');
         const emailCheck = document.getElementById('fieldEmailCheck');
-        if (nameCheck) nameCheck.hidden = !(name && name.value.trim());
+        if (nameCheck) nameCheck.hidden = !(name && name.value.trim()) || !!(name && name.readOnly);
         if (emailCheck) emailCheck.hidden = !(email && email.value.trim());
       }
 
@@ -6829,6 +7027,7 @@
         document.getElementById('fieldName').value = customer.name || '';
         document.getElementById('fieldSlug').value = customer.slug || '';
         lockSlugField(IS_ADMIN || Boolean(customer.slug && customer.id && !String(customer.id).startsWith('tmp-')));
+        lockNameField(Boolean(customer.id && !String(customer.id).startsWith('tmp-')));
         updateSlugPreview(customer.slug, document.getElementById('studioSlugPreview'));
         const slugEl = document.getElementById('fieldSlug');
         if (customer.slug) slugEl.dataset.touched = '1';
@@ -6858,6 +7057,8 @@
           const mins = Number(customer.googleSyncIntervalMinutes);
           googleSyncEl.value = String(Number.isFinite(mins) ? mins : 60);
         }
+        const lowBattEl = document.getElementById('fieldLowBatteryAlert');
+        if (lowBattEl) lowBattEl.checked = customer.lowBatteryAlert !== false;
         renderSlideshowList(customer);
         renderDesignSlotsUi();
         logoDataUrl = null;
@@ -7027,6 +7228,14 @@
         return `<span class="nowrap">${escapeHtml(d.wifiSsid || '—')}</span>`;
       }
 
+      function deepSleepToggleHtml(d) {
+        const on = d.deepSleep !== false;
+        return `<label class="hours-toggle" title="On: poll until 2 hours after closing, then sleep until 2 hours before the next opening. Off: use the set poll interval only. Buttons always do a live check.">
+          <input type="checkbox" data-deep-sleep="${escapeHtml(d.id)}" ${on ? 'checked' : ''} aria-label="Deep sleep">
+          <span class="hours-toggle-track" aria-hidden="true"></span>
+        </label>`;
+      }
+
       function visibleDevices() {
         const slug = selected() && selected().slug;
         if (IS_ADMIN && !slug) return devices;
@@ -7074,6 +7283,14 @@
         root.querySelectorAll('[data-battery-device]').forEach((btn) => {
           btn.addEventListener('click', () => {
             openBatteryHistory(btn.dataset.batteryDevice).catch((err) => setStatus(err.message, true));
+          });
+        });
+        root.querySelectorAll('[data-deep-sleep]').forEach((input) => {
+          input.addEventListener('change', () => {
+            saveDeviceDeepSleep(input.dataset.deepSleep, input.checked).catch((err) => {
+              input.checked = !input.checked;
+              setStatus(err.message, true);
+            });
           });
         });
         root.querySelectorAll('[data-device-name]').forEach((input) => {
@@ -7156,6 +7373,7 @@
           <td class="device-detail" data-label="Days left">${formatDaysLeft(d)}</td>
           <td class="device-detail" data-label="Customer ID"><span class="nowrap">${escapeHtml(deviceUrlCode(d) || '—')}</span></td>
           <td class="device-detail" data-label="Poll">${formatPollInterval(d)}</td>
+          <td class="device-detail" data-label="Deep sleep">${deepSleepToggleHtml(d)}</td>
           <td class="device-detail" data-label="Last check-in">${formatCheckin(d.lastSeen)}</td>
           <td class="device-detail" data-label="Actions">${deviceActionHtml(d)}</td>
         </tr>`;
@@ -7168,7 +7386,7 @@
         if (!list.length) {
           const table = document.getElementById('deviceTable');
           if (table) table.classList.add('is-empty');
-          body.innerHTML = `<tr><td colspan="11">
+          body.innerHTML = `<tr><td colspan="12">
             <div class="device-empty">
               <svg viewBox="0 0 88 72" aria-hidden="true">
                 <rect x="18" y="22" width="34" height="28" rx="3"/>
@@ -7200,7 +7418,7 @@
             : 'No devices have checked in yet';
         }
         if (!list.length) {
-          body.innerHTML = '<tr><td colspan="12" class="hint">No devices have checked in yet.</td></tr>';
+          body.innerHTML = '<tr><td colspan="13" class="hint">No devices have checked in yet.</td></tr>';
           return;
         }
         body.innerHTML = list.map((d) => deviceRowHtml(d, { firmware: true })).join('');
@@ -7224,6 +7442,26 @@
         const data = await res.json();
         devices = data.devices || [];
         renderDevices();
+      }
+
+      async function saveDeviceDeepSleep(id, enabled) {
+        const row = (devices || []).find((d) => d.id === id);
+        const on = Boolean(enabled);
+        if (row && (row.deepSleep !== false) === on) return;
+        const res = await apiFetch('/api/smarthours/devices/' + encodeURIComponent(id), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deepSleep: on })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not save deep sleep');
+        if (row) row.deepSleep = on;
+        document.querySelectorAll('[data-deep-sleep="' + CSS.escape(id) + '"]').forEach((input) => {
+          input.checked = on;
+        });
+        setStatus(on
+          ? 'Deep Sleep on — poll until 2 hours after closing, then sleep until 2 hours before opening.'
+          : 'Deep Sleep off — using the set poll interval.');
       }
 
       async function saveDeviceCustomName(id, value) {
@@ -7538,7 +7776,9 @@
         const googleRef = document.getElementById('fieldMapsUrl').value.trim();
         const looksLikePlaceId = /^ChIJ[\w-]+$/i.test(googleRef) || /^places\/ChIJ/i.test(googleRef);
         const payload = {
-          name: document.getElementById('fieldName').value.trim(),
+          name: document.getElementById('fieldName').readOnly && c && c.name
+            ? c.name
+            : document.getElementById('fieldName').value.trim(),
           slug: document.getElementById('fieldSlug').readOnly && c && c.slug
             ? c.slug
             : document.getElementById('fieldSlug').value.trim(),
@@ -7557,6 +7797,9 @@
           liveDesignId: c.liveDesignId,
           editingDesignId,
           googleSyncIntervalMinutes: Number(document.getElementById('googleSyncMinutes').value),
+          lowBatteryAlert: document.getElementById('fieldLowBatteryAlert')
+            ? document.getElementById('fieldLowBatteryAlert').checked
+            : true,
           eink: {
             enabled: true,
             pollIntervalMinutes: Number(document.getElementById('einkPoll').value) || 60,
@@ -7644,6 +7887,23 @@
             ? `Sketch includes embedded Design BMP · version ${ver}${bytes ? ` · ${bytes} bytes` : ''}`
             : '';
         }
+      }
+
+      async function saveLowBatteryAlert(on) {
+        const c = selected();
+        if (!c) return;
+        c.lowBatteryAlert = Boolean(on);
+        if (!selectedId || String(selectedId).startsWith('tmp-')) return;
+        const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(selectedId), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ lowBatteryAlert: Boolean(on) })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not save battery alert');
+        setStatus(on
+          ? 'Low Battery Alert on — we will email you if a display drops below 10%.'
+          : 'Low Battery Alert off.');
       }
 
       async function saveCustomer(options) {
@@ -7964,6 +8224,15 @@
           }
         });
       });
+      const lowBattEl = document.getElementById('fieldLowBatteryAlert');
+      if (lowBattEl) {
+        lowBattEl.addEventListener('change', () => {
+          saveLowBatteryAlert(lowBattEl.checked).catch((err) => {
+            lowBattEl.checked = !lowBattEl.checked;
+            setStatus(err.message, true);
+          });
+        });
+      }
 
       document.getElementById('deleteBtn').addEventListener('click', async () => {
         const c = selected();
@@ -8430,6 +8699,7 @@
         const el = document.getElementById(id);
         if (!el) return;
         el.addEventListener('input', () => {
+          if (id === 'fieldName' && el.readOnly) return;
           if (id === 'fieldName' || id === 'fieldEmail') syncInfoTileChecks();
           const c = selected();
           if (c && id === 'fieldName') {

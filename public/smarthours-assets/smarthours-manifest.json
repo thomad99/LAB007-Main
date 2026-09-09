@@ -1,0 +1,20 @@
+{
+  "name": "SmartHours",
+  "short_name": "SmartHours",
+  "description": "Window-mounted e-ink that keeps opening hours accurate.",
+  "icons": [
+    {
+      "src": "/SmartHours/assets/smarthours-icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/SmartHours/assets/smarthours-icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0b1f3a"
+}
