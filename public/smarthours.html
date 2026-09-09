@@ -482,6 +482,7 @@
     body.admin-mode #onboard { display: none !important; }
     body.customer-mode.has-studio #onboard { display: none; }
     body.customer-mode .admin-only { display: none !important; }
+    body.customer-mode .admin-net-only { display: none !important; }
     body.customer-mode .tabs [data-tab="preview"],
     body.customer-mode #tab-preview { display: none !important; }
     body.admin-mode .customer-only { display: none !important; }
@@ -2127,7 +2128,18 @@
       }
       .device-summary-battery {
         flex: 0 0 auto;
-        max-width: 5.5rem;
+        max-width: 6.2rem;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 2px;
+      }
+      .device-days-left {
+        font-size: .68rem;
+        font-weight: 700;
+        letter-spacing: .02em;
+        color: var(--muted);
+        white-space: nowrap;
       }
       .device-summary-battery .cell-stack { align-items: flex-end; }
       .device-summary-status,
@@ -2520,10 +2532,11 @@
       .device-summary-copy .hint { font-size: .72rem; }
       .device-summary-battery {
         flex: 0 0 auto;
-        max-width: 3rem;
+        max-width: 4.8rem;
       }
       .device-summary-battery .battery-link { min-height: 0; }
       .device-summary-battery .hint { display: none; }
+      .device-days-left { font-size: .62rem; }
       .device-summary-chevron-btn {
         flex: 0 0 36px;
         width: 36px;
@@ -2535,7 +2548,8 @@
         border-radius: 9px;
         background: var(--panel);
       }
-      .device-table td.device-detail[data-label="Battery"] {
+      .device-table td.device-detail[data-label="Battery"],
+      .device-table td.device-detail[data-label="Days left"] {
         display: none !important;
       }
       .device-table td[data-label]::before {
@@ -4240,10 +4254,11 @@
                   <tr>
                     <th>Status</th>
                     <th>Device</th>
-                    <th>WiFi</th>
+                    <th class="admin-net-only">WiFi</th>
                     <th>Signal</th>
-                    <th>IP</th>
+                    <th class="admin-net-only">IP</th>
                     <th>Battery</th>
+                    <th>Days left</th>
                     <th>Customer ID</th>
                     <th>Poll</th>
                     <th>Last check-in</th>
@@ -4251,7 +4266,7 @@
                   </tr>
                 </thead>
                 <tbody id="deviceTableBody">
-                  <tr><td colspan="10" class="hint">No devices have checked in yet.</td></tr>
+                  <tr><td colspan="11" class="hint">No devices have checked in yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -4291,6 +4306,7 @@
                 <th>Signal</th>
                 <th>IP</th>
                 <th>Battery</th>
+                <th>Days left</th>
                 <th>Customer ID</th>
                 <th>Poll</th>
                 <th>Last check-in</th>
@@ -4298,7 +4314,7 @@
               </tr>
             </thead>
             <tbody id="fleetTableBody">
-              <tr><td colspan="11" class="hint">No devices have checked in yet.</td></tr>
+              <tr><td colspan="12" class="hint">No devices have checked in yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -7001,6 +7017,12 @@
         return `<span class="cell-stack"><span class="${cls}">${label}</span><span class="hint nowrap">${n}&nbsp;dBm</span></span>`;
       }
 
+      function formatDaysLeft(d) {
+        const n = Number(d && d.estimatedDaysRemaining);
+        if (!Number.isFinite(n) || n < 0) return '—';
+        return `<span class="nowrap" title="Estimated from recent battery use">${n}&nbsp;day${n === 1 ? '' : 's'}</span>`;
+      }
+
       function formatWifi(d) {
         return `<span class="nowrap">${escapeHtml(d.wifiSsid || '—')}</span>`;
       }
@@ -7089,7 +7111,7 @@
         if (d.pendingReset) {
           return `<div class="device-actions"><span class="hint">Reset queued — waiting for next check-in</span></div>`;
         }
-        return `<div class="device-actions"><button type="button" class="btn-danger" data-reset-device="${escapeHtml(d.id)}">Reset to setup</button></div>`;
+        return `<div class="device-actions"><button type="button" class="btn-danger" data-reset-device="${escapeHtml(d.id)}">RESET</button></div>`;
       }
 
       function deviceDisplayName(d) {
@@ -7116,7 +7138,7 @@
                   <span class="hint">${escapeHtml(formatCheckinRel(d.lastSeen))}</span>
                 </span>
               </button>
-              <div class="device-summary-battery">${formatBattery(d)}</div>
+              <div class="device-summary-battery">${formatBattery(d)}<span class="device-days-left">${formatDaysLeft(d)}</span></div>
               <button type="button" class="device-summary-chevron-btn" data-expand-device="${escapeHtml(d.id)}" aria-expanded="${expanded ? 'true' : 'false'}" aria-label="Show device details">
                 <span class="device-summary-chevron" aria-hidden="true">
                   <svg viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
@@ -7127,10 +7149,11 @@
           <td class="device-detail ${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
           <td class="device-detail" data-label="Device"><span class="cell-stack">${deviceNameInputHtml(d)}<span class="hint nowrap">${escapeHtml(d.id)}</span>${fwHint}</span></td>
           ${firmwareCell}
-          <td class="device-detail" data-label="WiFi">${formatWifi(d)}</td>
+          <td class="device-detail admin-net-only" data-label="WiFi">${formatWifi(d)}</td>
           <td class="device-detail" data-label="Signal">${formatWifiSignal(d)}</td>
-          <td class="device-detail" data-label="IP"><span class="nowrap">${escapeHtml(d.ip || '—')}</span></td>
+          <td class="device-detail admin-net-only" data-label="IP"><span class="nowrap">${escapeHtml(d.ip || '—')}</span></td>
           <td class="device-detail" data-label="Battery">${formatBattery(d)}</td>
+          <td class="device-detail" data-label="Days left">${formatDaysLeft(d)}</td>
           <td class="device-detail" data-label="Customer ID"><span class="nowrap">${escapeHtml(deviceUrlCode(d) || '—')}</span></td>
           <td class="device-detail" data-label="Poll">${formatPollInterval(d)}</td>
           <td class="device-detail" data-label="Last check-in">${formatCheckin(d.lastSeen)}</td>
@@ -7145,7 +7168,7 @@
         if (!list.length) {
           const table = document.getElementById('deviceTable');
           if (table) table.classList.add('is-empty');
-          body.innerHTML = `<tr><td colspan="10">
+          body.innerHTML = `<tr><td colspan="11">
             <div class="device-empty">
               <svg viewBox="0 0 88 72" aria-hidden="true">
                 <rect x="18" y="22" width="34" height="28" rx="3"/>
@@ -7177,7 +7200,7 @@
             : 'No devices have checked in yet';
         }
         if (!list.length) {
-          body.innerHTML = '<tr><td colspan="11" class="hint">No devices have checked in yet.</td></tr>';
+          body.innerHTML = '<tr><td colspan="12" class="hint">No devices have checked in yet.</td></tr>';
           return;
         }
         body.innerHTML = list.map((d) => deviceRowHtml(d, { firmware: true })).join('');
