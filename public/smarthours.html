@@ -143,6 +143,7 @@
       flex: 0 0 auto;
       background: transparent;
       padding: 0;
+      image-rendering: auto;
     }
     html[data-theme="dark"] .brand-logo-light,
     html[data-theme="white"] .brand-logo-dark,
@@ -252,6 +253,7 @@
     .btn-danger { background: transparent; color: var(--danger); border-color: rgba(255,143,159,.35); }
     .btn:disabled, .btn-secondary:disabled { opacity: .5; cursor: not-allowed; }
     .status { min-height: 22px; color: var(--accent); margin-bottom: 10px; font-size: .9rem; }
+    .status:empty { display: none; min-height: 0; margin: 0; }
     .status.err { color: var(--danger); }
     .panel {
       background: var(--panel); border: 1px solid var(--line);
@@ -327,6 +329,12 @@
     body.customer-mode.has-studio header { margin-bottom: 8px; }
     body.has-studio header { flex: 0 0 auto; margin-bottom: 8px; }
     body.has-studio .status { min-height: 0; margin-bottom: 6px; }
+    .status:empty,
+    body.has-studio .status:empty {
+      display: none;
+      min-height: 0;
+      margin: 0;
+    }
     body.has-studio .grid-main {
       flex: 1 1 auto;
       min-height: 0;
@@ -583,10 +591,6 @@
     body.admin-mode.readonly #fieldName[readonly],
     body.admin-mode.readonly #fieldSlug[readonly] {
       opacity: 1;
-    }
-    body.admin-mode.readonly .hours-toggle input[data-deep-sleep] {
-      pointer-events: auto;
-      opacity: 0;
     }
     body.admin-mode.readonly .templates-page input,
     body.admin-mode.readonly .templates-page select,
@@ -972,10 +976,17 @@
     #tab-info .info-tile-name #fieldName[readonly] {
       padding-right: 0;
     }
+    #tab-info #fieldMapsUrl,
+    #tab-info #fieldEmail {
+      font-family: inherit;
+      font-size: 1rem;
+      font-weight: 400;
+      letter-spacing: normal;
+      line-height: 1.3;
+    }
     #tab-info #fieldMapsUrl {
       overflow-wrap: anywhere;
       word-break: break-all;
-      font-size: .86rem;
     }
     #tab-info .slug-preview,
     #tab-info a.slug-preview {
@@ -1110,35 +1121,39 @@
     .device-settings-grid {
       display: grid;
       grid-template-columns: repeat(2, minmax(0, 1fr));
-      gap: 16px 18px;
+      gap: 12px;
       align-items: stretch;
     }
     @media (max-width: 800px) {
-      .device-settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    }
-    @media (max-width: 380px) {
       .device-settings-grid { grid-template-columns: 1fr; }
     }
     .device-settings-grid > div {
       min-width: 0;
       display: flex;
       flex-direction: column;
+      gap: 8px;
+      padding: 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--wash);
+      box-sizing: border-box;
     }
     .device-settings-grid > div > label,
     .device-settings-grid .settings-toggle-label {
-      display: flex;
+      display: block;
       align-items: flex-end;
-      min-height: 2.6em;
+      min-height: 0;
+      margin: 0;
       line-height: 1.25;
     }
     .device-settings-grid .field-hint {
-      margin: 6px 0 0;
+      margin: 0;
       color: var(--muted);
       font-size: .78rem;
       line-height: 1.35;
-      min-height: 2.7em;
+      min-height: 0;
     }
-    .device-battery-field { grid-column: 1 / -1; }
+    .device-battery-field { grid-column: auto; }
     .settings-toggle-label {
       display: block;
       font-size: .82rem;
@@ -1189,6 +1204,20 @@
       font-size: .98rem;
       min-height: 44px;
       width: 100%;
+    }
+    #tab-devices .device-settings-grid select {
+      appearance: none;
+      -webkit-appearance: none;
+      background-color: var(--input);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%239aa7bd' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 12px center;
+      background-size: 18px;
+      padding-right: 40px;
+    }
+    html[data-theme="white"] #tab-devices .device-settings-grid select,
+    html[data-theme="color"] #tab-devices .device-settings-grid select {
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='none' stroke='%2314171c' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
     }
     #tab-devices .device-note {
       margin: 0;
@@ -1411,6 +1440,14 @@
       font-size: 1.05rem;
       font-weight: 650;
       color: var(--text);
+    }
+    .hours-tile-title {
+      display: block;
+      font-size: 1.05rem;
+      font-weight: 650;
+      color: var(--text);
+      letter-spacing: 0;
+      text-transform: none;
     }
     .hours-table tr.is-closed { opacity: 1; }
     .hours-table tr.is-closed > td:first-child,
@@ -2391,7 +2428,7 @@
       }
       body.has-studio .wrap,
       body.has-studio[data-studio-tab="design"] .wrap {
-        width: calc(100% - 12px);
+        width: 100%;
         max-width: 100%;
         height: auto !important;
         max-height: none !important;
@@ -2414,12 +2451,16 @@
         max-height: none !important;
         overflow-x: hidden !important;
         overflow-y: visible !important;
-        padding: 10px;
+        padding: 10px 12px;
         max-width: 100%;
+        box-sizing: border-box;
       }
       body.customer-mode header,
       body.customer-mode.has-studio header {
         margin-bottom: 8px;
+        padding-left: 12px;
+        padding-right: 12px;
+        box-sizing: border-box;
       }
       body.customer-mode .brand-logo,
       body.customer-mode.has-studio .brand-logo {
@@ -2433,9 +2474,13 @@
         z-index: 80;
         display: grid;
         grid-template-columns: repeat(4, minmax(0, 1fr));
+        justify-items: stretch;
         gap: 6px;
-        margin: -10px -10px 12px;
-        padding: 8px 10px 10px;
+        width: calc(100% + 24px);
+        max-width: none;
+        margin: -10px -12px 12px;
+        padding: 8px 6px 10px;
+        box-sizing: border-box;
         background: var(--overlay);
         backdrop-filter: blur(14px);
         border-bottom: 1px solid var(--line);
@@ -2443,11 +2488,15 @@
       body.admin-mode .tabs { grid-template-columns: repeat(5, minmax(0, 1fr)); }
       .tabs .tab-btn {
         min-width: 0;
+        width: 100%;
         min-height: 58px;
         padding: 8px 4px 10px;
         font-size: .68rem;
         gap: 4px;
         border-radius: 10px;
+        text-align: center;
+        align-items: center;
+        justify-content: center;
       }
       .tabs .tab-btn span {
         max-width: 100%;
@@ -2455,10 +2504,17 @@
         text-overflow: clip;
         white-space: nowrap;
       }
+      html[data-theme="white"] .tabs .tab-btn,
+      html[data-theme="color"] .tabs .tab-btn {
+        min-height: 58px;
+        border-radius: 10px;
+      }
       .tabs .tab-btn .tab-label-full { display: none; }
       .tabs .tab-btn .tab-label-short { display: inline; }
       .tabs .tab-btn svg { width: 20px; height: 20px; }
-      #tab-info input:not([type="checkbox"]):not([type="number"]) {
+      #tab-info input:not([type="checkbox"]):not([type="number"]),
+      #tab-info #fieldMapsUrl,
+      #tab-info #fieldEmail {
         font-size: 1.02rem;
         min-height: 44px;
         padding: 10px 12px;
@@ -2485,26 +2541,35 @@
       }
       .hours-toolbar {
         display: grid;
+        grid-template-columns: 1fr;
+        justify-items: stretch;
         gap: 10px;
+        width: calc(100% + 24px);
+        max-width: none;
+        margin: 0 -12px;
+        padding: 0 10px;
+        box-sizing: border-box;
       }
       .hours-sync-card,
       .hours-toolbar .manual-opt {
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: space-between;
+        justify-content: center;
         gap: 10px;
         width: 100%;
+        max-width: 100%;
         margin: 0;
-        padding: 12px 14px;
+        padding: 16px 14px;
         border: 1px solid var(--line);
         border-radius: 14px;
         background: var(--panel);
+        box-sizing: border-box;
+        text-align: center;
       }
       .hours-sync-card {
-        flex-direction: column;
         flex-wrap: nowrap;
-        align-items: stretch;
-        text-align: center;
+        align-items: center;
       }
       .btn-sync { min-width: 0; width: 100%; flex: none; font-size: .95rem; padding: 12px 14px; }
       .hours-toolbar .sync-stamp {
@@ -2515,7 +2580,16 @@
         font-weight: 600;
         line-height: 1.35;
       }
-      .hours-toolbar .manual-opt { font-size: 1.05rem; color: var(--text); }
+      .hours-toolbar .manual-opt {
+        font-size: 1.05rem;
+        color: var(--text);
+        letter-spacing: 0;
+        text-transform: none;
+      }
+      .hours-toolbar .manual-opt-label { text-align: center; }
+      .hours-toolbar .manual-opt .hours-toggle {
+        justify-content: center;
+      }
       .hours-toolbar .manual-opt input { transform: none; }
       .hours-table { margin-top: 8px; width: 100%; table-layout: fixed; }
       .hours-table thead { display: table-header-group; }
@@ -2559,8 +2633,8 @@
       .canvas-el .edit-sketch { width: 34px; height: 34px; }
       .canvas-el .edit-sketch svg { width: 18px; height: 18px; }
       .device-settings-grid {
-        grid-template-columns: 1fr 1fr;
-        gap: 12px 10px;
+        grid-template-columns: 1fr;
+        gap: 10px;
         max-width: none;
         align-items: stretch;
       }
@@ -2572,17 +2646,12 @@
       }
       .device-settings-grid > div > label,
       .device-settings-grid .settings-toggle-label {
-        min-height: 2.8em;
-        margin-bottom: 6px;
+        min-height: 0;
+        margin-bottom: 0;
+        text-align: left;
       }
-      .device-settings-grid .field-hint { min-height: 3.2em; }
+      .device-settings-grid .field-hint { min-height: 0; }
       .device-battery-field .field-hint { min-height: 0; }
-      @media (max-width: 430px) {
-        .device-settings-grid { grid-template-columns: 1fr; }
-        .device-settings-grid > div > label,
-        .device-settings-grid .settings-toggle-label { min-height: 0; }
-        .device-settings-grid .field-hint { min-height: 0; }
-      }
       #tab-devices,
       #tab-devices .device-card,
       #tab-devices .device-table-wrap,
@@ -2840,8 +2909,10 @@
         top: 0;
         z-index: 80;
         gap: 4px;
-        margin: 0 0 4px;
-        padding: 4px 0 6px;
+        width: calc(100% + 24px);
+        margin: 0 -12px 4px;
+        padding: 4px 6px 6px;
+        box-sizing: border-box;
         background: var(--overlay);
         border: 0;
         backdrop-filter: blur(14px);
@@ -2983,9 +3054,11 @@
         top: auto;
         z-index: 80;
         flex: 0 0 auto;
-        margin: 0;
-        padding: 6px 8px max(6px, env(safe-area-inset-top));
+        width: calc(100% + 24px);
+        margin: 0 -12px;
+        padding: 6px 6px max(6px, env(safe-area-inset-top));
         gap: 4px;
+        box-sizing: border-box;
         background: var(--overlay);
         border: 0;
         backdrop-filter: blur(14px);
@@ -3565,6 +3638,10 @@
     html[data-theme="white"] .tpl-admin-card {
       box-shadow: 0 1px 2px rgba(20, 24, 32, .05);
     }
+    html[data-theme="white"] .device-settings-grid > div {
+      background: #f7f8fa;
+      box-shadow: 0 1px 2px rgba(20, 24, 32, .04);
+    }
     html[data-theme="white"] .info-tile-url .info-tile-icon {
       color: #2563eb;
       background: rgba(37, 99, 235, .1);
@@ -3738,8 +3815,8 @@
   <div id="app" class="wrap">
     <header>
       <div class="brand">
-        <img class="brand-logo brand-logo-light" src="/SmartHours/assets/smarthours-lockup.png?v=5" width="640" height="180" alt="SmartHours">
-        <img class="brand-logo brand-logo-dark" src="/SmartHours/assets/smarthours-logo-white.png?v=5" width="640" height="180" alt="SmartHours">
+        <img class="brand-logo brand-logo-light" src="/SmartHours/assets/smarthours-logo.png?v=8" width="936" height="261" alt="SmartHours">
+        <img class="brand-logo brand-logo-dark" src="/SmartHours/assets/smarthours-logo-white.png?v=8" width="974" height="277" alt="SmartHours">
         <div class="brand-text">
           <h1 id="pageTitle">SmartHours</h1>
           <p class="sub" id="pageSub">Set up your hours display</p>
@@ -3942,6 +4019,7 @@
         <div class="tab-panel" id="tab-hours">
           <div class="hours-toolbar">
             <div class="hours-sync-card">
+              <span class="hours-tile-title">Google Hours Sync</span>
               <button type="button" class="btn btn-sync mutate-only" id="syncOneBtn">Sync Google hours</button>
               <p class="sync-stamp empty" id="syncMeta"></p>
             </div>
@@ -4349,13 +4427,20 @@
                 </select>
                 <p class="field-hint">Rotate the display if mounted.</p>
               </div>
+              <div>
+                <label for="fieldDeepSleep">Deep Sleep</label>
+                <select id="fieldDeepSleep">
+                  <option value="on" selected>On</option>
+                  <option value="off">Off</option>
+                </select>
+                <p class="field-hint">Sleeps 2 hours after close, wakes 2 hours before open.</p>
+              </div>
               <div class="device-battery-field">
-                <span class="settings-toggle-label">Low Battery Alert</span>
-                <label class="hours-toggle hours-toggle-lg" for="fieldLowBatteryAlert">
-                  <input id="fieldLowBatteryAlert" type="checkbox" checked>
-                  <span class="hours-toggle-track" aria-hidden="true"></span>
-                  <span class="hours-toggle-state" data-off="Off" data-on="On"></span>
-                </label>
+                <label for="fieldLowBatteryAlert">Low Battery Alert</label>
+                <select id="fieldLowBatteryAlert">
+                  <option value="on" selected>On</option>
+                  <option value="off">Off</option>
+                </select>
                 <p class="field-hint">Email you when a display drops below 10%. Uses the email on Customer Info.</p>
               </div>
               <div class="admin-only">
@@ -4406,7 +4491,6 @@
               </span>
               <div>
                 <h2>Device Check-ins</h2>
-                <p>See your displays and their status. Type a name such as Front Door or Back Door. Deep Sleep stays on the poll interval until 2 hours after closing, then sleeps until 2 hours before the next opening. Buttons still wake the display for a live check.</p>
               </div>
               <button type="button" class="btn-secondary" id="refreshDevicesBtn">
                 <svg viewBox="0 0 24 24" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
@@ -4426,13 +4510,12 @@
                     <th>Days left</th>
                     <th>Customer ID</th>
                     <th>Poll</th>
-                    <th>Deep sleep</th>
                     <th>Last check-in</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody id="deviceTableBody">
-                  <tr><td colspan="12" class="hint">No devices have checked in yet.</td></tr>
+                  <tr><td colspan="11" class="hint">No devices have checked in yet.</td></tr>
                 </tbody>
               </table>
             </div>
@@ -4475,13 +4558,12 @@
                 <th>Days left</th>
                 <th>Customer ID</th>
                 <th>Poll</th>
-                <th>Deep sleep</th>
                 <th>Last check-in</th>
                 <th>Actions</th>
               </tr>
             </thead>
             <tbody id="fleetTableBody">
-              <tr><td colspan="13" class="hint">No devices have checked in yet.</td></tr>
+              <tr><td colspan="12" class="hint">No devices have checked in yet.</td></tr>
             </tbody>
           </table>
         </div>
@@ -5871,7 +5953,7 @@
         if (!slot) return;
         c.liveDesignId = slot.id;
         renderDesignSlotsUi();
-        setStatus(`“${slot.name}” is set as live. Save Design to publish.`);
+        scheduleAutosave(150);
       }
 
       function addDesignSlot() {
@@ -5894,7 +5976,7 @@
         });
         selectedElId = null;
         loadDesignSlotIntoEditor(id);
-        setStatus(`Created “${name}”.`);
+        scheduleAutosave(150);
       }
 
       function deleteDesignSlot() {
@@ -5912,7 +5994,7 @@
         c.designs = c.designs.filter((d) => d.id !== slot.id);
         if (wasLive) c.liveDesignId = c.designs[0].id;
         loadDesignSlotIntoEditor(c.liveDesignId);
-        setStatus('Design deleted locally. Save Design to keep the change.');
+        scheduleAutosave(150);
       }
 
       function ensureLayout(c) {
@@ -6267,7 +6349,6 @@
         closeSketchPad();
         renderCanvas();
         scheduleAutosave(200);
-        setStatus('Sketch saved.');
       }
 
       function fillElMediaSelect() {
@@ -6370,10 +6451,8 @@
           current.symbolId = symbolId;
           renderCanvas();
           scheduleAutosave(200);
-          setStatus('Symbol updated.');
         } else {
           addLayoutElement('symbol', { symbolId });
-          setStatus('Symbol added.');
         }
         closeSymbolPicker();
         syncElPropsPanel();
@@ -6496,7 +6575,6 @@
           scheduleAutosave(200);
         }
         closeImagePicker();
-        setStatus('Template applied.');
       }
 
       function applyStatusPair(pairId) {
@@ -7058,7 +7136,9 @@
           googleSyncEl.value = String(Number.isFinite(mins) ? mins : 60);
         }
         const lowBattEl = document.getElementById('fieldLowBatteryAlert');
-        if (lowBattEl) lowBattEl.checked = customer.lowBatteryAlert !== false;
+        if (lowBattEl) lowBattEl.value = customer.lowBatteryAlert !== false ? 'on' : 'off';
+        const deepSleepEl = document.getElementById('fieldDeepSleep');
+        if (deepSleepEl) deepSleepEl.value = customer.deepSleep !== false ? 'on' : 'off';
         renderSlideshowList(customer);
         renderDesignSlotsUi();
         logoDataUrl = null;
@@ -7228,14 +7308,6 @@
         return `<span class="nowrap">${escapeHtml(d.wifiSsid || '—')}</span>`;
       }
 
-      function deepSleepToggleHtml(d) {
-        const on = d.deepSleep !== false;
-        return `<label class="hours-toggle" title="On: poll until 2 hours after closing, then sleep until 2 hours before the next opening. Off: use the set poll interval only. Buttons always do a live check.">
-          <input type="checkbox" data-deep-sleep="${escapeHtml(d.id)}" ${on ? 'checked' : ''} aria-label="Deep sleep">
-          <span class="hours-toggle-track" aria-hidden="true"></span>
-        </label>`;
-      }
-
       function visibleDevices() {
         const slug = selected() && selected().slug;
         if (IS_ADMIN && !slug) return devices;
@@ -7283,14 +7355,6 @@
         root.querySelectorAll('[data-battery-device]').forEach((btn) => {
           btn.addEventListener('click', () => {
             openBatteryHistory(btn.dataset.batteryDevice).catch((err) => setStatus(err.message, true));
-          });
-        });
-        root.querySelectorAll('[data-deep-sleep]').forEach((input) => {
-          input.addEventListener('change', () => {
-            saveDeviceDeepSleep(input.dataset.deepSleep, input.checked).catch((err) => {
-              input.checked = !input.checked;
-              setStatus(err.message, true);
-            });
           });
         });
         root.querySelectorAll('[data-device-name]').forEach((input) => {
@@ -7373,7 +7437,6 @@
           <td class="device-detail" data-label="Days left">${formatDaysLeft(d)}</td>
           <td class="device-detail" data-label="Customer ID"><span class="nowrap">${escapeHtml(deviceUrlCode(d) || '—')}</span></td>
           <td class="device-detail" data-label="Poll">${formatPollInterval(d)}</td>
-          <td class="device-detail" data-label="Deep sleep">${deepSleepToggleHtml(d)}</td>
           <td class="device-detail" data-label="Last check-in">${formatCheckin(d.lastSeen)}</td>
           <td class="device-detail" data-label="Actions">${deviceActionHtml(d)}</td>
         </tr>`;
@@ -7386,7 +7449,7 @@
         if (!list.length) {
           const table = document.getElementById('deviceTable');
           if (table) table.classList.add('is-empty');
-          body.innerHTML = `<tr><td colspan="12">
+          body.innerHTML = `<tr><td colspan="11">
             <div class="device-empty">
               <svg viewBox="0 0 88 72" aria-hidden="true">
                 <rect x="18" y="22" width="34" height="28" rx="3"/>
@@ -7418,7 +7481,7 @@
             : 'No devices have checked in yet';
         }
         if (!list.length) {
-          body.innerHTML = '<tr><td colspan="13" class="hint">No devices have checked in yet.</td></tr>';
+          body.innerHTML = '<tr><td colspan="12" class="hint">No devices have checked in yet.</td></tr>';
           return;
         }
         body.innerHTML = list.map((d) => deviceRowHtml(d, { firmware: true })).join('');
@@ -7444,26 +7507,6 @@
         renderDevices();
       }
 
-      async function saveDeviceDeepSleep(id, enabled) {
-        const row = (devices || []).find((d) => d.id === id);
-        const on = Boolean(enabled);
-        if (row && (row.deepSleep !== false) === on) return;
-        const res = await apiFetch('/api/smarthours/devices/' + encodeURIComponent(id), {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ deepSleep: on })
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) throw new Error(data.error || 'Could not save deep sleep');
-        if (row) row.deepSleep = on;
-        document.querySelectorAll('[data-deep-sleep="' + CSS.escape(id) + '"]').forEach((input) => {
-          input.checked = on;
-        });
-        setStatus(on
-          ? 'Deep Sleep on — poll until 2 hours after closing, then sleep until 2 hours before opening.'
-          : 'Deep Sleep off — using the set poll interval.');
-      }
-
       async function saveDeviceCustomName(id, value) {
         const row = (devices || []).find((d) => d.id === id);
         if (!row) return;
@@ -7482,7 +7525,7 @@
         document.querySelectorAll('[data-device-name="' + CSS.escape(id) + '"]').forEach((input) => {
           if (document.activeElement !== input) input.value = customName || hardware;
         });
-        setStatus(customName ? 'Saved as “' + customName + '”.' : 'Using the display’s default name.');
+        setStatus('');
       }
 
       async function queueDeviceReset(id) {
@@ -7546,14 +7589,17 @@
           const current = Number.isFinite(Number(device.batteryPercent))
             ? Number(device.batteryPercent) + '% now'
             : 'No current reading';
-          meta.textContent = current + ' · daily averages, not each check-in';
+          meta.textContent = summary.sinceCharge
+            ? current + ' · average use since last charge'
+            : current + ' · daily averages, not each check-in';
         }
         if (summaryEl) {
           const drain = summary.avgDailyDrainPercent;
           const left = summary.estimatedDaysRemaining;
           const tracked = Number(summary.daysTracked) || 0;
+          const daysLabel = summary.sinceCharge ? 'Days since charge' : 'Days tracked';
           summaryEl.innerHTML = [
-            `<div class="battery-stat"><span>Days tracked</span><strong>${tracked || '—'}</strong></div>`,
+            `<div class="battery-stat"><span>${daysLabel}</span><strong>${tracked || '—'}</strong></div>`,
             `<div class="battery-stat"><span>Avg use / day</span><strong>${drain != null ? drain + '%' : '—'}</strong></div>`,
             `<div class="battery-stat"><span>Est. remaining</span><strong>${left != null ? left + ' day' + (left === 1 ? '' : 's') : '—'}</strong></div>`
           ].join('');
@@ -7798,7 +7844,10 @@
           editingDesignId,
           googleSyncIntervalMinutes: Number(document.getElementById('googleSyncMinutes').value),
           lowBatteryAlert: document.getElementById('fieldLowBatteryAlert')
-            ? document.getElementById('fieldLowBatteryAlert').checked
+            ? document.getElementById('fieldLowBatteryAlert').value !== 'off'
+            : true,
+          deepSleep: document.getElementById('fieldDeepSleep')
+            ? document.getElementById('fieldDeepSleep').value !== 'off'
             : true,
           eink: {
             enabled: true,
@@ -7901,9 +7950,22 @@
         });
         const data = await res.json().catch(() => ({}));
         if (!res.ok) throw new Error(data.error || 'Could not save battery alert');
-        setStatus(on
-          ? 'Low Battery Alert on — we will email you if a display drops below 10%.'
-          : 'Low Battery Alert off.');
+        setStatus('');
+      }
+
+      async function saveDeepSleep(on) {
+        const c = selected();
+        if (!c) return;
+        c.deepSleep = Boolean(on);
+        if (!selectedId || String(selectedId).startsWith('tmp-')) return;
+        const res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(selectedId), {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ deepSleep: Boolean(on) })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not save deep sleep');
+        setStatus('');
       }
 
       async function saveCustomer(options) {
@@ -7914,7 +7976,6 @@
           setStatus('Customer name is required.', true);
           return;
         }
-        if (!opts.keepEditor) setStatus('Saving…');
         let res;
         if (selectedId && !String(selectedId).startsWith('tmp-')) {
           res = await apiFetch('/api/smarthours/customers/' + encodeURIComponent(selectedId), {
@@ -7945,10 +8006,12 @@
             cur.useManualHours = data.useManualHours;
             cur.hours = data.hours || cur.hours;
             cur.eink = data.eink || cur.eink;
+            cur.lowBatteryAlert = data.lowBatteryAlert !== false;
+            cur.deepSleep = data.deepSleep !== false;
             cur.updatedAt = data.updatedAt;
           }
           rememberStudioSlug(data.slug || payload.slug);
-          setStatus('Saved');
+          setStatus('');
           return selected();
         }
         if (IS_ADMIN) await loadCustomers();
@@ -7958,14 +8021,7 @@
         if (c && keepEditing && (c.designs || []).some((d) => d.id === keepEditing)) {
           loadDesignSlotIntoEditor(keepEditing);
         }
-        const hasGoogle = !!(payload.googleMapsUrl || payload.googlePlaceId);
-        if (!opts.silent) {
-          setStatus(
-            hasGoogle && !payload.useManualHours
-              ? 'Saved. Click Sync Google hours to pull opening times.'
-              : 'Saved. Public URL ready.'
-          );
-        }
+        setStatus('');
         return selected();
       }
 
@@ -8096,7 +8152,6 @@
           .then((c) => {
             if (!c) return;
             renderDesignSlotsUi();
-            setStatus('Saved.');
           })
           .catch((err) => setStatus(err.message, true))
           .finally(() => setBusy(btn, false));
@@ -8137,7 +8192,6 @@
           .then((saved) => {
             if (!saved) return;
             renderDesignSlotsUi();
-            setStatus('Saved as “' + name + '”.');
           })
           .catch((err) => setStatus(err.message, true))
           .finally(() => setBusy(btn, false));
@@ -8159,7 +8213,6 @@
         c.liveDesignId = liveSel.value;
         renderDesignSlotsUi();
         saveCustomer()
-          .then(() => setStatus('Live design updated.'))
           .catch((err) => setStatus(err.message, true));
       });
       document.getElementById('designSlotName').addEventListener('change', () => {
@@ -8177,7 +8230,6 @@
         saveCustomer()
           .then(() => {
             refreshEinkPanel();
-            setStatus('E-ink settings saved. Preview refreshed.');
           })
           .catch((err) => setStatus(err.message, true));
       });
@@ -8227,8 +8279,19 @@
       const lowBattEl = document.getElementById('fieldLowBatteryAlert');
       if (lowBattEl) {
         lowBattEl.addEventListener('change', () => {
-          saveLowBatteryAlert(lowBattEl.checked).catch((err) => {
-            lowBattEl.checked = !lowBattEl.checked;
+          const on = lowBattEl.value !== 'off';
+          saveLowBatteryAlert(on).catch((err) => {
+            lowBattEl.value = on ? 'off' : 'on';
+            setStatus(err.message, true);
+          });
+        });
+      }
+      const deepSleepEl = document.getElementById('fieldDeepSleep');
+      if (deepSleepEl) {
+        deepSleepEl.addEventListener('change', () => {
+          const on = deepSleepEl.value !== 'off';
+          saveDeepSleep(on).catch((err) => {
+            deepSleepEl.value = on ? 'off' : 'on';
             setStatus(err.message, true);
           });
         });
@@ -8254,7 +8317,6 @@
         selectedId = null;
         editor.classList.remove('open');
         await loadCustomers();
-        setStatus('Deleted.');
       });
 
       document.getElementById('syncOneBtn').addEventListener('click', async () => {
@@ -8310,11 +8372,7 @@
           if (!res.ok) throw new Error(data.error || 'Failed to save sync interval');
           settings = data.settings || settings;
           document.getElementById('autoSyncHours').value = String(settings.autoSyncIntervalHours ?? 24);
-          setStatus(
-            settings.autoSyncIntervalHours > 0
-              ? `Auto Google sync set to every ${settings.autoSyncIntervalHours} hour(s).`
-              : 'Auto Google sync turned off.'
-          );
+          setStatus('');
         } catch (err) {
           setStatus(err.message || 'Failed to save sync interval', true);
         } finally {
@@ -9252,8 +9310,7 @@
               const nameField = document.getElementById('templateUploadName');
               if (nameField) nameField.value = '';
               renderAdminTemplates();
-              setStatus('Template uploaded.');
-            }).catch((err) => setStatus(err.message, true));
+              }).catch((err) => setStatus(err.message, true));
           };
           reader.onerror = () => setStatus('Could not read that image.', true);
           reader.readAsDataURL(file);
