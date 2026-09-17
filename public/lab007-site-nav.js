@@ -9,7 +9,7 @@
     // ['CursorAI', '/cursorai'],
     ['BUCK', 'https://buck-lab007.onrender.com/'],
     // ['007Trade', '/007trade'],
-    ['Elite Invoices', '/Elite-Invoices'],
+    ['Elite Management', '/Elite-Management'],
     ['Clever-CRM', '/Clever-CRM'],
     ['SmartHours', '/SmartHours'],
     ['Design Studio', '/design-studio'],

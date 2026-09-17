@@ -51,6 +51,7 @@ const {
   deleteClientPhoto,
   clientPhotoCounts
 } = require('./lib/elite-invoices');
+const { createContractEsign } = require('./lib/contractEsign');
 registerCursorAiTelegramHandlers(registerTelegramInboundHandler);
 registerCronTelegramHandlers(registerTelegramInboundHandler);
 const fetchFn = global.fetch || ((...args) => import('node-fetch').then(({ default: f }) => f(...args)));
@@ -6062,7 +6063,7 @@ app.get(['/elite-cleaning', '/elite-cleaning.html', '/elite-cleaners-2', '/Elite
   res.status(404).type('html').send('<!doctype html><title>Not found</title><h1>Page removed</h1><p>The Elite Cleaning marketing page is no longer published on LAB007.</p><p><a href="/">Home</a></p>');
 });
 
-// Elite Invoices — cleaning client invoice generator
+// Elite Management — invoices, client database, and contracts
 // Set LAB007_DATA_DIR=/var/data/lab007 (Render disk) or ELITE_INVOICES_DATA_DIR for a custom folder.
 const eliteInvoicesDataDir = (() => {
   const explicit = String(process.env.ELITE_INVOICES_DATA_DIR || '').trim();
@@ -6366,7 +6367,10 @@ function eliteInvoicesPasswordFromRequest(req) {
 function requireEliteInvoicesAuth(req, res, next) {
   eliteInvoicesNoIndexHeaders(res);
   // Login is public (also registered before this middleware).
-  if (String(req.path || '').replace(/\/+$/, '') === '/auth/login') return next();
+  const p = String(req.path || '').replace(/\/+$/, '');
+  if (p === '/auth/login') return next();
+  // Public contract signing (token links shared with clients/employees).
+  if (/^\/contracts\/sign\//.test(p)) return next();
   if (!eliteInvoicesAuthRequired()) return next();
 
   const given = eliteInvoicesPasswordFromRequest(req);
@@ -6414,13 +6418,24 @@ app.use('/design-studio', express.static(designStudioDir, {
   redirect: false
 }));
 
-app.get('/Elite-Invoices', (req, res) => {
+function sendEliteManagementPage(req, res) {
   eliteInvoicesNoIndexHeaders(res);
   res.sendFile(path.join(__dirname, 'public', 'elite-invoices.html'));
-});
-app.get('/elite-invoices', (req, res) => {
+}
+app.get('/Elite-Management', sendEliteManagementPage);
+app.get('/Elite-Invoices', (req, res) => {
   eliteInvoicesNoIndexHeaders(res);
-  res.redirect(301, '/Elite-Invoices');
+  res.redirect(301, '/Elite-Management');
+});
+app.get(['/elite-management', '/elite-invoices'], (req, res) => {
+  eliteInvoicesNoIndexHeaders(res);
+  res.redirect(301, '/Elite-Management');
+});
+app.get(['/Elite-Management/sign/:token', '/Elite-Invoices/sign/:token'], (req, res) => {
+  eliteInvoicesNoIndexHeaders(res);
+  const p = path.join(__dirname, 'public', 'elite-sign.html');
+  if (fs.existsSync(p)) return res.sendFile(p);
+  return res.status(404).send('Not found');
 });
 
 // CleverCRM — Clever Lifting Products lead/customer CRM
@@ -6824,6 +6839,44 @@ app.delete('/api/elite-invoices/invoices/:id', (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+const eliteContractsDataDir = path.join(eliteInvoicesDataDir, 'contracts-data');
+if (!fs.existsSync(eliteContractsDataDir)) {
+  fs.mkdirSync(eliteContractsDataDir, { recursive: true });
+}
+function eliteContractClientName(client) {
+  return String(client?.displayName || client?.billToName || 'Client').trim() || 'Client';
+}
+const eliteContractEsign = createContractEsign({
+  dataDir: eliteContractsDataDir,
+  apiPrefix: '/api/elite-invoices',
+  signPagePath: '/Elite-Management/sign',
+  brandName: 'Elite Management',
+  signedHeader: 'Elite Cleaning Services - Signed Contract Copy',
+  notifyIntro: 'A client has signed an Elite Management contract.',
+  logPrefix: '[EliteManagement]',
+  libDir: path.join(__dirname, 'lib'),
+  defaultAgentIdentity: 'Elite Cleaning (Owner)',
+  findCustomer: (clientId) => {
+    const client = readEliteInvoiceClients().find((c) => c.id === clientId);
+    if (!client) return null;
+    return { id: client.id, name: eliteContractClientName(client) };
+  },
+  listCustomers: () =>
+    readEliteInvoiceClients().map((c) => ({ id: c.id, name: eliteContractClientName(c) })),
+  getEmailTransporter: () => emailTransporter,
+  getNotifyEmail: () =>
+    process.env.ELITE_MANAGEMENT_SIGN_NOTIFY_EMAIL ||
+    process.env.ELITE_INVOICES_REPLY_TO ||
+    process.env.MARKETING_MANAGER_SIGN_NOTIFY_EMAIL ||
+    process.env.MY_EMAIL_ADDRESS ||
+    process.env.SMTP_USER ||
+    '',
+  getFromEmail: () =>
+    process.env.ELITE_INVOICES_FROM || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@lab007.ai'
+});
+eliteContractEsign.register(app);
+console.log('[EliteManagement] contracts data dir:', eliteContractsDataDir);
 
 // SRQ Cleaning - Sarasota cleaning services
 app.get('/SRQCleaning', (req, res) => {

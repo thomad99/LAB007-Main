@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
-  <title>Elite Invoices | Elite Cleaning Services</title>
+      <title>Elite Management | Elite Cleaning Services</title>
   <link rel="icon" type="image/png" sizes="32x32" href="/elite-cleaning-assets/elite-cleaning-favicon-32.png">
   <style>
     :root {
@@ -65,6 +65,8 @@
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
+      flex: 1 1 560px;
+      justify-content: flex-end;
     }
     .btn, .btn-link, .btn-small {
       appearance: none;
@@ -760,6 +762,245 @@
       font-size: .88rem;
     }
     .hidden { display: none !important; }
+    .em-contracts-layout {
+      display: grid;
+      grid-template-columns: minmax(220px, 280px) 1fr;
+      gap: 18px;
+      align-items: start;
+      margin-top: 18px;
+    }
+    .em-client-side {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(21, 21, 21, .92);
+      padding: 14px;
+    }
+    .em-client-side label {
+      display: block;
+      font-size: .78rem;
+      color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .em-client-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      max-height: min(62vh, 560px);
+      overflow: auto;
+      margin-top: 10px;
+    }
+    .em-client-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+      width: 100%;
+      text-align: left;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--text);
+      cursor: pointer;
+      font: inherit;
+    }
+    .em-client-btn:hover { background: rgba(215, 173, 75, .08); }
+    .em-client-btn.is-active {
+      border-color: var(--gold);
+      background: rgba(215, 173, 75, .14);
+    }
+    .em-client-name { font-weight: 700; color: var(--cream); }
+    .em-contract-work {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(21, 21, 21, .92);
+      padding: 18px 20px 24px;
+      min-height: 420px;
+    }
+    .em-work-head h2 {
+      margin: 0 0 4px;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.35rem;
+    }
+    .em-muted { color: var(--muted); font-size: .92rem; }
+    .em-small { font-size: .78rem; color: var(--muted); margin-top: 4px; }
+    .em-error { color: var(--unpaid); font-size: .92rem; }
+    .em-label {
+      display: block;
+      font-size: .78rem;
+      color: var(--muted);
+      margin: 10px 0 6px;
+    }
+    .em-input, .em-select, #em-client-search {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(215, 173, 75, .25);
+      background: #0d0d0d;
+      color: var(--text);
+      font: inherit;
+    }
+    .em-check {
+      display: flex;
+      gap: 10px;
+      align-items: flex-start;
+      margin: 12px 0;
+      cursor: pointer;
+      color: var(--muted);
+      font-size: .9rem;
+    }
+    .em-details {
+      margin-top: 14px;
+      padding-top: 8px;
+      border-top: 1px solid var(--line);
+    }
+    .em-details summary {
+      cursor: pointer;
+      color: var(--gold);
+      font-weight: 700;
+      margin-bottom: 10px;
+    }
+    .em-rich-editor {
+      min-height: 160px;
+      margin-top: 8px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid rgba(215, 173, 75, .25);
+      background: #fff;
+      color: #111;
+      font: inherit;
+      line-height: 1.5;
+    }
+    .em-inline-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 10px;
+    }
+    .em-contract-browser {
+      margin-top: 14px;
+      padding: 16px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(21, 21, 21, .92);
+    }
+    .em-browser-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .em-browser-head h3 {
+      margin: 0;
+      font-family: Georgia, "Times New Roman", serif;
+      font-size: 1.05rem;
+      color: var(--cream);
+    }
+    .em-browser-filters {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 12px;
+    }
+    .em-browser-filters .em-select { max-width: 260px; }
+    .em-contract-list { margin-top: 12px; display: flex; flex-direction: column; gap: 8px; }
+    .em-contract-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: rgba(0, 0, 0, .25);
+    }
+    .em-contract-main { min-width: 0; }
+    .em-contract-title { font-weight: 700; color: #fff; }
+    .em-contract-actions {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .em-status-badge {
+      font-size: .72rem;
+      font-weight: 700;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+      padding: 4px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+    }
+    .em-st-pending { color: #f2d27b; border-color: rgba(242, 210, 123, .4); }
+    .em-st-done { color: var(--paid); border-color: rgba(125, 211, 160, .4); }
+    .em-list-head {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+    .em-list-head-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-left: auto; }
+    .em-pill {
+      font-size: .75rem;
+      color: var(--muted);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 4px 8px;
+    }
+    .em-kpi-click {
+      appearance: none;
+      border: 1px solid var(--line);
+      text-align: left;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+    .em-kpi-click:hover { border-color: var(--gold); }
+    .em-sig-frame {
+      position: relative;
+      max-width: 100%;
+      width: 100%;
+      margin-top: 8px;
+      border-radius: 14px;
+      overflow: visible;
+      isolation: isolate;
+    }
+    .em-sig-frame-rot {
+      position: absolute;
+      inset: -4px;
+      z-index: 0;
+      border-radius: 16px;
+      background: conic-gradient(from 0deg, #2563eb, #60a5fa, #38bdf8, #2563eb);
+      opacity: 0;
+      pointer-events: none;
+      animation: em-sig-spin 1s linear infinite;
+    }
+    .em-sig-frame.em-sig-saving .em-sig-frame-rot { opacity: 1; }
+    @keyframes em-sig-spin { to { transform: rotate(360deg); } }
+    .em-sig-frame-inner {
+      position: relative;
+      z-index: 1;
+      margin: 5px;
+      background: #fff;
+      border-radius: 10px;
+    }
+    .em-agent-sig-canvas {
+      display: block;
+      width: 100%;
+      max-width: 520px;
+      height: 140px;
+      border-radius: 8px;
+      background: #fff;
+      touch-action: none;
+    }
+    .em-details .btn { margin-top: 10px; }
+    .em-inline-actions .btn,
+    .em-inline-actions .btn-secondary,
+    .em-inline-actions .btn-danger { margin-top: 0; }
     @media (max-width: 900px) {
       .wrap { padding-top: 64px; }
       header { align-items: flex-start; }
@@ -770,13 +1011,15 @@
       #clientsTable .actions {
         flex-wrap: wrap;
       }
+      .em-contracts-layout { grid-template-columns: 1fr; }
+      .em-contract-row { flex-direction: column; align-items: flex-start; }
     }
   </style>
 </head>
 <body>
   <div id="loginGate" class="login-gate">
     <div class="login-card">
-      <h2>Elite Invoices</h2>
+      <h2>Elite Management</h2>
       <p>Enter password to continue.</p>
       <form id="loginForm">
         <input type="password" id="loginPassword" autocomplete="current-password" placeholder="Password" required>
@@ -792,8 +1035,8 @@
       <div class="brand">
         <img src="/elite-cleaning-assets/elite-cleaning-logo-dots-glow.png" alt="Elite Cleaning Services">
         <div>
-          <h1>Elite Invoices</h1>
-          <p class="sub">Create, store, and manage cleaning invoices.</p>
+          <h1>Elite Management</h1>
+          <p class="sub">Invoices, clients, and electronic contracts.</p>
         </div>
       </div>
       <div class="toolbar">
@@ -801,6 +1044,7 @@
         <button type="button" class="btn-secondary" id="clientFullTab">Client Database</button>
         <button type="button" class="btn-secondary" id="invoicesTab">View Invoices</button>
         <button type="button" class="btn-secondary" id="weeklyTab">Billing Totals</button>
+        <button type="button" class="btn-secondary" id="contractsTab">Contracts</button>
         <button type="button" class="btn" id="addClientBtn">Add Client</button>
         <button type="button" class="btn-secondary" id="saveBtn">Save Changes</button>
       </div>
@@ -946,6 +1190,22 @@
         <p class="hint" id="weekHint">Totals are grouped Monday through Sunday by cleaning/service date.</p>
       </div>
     </section>
+
+    <section class="panel-section" id="contractsPanel">
+      <div class="week-kpis" id="em-contract-kpis"></div>
+      <div class="em-contract-browser" id="em-contract-browser" style="display:none;"></div>
+      <div class="em-contracts-layout">
+        <aside class="em-client-side">
+          <label for="em-client-search">Find Client</label>
+          <input type="search" id="em-client-search" placeholder="Search invoice clients..." autocomplete="off">
+          <div id="em-client-list" class="em-client-list"></div>
+        </aside>
+        <div id="em-contract-work" class="em-contract-work"></div>
+      </div>
+      <p class="hint">
+        Contracts attach to the same clients used for invoicing. Marketing Manager customers stay in Marketing Manager and are not imported.
+      </p>
+    </section>
   </div>
   </div>
 
@@ -1004,6 +1264,7 @@
     <img id="clientPhotoLightboxImg" alt="Property photo">
   </div>
 
+  <script src="/js/elite-contracts.js"></script>
   <script src="/lab007-site-nav.js" defer></script>
   <script>
     (function () {
@@ -1023,10 +1284,12 @@
       const clientFullTab = document.getElementById('clientFullTab');
       const invoicesTab = document.getElementById('invoicesTab');
       const weeklyTab = document.getElementById('weeklyTab');
+      const contractsTab = document.getElementById('contractsTab');
       const clientsPanel = document.getElementById('clientsPanel');
       const clientFullPanel = document.getElementById('clientFullPanel');
       const invoicesPanel = document.getElementById('invoicesPanel');
       const weeklyPanel = document.getElementById('weeklyPanel');
+      const contractsPanel = document.getElementById('contractsPanel');
       const filterClient = document.getElementById('filterClient');
       const filterPaid = document.getElementById('filterPaid');
       const filterSearch = document.getElementById('filterSearch');
@@ -1064,6 +1327,7 @@
       const weekTodayBtn = document.getElementById('weekTodayBtn');
       const clientsTableHead = document.querySelector('#clientsTable thead');
       let clients = [];
+      let eliteContractsUi = null;
       let invoices = [];
       let invoiceGrandTotal = 0;
       let clientFull = { columns: [], rows: [], photoCounts: {} };
@@ -1206,14 +1470,17 @@
         const isClientFull = name === 'clientfull';
         const isInvoices = name === 'invoices';
         const isWeekly = name === 'weekly';
+        const isContracts = name === 'contracts';
         clientsPanel.classList.toggle('active', isClients);
         clientFullPanel.classList.toggle('active', isClientFull);
         invoicesPanel.classList.toggle('active', isInvoices);
         weeklyPanel.classList.toggle('active', isWeekly);
+        contractsPanel.classList.toggle('active', isContracts);
         clientsTab.classList.toggle('active', isClients);
         clientFullTab.classList.toggle('active', isClientFull);
         invoicesTab.classList.toggle('active', isInvoices);
         weeklyTab.classList.toggle('active', isWeekly);
+        contractsTab.classList.toggle('active', isContracts);
         saveBtn.style.display = isClients ? '' : 'none';
         addClientBtn.style.display = isClients ? '' : 'none';
         if (isInvoices) loadInvoices().catch((err) => setStatus(err.message, true));
@@ -1221,6 +1488,15 @@
         if (isWeekly) {
           weekCursor = normalizeDashCursor(new Date());
           loadWeeklyDashboard().catch((err) => setStatus(err.message, true));
+        }
+        if (isContracts) {
+          if (!clients.length) {
+            loadClients().catch((err) => setStatus(err.message, true)).then(() => {
+              if (eliteContractsUi) eliteContractsUi.load().catch((err) => setStatus(err.message, true));
+            });
+          } else if (eliteContractsUi) {
+            eliteContractsUi.load().catch((err) => setStatus(err.message, true));
+          }
         }
       }
 
@@ -2143,7 +2419,7 @@
         const client = clients.find((row) => row.id === clientId);
         if (!client) return;
         const label = client.displayName || client.billToName || 'this client';
-        if (!window.confirm(`Delete ${label}? This removes the client from Elite Invoices. Existing invoices stay in history.`)) {
+        if (!window.confirm(`Delete ${label}? This removes the client from Elite Management. Existing invoices stay in history.`)) {
           return;
         }
         button.disabled = true;
@@ -2537,6 +2813,7 @@
       clientFullTab.addEventListener('click', () => showPanel('clientfull'));
       invoicesTab.addEventListener('click', () => showPanel('invoices'));
       weeklyTab.addEventListener('click', () => showPanel('weekly'));
+      contractsTab.addEventListener('click', () => showPanel('contracts'));
       addClientBtn.addEventListener('click', addClient);
       saveBtn.addEventListener('click', () => saveClients().catch((err) => setStatus(err.message, true)));
       refreshInvoicesBtn.addEventListener('click', () => loadInvoices().catch((err) => setStatus(err.message, true)));
@@ -2625,6 +2902,19 @@
           loadInvoices().catch((err) => setStatus(err.message, true));
         }, 250);
       });
+
+      if (typeof window.initEliteContracts === 'function') {
+        eliteContractsUi = window.initEliteContracts({
+          apiFetch,
+          setStatus,
+          escapeHtml,
+          getClients: () => clients,
+          onAuthFail: () => {
+            sessionStorage.removeItem(AUTH_KEY);
+            showLogin('Session expired. Enter password again.');
+          }
+        });
+      }
 
       const savedPassword = sessionStorage.getItem(AUTH_KEY);
       if (savedPassword) {

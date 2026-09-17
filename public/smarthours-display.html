@@ -163,7 +163,7 @@
       function formatDay(day) {
         if (!day || day.closed) return 'Closed';
         const a = day.open && day.close ? `${day.open} – ${day.close}` : '';
-        const b = day.open2 && day.close2 ? `${day.open2} – ${day.close2}` : '';
+        const b = day.split !== false && day.open2 && day.close2 ? `${day.open2} – ${day.close2}` : '';
         return b ? `${a}, ${b}` : (a || 'Closed');
       }
 
@@ -185,7 +185,7 @@
           const cur = mins < start && end > 24 * 60 ? mins + 24 * 60 : mins;
           return cur >= start && cur < end;
         };
-        return inSlot(day.open, day.close) || inSlot(day.open2, day.close2);
+        return inSlot(day.open, day.close) || ((day.split !== false && day.open2 && day.close2) && inSlot(day.open2, day.close2));
       }
 
       function normalizeHangRotation(value) {

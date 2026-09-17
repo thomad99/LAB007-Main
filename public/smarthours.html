@@ -744,6 +744,78 @@
       text-decoration: none;
     }
     .setup-maps-wrap a:hover { text-decoration: underline; }
+    .setup-copy-head {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .setup-copy-head label { margin: 0; }
+    .maps-help-btn {
+      appearance: none;
+      flex: 0 0 auto;
+      width: 28px;
+      height: 28px;
+      margin: 0;
+      padding: 0;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      background: var(--wash);
+      color: var(--accent);
+      display: grid;
+      place-items: center;
+      cursor: pointer;
+    }
+    .maps-help-btn svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .maps-help-btn:hover,
+    .maps-help-btn[aria-expanded="true"] {
+      border-color: var(--accent);
+      background: var(--accent-dim);
+    }
+    .maps-help-panel {
+      grid-column: 1 / -1;
+      margin: 2px 0 0;
+      padding: 14px 16px 16px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--wash);
+      text-align: left;
+    }
+    .maps-help-panel p {
+      margin: 0 0 10px;
+      color: var(--text);
+      font-size: .92rem;
+      line-height: 1.45;
+    }
+    .maps-help-panel ol {
+      margin: 0 0 12px;
+      padding-left: 1.2em;
+      color: var(--text);
+      font-size: .9rem;
+      line-height: 1.5;
+    }
+    .maps-help-panel li { margin: 0 0 4px; }
+    .maps-help-example {
+      margin: 0 0 8px;
+      font-size: .82rem;
+      font-weight: 700;
+      color: var(--muted);
+    }
+    .maps-help-panel img {
+      display: block;
+      width: 100%;
+      max-width: 720px;
+      height: auto;
+      border-radius: 10px;
+      border: 1px solid var(--line);
+    }
     .setup-save {
       margin-top: 22px;
       width: 100%;
@@ -894,21 +966,6 @@
       fill: none;
       stroke: currentColor;
       stroke-width: 1.8;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-    .info-save-continue {
-      min-height: 44px;
-      padding: 10px 18px;
-      border-radius: 999px;
-      gap: 8px;
-    }
-    .info-save-continue svg {
-      width: 16px;
-      height: 16px;
-      stroke: currentColor;
-      fill: none;
-      stroke-width: 2.2;
       stroke-linecap: round;
       stroke-linejoin: round;
     }
@@ -1112,7 +1169,6 @@
       .info-page-mark { width: 34px; height: 34px; }
       .info-page-mark svg { width: 18px; height: 18px; }
       .info-page-title h2 { font-size: 1.02rem; }
-      .info-save-continue { width: 100%; min-height: 42px; }
       .info-tile {
         min-height: 0;
         padding: 12px 14px;
@@ -1404,7 +1460,8 @@
       text-transform: uppercase;
     }
     .hours-table input[type="time"] { padding: 10px 12px; font-size: 1.25rem; min-height: 48px; }
-    .hours-table td:nth-child(2) { width: 1%; white-space: nowrap; vertical-align: middle; }
+    .hours-table td:nth-child(2),
+    .hours-table td:nth-child(3) { width: 1%; white-space: nowrap; vertical-align: middle; }
     .hours-toggle {
       position: relative;
       display: inline-flex;
@@ -1549,15 +1606,22 @@
       font-size: 1.2rem;
       color: var(--muted);
     }
-    .hours-table tr.is-closed .hours-times { display: none; }
+    .hours-table tr.is-closed .hours-times-wrap { display: none; }
     .hours-table tr.is-closed .closed-label { display: inline; }
+    .hours-table tr.is-closed .hours-split-cell { visibility: hidden; }
+    .hours-table .hours-times-wrap {
+      display: grid;
+      gap: 10px;
+      max-width: 560px;
+    }
     .hours-table .hours-times {
       display: grid;
       grid-template-columns: auto 1fr auto auto 1fr;
       gap: 10px 14px;
       align-items: center;
-      max-width: 560px;
     }
+    .hours-table .hours-times-2 { display: none; }
+    .hours-table tr.is-split:not(.is-closed) .hours-times-2 { display: grid; }
     .hours-table .time-dash { color: var(--muted); font-weight: 700; }
     .hours-table .hours-times .time-label {
       font-size: 1.15rem;
@@ -1635,6 +1699,13 @@
     .device-table .hint { margin-top: 0; }
     .pill-on { color: #34d399; font-weight: 700; }
     .pill-off { color: var(--muted); }
+    .device-table tr.is-offline td.device-detail:not([data-label="Status"]):not([data-label="Device"]):not([data-label="Actions"]),
+    .device-table tr.is-offline .device-summary-copy .hint,
+    .device-table tr.is-offline .device-summary-battery {
+      opacity: .42;
+      filter: grayscale(1);
+      color: var(--muted);
+    }
     .device-table .device-summary { display: none; }
     .btn-sync {
       background: linear-gradient(135deg, #5eead4, #34d399);
@@ -2704,10 +2775,12 @@
         vertical-align: middle;
       }
       .hours-table th { font-size: .7rem; }
-      .hours-table td:nth-child(1) { width: 28%; font-weight: 700; }
-      .hours-table td:nth-child(2) { width: 18%; text-align: center; }
-      .hours-table td:nth-child(3) { width: 54%; }
+      .hours-table td:nth-child(1) { width: 22%; font-weight: 700; }
+      .hours-table td:nth-child(2),
+      .hours-table td:nth-child(3) { width: 14%; text-align: center; }
+      .hours-table td:nth-child(4) { width: 50%; }
       .hours-table .time-label { display: none; }
+      .hours-table .hours-times-wrap { max-width: none; }
       .hours-table .hours-times {
         display: grid;
         grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
@@ -2806,6 +2879,9 @@
       .device-table:not(.is-empty) tr.is-expanded {
         padding: 6px 8px 10px;
         background: rgba(118, 244, 197, .05);
+      }
+      .device-table:not(.is-empty) tr.is-expanded.is-offline {
+        background: rgba(148, 163, 184, .08);
       }
       .device-summary-bar {
         display: grid;
@@ -3959,12 +4035,30 @@
             <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>
           </div>
           <div class="setup-copy">
-            <label for="onboardMaps">Website or Google Maps</label>
+            <div class="setup-copy-head">
+              <label for="onboardMaps">Website or Google Maps</label>
+              <button type="button" class="maps-help-btn" id="onboardMapsHelpBtn" aria-expanded="false" aria-controls="onboardMapsHelp" title="How to get your Google share link" aria-label="How to get your Google share link">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 5"/><path d="M12 17h.01"/></svg>
+              </button>
+            </div>
             <p>Paste your website, or Share from your Maps listing</p>
           </div>
           <div class="setup-maps-wrap">
             <input id="onboardMaps" type="text" placeholder="yourbusiness.com or Google Maps link" autocomplete="url">
             <a href="https://maps.google.com" target="_blank" rel="noopener">Open Google Maps</a>
+          </div>
+          <div class="maps-help-panel hidden-block" id="onboardMapsHelp">
+            <p>To link the hours to your Google Business Profile we need your Google profile link.</p>
+            <p>To get your unique link, perform the following:</p>
+            <ol>
+              <li>Search your own business on Google</li>
+              <li>Select your Business</li>
+              <li>Click Share</li>
+              <li>You should get a share link</li>
+              <li>Copy and paste the link into here</li>
+            </ol>
+            <p class="maps-help-example">Example</p>
+            <img src="/SmartHours/assets/google-share-help.png" alt="Google search showing Share on a business profile and the share.google link to copy" width="1280" height="720">
           </div>
         </div>
         <div class="setup-row">
@@ -4041,10 +4135,6 @@
                   <p>Basic details about your business</p>
                 </div>
               </div>
-              <button type="button" class="btn info-save-continue" id="infoSaveContinueBtn">
-                Save &amp; Continue
-                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14"/><path d="m13 6 6 6-6 6"/></svg>
-              </button>
             </div>
             <div class="info-tiles">
               <article class="info-tile info-tile-name" id="infoNameTile">
@@ -4101,7 +4191,7 @@
             <div class="auto-sync-bar admin-only">
               <div>
                 <label for="autoSyncHours">Auto Google sync</label>
-                <input id="autoSyncHours" type="number" min="0" max="168" step="1" value="24" title="0 disables auto-sync for all customers. Each customer sets their own interval on Device Controls (default 60 minutes).">
+                <input id="autoSyncHours" type="number" min="0" max="168" step="1" value="24" title="Legacy setting. Auto-sync uses each customer’s Google Hours Sync interval on Device Controls.">
               </div>
               <button type="button" class="btn-secondary mutate-only" id="saveAutoSyncBtn">Save interval</button>
             </div>
@@ -4114,7 +4204,6 @@
         <div class="tab-panel" id="tab-hours">
           <div class="hours-toolbar">
             <div class="hours-sync-card">
-              <span class="hours-tile-title">Google Hours Sync</span>
               <button type="button" class="btn btn-sync mutate-only" id="syncOneBtn">Sync Google hours</button>
               <p class="sync-stamp empty" id="syncMeta"></p>
             </div>
@@ -4132,6 +4221,7 @@
               <tr>
                 <th>Day</th>
                 <th>Closed</th>
+                <th>Split</th>
                 <th>Hours</th>
               </tr>
             </thead>
@@ -4506,17 +4596,17 @@
                     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
                   </span>
                 </div>
-                <p class="field-hint">How often the display content refreshes.</p>
+                <p class="field-hint">How often the display content refreshes. The panel also schedules a wake at opening and at closing so OPEN/CLOSED flips on time.</p>
               </div>
               <div>
-                <label for="googleSyncMinutes">Google Hours Sync (minutes)</label>
+                <label for="googleSyncHours">Google Hours Sync (hours)</label>
                 <div class="field-with-icon">
-                  <input id="googleSyncMinutes" type="number" min="0" max="10080" value="60" title="How often to refresh opening hours from Google. Default 60. 0 turns auto-sync off for this page.">
+                  <input id="googleSyncHours" type="number" min="0" max="168" step="1" value="24" title="How often to refresh opening hours from Google. Default 24 hours (daily). 0 turns auto-sync off for this page. Google hours are kept at most 7 days.">
                   <span class="field-icon" aria-hidden="true">
                     <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
                   </span>
                 </div>
-                <p class="field-hint">How often to check for Google hours.</p>
+                <p class="field-hint">How often to check Google for hour changes. Default 24 hours (daily). 0 turns auto-sync off. Google hours are stored at most 7 days; manual hours are kept.</p>
               </div>
               <div>
                 <label for="einkOrientation">Orientation</label>
@@ -4542,7 +4632,7 @@
                   <option value="on" selected>On</option>
                   <option value="off">Off</option>
                 </select>
-                <p class="field-hint">Sleeps 2 hours after close, wakes 2 hours before open.</p>
+                <p class="field-hint">Overnight: sleeps 2 hours after close, wakes 2 hours before open. Also wakes at opening and at closing so OPEN/CLOSED flips on time.</p>
               </div>
               <div class="device-battery-field">
                 <label for="fieldLowBatteryAlert">Low Battery Alert</label>
@@ -5384,7 +5474,7 @@
       }
 
       function emptyDay() {
-        return { closed: true, open: '09:00', close: '17:00', open2: '', close2: '' };
+        return { closed: true, split: false, open: '09:00', close: '17:00', open2: '', close2: '' };
       }
 
       function defaultHours() {
@@ -5552,10 +5642,17 @@
         `).join('');
       }
 
+      function daySplitEnabled(day) {
+        if (!day || day.closed) return false;
+        if (day.split === false) return false;
+        return Boolean(day.open2 && day.close2);
+      }
+
       function formatDay(day) {
         if (!day || day.closed) return 'Closed';
         const a = day.open && day.close ? `${day.open} – ${day.close}` : '';
-        return a || 'Closed';
+        const b = daySplitEnabled(day) ? `${day.open2} – ${day.close2}` : '';
+        return b ? `${a}, ${b}` : (a || 'Closed');
       }
 
       function isOpenNow(hours, date) {
@@ -5575,7 +5672,7 @@
           const cur = mins < start && end > 24 * 60 ? mins + 24 * 60 : mins;
           return cur >= start && cur < end;
         };
-        return inSlot(day.open, day.close) || inSlot(day.open2, day.close2);
+        return inSlot(day.open, day.close) || (daySplitEnabled(day) && inSlot(day.open2, day.close2));
       }
 
       function editorHours() {
@@ -5876,19 +5973,24 @@
       function syncHoursRowState(row) {
         if (!row) return;
         const closed = row.querySelector('[data-f="closed"]').checked;
+        const split = row.querySelector('[data-f="split"]').checked;
         row.classList.toggle('is-closed', closed);
+        row.classList.toggle('is-split', !closed && split);
       }
 
       function readHoursFromForm() {
         const hours = {};
         DAYS.forEach((day) => {
           const row = hoursBody.querySelector(`tr[data-day="${day}"]`);
+          const closed = row.querySelector('[data-f="closed"]').checked;
+          const split = row.querySelector('[data-f="split"]').checked;
           hours[day] = {
-            closed: row.querySelector('[data-f="closed"]').checked,
+            closed,
+            split,
             open: row.querySelector('[data-f="open"]').value,
             close: row.querySelector('[data-f="close"]').value,
-            open2: '',
-            close2: ''
+            open2: row.querySelector('[data-f="open2"]').value || '',
+            close2: row.querySelector('[data-f="close2"]').value || ''
           };
         });
         return hours;
@@ -5898,7 +6000,8 @@
         const h = hours || defaultHours();
         hoursBody.innerHTML = DAYS.map((day) => {
           const d = h[day] || emptyDay();
-          return `<tr data-day="${day}" class="${d.closed ? 'is-closed' : ''}">
+          const splitOn = d.split === true || (d.split == null && Boolean(d.open2 && d.close2));
+          return `<tr data-day="${day}" class="${d.closed ? 'is-closed' : ''}${splitOn && !d.closed ? ' is-split' : ''}">
             <td>${DAY_LABELS[day]}</td>
             <td>
               <label class="hours-toggle">
@@ -5907,15 +6010,31 @@
                 <span class="hours-toggle-state" data-off="Off" data-on="On"></span>
               </label>
             </td>
+            <td class="hours-split-cell">
+              <label class="hours-toggle">
+                <input type="checkbox" data-f="split" ${splitOn ? 'checked' : ''} aria-label="${DAY_LABELS[day]} split hours">
+                <span class="hours-toggle-track" aria-hidden="true"></span>
+                <span class="hours-toggle-state" data-off="Off" data-on="On"></span>
+              </label>
+            </td>
             <td>
               <span class="closed-label">Closed</span>
-              <span class="hours-times">
-                <span class="time-label">Open</span>
-                <input type="time" data-f="open" value="${d.open || '09:00'}" aria-label="${DAY_LABELS[day]} open">
-                <span class="time-dash" aria-hidden="true">–</span>
-                <span class="time-label">Close</span>
-                <input type="time" data-f="close" value="${d.close || '17:00'}" aria-label="${DAY_LABELS[day]} close">
-              </span>
+              <div class="hours-times-wrap">
+                <span class="hours-times">
+                  <span class="time-label">Open</span>
+                  <input type="time" data-f="open" value="${d.open || '09:00'}" aria-label="${DAY_LABELS[day]} open">
+                  <span class="time-dash" aria-hidden="true">–</span>
+                  <span class="time-label">Close</span>
+                  <input type="time" data-f="close" value="${d.close || '17:00'}" aria-label="${DAY_LABELS[day]} close">
+                </span>
+                <span class="hours-times hours-times-2">
+                  <span class="time-label">Open</span>
+                  <input type="time" data-f="open2" value="${d.open2 || '17:00'}" aria-label="${DAY_LABELS[day]} split open">
+                  <span class="time-dash" aria-hidden="true">–</span>
+                  <span class="time-label">Close</span>
+                  <input type="time" data-f="close2" value="${d.close2 || '21:00'}" aria-label="${DAY_LABELS[day]} split close">
+                </span>
+              </div>
             </td>
           </tr>`;
         }).join('');
@@ -7291,16 +7410,16 @@
         const when = formatSyncWhen(customer && customer.lastSyncedAt);
         const failWhen = formatSyncWhen(customer && customer.lastSyncAttemptAt);
         if (when) {
-          el.textContent = 'Last Google sync: ' + when;
+          el.textContent = 'Last Sync: ' + when;
           el.classList.remove('empty');
           return;
         }
         if (customer && customer.lastSyncError) {
-          el.textContent = 'Last Google sync failed' + (failWhen ? ': ' + failWhen : '');
+          el.textContent = 'Last Sync failed' + (failWhen ? ': ' + failWhen : '');
           el.classList.add('empty');
           return;
         }
-        el.textContent = 'Last Google sync: never';
+        el.textContent = 'Last Sync: never';
         el.classList.add('empty');
       }
 
@@ -7348,10 +7467,12 @@
         customer.design = cloneDesignData(liveSlot.design);
         writeDesignToForm(customer.design);
         writeEinkToForm(customer.eink);
-        const googleSyncEl = document.getElementById('googleSyncMinutes');
+        const googleSyncEl = document.getElementById('googleSyncHours');
         if (googleSyncEl) {
           const mins = Number(customer.googleSyncIntervalMinutes);
-          googleSyncEl.value = String(Number.isFinite(mins) ? mins : 60);
+          if (!Number.isFinite(mins) || mins < 0) googleSyncEl.value = '24';
+          else if (mins === 0) googleSyncEl.value = '0';
+          else googleSyncEl.value = String(Math.max(1, Math.min(168, Math.round(mins / 60))));
         }
         const lowBattEl = document.getElementById('fieldLowBatteryAlert');
         if (lowBattEl) lowBattEl.value = customer.lowBatteryAlert !== false ? 'on' : 'off';
@@ -7468,10 +7589,21 @@
         return t.toLocaleDateString();
       }
 
-      function deviceOnline(iso) {
-        if (!iso) return false;
-        const t = new Date(iso).getTime();
-        return Number.isFinite(t) && (Date.now() - t) < 90 * 60 * 1000;
+      const DEVICE_ONLINE_GRACE_MINUTES = 10;
+
+      function deviceDueMinutes(d) {
+        const assigned = Number(d && d.assignedSleepMinutes);
+        if (Number.isFinite(assigned) && assigned > 0) return assigned;
+        const reported = Number(d && d.reportedPollMinutes);
+        if (Number.isFinite(reported) && reported > 0) return reported;
+        return devicePollMinutes(d) || 60;
+      }
+
+      function deviceOnline(d) {
+        if (!d || !d.lastSeen) return false;
+        const t = new Date(d.lastSeen).getTime();
+        if (!Number.isFinite(t)) return false;
+        return (Date.now() - t) <= (deviceDueMinutes(d) + DEVICE_ONLINE_GRACE_MINUTES) * 60 * 1000;
       }
 
       function deviceUrlCode(d) {
@@ -7517,8 +7649,9 @@
       }
 
       function formatDaysLeft(d) {
-        const n = Number(d && d.estimatedDaysRemaining);
-        if (!Number.isFinite(n) || n < 0) return '—';
+        const raw = Number(d && d.estimatedDaysRemaining);
+        if (!Number.isFinite(raw) || raw < 0) return '—';
+        const n = Math.min(100, raw);
         const title = d && d.batteryDrainIsDefault
           ? 'Default estimate of 1% per day until this display has enough history'
           : 'Estimated from recent battery use';
@@ -7605,7 +7738,7 @@
 
       function deviceNameInputHtml(d) {
         const shown = String((d && (d.customName || d.name)) || '').trim();
-        const placeholder = d && d.customName && d.name ? d.name : 'Front Door';
+        const placeholder = d && d.customName && d.name ? d.name : 'OpenHours1';
         return `<span class="device-name-row"><input type="text" class="device-name-input" data-device-name="${escapeHtml(d.id)}" value="${escapeHtml(shown)}" placeholder="${escapeHtml(placeholder)}" maxlength="40" aria-label="Device name" autocomplete="off"></span>`;
       }
 
@@ -7622,7 +7755,7 @@
 
       function deviceRowHtml(d, options) {
         const opts = options || {};
-        const on = deviceOnline(d.lastSeen);
+        const on = deviceOnline(d);
         const expanded = expandedDevices.has(d.id);
         const firmwareCell = opts.firmware
           ? `<td class="device-detail" data-label="Firmware">${escapeHtml(d.fwVersion || '—')}</td>`
@@ -7630,7 +7763,7 @@
         const fwHint = !opts.firmware && d.fwVersion
           ? `<span class="hint nowrap">${escapeHtml(d.fwVersion)}</span>`
           : '';
-        return `<tr class="device-row${expanded ? ' is-expanded' : ''}" data-device-row="${escapeHtml(d.id)}">
+        return `<tr class="device-row${expanded ? ' is-expanded' : ''}${on ? '' : ' is-offline'}" data-device-row="${escapeHtml(d.id)}">
           <td class="device-summary">
             <div class="device-summary-bar">
               <button type="button" class="device-summary-btn" data-expand-device="${escapeHtml(d.id)}" aria-expanded="${expanded ? 'true' : 'false'}">
@@ -7695,7 +7828,7 @@
         const meta = document.getElementById('fleetMeta');
         if (!body) return;
         const list = (devices || []).slice().sort((a, b) => String(b.lastSeen || '').localeCompare(String(a.lastSeen || '')));
-        const online = list.filter((d) => deviceOnline(d.lastSeen)).length;
+        const online = list.filter((d) => deviceOnline(d)).length;
         if (meta) {
           meta.textContent = list.length
             ? (list.length + ' device' + (list.length === 1 ? '' : 's') + ' · ' + online + ' online')
@@ -8068,7 +8201,7 @@
           })),
           liveDesignId: c.liveDesignId,
           editingDesignId,
-          googleSyncIntervalMinutes: Number(document.getElementById('googleSyncMinutes').value),
+          googleSyncIntervalHours: Number(document.getElementById('googleSyncHours').value),
           lowBatteryAlert: document.getElementById('fieldLowBatteryAlert')
             ? document.getElementById('fieldLowBatteryAlert').value !== 'off'
             : true,
@@ -8229,11 +8362,13 @@
             cur.slug = data.slug;
             cur.googleMapsUrl = data.googleMapsUrl;
             cur.googlePlaceId = data.googlePlaceId;
+            cur.email = data.email != null ? data.email : cur.email;
             cur.useManualHours = data.useManualHours;
             cur.hours = data.hours || cur.hours;
             cur.eink = data.eink || cur.eink;
             cur.lowBatteryAlert = data.lowBatteryAlert !== false;
             cur.deepSleep = data.deepSleep !== false;
+            cur.googleSyncIntervalMinutes = data.googleSyncIntervalMinutes;
             cur.updatedAt = data.updatedAt;
           }
           rememberStudioSlug(data.slug || payload.slug);
@@ -8253,8 +8388,19 @@
 
       hoursBody.addEventListener('change', (event) => {
         const row = event.target.closest('tr[data-day]');
-        if (!row || !event.target.matches('[data-f="closed"]')) return;
-        syncHoursRowState(row);
+        if (!row) return;
+        if (event.target.matches('[data-f="split"]') && event.target.checked) {
+          const open2 = row.querySelector('[data-f="open2"]');
+          const close2 = row.querySelector('[data-f="close2"]');
+          if (open2 && !open2.value) open2.value = '17:00';
+          if (close2 && !close2.value) close2.value = '21:00';
+        }
+        if (event.target.matches('[data-f="closed"], [data-f="split"]')) {
+          syncHoursRowState(row);
+        }
+        const c = selected();
+        if (c && (c.useManualHours || !c.googleHours)) c.hours = readHoursFromForm();
+        renderCanvas();
       });
 
       document.getElementById('deviceMgmtBtn').addEventListener('click', () => openDeviceMgmt());
@@ -8348,18 +8494,6 @@
       document.getElementById('saveBtn').addEventListener('click', () => {
         saveCustomer().catch((err) => setStatus(err.message, true));
       });
-      const infoSaveContinueBtn = document.getElementById('infoSaveContinueBtn');
-      if (infoSaveContinueBtn) {
-        infoSaveContinueBtn.addEventListener('click', () => {
-          saveCustomer()
-            .then((saved) => {
-              if (!saved) return;
-              const hoursBtn = document.querySelector('.tabs [data-tab="hours"]');
-              if (hoursBtn) hoursBtn.click();
-            })
-            .catch((err) => setStatus(err.message, true));
-        });
-      }
       editor.addEventListener('input', (event) => {
         const t = event.target;
         if (!t || t.closest('.hidden-block') || t.type === 'file') return;
@@ -9008,6 +9142,7 @@
           if (id === 'fieldName' && el.readOnly) return;
           if (id === 'fieldName' || id === 'fieldEmail') syncInfoTileChecks();
           const c = selected();
+          if (c && id === 'fieldEmail') c.email = el.value.trim();
           if (c && id === 'fieldName') {
             c.name = el.value;
             const slugEl = document.getElementById('fieldSlug');
@@ -9044,10 +9179,11 @@
         }, 280);
       });
       document.getElementById('fieldMapsUrl').addEventListener('input', () => {
-        showMapsLinkStatus(
-          document.getElementById('fieldMapsUrl'),
-          document.getElementById('studioMapsStatus')
-        );
+        const mapsEl = document.getElementById('fieldMapsUrl');
+        showMapsLinkStatus(mapsEl, document.getElementById('studioMapsStatus'));
+        const c = selected();
+        if (c) c.googleMapsUrl = (mapsEl && mapsEl.value.trim()) || '';
+        scheduleAutosave(700);
       });
 
       bindColorPair('bgColor', 'bgColorPick');
@@ -9276,6 +9412,14 @@
         const statusEl = document.getElementById('onboardSlugStatus');
         const previewEl = document.getElementById('onboardSlugPreview');
         if (!nameEl || !slugEl || !saveEl) return;
+        const mapsHelpBtn = document.getElementById('onboardMapsHelpBtn');
+        const mapsHelp = document.getElementById('onboardMapsHelp');
+        if (mapsHelpBtn && mapsHelp) {
+          mapsHelpBtn.addEventListener('click', () => {
+            const open = mapsHelp.classList.toggle('hidden-block') === false;
+            mapsHelpBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+          });
+        }
         updateSlugPreview('', previewEl);
         let onboardSlugTimer = null;
         const refreshSlug = () => {

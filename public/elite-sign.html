@@ -1,0 +1,471 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+  <title>Elite Cleaning Contract Signing</title>
+  <style>
+    :root { --bg:#f3f3f1; --panel:#ffffff; --line:rgba(0,0,0,.15); --text:#111111; --gold:#c9a84c; --muted:#5f6368; --ok:#2b8f60; }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Arial, sans-serif; background:var(--bg); color:var(--text); }
+    .wrap { max-width: 860px; margin: 28px auto; padding: 0 16px 24px; }
+    .card { background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:18px; margin-bottom:14px; }
+    .doc-card-scroll { max-height: min(45vh, 420px); overflow: auto; -webkit-overflow-scrolling: touch; border: 1px solid var(--line); border-radius: 8px; padding: 12px; background: #fafafa; }
+    .doc-card-scroll iframe, .doc-iframe { max-width: 100% !important; display: block; }
+    .doc-iframe { width: 100%; border: none; border-radius: 6px; height: min(32vh, 300px); min-height: 200px; }
+    .sign-section { scroll-margin-top: 16px; }
+    .view-full-btn {
+      margin-top: 10px;
+      background: transparent;
+      border: 1px solid var(--line);
+      color: var(--text);
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .view-full-btn:hover { background: rgba(0,0,0,.04); }
+    .contract-fullscreen {
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: #fff;
+      display: none;
+      flex-direction: column;
+    }
+    .contract-fullscreen.open { display: flex; }
+    .contract-fullscreen-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--line);
+      background: #fff;
+    }
+    .contract-fullscreen-body {
+      flex: 1;
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      padding: 10px;
+      background: #fafafa;
+    }
+    .contract-fullscreen-body iframe,
+    .contract-fullscreen-body img {
+      width: 100%;
+      max-width: 100%;
+      border: 1px solid rgba(0,0,0,.08);
+      border-radius: 8px;
+      background: #fff;
+    }
+    .contract-fullscreen-body iframe {
+      height: calc(100vh - 84px);
+      min-height: 520px;
+    }
+    @media (max-width: 640px) {
+      .doc-card-scroll { max-height: min(22vh, 180px); padding: 8px; }
+      .doc-iframe { height: min(20vh, 160px) !important; min-height: 120px !important; }
+    }
+    h1 { margin:0 0 8px; font-size:28px; }
+    h2 { margin:0 0 8px; font-size:19px; }
+    .muted { color:var(--muted); }
+    .body { white-space:pre-wrap; line-height:1.6; }
+    label { display:block; font-size:13px; color:var(--muted); margin:8px 0 6px; }
+    input { width:100%; padding:11px 12px; border-radius:8px; border:1px solid var(--line); background:#fff; color:var(--text); }
+    .sig-pad-wrap {
+      display: block;
+      width: 100%;
+      max-width: 620px;
+      border-radius: 10px;
+      padding: 3px;
+      box-sizing: border-box;
+      background: transparent;
+      transition: box-shadow 0.2s ease;
+    }
+    .sig-pad-wrap.sig-saving {
+      animation: sig-pad-blue-pulse 0.95s ease-in-out infinite;
+      box-shadow: 0 0 0 2px #2563eb, 0 0 18px rgba(37, 99, 235, 0.35);
+    }
+    @keyframes sig-pad-blue-pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 2px #2563eb, 0 0 14px rgba(37, 99, 235, 0.3);
+      }
+      50% {
+        box-shadow: 0 0 0 5px rgba(96, 165, 250, 0.85), 0 0 28px rgba(37, 99, 235, 0.55);
+      }
+    }
+    .sig-pad-wrap.sig-saved {
+      animation: sig-pad-green-pulse 1.15s ease-out 3;
+      box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.9), 0 0 22px rgba(34, 197, 94, 0.35);
+    }
+    @keyframes sig-pad-green-pulse {
+      0%, 100% {
+        box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.95), 0 0 18px rgba(34, 197, 94, 0.25);
+      }
+      45% {
+        box-shadow: 0 0 0 7px rgba(34, 197, 94, 0.35), 0 0 34px rgba(34, 197, 94, 0.4);
+      }
+    }
+    canvas {
+      width: 100%;
+      max-width: 620px;
+      height: 190px;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #fff;
+      touch-action: none;
+      display: block;
+    }
+    .row { display:flex; flex-wrap:wrap; gap:10px; margin-top:10px; }
+    button { border:0; border-radius:8px; padding:10px 14px; cursor:pointer; font-weight:700; }
+    .gold { background:var(--gold); color:#0a0a0b; }
+    .ghost { background:transparent; border:1px solid var(--line); color:var(--text); }
+    .post-sign-actions {
+      background: linear-gradient(180deg, rgba(201, 168, 76, 0.16), rgba(201, 168, 76, 0.08));
+      border: 1px solid rgba(201, 168, 76, 0.32);
+      border-radius: 10px;
+      padding: 10px;
+    }
+    .post-sign-actions .ghost {
+      background: rgba(255, 255, 255, 0.65);
+      border-color: rgba(201, 168, 76, 0.55);
+    }
+    .post-sign-actions .ghost:hover {
+      background: rgba(255, 255, 255, 0.9);
+    }
+    .ok { color:var(--ok); font-weight:700; }
+    .error { color:#b42318; font-weight:700; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Elite Cleaning Services</h1>
+      <p class="muted" id="custName">Loading…</p>
+    </div>
+    <div class="card" id="contractReadCard">
+      <h2 id="title">Contract</h2>
+      <p class="muted" id="docMeta"></p>
+      <p class="muted" style="font-size:13px; margin:0 0 8px;">Review the document below, then scroll down the page to enter your details and sign.</p>
+      <div id="docViewer" class="doc-card-scroll"></div>
+      <div class="body doc-card-scroll" id="bodyText" style="margin-top:10px; white-space:pre-wrap; line-height:1.6;"></div>
+      <button id="viewContractFullBtn" class="view-full-btn" type="button">View Contract (Full Screen)</button>
+      <p class="muted" id="signedMeta"></p>
+    </div>
+    <div class="card sign-section" id="signCard">
+      <h2 style="font-size:17px; margin-bottom:10px;" id="signHeading">Sign below</h2>
+      <label for="fullName" id="fullNameLabel">Full name</label>
+      <input id="fullName" type="text" placeholder="Your full name" />
+      <label for="signDate">Date</label>
+      <input id="signDate" type="date" />
+      <label>Signature</label>
+      <div class="sig-pad-wrap" id="sigPadWrap" aria-live="polite">
+        <canvas id="sigCanvas" width="620" height="190"></canvas>
+      </div>
+      <div class="row">
+        <button class="ghost" id="clearBtn" type="button">Clear signature</button>
+        <button class="gold" id="signBtn" type="button">Sign contract</button>
+      </div>
+      <div class="row post-sign-actions" id="postSignActions" style="display:none;">
+        <button class="ghost" id="viewBtn" type="button">View signed copy</button>
+        <button class="ghost" id="downloadBtn" type="button">Download signed copy</button>
+      </div>
+      <p id="statusMsg" class="muted"></p>
+    </div>
+  </div>
+  <div id="contractFullscreen" class="contract-fullscreen" aria-hidden="true">
+    <div class="contract-fullscreen-head">
+      <strong>Contract</strong>
+      <button id="closeContractFullBtn" class="ghost" type="button">Back</button>
+    </div>
+    <div id="contractFullscreenBody" class="contract-fullscreen-body"></div>
+  </div>
+  <script>
+    (function () {
+      const token = location.pathname.split('/').pop();
+      const titleEl = document.getElementById('title');
+      const bodyEl = document.getElementById('bodyText');
+      const custEl = document.getElementById('custName');
+      const msgEl = document.getElementById('statusMsg');
+      const docMetaEl = document.getElementById('docMeta');
+      const docViewerEl = document.getElementById('docViewer');
+      const signedMetaEl = document.getElementById('signedMeta');
+      const viewContractFullBtn = document.getElementById('viewContractFullBtn');
+      const contractFullscreen = document.getElementById('contractFullscreen');
+      const contractFullscreenBody = document.getElementById('contractFullscreenBody');
+      const closeContractFullBtn = document.getElementById('closeContractFullBtn');
+      const nameEl = document.getElementById('fullName');
+      const nameLabelEl = document.getElementById('fullNameLabel');
+      const signHeadingEl = document.getElementById('signHeading');
+      const dateEl = document.getElementById('signDate');
+      const signBtn = document.getElementById('signBtn');
+      const clearBtn = document.getElementById('clearBtn');
+      const viewBtn = document.getElementById('viewBtn');
+      const downloadBtn = document.getElementById('downloadBtn');
+      const postSignActions = document.getElementById('postSignActions');
+      const canvas = document.getElementById('sigCanvas');
+      const sigPadWrap = document.getElementById('sigPadWrap');
+      const ctx = canvas.getContext('2d');
+      let drawing = false;
+      let hasInk = false;
+      let signed = false;
+      let fullContractMode = 'none';
+      let fullContractPayload = '';
+      let signerRoleLabel = 'Customer';
+
+      function fillCanvasWhite() {
+        ctx.save();
+        ctx.globalCompositeOperation = 'source-over';
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.restore();
+      }
+
+      function pointerXY(ev) {
+        const r = canvas.getBoundingClientRect();
+        const src = ev.touches ? ev.touches[0] : ev;
+        const x = (src.clientX - r.left) * (canvas.width / r.width);
+        const y = (src.clientY - r.top) * (canvas.height / r.height);
+        return { x, y };
+      }
+      function startDraw(ev) {
+        if (signed) return;
+        ev.preventDefault();
+        drawing = true;
+        const p = pointerXY(ev);
+        ctx.beginPath();
+        ctx.moveTo(p.x, p.y);
+      }
+      function moveDraw(ev) {
+        if (!drawing || signed) return;
+        ev.preventDefault();
+        const p = pointerXY(ev);
+        ctx.lineWidth = 2;
+        ctx.lineCap = 'round';
+        ctx.strokeStyle = '#111111';
+        ctx.lineTo(p.x, p.y);
+        ctx.stroke();
+        hasInk = true;
+      }
+      function endDraw() {
+        drawing = false;
+      }
+      function clearSignature() {
+        if (signed) return;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        fillCanvasWhite();
+        hasInk = false;
+        sigPadWrap.classList.remove('sig-saving', 'sig-saved');
+      }
+
+      async function api(path, opt) {
+        const r = await fetch(path, { headers: { 'Content-Type': 'application/json' }, ...opt });
+        const j = await r.json().catch(() => ({}));
+        if (!r.ok) throw new Error(j.error || r.statusText);
+        return j;
+      }
+
+      function stripAutoSignatureSectionHtml(html) {
+        const s = String(html || '');
+        if (!s) return '';
+        const marker = /<p[^>]*>\s*<strong>\s*(?:Client|Employee) Acceptance\s*(?:&(?:amp;)?|and)\s*Signature\s*<\/strong>\s*<\/p>/i;
+        const m = s.match(marker);
+        if (!m || typeof m.index !== 'number') return s;
+        const cut = s.lastIndexOf('<hr', m.index);
+        return (cut >= 0 ? s.slice(0, cut) : s.slice(0, m.index)).trim();
+      }
+
+      function stripAutoSignatureSectionText(text) {
+        const s = String(text || '');
+        if (!s) return '';
+        const idx = s.search(/\n\s*---\s*\n[\s\S]*(?:Client|Employee) Acceptance\s*(?:&|and)\s*Signature/i);
+        if (idx >= 0) return s.slice(0, idx).trim();
+        const idx2 = s.search(/(?:Client|Employee) Acceptance\s*(?:&|and)\s*Signature/i);
+        if (idx2 >= 0) return s.slice(0, idx2).trim();
+        return s;
+      }
+
+      function setSignedUi() {
+        signed = true;
+        signBtn.disabled = true;
+        nameEl.disabled = true;
+        dateEl.disabled = true;
+        if (postSignActions) postSignActions.style.display = '';
+      }
+
+      function animateSignatureSuccess() {
+        sigPadWrap.classList.remove('sig-saving');
+        sigPadWrap.classList.remove('sig-saved');
+        void sigPadWrap.offsetWidth;
+        // Keep the green success state visible after save.
+        sigPadWrap.classList.add('sig-saved');
+      }
+
+      async function load() {
+        try {
+          const data = await api('/api/elite-invoices/contracts/sign/' + token);
+          const c = data.contract || {};
+          titleEl.textContent = c.title || 'Contract';
+          if (c.bodyHtml) bodyEl.innerHTML = stripAutoSignatureSectionHtml(c.bodyHtml);
+          else bodyEl.textContent = stripAutoSignatureSectionText(c.body || '');
+          signerRoleLabel = c.signerRoleLabel || (c.signerRole === 'employee' ? 'Employee' : 'Customer');
+          custEl.textContent =
+            'Client: ' + (c.customerName || 'Client') +
+            (signerRoleLabel === 'Employee' ? ' — to be signed by an Employee' : '');
+          signHeadingEl.textContent = signerRoleLabel + ' — sign below';
+          nameLabelEl.textContent = signerRoleLabel + ' full name';
+          nameEl.placeholder = 'Your full name (' + signerRoleLabel + ')';
+          if (c.hasDocument && c.documentPath) {
+            bodyEl.style.display = 'none';
+            const docUrl = c.documentPath;
+            const docName = c.documentName || 'Contract document';
+            docMetaEl.textContent = 'Document: ';
+            const link = document.createElement('a');
+            link.href = docUrl;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.style.color = '#c9a84c';
+            link.textContent = docName;
+            docMetaEl.appendChild(link);
+            const lower = String(docName).toLowerCase();
+            if (lower.endsWith('.pdf')) {
+              docViewerEl.innerHTML =
+                '<iframe class="doc-iframe" src="' + docUrl + '" title="Contract document"></iframe>';
+              fullContractMode = 'iframe';
+              fullContractPayload = docUrl;
+            } else if (lower.endsWith('.png') || lower.endsWith('.jpg') || lower.endsWith('.jpeg')) {
+              docViewerEl.innerHTML = '<img src="' + docUrl + '" alt="Contract document" style="max-width:100%;border:1px solid rgba(255,255,255,.1);border-radius:8px;" />';
+              fullContractMode = 'image';
+              fullContractPayload = docUrl;
+            } else {
+              docViewerEl.innerHTML = '';
+              fullContractMode = 'none';
+              fullContractPayload = '';
+            }
+          } else {
+            bodyEl.style.display = '';
+            docMetaEl.textContent = '';
+            docViewerEl.innerHTML = '';
+            fullContractMode = 'html';
+            fullContractPayload = c.bodyHtml ? stripAutoSignatureSectionHtml(c.bodyHtml) : stripAutoSignatureSectionText(c.body || '');
+          }
+          if (c.status === 'signed') {
+            setSignedUi();
+            animateSignatureSuccess();
+            nameEl.value = c.signerName || '';
+            dateEl.value = c.signDate || '';
+            signBtn.textContent = 'Already signed';
+            if (c.signatureDataUrl) {
+              const img = new Image();
+              img.onload = function () {
+                clearSignature();
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                hasInk = true;
+              };
+              img.src = c.signatureDataUrl;
+            }
+            signedMetaEl.className = 'ok';
+            signedMetaEl.textContent =
+              'Signed by ' + signerRoleLabel + (c.signerName ? ' ' + c.signerName : '') +
+              ' on ' + (c.signedAt || c.signDate || 'saved date');
+          } else {
+            dateEl.value = new Date().toISOString().slice(0, 10);
+          }
+        } catch (err) {
+          msgEl.className = 'error';
+          msgEl.textContent = err.message;
+        }
+      }
+
+      signBtn.addEventListener('click', async function () {
+        const fullName = nameEl.value.trim();
+        const date = dateEl.value;
+        if (!fullName) {
+          msgEl.className = 'error';
+          msgEl.textContent = signerRoleLabel + ' full name is required.';
+          return;
+        }
+        if (!date) {
+          msgEl.className = 'error';
+          msgEl.textContent = 'Date is required.';
+          return;
+        }
+        if (!hasInk) {
+          msgEl.className = 'error';
+          msgEl.textContent = 'Please draw your signature.';
+          return;
+        }
+        msgEl.className = 'muted';
+        msgEl.textContent = 'Saving signature...';
+        sigPadWrap.classList.remove('sig-saved');
+        sigPadWrap.classList.add('sig-saving');
+        signBtn.disabled = true;
+        const t0 = Date.now();
+        const minSavingMs = 550;
+        try {
+          await api('/api/elite-invoices/contracts/sign/' + token, {
+            method: 'POST',
+            body: JSON.stringify({ fullName, date, signatureDataUrl: canvas.toDataURL('image/jpeg', 0.92) })
+          });
+          const elapsed = Date.now() - t0;
+          if (elapsed < minSavingMs) await new Promise((r) => setTimeout(r, minSavingMs - elapsed));
+          sigPadWrap.classList.remove('sig-saving');
+          setSignedUi();
+          animateSignatureSuccess();
+          msgEl.className = 'ok';
+          msgEl.textContent = 'Contract signed and stored successfully.';
+        } catch (err) {
+          sigPadWrap.classList.remove('sig-saving');
+          signBtn.disabled = false;
+          msgEl.className = 'error';
+          msgEl.textContent = err.message;
+        }
+      });
+
+      clearBtn.addEventListener('click', clearSignature);
+      viewContractFullBtn.addEventListener('click', function () {
+        if (!contractFullscreen || !contractFullscreenBody) return;
+        if (fullContractMode === 'iframe' && fullContractPayload) {
+          contractFullscreenBody.innerHTML =
+            '<iframe src="' + fullContractPayload + '" title="Contract document full screen"></iframe>';
+        } else if (fullContractMode === 'image' && fullContractPayload) {
+          contractFullscreenBody.innerHTML =
+            '<img src="' + fullContractPayload + '" alt="Contract document full screen" />';
+        } else if (fullContractMode === 'html') {
+          contractFullscreenBody.innerHTML =
+            '<div class="body" style="white-space:pre-wrap;line-height:1.6;background:#fff;border:1px solid rgba(0,0,0,.08);border-radius:8px;padding:14px;">' +
+            String(fullContractPayload || bodyEl.innerHTML || bodyEl.textContent || '') +
+            '</div>';
+        } else {
+          contractFullscreenBody.innerHTML =
+            '<p class="muted">No contract preview available.</p>';
+        }
+        contractFullscreen.classList.add('open');
+        contractFullscreen.setAttribute('aria-hidden', 'false');
+      });
+      closeContractFullBtn.addEventListener('click', function () {
+        contractFullscreen.classList.remove('open');
+        contractFullscreen.setAttribute('aria-hidden', 'true');
+        contractFullscreenBody.innerHTML = '';
+      });
+      viewBtn.addEventListener('click', function () {
+        if (!signed) return;
+        window.open('/api/elite-invoices/contracts/sign/' + token + '/document', '_blank', 'noopener');
+      });
+      downloadBtn.addEventListener('click', function () {
+        if (!signed) return;
+        window.open('/api/elite-invoices/contracts/sign/' + token + '/download', '_blank', 'noopener');
+      });
+      canvas.addEventListener('mousedown', startDraw);
+      canvas.addEventListener('mousemove', moveDraw);
+      window.addEventListener('mouseup', endDraw);
+      canvas.addEventListener('touchstart', startDraw, { passive: false });
+      canvas.addEventListener('touchmove', moveDraw, { passive: false });
+      canvas.addEventListener('touchend', endDraw, { passive: false });
+      fillCanvasWhite();
+      load();
+    })();
+  </script>
+</body>
+</html>

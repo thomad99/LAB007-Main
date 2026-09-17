@@ -76,6 +76,7 @@ tomopi-data/images/
 /data/elite-invoices/clients.json
 /data/elite-invoices/invoices.json
 /data/elite-invoices/pdfs/
+/data/elite-invoices/contracts-data/
 
 # Local dev helper (do not let sync-to-github.ps1 pick it up)
 lib/buckProxy.js
