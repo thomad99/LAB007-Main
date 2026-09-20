@@ -3650,8 +3650,120 @@ function mmContractView(c, customerName) {
     sourceType: c.sourceType || '',
     sourceContractId: c.sourceContractId || '',
     sourceTaskId: c.sourceTaskId || '',
-    recipientName: c.recipientName || ''
+    recipientName: c.recipientName || '',
+    isWorkersAgreementTemplate: Boolean(c.isWorkersAgreementTemplate)
   };
+}
+
+function mmIsTemplateContract(c) {
+  return c.sourceType === 'template' || c.status === 'template' || Boolean(c.isWorkersAgreementTemplate);
+}
+
+function mmWorkersAgreementSourceScore(contract) {
+  const hay = `${contract.title || ''} ${contract.originalName || ''}`.toLowerCase();
+  let n = 0;
+  if (contract.isWorkersAgreementTemplate) n += 200;
+  if (/elite_cleaning_cleaner_agreement|elite cleaning cleaner agreement/.test(hay)) n += 100;
+  if (/cleaner.?agreement|workers?.?agreement|employee.?agreement/.test(hay)) n += 50;
+  if (/worker|cleaner|employee|staff/.test(hay)) n += 20;
+  if (/agreement|contract|handbook/.test(hay)) n += 10;
+  if (contract.filePath) n += 5;
+  return n;
+}
+
+function mmFindWorkersAgreementSource(customerId, preferredId) {
+  const data = readMarketingContracts();
+  const docs = data.contracts.filter((c) => c.customerId === customerId);
+  if (preferredId) {
+    const preferred = docs.find((c) => c.id === preferredId);
+    if (preferred) return preferred;
+  }
+  const templates = docs
+    .filter((c) => c.isWorkersAgreementTemplate)
+    .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  if (templates.length) return templates[0];
+  const originals = docs.filter((c) => c.sourceType !== 'cloned');
+  const scored = originals
+    .map((c) => ({ c, n: mmWorkersAgreementSourceScore(c) }))
+    .filter((x) => x.n >= 50)
+    .sort(
+      (a, b) =>
+        b.n - a.n || String(b.c.createdAt || '').localeCompare(String(a.c.createdAt || ''))
+    );
+  return scored[0]?.c || null;
+}
+
+function mmEnsureWorkersAgreementTask(customer) {
+  const existing = (customer.tasks || []).find((t) => t.kind === 'workers_agreement');
+  if (existing) {
+    if (existing.title === 'Send Workers agreement') existing.title = 'Workers Agreement';
+    return existing;
+  }
+  const now = new Date().toISOString();
+  const task = {
+    id: mmNewId('task'),
+    kind: 'workers_agreement',
+    title: 'Workers Agreement',
+    description:
+      'Generate the workers agreement PDF with the saved Elite owner signature and send an electronic signing link to staff.',
+    status: 'not_started',
+    notes: '',
+    sourceContractId: '',
+    createdAt: now,
+    updatedAt: now
+  };
+  customer.tasks.push(task);
+  return task;
+}
+
+function mmSourceAlreadyHasEliteSignature(source) {
+  return Boolean(
+    source.includeAgentSignature &&
+      String(source.agentIdentity || '').trim() === 'Elite Cleaning (Owner)'
+  );
+}
+
+function mmStampSavedAgentOnPdf(inputPath, newId, agent) {
+  const parsed = mmParseSignatureDataUrl(agent.signatureDataUrl);
+  if (!parsed?.buffer?.length) {
+    return { ok: false, error: 'Stored Elite signature is invalid. Save it again under Agent signature.' };
+  }
+  const agentExt = parsed.mime === 'image/jpeg' ? 'jpg' : 'png';
+  const agentTmpPath = path.join(
+    marketingManagerSignedDocsDir,
+    `wa-agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${agentExt}`
+  );
+  fs.writeFileSync(agentTmpPath, parsed.buffer);
+  const outPdf = path.join(marketingManagerContractDocsDir, `${newId}-with-agent.pdf`);
+  const genDate = new Date().toISOString().slice(0, 10);
+  const ok = mmStampAgentPageOnPdf(
+    inputPath,
+    outPdf,
+    agentTmpPath,
+    genDate,
+    agent.agentName || '',
+    agent.agentIdentity || 'Elite Cleaning (Owner)'
+  );
+  try {
+    if (fs.existsSync(agentTmpPath)) fs.unlinkSync(agentTmpPath);
+  } catch {}
+  if (!ok) {
+    try {
+      if (fs.existsSync(outPdf)) fs.unlinkSync(outPdf);
+    } catch {}
+    return {
+      ok: false,
+      error:
+        'Could not add the Elite signature to the PDF. Ensure Python and PyMuPDF (pymupdf) are available on the server.'
+    };
+  }
+  let fileSize = 0;
+  try {
+    fileSize = fs.statSync(outPdf).size || 0;
+  } catch {
+    fileSize = 0;
+  }
+  return { ok: true, filePath: outPdf, fileSize, genDate };
 }
 
 function mmCopyContractSourceFile(source, newId) {
@@ -3677,14 +3789,30 @@ function mmCopyContractSourceFile(source, newId) {
 
 function mmCloneContractForSigning(source, opts = {}) {
   const createdAt = new Date().toISOString();
+  const genDate = createdAt.slice(0, 10);
   const id = mmNewId('contract');
   const signerRole = mmNormalizeSignerRole(opts.signerRole || source.signerRole || 'employee');
-  const title = String(opts.title || source.title || 'Workers agreement').trim();
+  const title = String(opts.title || source.title || 'Workers Agreement').trim();
   const recipientName = String(opts.recipientName || '')
     .replace(/[\r\n\t]+/g, ' ')
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 200);
+  const includeAgent = Boolean(opts.includeAgentSignature);
+  const requestedAgentIdentity = mmNormalizeAgentIdentity(
+    opts.agentIdentity || 'Elite Cleaning (Owner)',
+    'Elite Cleaning (Owner)'
+  );
+  let agent = null;
+  if (includeAgent) {
+    agent = readMarketingAgentSignature(requestedAgentIdentity);
+    if (!agent?.signatureDataUrl) {
+      return {
+        error: `Save the ${requestedAgentIdentity} signature first under Electronic contracts → Agent signature.`
+      };
+    }
+  }
+
   const copied = mmCopyContractSourceFile(source, id);
   const contract = {
     id,
@@ -3705,16 +3833,51 @@ function mmCloneContractForSigning(source, opts = {}) {
     sourceTaskId: String(opts.sourceTaskId || '').trim(),
     recipientName,
     filePath: copied.filePath,
-    originalName: copied.originalName,
+    originalName: copied.originalName || source.originalName || `${title}.pdf`,
     mimeType: copied.mimeType,
     fileSize: copied.fileSize,
-    includeAgentSignature: Boolean(source.includeAgentSignature),
-    agentSignatureDate: source.agentSignatureDate || '',
-    agentName: source.agentName || '',
-    agentIdentity: source.agentIdentity || ''
+    includeAgentSignature: includeAgent || Boolean(source.includeAgentSignature),
+    agentSignatureDate: includeAgent ? genDate : source.agentSignatureDate || '',
+    agentName: includeAgent ? agent.agentName || '' : source.agentName || '',
+    agentIdentity: includeAgent ? requestedAgentIdentity : source.agentIdentity || ''
   };
-  if (!contract.filePath) {
+
+  const ext = path.extname(String(contract.filePath || contract.originalName || '')).toLowerCase();
+  if (includeAgent && agent && contract.filePath && ext === '.pdf' && !mmSourceAlreadyHasEliteSignature(source)) {
+    const stamped = mmStampSavedAgentOnPdf(contract.filePath, contract.id, agent);
+    if (!stamped.ok) {
+      try {
+        if (fs.existsSync(contract.filePath)) fs.unlinkSync(contract.filePath);
+      } catch {}
+      return { error: stamped.error };
+    }
+    try {
+      if (stamped.filePath !== contract.filePath && fs.existsSync(contract.filePath)) {
+        fs.unlinkSync(contract.filePath);
+      }
+    } catch {}
+    contract.filePath = stamped.filePath;
+    contract.mimeType = 'application/pdf';
+    contract.fileSize = stamped.fileSize;
+    contract.agentSignatureDate = stamped.genDate || genDate;
+  } else if (!contract.filePath) {
+    if (includeAgent && agent) {
+      contract._agentSigForPdf = agent.signatureDataUrl;
+      contract._agentNameForPdf = agent.agentName || '';
+      const appended = mmAppendAgentSignatureBlocks(
+        contract.body,
+        contract.bodyHtml,
+        agent.signatureDataUrl,
+        genDate,
+        agent.agentName || '',
+        requestedAgentIdentity
+      );
+      contract.body = appended.body;
+      contract.bodyHtml = appended.bodyHtml;
+    }
     const originalPdfPath = mmCreateOriginalContractPdf(contract);
+    delete contract._agentSigForPdf;
+    delete contract._agentNameForPdf;
     if (originalPdfPath) {
       contract.filePath = originalPdfPath;
       contract.originalName = contract.originalName || `${title}.pdf`;
@@ -3726,7 +3889,7 @@ function mmCloneContractForSigning(source, opts = {}) {
       }
     }
   }
-  return contract;
+  return { contract };
 }
 
 function mmSanitizeAgentName(value) {
@@ -5049,9 +5212,9 @@ app.post('/api/marketing-manager/customers/:customerId/tasks', (req, res) => {
       task = {
         id: mmNewId('task'),
         kind: 'workers_agreement',
-        title: 'Send Workers agreement',
+        title: 'Workers Agreement',
         description:
-          'Choose a workers agreement document, create a signing copy for a new staff member, preview it, then copy the signing link.',
+          'Generate the workers agreement PDF with the saved Elite owner signature and send an electronic signing link to staff.',
         status: 'not_started',
         notes: '',
         sourceContractId: '',
@@ -5182,6 +5345,121 @@ app.get('/api/marketing-manager/customers/:customerId/tasks/:taskId/onboarding.p
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader('Content-Disposition', `attachment; filename="LAB007-onboarding-${slug}.pdf"`);
     return res.send(pdfBuffer);
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/marketing-manager/customers/:customerId/workers-agreement/template', (req, res) => {
+  marketingContractsUpload.single('document')(req, res, (err) => {
+    if (err) return res.status(400).json({ error: err.message || 'Upload failed' });
+    try {
+      const state = readMarketingManagerState();
+      const c = mmFindCustomer(state, req.params.customerId);
+      if (!c) return res.status(404).json({ error: 'Customer not found' });
+      if (!req.file) return res.status(400).json({ error: 'PDF file is required' });
+      const uploadExt = path.extname(String(req.file.originalname || '').toLowerCase());
+      if (uploadExt !== '.pdf') {
+        try {
+          if (fs.existsSync(req.file.path)) fs.unlinkSync(req.file.path);
+        } catch {}
+        return res.status(400).json({ error: 'Upload the workers agreement as a PDF.' });
+      }
+      const task = mmEnsureWorkersAgreementTask(c);
+      const titleRaw = String(req.body?.title || '').trim();
+      const title = titleRaw || req.file.originalname || 'Elite Cleaning Cleaner Agreement';
+      const createdAt = new Date().toISOString();
+      const contract = {
+        id: mmNewId('contract'),
+        customerId: c.id,
+        title,
+        body: '',
+        bodyHtml: '',
+        token: crypto.randomBytes(24).toString('hex'),
+        status: 'template',
+        createdAt,
+        signedAt: null,
+        signerName: '',
+        signerRole: 'employee',
+        signDate: '',
+        signatureDataUrl: '',
+        sourceType: 'template',
+        isWorkersAgreementTemplate: true,
+        filePath: req.file.path,
+        originalName: req.file.originalname || title,
+        mimeType: req.file.mimetype || 'application/pdf',
+        fileSize: req.file.size || 0,
+        includeAgentSignature: false,
+        agentSignatureDate: '',
+        agentName: '',
+        agentIdentity: ''
+      };
+      const data = readMarketingContracts();
+      data.contracts
+        .filter((x) => x.customerId === c.id && x.isWorkersAgreementTemplate)
+        .forEach((x) => {
+          x.isWorkersAgreementTemplate = false;
+        });
+      data.contracts.push(contract);
+      writeMarketingContracts(data);
+      task.sourceContractId = contract.id;
+      task.updatedAt = createdAt;
+      writeMarketingManagerState(state);
+      return res.status(201).json({
+        task,
+        contract: mmContractView(contract, c.name)
+      });
+    } catch (error) {
+      return res.status(500).json({ error: error.message });
+    }
+  });
+});
+
+app.post('/api/marketing-manager/customers/:customerId/workers-agreement', (req, res) => {
+  try {
+    const state = readMarketingManagerState();
+    const c = mmFindCustomer(state, req.params.customerId);
+    if (!c) return res.status(404).json({ error: 'Customer not found' });
+    const task = mmEnsureWorkersAgreementTask(c);
+    const preferredId = String(req.body?.sourceContractId || task.sourceContractId || '').trim();
+    const source = mmFindWorkersAgreementSource(c.id, preferredId);
+    if (!source) {
+      return res.status(400).json({
+        error:
+          'Set the workers agreement PDF first. Upload Elite_Cleaning_Cleaner_Agreement.pdf in this Workers Agreement task.',
+        code: 'WA_SOURCE_REQUIRED'
+      });
+    }
+    const hasFile = Boolean(source.filePath && fs.existsSync(source.filePath));
+    const hasBody = Boolean(String(source.body || '').trim());
+    if (!hasFile && !hasBody) {
+      return res.status(400).json({
+        error: 'The workers agreement document has no file to copy. Upload the PDF again.',
+        code: 'WA_SOURCE_REQUIRED'
+      });
+    }
+    const cloned = mmCloneContractForSigning(source, {
+      signerRole: 'employee',
+      includeAgentSignature: true,
+      agentIdentity: 'Elite Cleaning (Owner)',
+      sourceTaskId: task.id,
+      recipientName: req.body?.recipientName,
+      title: source.title || 'Workers Agreement'
+    });
+    if (cloned.error) return res.status(400).json({ error: cloned.error });
+    const now = new Date().toISOString();
+    task.sourceContractId = source.id;
+    task.updatedAt = now;
+    if (task.status === 'not_started') task.status = 'in_progress';
+    writeMarketingManagerState(state);
+    const data = readMarketingContracts();
+    data.contracts.push(cloned.contract);
+    writeMarketingContracts(data);
+    return res.status(201).json({
+      task,
+      contract: mmContractView(cloned.contract, c.name),
+      source: mmContractView(source, c.name)
+    });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -5484,15 +5762,18 @@ app.post('/api/marketing-manager/customers/:customerId/contracts/:contractId/clo
         writeMarketingManagerState(state);
       }
     }
-    const contract = mmCloneContractForSigning(source, {
+    const cloned = mmCloneContractForSigning(source, {
       signerRole: req.body?.signerRole || 'employee',
       title: req.body?.title,
       recipientName: req.body?.recipientName,
-      sourceTaskId
+      sourceTaskId,
+      includeAgentSignature: req.body?.includeAgentSignature !== false,
+      agentIdentity: req.body?.agentIdentity || 'Elite Cleaning (Owner)'
     });
-    data.contracts.push(contract);
+    if (cloned.error) return res.status(400).json({ error: cloned.error });
+    data.contracts.push(cloned.contract);
     writeMarketingContracts(data);
-    return res.status(201).json({ contract: mmContractView(contract, c.name) });
+    return res.status(201).json({ contract: mmContractView(cloned.contract, c.name) });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -5557,6 +5838,7 @@ app.get('/api/marketing-manager/contracts/stats', (req, res) => {
     let pending = 0;
     let signed = 0;
     data.contracts.forEach((c) => {
+      if (mmIsTemplateContract(c)) return;
       total += 1;
       if ((c.status || 'pending') === 'signed') signed += 1;
       else pending += 1;
@@ -5611,6 +5893,7 @@ app.get('/api/marketing-manager/contracts/sign/:token', (req, res) => {
     const data = readMarketingContracts();
     const contract = data.contracts.find((x) => x.token === token);
     if (!contract) return res.status(404).json({ error: 'Contract not found' });
+    if (mmIsTemplateContract(contract)) return res.status(404).json({ error: 'Contract not found' });
     const state = readMarketingManagerState();
     const customer = mmFindCustomer(state, contract.customerId);
     return res.json({

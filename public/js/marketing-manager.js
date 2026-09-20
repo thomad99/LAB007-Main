@@ -195,6 +195,7 @@
     const allContracts = state.contracts || [];
     const filteredContracts = allContracts.filter((ct) => {
       const st = String(ct.status || 'pending');
+      if (ct.isWorkersAgreementTemplate || st === 'template' || ct.sourceType === 'template') return false;
       if (statusFilter !== 'all' && st !== statusFilter) return false;
       if (customerFilter !== 'all' && String(ct.customerId || '') !== customerFilter) return false;
       return true;
@@ -418,39 +419,52 @@
     return n;
   }
 
-  function workersAgreementPickerDocs(customerId) {
+  function workersAgreementSource(cust) {
+    const customerId = cust?.id;
+    const task = (cust?.tasks || []).find((t) => t.kind === 'workers_agreement');
     const all = (state.contracts || []).filter((ct) => String(ct.customerId || '') === String(customerId));
-    const originals = all.filter((ct) => ct.sourceType !== 'cloned');
-    const pool = originals.length ? originals : all;
-    return [...pool].sort((a, b) => {
-      const scoreDiff = workersAgreementScore(b) - workersAgreementScore(a);
-      if (scoreDiff) return scoreDiff;
-      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
-    });
+    if (task?.sourceContractId) {
+      const preferred = all.find((d) => d.id === task.sourceContractId);
+      if (preferred) return preferred;
+    }
+    const templates = all
+      .filter((d) => d.isWorkersAgreementTemplate || d.sourceType === 'template')
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    if (templates.length) return templates[0];
+    const originals = all.filter((d) => d.sourceType !== 'cloned');
+    const scored = originals
+      .map((d) => ({ d, n: workersAgreementScore(d) }))
+      .filter((x) => x.n >= 50)
+      .sort((a, b) => b.n - a.n || String(b.d.createdAt || '').localeCompare(String(a.d.createdAt || '')));
+    return scored[0]?.d || null;
   }
 
-  function renderWorkersAgreementTask(cust, task) {
-    const tool = $('#mm-task-tool');
-    if (!tool) return;
-    const docs = workersAgreementPickerDocs(cust.id);
-    const sent = (state.contracts || [])
-      .filter((ct) => String(ct.customerId || '') === String(cust.id) && String(ct.sourceTaskId || '') === String(task.id))
+  function workersAgreementSent(cust) {
+    const customerId = cust?.id;
+    const task = (cust?.tasks || []).find((t) => t.kind === 'workers_agreement');
+    return (state.contracts || [])
+      .filter((ct) => {
+        if (String(ct.customerId || '') !== String(customerId)) return false;
+        if (ct.isWorkersAgreementTemplate || ct.sourceType === 'template' || ct.status === 'template') return false;
+        if (task && String(ct.sourceTaskId || '') === String(task.id)) return true;
+        return ct.sourceType === 'cloned' && workersAgreementScore(ct) >= 50;
+      })
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-    const preferred = docs.find((d) => d.id === task.sourceContractId) || docs[0];
-    const selectedId = preferred?.id || '';
-    const selected = docs.find((d) => d.id === selectedId) || null;
-    const previewSrc = selected?.documentPath || '';
-    const previewHtml = selected?.bodyHtml || '';
-    const optionHtml = docs.length
-      ? docs
-          .map((d) => {
-            const hint = d.documentName && d.documentName !== d.title ? ` (${d.documentName})` : '';
-            return `<option value="${escapeHtml(d.id)}"${d.id === selectedId ? ' selected' : ''}>${escapeHtml(
-              `${d.title || 'Document'}${hint}`
-            )}</option>`;
-          })
-          .join('')
-      : '<option value="">No documents uploaded yet</option>';
+  }
+
+  function eliteSignatureReady() {
+    return Boolean(state.agentSig?.profiles?.['Elite Cleaning (Owner)']?.signatureDataUrl);
+  }
+
+  function renderWorkersAgreementTask(cust, mountEl) {
+    const tool = mountEl || $('#mm-task-tool');
+    if (!tool) return;
+    const source = workersAgreementSource(cust);
+    const sent = workersAgreementSent(cust);
+    const latest = sent[0] || null;
+    const previewDoc = latest || source;
+    const eliteReady = eliteSignatureReady();
+    const previewSrc = previewDoc?.documentPath || '';
     const sentHtml = sent.length
       ? sent
           .map((ct) => {
@@ -463,8 +477,13 @@
                 : 'Staff signing copy';
             return `<div class="mm-contract-row">
               <div class="mm-contract-row-main">
-                <div class="mm-contract-row-title">${escapeHtml(ct.title || 'Workers agreement')}</div>
+                <div class="mm-contract-row-title">${escapeHtml(ct.title || 'Workers Agreement')}</div>
                 <div class="mm-small">${who} • Created ${escapeHtml(fmtDate(ct.createdAt))}</div>
+                ${
+                  ct.includeAgentSignature
+                    ? `<div class="mm-small">Elite signature included${ct.agentSignatureDate ? ` • ${escapeHtml(ct.agentSignatureDate)}` : ''}</div>`
+                    : ''
+                }
                 ${
                   ct.signedAt
                     ? `<div class="mm-small">Signed ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerName || 'staff')}</div>`
@@ -476,106 +495,128 @@
                 <button type="button" class="btn-mm-tiny" data-wa-preview-sent="${escapeHtml(ct.id)}">Preview</button>
                 <button type="button" class="btn-mm-tiny" data-wa-open-sent="${escapeHtml(ct.signPath)}">Open signing page</button>
                 <button type="button" class="btn-mm-tiny" data-wa-copy-sent="${escapeHtml(ct.signPath)}">Copy link</button>
+                ${
+                  ct.signedDocumentPath
+                    ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.signedDocumentPath)}" target="_blank" rel="noopener" style="text-decoration:none;">Signed file</a>`
+                    : ''
+                }
+                <button type="button" class="btn-mm-tiny-danger" data-wa-delete-sent="${escapeHtml(ct.id)}">Delete</button>
               </div>
             </div>`;
           })
           .join('')
-      : '<p class="mm-muted">No signing copies yet. Choose a document and create one below.</p>';
+      : '<p class="mm-muted">No signing copies yet. Generate one to get an electronic signing link.</p>';
 
     tool.innerHTML = `
-      <p class="mm-muted">Pick the workers agreement (for example Elite_Cleaning_Cleaner_Agreement.pdf), preview it, then create a signing copy and send the link to a new staff member.</p>
-      <label class="mm-notes-label" for="mm-wa-doc">Workers agreement document</label>
-      <select id="mm-wa-doc" class="mm-select">${optionHtml}</select>
-      <label class="mm-notes-label" for="mm-wa-recipient">Staff member name (optional, for your records)</label>
-      <input type="text" id="mm-wa-recipient" class="mm-input" maxlength="200" placeholder="e.g. Jane Doe" />
-      <div class="mm-wa-actions">
-        <button type="button" class="btn-mm-ghost" id="mm-wa-preview" ${selected ? '' : 'disabled'}>Preview document</button>
-        <button type="button" class="btn-mm" id="mm-wa-create" ${selected ? '' : 'disabled'}>Create signing copy</button>
+      <p class="mm-muted">Click generate to create a workers agreement PDF for signing. The saved Elite Cleaning owner signature is added automatically, then you can copy the staff signing link.</p>
+      <div class="mm-sug-row" style="margin-top:10px;">
+        <div>
+          <div style="font-weight:600;">Elite signature</div>
+          <div class="mm-small">${
+            eliteReady
+              ? 'Saved Elite Cleaning (Owner) signature will be added to each PDF.'
+              : 'Save the Elite Cleaning (Owner) signature under Electronic contracts → Agent signature first.'
+          }</div>
+        </div>
+        <span class="mm-status-badge ${eliteReady ? 'mm-st-done' : 'mm-st-todo'}">${eliteReady ? 'Ready' : 'Missing'}</span>
+      </div>
+      <div class="mm-sug-row" style="margin-top:8px;">
+        <div>
+          <div style="font-weight:600;">Agreement PDF</div>
+          <div class="mm-small">${
+            source
+              ? escapeHtml(source.title || source.documentName || 'Workers agreement')
+              : 'Upload Elite_Cleaning_Cleaner_Agreement.pdf once, then generate as many signing copies as you need.'
+          }</div>
+        </div>
+        <span class="mm-status-badge ${source ? 'mm-st-done' : 'mm-st-todo'}">${source ? 'Ready' : 'Needed'}</span>
       </div>
       ${
-        docs.length
-          ? `<div class="mm-wa-preview" id="mm-wa-preview-box">${
-              previewSrc
-                ? `<iframe title="Workers agreement preview" src="${escapeHtml(previewSrc)}"></iframe>`
-                : previewHtml
-                  ? `<div class="mm-wa-preview-text">${previewHtml}</div>`
-                  : '<div class="mm-wa-empty">This document has no file preview. Create a signing copy to open it on the signing page.</div>'
-            }</div>`
-          : `<div class="mm-wa-preview"><div class="mm-wa-empty">Upload the workers agreement under Electronic contracts first (PDF such as Elite_Cleaning_Cleaner_Agreement.pdf), then come back here to create a signing copy.</div></div>`
+        source
+          ? ''
+          : `<div class="mm-task-meta" style="margin-top:12px;">
+              <label class="mm-notes-label" for="mm-wa-template-file">Upload workers agreement PDF</label>
+              <input type="file" id="mm-wa-template-file" class="mm-input" accept=".pdf,application/pdf" />
+              <button type="button" class="btn-mm-ghost" id="mm-wa-save-template" style="margin-top:8px;">Save agreement PDF</button>
+            </div>`
       }
-      <h4 class="mm-like-title" style="margin-top:18px;">Signing copies from this task</h4>
+      <label class="mm-notes-label" for="mm-wa-recipient">Staff member name (optional)</label>
+      <input type="text" id="mm-wa-recipient" class="mm-input" maxlength="200" placeholder="e.g. Jane Doe" />
+      <div class="mm-wa-actions">
+        <button type="button" class="btn-mm" id="mm-wa-create">Generate signing PDF</button>
+        <button type="button" class="btn-mm-ghost" id="mm-wa-preview" ${previewDoc ? '' : 'disabled'}>Preview</button>
+        ${
+          latest?.signPath
+            ? `<button type="button" class="btn-mm-ghost" id="mm-wa-copy-latest">Copy latest link</button>`
+            : ''
+        }
+      </div>
+      <div class="mm-wa-preview" id="mm-wa-preview-box">${
+        previewSrc
+          ? `<iframe title="Workers agreement preview" src="${escapeHtml(previewSrc)}"></iframe>`
+          : '<div class="mm-wa-empty">Generate a signing PDF to preview it here.</div>'
+      }</div>
+      <h4 class="mm-like-title" style="margin-top:18px;">Signing copies</h4>
       <div class="mm-contract-list">${sentHtml}</div>
     `;
 
-    const setPreview = (doc) => {
-      const box = document.getElementById('mm-wa-preview-box');
-      if (!box) return;
-      if (doc?.documentPath) {
-        box.innerHTML = `<iframe title="Workers agreement preview" src="${escapeHtml(doc.documentPath)}"></iframe>`;
-        return;
+    $('#mm-wa-save-template')?.addEventListener('click', async () => {
+      const fileInput = document.getElementById('mm-wa-template-file');
+      const file = fileInput?.files && fileInput.files[0];
+      if (!file) return alert('Choose the workers agreement PDF first.');
+      const fd = new FormData();
+      fd.append('document', file);
+      fd.append('title', file.name.replace(/\.pdf$/i, '') || 'Elite Cleaning Cleaner Agreement');
+      try {
+        await apiForm(`/api/marketing-manager/customers/${cust.id}/workers-agreement/template`, 'POST', fd);
+        await refresh();
+      } catch (err) {
+        alert(err.message || 'Could not save the workers agreement PDF.');
       }
-      if (doc?.bodyHtml) {
-        box.innerHTML = `<div class="mm-wa-preview-text">${doc.bodyHtml}</div>`;
-        return;
-      }
-      box.innerHTML =
-        '<div class="mm-wa-empty">This document has no file preview. Create a signing copy to open it on the signing page.</div>';
-    };
-
-    const selectedDoc = () => docs.find((d) => d.id === $('#mm-wa-doc')?.value) || null;
-
-    $('#mm-wa-doc')?.addEventListener('change', () => {
-      const doc = selectedDoc();
-      const createBtn = $('#mm-wa-create');
-      const previewBtn = $('#mm-wa-preview');
-      if (createBtn) createBtn.disabled = !doc;
-      if (previewBtn) previewBtn.disabled = !doc;
-      setPreview(doc);
     });
 
     $('#mm-wa-preview')?.addEventListener('click', () => {
-      const doc = selectedDoc();
-      if (!doc) return;
-      if (doc.documentPath) window.open(doc.documentPath, '_blank', 'noopener');
-      else if (doc.signPath) window.open(doc.signPath, '_blank', 'noopener');
+      if (previewDoc?.documentPath) window.open(previewDoc.documentPath, '_blank', 'noopener');
+      else if (latest?.signPath) window.open(latest.signPath, '_blank', 'noopener');
+    });
+
+    $('#mm-wa-copy-latest')?.addEventListener('click', async () => {
+      if (!latest?.signPath) return;
+      const full = `${window.location.origin}${latest.signPath}`;
+      const ok = await copyText(full);
+      if (ok) alert('Signing link copied.');
+      else prompt('Copy signing link', full);
     });
 
     $('#mm-wa-create')?.addEventListener('click', async () => {
-      const doc = selectedDoc();
-      if (!doc) return alert('Choose a workers agreement document first.');
       const createBtn = $('#mm-wa-create');
       const recipientName = String($('#mm-wa-recipient')?.value || '').trim();
-      const originalLabel = createBtn?.textContent || 'Create signing copy';
+      const originalLabel = createBtn?.textContent || 'Generate signing PDF';
       try {
         if (createBtn) {
           createBtn.classList.add('is-loading');
-          createBtn.textContent = 'Creating...';
+          createBtn.textContent = 'Generating...';
           createBtn.disabled = true;
         }
-        const resp = await api(`/api/marketing-manager/customers/${cust.id}/contracts/${doc.id}/clone`, {
+        const resp = await api(`/api/marketing-manager/customers/${cust.id}/workers-agreement`, {
           method: 'POST',
-          body: JSON.stringify({
-            signerRole: 'employee',
-            sourceTaskId: task.id,
-            recipientName
-          })
+          body: JSON.stringify({ recipientName })
         });
         const signPath = resp?.contract?.signPath;
         let copied = false;
-        if (signPath) {
-          copied = await copyText(`${window.location.origin}${signPath}`);
-        }
+        if (signPath) copied = await copyText(`${window.location.origin}${signPath}`);
+        pendingSelectTaskId = resp?.task?.id || pendingSelectTaskId;
         await refresh();
         if (signPath) {
           const full = `${window.location.origin}${signPath}`;
           alert(
             copied
-              ? 'Signing copy created. The staff signing link is on your clipboard.'
-              : `Signing copy created. Copy this link:\n${full}`
+              ? 'Signing PDF created with the Elite signature. The staff signing link is on your clipboard.'
+              : `Signing PDF created with the Elite signature. Copy this link:\n${full}`
           );
         }
       } catch (err) {
-        alert(err.message || 'Could not create signing copy.');
+        alert(err.message || 'Could not generate the signing PDF.');
       } finally {
         if (createBtn) {
           createBtn.classList.remove('is-loading');
@@ -608,6 +649,17 @@
         const ok = await copyText(full);
         if (ok) alert('Signing link copied.');
         else prompt('Copy signing link', full);
+      });
+    });
+    tool.querySelectorAll('[data-wa-delete-sent]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const contractId = btn.getAttribute('data-wa-delete-sent');
+        if (!contractId) return;
+        if (!confirm('Delete this signing copy?')) return;
+        await api(`/api/marketing-manager/customers/${cust.id}/contracts/${contractId}`, {
+          method: 'DELETE'
+        });
+        await refresh();
       });
     });
   }
@@ -658,7 +710,8 @@
     }
 
     if (task.kind === 'workers_agreement') {
-      renderWorkersAgreementTask(cust, task);
+      tool.innerHTML =
+        '<p class="mm-muted">Generate the PDF, copy the electronic signing link, and track staff signatures in <strong>Workers Agreement</strong> above.</p>';
       return;
     }
 
@@ -936,6 +989,7 @@
     return {
       taskId: document.getElementById('mm-task-select')?.value || null,
       tasksOpen: document.getElementById('mm-tasks-details')?.open,
+      workersOpen: document.getElementById('mm-task-workers-details')?.open,
       contractsOpen: document.getElementById('mm-contracts-details')?.open,
       agentOpen: document.getElementById('mm-agent-sig-details')?.open,
       createOpen: document.getElementById('mm-contract-create-details')?.open,
@@ -958,6 +1012,7 @@
       if (el) el.open = true;
     };
     setOpen('mm-tasks-details', prev.tasksOpen);
+    setOpen('mm-task-workers-details', prev.workersOpen);
     setOpen('mm-contracts-details', prev.contractsOpen);
     setOpen('mm-agent-sig-details', prev.agentOpen);
     setOpen('mm-contract-create-details', prev.createOpen);
@@ -1194,6 +1249,15 @@
       </div>
 
       <div class="mm-task-panel">
+        <details class="mm-campaign-details" id="mm-task-workers-details"${
+          prevUi && prevUi.workersOpen === false ? '' : ' open'
+        }>
+          <summary>Workers Agreement</summary>
+          <div id="mm-wa-panel" class="mm-task-tool" style="margin-top:10px;"></div>
+        </details>
+      </div>
+
+      <div class="mm-task-panel">
         <details class="mm-campaign-details" id="mm-tasks-details">
           <summary>Tasks</summary>
           <details class="mm-campaign-details" id="mm-task-manual-details" style="margin-top:10px;">
@@ -1224,8 +1288,6 @@
               <button type="button" class="btn-mm" id="mm-add-directory" style="margin-top:10px;">Legacy single directory checklist</button>
               <button type="button" class="btn-mm-ghost" id="mm-add-onboarding" style="margin-left:8px;margin-top:10px;">Client onboarding</button>
               <p class="mm-small" style="margin:10px 0 0;">Six access &amp; asset items with instructions and a shareable PDF.</p>
-              <button type="button" class="btn-mm" id="mm-add-workers-agreement" style="margin-top:10px;">Send Workers agreement</button>
-              <p class="mm-small" style="margin:8px 0 0;">Choose a workers agreement, create a signing copy, preview it, and copy a link for a new staff member.</p>
               <div class="mm-small" style="margin:14px 0 6px;">Campaign starter templates</div>
               <div class="mm-campaign-grid" id="mm-task-templates-buttons"></div>
             </div>
@@ -1372,14 +1434,6 @@
       });
       await refresh();
     });
-    $('#mm-add-workers-agreement')?.addEventListener('click', async () => {
-      const resp = await api(`/api/marketing-manager/customers/${cust.id}/tasks`, {
-        method: 'POST',
-        body: JSON.stringify({ kind: 'workers_agreement' })
-      });
-      pendingSelectTaskId = resp?.task?.id || null;
-      await refresh();
-    });
     $('#mm-add-keywords')?.addEventListener('click', async () => {
       await api(`/api/marketing-manager/customers/${cust.id}/tasks`, {
         method: 'POST',
@@ -1433,7 +1487,9 @@
       if (!listEl) return;
       try {
         const data = await api(`/api/marketing-manager/customers/${cust.id}/contracts`);
-        const contracts = data.contracts || [];
+        const contracts = (data.contracts || []).filter(
+          (x) => !x.isWorkersAgreementTemplate && x.sourceType !== 'template' && x.status !== 'template'
+        );
         const signedCount = contracts.filter((x) => x.status === 'signed').length;
         const pendingCount = contracts.length - signedCount;
         if (!contracts.length) {
@@ -1602,6 +1658,7 @@
     });
     bindAgentSignatureUi();
     loadContracts();
+    renderWorkersAgreementTask(cust, document.getElementById('mm-wa-panel'));
 
     const sel = $('#mm-task-select');
     const tasks = cust.tasks || [];
