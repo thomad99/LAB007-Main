@@ -19,6 +19,7 @@
     }
   };
   let selectedId = null;
+  let pendingSelectTaskId = null;
   const contractBrowser = {
     open: false,
     status: 'all',
@@ -406,6 +407,211 @@
     await refresh();
   }
 
+  function workersAgreementScore(ct) {
+    const hay = `${ct.title || ''} ${ct.documentName || ''}`.toLowerCase();
+    let n = 0;
+    if (/elite_cleaning_cleaner_agreement|elite cleaning cleaner agreement/.test(hay)) n += 100;
+    if (/cleaner.?agreement|workers?.?agreement|employee.?agreement/.test(hay)) n += 50;
+    if (/worker|cleaner|employee|staff/.test(hay)) n += 20;
+    if (/agreement|contract|handbook/.test(hay)) n += 10;
+    if (ct.hasDocument) n += 5;
+    return n;
+  }
+
+  function workersAgreementPickerDocs(customerId) {
+    const all = (state.contracts || []).filter((ct) => String(ct.customerId || '') === String(customerId));
+    const originals = all.filter((ct) => ct.sourceType !== 'cloned');
+    const pool = originals.length ? originals : all;
+    return [...pool].sort((a, b) => {
+      const scoreDiff = workersAgreementScore(b) - workersAgreementScore(a);
+      if (scoreDiff) return scoreDiff;
+      return String(b.createdAt || '').localeCompare(String(a.createdAt || ''));
+    });
+  }
+
+  function renderWorkersAgreementTask(cust, task) {
+    const tool = $('#mm-task-tool');
+    if (!tool) return;
+    const docs = workersAgreementPickerDocs(cust.id);
+    const sent = (state.contracts || [])
+      .filter((ct) => String(ct.customerId || '') === String(cust.id) && String(ct.sourceTaskId || '') === String(task.id))
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+    const preferred = docs.find((d) => d.id === task.sourceContractId) || docs[0];
+    const selectedId = preferred?.id || '';
+    const selected = docs.find((d) => d.id === selectedId) || null;
+    const previewSrc = selected?.documentPath || '';
+    const previewHtml = selected?.bodyHtml || '';
+    const optionHtml = docs.length
+      ? docs
+          .map((d) => {
+            const hint = d.documentName && d.documentName !== d.title ? ` (${d.documentName})` : '';
+            return `<option value="${escapeHtml(d.id)}"${d.id === selectedId ? ' selected' : ''}>${escapeHtml(
+              `${d.title || 'Document'}${hint}`
+            )}</option>`;
+          })
+          .join('')
+      : '<option value="">No documents uploaded yet</option>';
+    const sentHtml = sent.length
+      ? sent
+          .map((ct) => {
+            const stClass = ct.status === 'signed' ? 'mm-st-done' : 'mm-st-started';
+            const stLabel = ct.status === 'signed' ? 'Signed' : 'Awaiting signature';
+            const who = ct.recipientName
+              ? `For ${escapeHtml(ct.recipientName)}`
+              : ct.signedAt
+                ? `Signed by ${escapeHtml(ct.signerName || 'staff')}`
+                : 'Staff signing copy';
+            return `<div class="mm-contract-row">
+              <div class="mm-contract-row-main">
+                <div class="mm-contract-row-title">${escapeHtml(ct.title || 'Workers agreement')}</div>
+                <div class="mm-small">${who} • Created ${escapeHtml(fmtDate(ct.createdAt))}</div>
+                ${
+                  ct.signedAt
+                    ? `<div class="mm-small">Signed ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerName || 'staff')}</div>`
+                    : ''
+                }
+              </div>
+              <div class="mm-contract-row-actions">
+                <span class="mm-status-badge ${stClass}">${stLabel}</span>
+                <button type="button" class="btn-mm-tiny" data-wa-preview-sent="${escapeHtml(ct.id)}">Preview</button>
+                <button type="button" class="btn-mm-tiny" data-wa-open-sent="${escapeHtml(ct.signPath)}">Open signing page</button>
+                <button type="button" class="btn-mm-tiny" data-wa-copy-sent="${escapeHtml(ct.signPath)}">Copy link</button>
+              </div>
+            </div>`;
+          })
+          .join('')
+      : '<p class="mm-muted">No signing copies yet. Choose a document and create one below.</p>';
+
+    tool.innerHTML = `
+      <p class="mm-muted">Pick the workers agreement (for example Elite_Cleaning_Cleaner_Agreement.pdf), preview it, then create a signing copy and send the link to a new staff member.</p>
+      <label class="mm-notes-label" for="mm-wa-doc">Workers agreement document</label>
+      <select id="mm-wa-doc" class="mm-select">${optionHtml}</select>
+      <label class="mm-notes-label" for="mm-wa-recipient">Staff member name (optional, for your records)</label>
+      <input type="text" id="mm-wa-recipient" class="mm-input" maxlength="200" placeholder="e.g. Jane Doe" />
+      <div class="mm-wa-actions">
+        <button type="button" class="btn-mm-ghost" id="mm-wa-preview" ${selected ? '' : 'disabled'}>Preview document</button>
+        <button type="button" class="btn-mm" id="mm-wa-create" ${selected ? '' : 'disabled'}>Create signing copy</button>
+      </div>
+      ${
+        docs.length
+          ? `<div class="mm-wa-preview" id="mm-wa-preview-box">${
+              previewSrc
+                ? `<iframe title="Workers agreement preview" src="${escapeHtml(previewSrc)}"></iframe>`
+                : previewHtml
+                  ? `<div class="mm-wa-preview-text">${previewHtml}</div>`
+                  : '<div class="mm-wa-empty">This document has no file preview. Create a signing copy to open it on the signing page.</div>'
+            }</div>`
+          : `<div class="mm-wa-preview"><div class="mm-wa-empty">Upload the workers agreement under Electronic contracts first (PDF such as Elite_Cleaning_Cleaner_Agreement.pdf), then come back here to create a signing copy.</div></div>`
+      }
+      <h4 class="mm-like-title" style="margin-top:18px;">Signing copies from this task</h4>
+      <div class="mm-contract-list">${sentHtml}</div>
+    `;
+
+    const setPreview = (doc) => {
+      const box = document.getElementById('mm-wa-preview-box');
+      if (!box) return;
+      if (doc?.documentPath) {
+        box.innerHTML = `<iframe title="Workers agreement preview" src="${escapeHtml(doc.documentPath)}"></iframe>`;
+        return;
+      }
+      if (doc?.bodyHtml) {
+        box.innerHTML = `<div class="mm-wa-preview-text">${doc.bodyHtml}</div>`;
+        return;
+      }
+      box.innerHTML =
+        '<div class="mm-wa-empty">This document has no file preview. Create a signing copy to open it on the signing page.</div>';
+    };
+
+    const selectedDoc = () => docs.find((d) => d.id === $('#mm-wa-doc')?.value) || null;
+
+    $('#mm-wa-doc')?.addEventListener('change', () => {
+      const doc = selectedDoc();
+      const createBtn = $('#mm-wa-create');
+      const previewBtn = $('#mm-wa-preview');
+      if (createBtn) createBtn.disabled = !doc;
+      if (previewBtn) previewBtn.disabled = !doc;
+      setPreview(doc);
+    });
+
+    $('#mm-wa-preview')?.addEventListener('click', () => {
+      const doc = selectedDoc();
+      if (!doc) return;
+      if (doc.documentPath) window.open(doc.documentPath, '_blank', 'noopener');
+      else if (doc.signPath) window.open(doc.signPath, '_blank', 'noopener');
+    });
+
+    $('#mm-wa-create')?.addEventListener('click', async () => {
+      const doc = selectedDoc();
+      if (!doc) return alert('Choose a workers agreement document first.');
+      const createBtn = $('#mm-wa-create');
+      const recipientName = String($('#mm-wa-recipient')?.value || '').trim();
+      const originalLabel = createBtn?.textContent || 'Create signing copy';
+      try {
+        if (createBtn) {
+          createBtn.classList.add('is-loading');
+          createBtn.textContent = 'Creating...';
+          createBtn.disabled = true;
+        }
+        const resp = await api(`/api/marketing-manager/customers/${cust.id}/contracts/${doc.id}/clone`, {
+          method: 'POST',
+          body: JSON.stringify({
+            signerRole: 'employee',
+            sourceTaskId: task.id,
+            recipientName
+          })
+        });
+        const signPath = resp?.contract?.signPath;
+        let copied = false;
+        if (signPath) {
+          copied = await copyText(`${window.location.origin}${signPath}`);
+        }
+        await refresh();
+        if (signPath) {
+          const full = `${window.location.origin}${signPath}`;
+          alert(
+            copied
+              ? 'Signing copy created. The staff signing link is on your clipboard.'
+              : `Signing copy created. Copy this link:\n${full}`
+          );
+        }
+      } catch (err) {
+        alert(err.message || 'Could not create signing copy.');
+      } finally {
+        if (createBtn) {
+          createBtn.classList.remove('is-loading');
+          createBtn.textContent = originalLabel;
+          createBtn.disabled = false;
+        }
+      }
+    });
+
+    tool.querySelectorAll('[data-wa-preview-sent]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-wa-preview-sent');
+        const ct = sent.find((x) => x.id === id);
+        if (!ct) return;
+        if (ct.documentPath) window.open(ct.documentPath, '_blank', 'noopener');
+        else if (ct.signPath) window.open(ct.signPath, '_blank', 'noopener');
+      });
+    });
+    tool.querySelectorAll('[data-wa-open-sent]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const p = btn.getAttribute('data-wa-open-sent');
+        if (p) window.open(p, '_blank', 'noopener');
+      });
+    });
+    tool.querySelectorAll('[data-wa-copy-sent]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const p = btn.getAttribute('data-wa-copy-sent');
+        if (!p) return;
+        const full = `${window.location.origin}${p}`;
+        const ok = await copyText(full);
+        if (ok) alert('Signing link copied.');
+        else prompt('Copy signing link', full);
+      });
+    });
+  }
+
   function renderTaskDetail(cust, task) {
     const tool = $('#mm-task-tool');
     if (!tool) return;
@@ -448,6 +654,11 @@
           await patchTask(cust.id, task.id, { checklist: ch });
         });
       });
+      return;
+    }
+
+    if (task.kind === 'workers_agreement') {
+      renderWorkersAgreementTask(cust, task);
       return;
     }
 
@@ -1013,6 +1224,8 @@
               <button type="button" class="btn-mm" id="mm-add-directory" style="margin-top:10px;">Legacy single directory checklist</button>
               <button type="button" class="btn-mm-ghost" id="mm-add-onboarding" style="margin-left:8px;margin-top:10px;">Client onboarding</button>
               <p class="mm-small" style="margin:10px 0 0;">Six access &amp; asset items with instructions and a shareable PDF.</p>
+              <button type="button" class="btn-mm" id="mm-add-workers-agreement" style="margin-top:10px;">Send Workers agreement</button>
+              <p class="mm-small" style="margin:8px 0 0;">Choose a workers agreement, create a signing copy, preview it, and copy a link for a new staff member.</p>
               <div class="mm-small" style="margin:14px 0 6px;">Campaign starter templates</div>
               <div class="mm-campaign-grid" id="mm-task-templates-buttons"></div>
             </div>
@@ -1157,6 +1370,14 @@
         method: 'POST',
         body: JSON.stringify({ kind: 'onboarding' })
       });
+      await refresh();
+    });
+    $('#mm-add-workers-agreement')?.addEventListener('click', async () => {
+      const resp = await api(`/api/marketing-manager/customers/${cust.id}/tasks`, {
+        method: 'POST',
+        body: JSON.stringify({ kind: 'workers_agreement' })
+      });
+      pendingSelectTaskId = resp?.task?.id || null;
       await refresh();
     });
     $('#mm-add-keywords')?.addEventListener('click', async () => {
@@ -1396,12 +1617,20 @@
         $('#mm-task-tool').innerHTML = '';
         return;
       }
-      const isOnboarding = task.kind === 'onboarding';
-      const editorBlock = isOnboarding
-        ? `<label class="mm-notes-label">Internal notes (not in client PDF)</label>
-          <textarea id="mm-task-onb-notes" class="mm-textarea" rows="5" placeholder="Agency-only reminders…">${escapeHtml(
-            task.notes || ''
-          )}</textarea>`
+      const isDedicatedTool = task.kind === 'onboarding' || task.kind === 'workers_agreement';
+      const notesLabel =
+        task.kind === 'workers_agreement'
+          ? 'Internal notes (not sent to staff)'
+          : 'Internal notes (not in client PDF)';
+      const notesPlaceholder =
+        task.kind === 'workers_agreement'
+          ? 'Who you sent this to, start dates, reminders…'
+          : 'Agency-only reminders…';
+      const editorBlock = isDedicatedTool
+        ? `<label class="mm-notes-label">${notesLabel}</label>
+          <textarea id="mm-task-onb-notes" class="mm-textarea" rows="5" placeholder="${escapeHtml(
+            notesPlaceholder
+          )}">${escapeHtml(task.notes || '')}</textarea>`
         : `<label class="mm-notes-label">Task details (rich text)</label>
           <div class="mm-edit-actions" style="margin:0 0 8px;">
             <button type="button" class="btn-mm-tiny" data-ed-cmd="bold">Bold</button>
@@ -1437,7 +1666,7 @@
         const status = String($('#mm-task-status')?.value || 'not_started');
         await patchTask(cust.id, task.id, { status });
       });
-      if (!isOnboarding) {
+      if (!isDedicatedTool) {
         meta.querySelectorAll('[data-ed-cmd]').forEach((btn) => {
           btn.addEventListener('click', () => {
             const cmd = btn.getAttribute('data-ed-cmd');
@@ -1476,7 +1705,7 @@
         try {
           saving = true;
           if (taskSaveStatusEl) taskSaveStatusEl.textContent = 'Saving...';
-          if (isOnboarding) {
+          if (isDedicatedTool) {
             const notes = String($('#mm-task-onb-notes')?.value || '');
             await patchTask(cust.id, task.id, { title, notes });
           } else {
@@ -1498,7 +1727,7 @@
         saveTimer = setTimeout(doSaveTaskText, 450);
       };
       taskTitleEl?.addEventListener('input', queueTaskTextSave);
-      if (isOnboarding) {
+      if (isDedicatedTool) {
         taskOnbNotesEl?.addEventListener('input', queueTaskTextSave);
         taskOnbNotesEl?.addEventListener('blur', doSaveTaskText);
       } else {
@@ -1520,6 +1749,11 @@
       if (prevUi?.taskId) {
         const ok = Array.from(sel.options || []).some((o) => o.value === prevUi.taskId);
         if (ok) sel.value = prevUi.taskId;
+      }
+      if (pendingSelectTaskId) {
+        const ok = Array.from(sel.options || []).some((o) => o.value === pendingSelectTaskId);
+        if (ok) sel.value = pendingSelectTaskId;
+        pendingSelectTaskId = null;
       }
     }
     restoreMmMainUi(prevUi);
