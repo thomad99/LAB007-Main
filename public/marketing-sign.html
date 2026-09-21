@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LAB007 Contract Signing</title>
+  <title>Agreement</title>
   <style>
     :root { --bg:#f3f3f1; --panel:#ffffff; --line:rgba(0,0,0,.15); --text:#111111; --gold:#c9a84c; --muted:#5f6368; --ok:#2b8f60; }
     * { box-sizing: border-box; }
@@ -140,7 +140,7 @@
 <body>
   <div class="wrap">
     <div class="card">
-      <h1>Electronic Contract</h1>
+      <h1 id="pageHeading">Agreement</h1>
       <p class="muted" id="custName">Loading…</p>
     </div>
     <div class="card" id="contractReadCard">
@@ -305,6 +305,10 @@
         try {
           const data = await api('/api/marketing-manager/contracts/sign/' + token);
           const c = data.contract || {};
+          const pageTitle = c.pageTitle || 'LAB007 Contract Signing';
+          document.title = pageTitle;
+          const headingEl = document.getElementById('pageHeading');
+          if (headingEl) headingEl.textContent = pageTitle;
           titleEl.textContent = c.title || 'Contract';
           if (c.bodyHtml) bodyEl.innerHTML = stripAutoSignatureSectionHtml(c.bodyHtml);
           else bodyEl.textContent = stripAutoSignatureSectionText(c.body || '');

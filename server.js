@@ -3614,6 +3614,15 @@ function mmSignerRoleLabel(role) {
   return mmNormalizeSignerRole(role) === 'employee' ? 'Employee' : 'Customer';
 }
 
+function mmSigningPageTitle(contract, customer) {
+  const eliteCustomer = /elite\s*cleaning/i.test(String(customer?.name || ''));
+  const workers =
+    contract?.documentKind === 'workers_agreement' ||
+    String(contract?.sourceContractId || '') === MM_WORKERS_AGREEMENT_MASTER_ID ||
+    (mmNormalizeSignerRole(contract?.signerRole) === 'employee' && eliteCustomer);
+  return workers ? 'Elite Cleaning Agreement' : 'LAB007 Contract Signing';
+}
+
 /** Label used inside signature blocks ("Client" kept for customer docs for continuity). */
 function mmSignerBlockLabel(role) {
   return mmNormalizeSignerRole(role) === 'employee' ? 'Employee' : 'Client';
@@ -6098,6 +6107,8 @@ app.get('/api/marketing-manager/contracts/sign/:token', (req, res) => {
     return res.json({
       contract: {
         title: contract.title,
+        pageTitle: mmSigningPageTitle(contract, customer),
+        documentKind: contract.documentKind || '',
         body: contract.body,
         bodyHtml: contract.bodyHtml || '',
         status: contract.status || 'pending',
