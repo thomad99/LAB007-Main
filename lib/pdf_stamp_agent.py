@@ -49,6 +49,11 @@ def main():
     parser.add_argument("--date", required=True)
     parser.add_argument("--name", required=False, default="")
     parser.add_argument("--identity", required=False, default="LAB007 Owners")
+    parser.add_argument(
+        "--replace-existing-agent",
+        action="store_true",
+        help="Remove a previous appended owner-signature page before adding this one.",
+    )
     args = parser.parse_args()
 
     if not os.path.exists(args.input):
@@ -59,6 +64,14 @@ def main():
     doc = fitz.open(args.input)
     if doc.page_count == 0:
         raise RuntimeError("Input PDF has no pages")
+
+    if args.replace_existing_agent:
+        while doc.page_count > 1:
+            last_text = doc[-1].get_text("text") or ""
+            if "Representing:" in last_text and "Agent Signature:" in last_text:
+                doc.delete_page(doc.page_count - 1)
+                continue
+            break
 
     # New page at end — match source document page size (avoids inconsistent print boxes).
     ref = doc[-1].rect

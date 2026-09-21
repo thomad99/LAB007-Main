@@ -419,24 +419,15 @@
     return n;
   }
 
-  function workersAgreementSource(cust) {
-    const customerId = cust?.id;
-    const task = (cust?.tasks || []).find((t) => t.kind === 'workers_agreement');
-    const all = (state.contracts || []).filter((ct) => String(ct.customerId || '') === String(customerId));
-    if (task?.sourceContractId) {
-      const preferred = all.find((d) => d.id === task.sourceContractId);
-      if (preferred) return preferred;
-    }
-    const templates = all
-      .filter((d) => d.isWorkersAgreementTemplate || d.sourceType === 'template')
-      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
-    if (templates.length) return templates[0];
-    const originals = all.filter((d) => d.sourceType !== 'cloned');
-    const scored = originals
-      .map((d) => ({ d, n: workersAgreementScore(d) }))
-      .filter((x) => x.n >= 50)
-      .sort((a, b) => b.n - a.n || String(b.d.createdAt || '').localeCompare(String(a.d.createdAt || '')));
-    return scored[0]?.d || null;
+  function workersAgreementSource() {
+    return {
+      id: 'master_elite_cleaner_agreement',
+      title: 'Elite Cleaning Cleaner Agreement',
+      documentName: 'Elite_Cleaning_Cleaner_Agreement.pdf',
+      documentPath: '/api/marketing-manager/workers-agreement/master',
+      includeAgentSignature: false,
+      agentIdentity: ''
+    };
   }
 
   function workersAgreementSent(cust) {
@@ -453,18 +444,30 @@
   }
 
   function eliteSignatureReady() {
-    return Boolean(state.agentSig?.profiles?.['Elite Cleaning (Owner)']?.signatureDataUrl);
+    return Boolean(
+      state.agentSig?.profiles?.['Elite Cleaning (Owner)']?.signatureDataUrl ||
+        state.agentSig?.profiles?.['LAB007 Owners']?.signatureDataUrl
+    );
+  }
+
+  function eliteSignatureLabel() {
+    if (state.agentSig?.profiles?.['Elite Cleaning (Owner)']?.signatureDataUrl) {
+      return 'Saved Elite Cleaning (Owner) signature will be added to each PDF.';
+    }
+    if (state.agentSig?.profiles?.['LAB007 Owners']?.signatureDataUrl) {
+      return 'Your saved signature will be added as Elite Cleaning (Owner), not LAB007.';
+    }
+    return 'Save the Elite Cleaning (Owner) signature under Electronic contracts → Agent signature first.';
   }
 
   function renderWorkersAgreementTask(cust, mountEl) {
     const tool = mountEl || $('#mm-task-tool');
     if (!tool) return;
-    const source = workersAgreementSource(cust);
+    const source = workersAgreementSource();
     const sent = workersAgreementSent(cust);
     const latest = sent[0] || null;
-    const previewDoc = latest || source;
     const eliteReady = eliteSignatureReady();
-    const previewSrc = previewDoc?.documentPath || '';
+    const previewSrc = source.documentPath;
     const sentHtml = sent.length
       ? sent
           .map((ct) => {
@@ -508,76 +511,41 @@
       : '<p class="mm-muted">No signing copies yet. Generate one to get an electronic signing link.</p>';
 
     tool.innerHTML = `
-      <p class="mm-muted">Click generate to create a workers agreement PDF for signing. The saved Elite Cleaning owner signature is added automatically, then you can copy the staff signing link.</p>
+      <p class="mm-muted">This uses the Elite Cleaning Cleaner Agreement master (2 pages, no signatures). Generate copies it, adds only the Elite Cleaning owner signature, and creates the staff signing link.</p>
       <div class="mm-sug-row" style="margin-top:10px;">
         <div>
           <div style="font-weight:600;">Elite signature</div>
-          <div class="mm-small">${
-            eliteReady
-              ? 'Saved Elite Cleaning (Owner) signature will be added to each PDF.'
-              : 'Save the Elite Cleaning (Owner) signature under Electronic contracts → Agent signature first.'
-          }</div>
+          <div class="mm-small">${eliteSignatureLabel()}</div>
         </div>
         <span class="mm-status-badge ${eliteReady ? 'mm-st-done' : 'mm-st-todo'}">${eliteReady ? 'Ready' : 'Missing'}</span>
       </div>
       <div class="mm-sug-row" style="margin-top:8px;">
         <div>
-          <div style="font-weight:600;">Agreement PDF</div>
-          <div class="mm-small">${
-            source
-              ? escapeHtml(source.title || source.documentName || 'Workers agreement')
-              : 'Upload Elite_Cleaning_Cleaner_Agreement.pdf once, then generate as many signing copies as you need.'
-          }</div>
+          <div style="font-weight:600;">Master agreement</div>
+          <div class="mm-small">${escapeHtml(source.title)} — clean source PDF, Elite signature added only when you generate.</div>
         </div>
-        <span class="mm-status-badge ${source ? 'mm-st-done' : 'mm-st-todo'}">${source ? 'Ready' : 'Needed'}</span>
+        <span class="mm-status-badge mm-st-done">Ready</span>
       </div>
-      ${
-        source
-          ? ''
-          : `<div class="mm-task-meta" style="margin-top:12px;">
-              <label class="mm-notes-label" for="mm-wa-template-file">Upload workers agreement PDF</label>
-              <input type="file" id="mm-wa-template-file" class="mm-input" accept=".pdf,application/pdf" />
-              <button type="button" class="btn-mm-ghost" id="mm-wa-save-template" style="margin-top:8px;">Save agreement PDF</button>
-            </div>`
-      }
       <label class="mm-notes-label" for="mm-wa-recipient">Staff member name (optional)</label>
       <input type="text" id="mm-wa-recipient" class="mm-input" maxlength="200" placeholder="e.g. Jane Doe" />
       <div class="mm-wa-actions">
         <button type="button" class="btn-mm" id="mm-wa-create">Generate signing PDF</button>
-        <button type="button" class="btn-mm-ghost" id="mm-wa-preview" ${previewDoc ? '' : 'disabled'}>Preview</button>
+        <button type="button" class="btn-mm-ghost" id="mm-wa-preview">Preview master</button>
         ${
           latest?.signPath
             ? `<button type="button" class="btn-mm-ghost" id="mm-wa-copy-latest">Copy latest link</button>`
             : ''
         }
       </div>
-      <div class="mm-wa-preview" id="mm-wa-preview-box">${
-        previewSrc
-          ? `<iframe title="Workers agreement preview" src="${escapeHtml(previewSrc)}"></iframe>`
-          : '<div class="mm-wa-empty">Generate a signing PDF to preview it here.</div>'
-      }</div>
+      <div class="mm-wa-preview" id="mm-wa-preview-box">
+        <iframe title="Workers agreement master preview" src="${escapeHtml(previewSrc)}"></iframe>
+      </div>
       <h4 class="mm-like-title" style="margin-top:18px;">Signing copies</h4>
       <div class="mm-contract-list">${sentHtml}</div>
     `;
 
-    $('#mm-wa-save-template')?.addEventListener('click', async () => {
-      const fileInput = document.getElementById('mm-wa-template-file');
-      const file = fileInput?.files && fileInput.files[0];
-      if (!file) return alert('Choose the workers agreement PDF first.');
-      const fd = new FormData();
-      fd.append('document', file);
-      fd.append('title', file.name.replace(/\.pdf$/i, '') || 'Elite Cleaning Cleaner Agreement');
-      try {
-        await apiForm(`/api/marketing-manager/customers/${cust.id}/workers-agreement/template`, 'POST', fd);
-        await refresh();
-      } catch (err) {
-        alert(err.message || 'Could not save the workers agreement PDF.');
-      }
-    });
-
     $('#mm-wa-preview')?.addEventListener('click', () => {
-      if (previewDoc?.documentPath) window.open(previewDoc.documentPath, '_blank', 'noopener');
-      else if (latest?.signPath) window.open(latest.signPath, '_blank', 'noopener');
+      window.open(source.documentPath, '_blank', 'noopener');
     });
 
     $('#mm-wa-copy-latest')?.addEventListener('click', async () => {
