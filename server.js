@@ -433,8 +433,35 @@ app.get('/marketing-manager', (req, res) => {
 
 app.get('/marketing-manager/sign/:token', (req, res) => {
   const p = path.join(__dirname, 'public', 'marketing-sign.html');
-  if (fs.existsSync(p)) return res.sendFile(p);
-  return res.status(404).send('Not found');
+  if (!fs.existsSync(p)) return res.status(404).send('Not found');
+  let html = fs.readFileSync(p, 'utf8');
+  const token = String(req.params.token || '').trim();
+  let pageTitle = 'LAB007 Contract Signing';
+  let description = 'Review and sign this agreement.';
+  try {
+    const data = readMarketingContracts();
+    const contract = data.contracts.find((x) => x.token === token);
+    if (contract && !mmIsTemplateContract(contract)) {
+      const state = readMarketingManagerState();
+      const customer = mmFindCustomer(state, contract.customerId);
+      pageTitle = mmSigningPageTitle(contract, customer);
+      if (pageTitle === 'Elite Cleaning Agreement') {
+        description = 'Please review and sign the Elite Cleaning Agreement.';
+      }
+    }
+  } catch (_) {}
+  const safeTitle = mmEscapeHtml(pageTitle);
+  const safeDesc = mmEscapeHtml(description);
+  html = html.replace(
+    /<title>[^<]*<\/title>/i,
+    `<title>${safeTitle}</title>\n  <meta property="og:title" content="${safeTitle}" />\n  <meta property="og:description" content="${safeDesc}" />\n  <meta name="twitter:card" content="summary" />\n  <meta name="twitter:title" content="${safeTitle}" />`
+  );
+  html = html.replace(
+    /<h1 id="pageHeading">[^<]*<\/h1>/i,
+    `<h1 id="pageHeading">${safeTitle}</h1>`
+  );
+  res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+  return res.type('html').send(html);
 });
 
 app.get('/cursorai', (req, res) => {

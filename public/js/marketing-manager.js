@@ -23,6 +23,7 @@
   let waCopiesFilter = 'all';
   let waCopiesCache = [];
   let waLiveReloadBound = false;
+  let waStatusMessage = '';
   const contractBrowser = {
     open: false,
     status: 'all',
@@ -632,6 +633,7 @@
         <button type="button" class="btn-mm-ghost" id="mm-wa-preview">Preview master</button>
         <button type="button" class="btn-mm-ghost" id="mm-wa-copy-latest" hidden>Copy latest link</button>
         <button type="button" class="btn-mm-ghost" id="mm-wa-refresh-copies">Refresh status</button>
+        <span class="mm-small" id="mm-wa-status">${escapeHtml(waStatusMessage)}</span>
       </div>
       <div class="mm-wa-copies-head">
         <h4 class="mm-like-title" style="margin:0;">Signing copies</h4>
@@ -681,8 +683,9 @@
         if (!p) return;
         const full = `${window.location.origin}${p}`;
         const ok = await copyText(full);
-        if (ok) alert('Signing link copied.');
-        else prompt('Copy signing link', full);
+        waStatusMessage = ok ? 'Link copied.' : 'Could not copy — use Copy latest link.';
+        const statusEl = document.getElementById('mm-wa-status');
+        if (statusEl) statusEl.textContent = waStatusMessage;
         return;
       }
       const delBtn = e.target.closest('[data-wa-delete-sent]');
@@ -707,8 +710,9 @@
       if (!signPath) return;
       const full = `${window.location.origin}${signPath}`;
       const ok = await copyText(full);
-      if (ok) alert('Signing link copied.');
-      else prompt('Copy signing link', full);
+      waStatusMessage = ok ? 'Link copied.' : 'Could not copy the link.';
+      const statusEl = document.getElementById('mm-wa-status');
+      if (statusEl) statusEl.textContent = waStatusMessage;
     });
 
     $('#mm-wa-refresh-copies')?.addEventListener('click', async () => {
@@ -739,15 +743,12 @@
         let copied = false;
         if (signPath) copied = await copyText(`${window.location.origin}${signPath}`);
         pendingSelectTaskId = resp?.task?.id || pendingSelectTaskId;
+        waStatusMessage = signPath
+          ? copied
+            ? 'Signing PDF ready. Link copied.'
+            : 'Signing PDF ready. Use Copy link on the new copy.'
+          : '';
         await refresh();
-        if (signPath) {
-          const full = `${window.location.origin}${signPath}`;
-          alert(
-            copied
-              ? 'Signing PDF created with the Elite signature. The staff signing link is on your clipboard. After they sign, refresh this list to download the signed copy.'
-              : `Signing PDF created with the Elite signature. Copy this link:\n${full}`
-          );
-        }
       } catch (err) {
         alert(err.message || 'Could not generate the signing PDF.');
       } finally {
