@@ -20,6 +20,9 @@
   };
   let selectedId = null;
   let pendingSelectTaskId = null;
+  let waCopiesFilter = 'all';
+  let waCopiesCache = [];
+  let waLiveReloadBound = false;
   const contractBrowser = {
     open: false,
     status: 'all',
@@ -282,7 +285,7 @@
                         <span class="mm-status-badge ${stClass}">${stLabel}</span>
                         <button type="button" class="btn-mm-tiny" data-open-contract="${escapeHtml(ct.signPath)}">Open</button>
                         <button type="button" class="btn-mm-tiny" data-copy-contract="${escapeHtml(ct.signPath)}">Copy link</button>
-                        ${ct.signedDocumentPath ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.signedDocumentPath)}" target="_blank" rel="noopener" style="text-decoration:none;">Signed file</a>` : ''}
+                        ${ct.signedDocumentPath ? `<a class="btn-mm-tiny mm-wa-download" href="${escapeHtml(ct.downloadSignedPath || ct.signedDocumentPath + '?download=1')}" download>Download signed PDF</a>` : ''}
                         <button type="button" class="btn-mm-tiny-danger" data-delete-contract-browser="${escapeHtml(ct.id)}" data-delete-contract-customer="${escapeHtml(ct.customerId || '')}">Delete</button>
                         <button type="button" class="btn-mm-ghost" data-jump-customer="${escapeHtml(ct.customerId || '')}" style="padding:4px 10px;font-size:11px;">Customer</button>
                       </div>
@@ -433,14 +436,159 @@
   function workersAgreementSent(cust) {
     const customerId = cust?.id;
     const task = (cust?.tasks || []).find((t) => t.kind === 'workers_agreement');
+    const trackedIds = new Set(task?.agreementIds || []);
     return (state.contracts || [])
       .filter((ct) => {
         if (String(ct.customerId || '') !== String(customerId)) return false;
         if (ct.isWorkersAgreementTemplate || ct.sourceType === 'template' || ct.status === 'template') return false;
+        if (ct.documentKind === 'workers_agreement') return true;
+        if (String(ct.sourceContractId || '') === 'master_elite_cleaner_agreement') return true;
         if (task && String(ct.sourceTaskId || '') === String(task.id)) return true;
+        if (trackedIds.has(ct.id)) return true;
         return ct.sourceType === 'cloned' && workersAgreementScore(ct) >= 50;
       })
       .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')));
+  }
+
+  function workersAgreementCopyRowsHtml(copies) {
+    const filtered = copies.filter((ct) => {
+      if (waCopiesFilter === 'signed') return ct.status === 'signed';
+      if (waCopiesFilter === 'pending') return ct.status !== 'signed';
+      return true;
+    });
+    if (!copies.length) {
+      return '<p class="mm-muted">No signing copies yet. Generate one to get an electronic signing link. Copies stay here after staff sign so you can download them.</p>';
+    }
+    if (!filtered.length) {
+      return '<p class="mm-muted">No copies in this filter. Switch to All to see every agreement.</p>';
+    }
+    return filtered
+      .map((ct) => {
+        const signed = ct.status === 'signed';
+        const stClass = signed ? 'mm-st-done' : 'mm-st-started';
+        const stLabel = signed ? 'Signed' : 'Awaiting signature';
+        const who = ct.recipientName
+          ? `For ${escapeHtml(ct.recipientName)}`
+          : signed
+            ? `Signed by ${escapeHtml(ct.signerName || 'staff')}`
+            : 'Staff signing copy';
+        const previewPath = signed && ct.signedDocumentPath ? ct.signedDocumentPath : ct.documentPath || ct.signPath || '';
+        const downloadHref = signed
+          ? ct.downloadSignedPath || `${ct.signedDocumentPath || ''}?download=1`
+          : ct.downloadDocumentPath || `${ct.documentPath || ''}?download=1`;
+        return `<div class="mm-contract-row${signed ? ' mm-wa-signed' : ''}">
+          <div class="mm-contract-row-main">
+            <div class="mm-contract-row-title">${escapeHtml(ct.title || 'Workers Agreement')}</div>
+            <div class="mm-small">${who} • Created ${escapeHtml(fmtDate(ct.createdAt))}</div>
+            ${
+              ct.includeAgentSignature
+                ? `<div class="mm-small">Elite signature included${ct.agentSignatureDate ? ` • ${escapeHtml(ct.agentSignatureDate)}` : ''}</div>`
+                : ''
+            }
+            ${
+              signed
+                ? `<div class="mm-small">Signed ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerName || 'staff')}</div>`
+                : '<div class="mm-small">Waiting for staff to sign the link.</div>'
+            }
+          </div>
+          <div class="mm-contract-row-actions">
+            <span class="mm-status-badge ${stClass}">${stLabel}</span>
+            ${previewPath ? `<button type="button" class="btn-mm-tiny" data-wa-preview-sent="${escapeHtml(previewPath)}">Preview</button>` : ''}
+            ${ct.signPath ? `<button type="button" class="btn-mm-tiny" data-wa-open-sent="${escapeHtml(ct.signPath)}">Open signing page</button>` : ''}
+            ${
+              signed
+                ? ''
+                : `<button type="button" class="btn-mm-tiny" data-wa-copy-sent="${escapeHtml(ct.signPath || '')}">Copy link</button>`
+            }
+            ${
+              signed && (ct.signedDocumentPath || ct.downloadSignedPath)
+                ? `<a class="btn-mm-tiny mm-wa-download" href="${escapeHtml(downloadHref)}" download>Download signed PDF</a>`
+                : downloadHref && downloadHref !== '?download=1'
+                  ? `<a class="btn-mm-tiny" href="${escapeHtml(downloadHref)}" download>Download PDF</a>`
+                  : ''
+            }
+            <button type="button" class="btn-mm-tiny-danger" data-wa-delete-sent="${escapeHtml(ct.id)}">Delete</button>
+          </div>
+        </div>`;
+      })
+      .join('');
+  }
+
+  function updateWorkersAgreementSummary(pending, signed) {
+    const sum = document.querySelector('#mm-task-workers-details > summary');
+    if (!sum) return;
+    const extra =
+      pending || signed ? ` — ${pending} awaiting, ${signed} signed` : '';
+    sum.textContent = `Workers Agreement${extra}`;
+  }
+
+  function fillWorkersAgreementCopies(cust, copies) {
+    waCopiesCache = Array.isArray(copies) ? copies : [];
+    const list = waCopiesCache;
+    const listEl = document.getElementById('mm-wa-copies-list');
+    const countsEl = document.getElementById('mm-wa-copy-counts');
+    const latestBtn = document.getElementById('mm-wa-copy-latest');
+    const pending = list.filter((ct) => ct.status !== 'signed').length;
+    const signed = list.filter((ct) => ct.status === 'signed').length;
+    if (countsEl) countsEl.textContent = `${list.length} total · ${pending} awaiting · ${signed} signed`;
+    if (listEl) listEl.innerHTML = workersAgreementCopyRowsHtml(list);
+    updateWorkersAgreementSummary(pending, signed);
+    if (latestBtn) {
+      const latestPending = list.find((ct) => ct.status !== 'signed' && ct.signPath);
+      latestBtn.hidden = !latestPending;
+      if (latestPending) latestBtn.dataset.signPath = latestPending.signPath;
+    }
+    document.querySelectorAll('[data-wa-filter]').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-wa-filter') === waCopiesFilter);
+    });
+  }
+
+  async function loadWorkersAgreementCopies(cust) {
+    try {
+      const data = await api(`/api/marketing-manager/customers/${cust.id}/workers-agreement`);
+      const copies = data.copies || [];
+      const byId = new Map((state.contracts || []).map((ct) => [ct.id, ct]));
+      copies.forEach((ct) => byId.set(ct.id, ct));
+      state.contracts = [...byId.values()].sort((a, b) =>
+        String(b.createdAt || '').localeCompare(String(a.createdAt || ''))
+      );
+      fillWorkersAgreementCopies(cust, copies);
+      return copies;
+    } catch (err) {
+      fillWorkersAgreementCopies(cust, workersAgreementSent(cust));
+      const listEl = document.getElementById('mm-wa-copies-list');
+      if (listEl && !workersAgreementSent(cust).length) {
+        listEl.innerHTML = `<p class="mm-muted">Could not load signing copies: ${escapeHtml(err.message || 'unknown error')}</p>`;
+      }
+      return workersAgreementSent(cust);
+    }
+  }
+
+  async function reloadWorkersAgreementCopies() {
+    if (document.visibilityState && document.visibilityState !== 'visible') return;
+    const list = document.getElementById('mm-wa-copies-list');
+    if (!list || !selectedId) return;
+    const cust = state.data.customers.find((c) => c.id === selectedId);
+    if (!cust) return;
+    try {
+      const [copiesOk, contractsResp, cstats] = await Promise.all([
+        loadWorkersAgreementCopies(cust),
+        api('/api/marketing-manager/contracts').catch(() => null),
+        api('/api/marketing-manager/contracts/stats').catch(() => null)
+      ]);
+      if (contractsResp?.contracts) state.contracts = contractsResp.contracts;
+      if (cstats) state.contractStats = cstats;
+      return copiesOk;
+    } catch (_) {}
+  }
+
+  function bindWorkersAgreementLiveReload() {
+    if (waLiveReloadBound) return;
+    waLiveReloadBound = true;
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') reloadWorkersAgreementCopies();
+    });
+    window.addEventListener('focus', () => reloadWorkersAgreementCopies());
   }
 
   function eliteSignatureReady() {
@@ -464,54 +612,12 @@
     const tool = mountEl || $('#mm-task-tool');
     if (!tool) return;
     const source = workersAgreementSource();
-    const sent = workersAgreementSent(cust);
-    const latest = sent[0] || null;
     const eliteReady = eliteSignatureReady();
     const previewSrc = source.documentPath;
-    const sentHtml = sent.length
-      ? sent
-          .map((ct) => {
-            const stClass = ct.status === 'signed' ? 'mm-st-done' : 'mm-st-started';
-            const stLabel = ct.status === 'signed' ? 'Signed' : 'Awaiting signature';
-            const who = ct.recipientName
-              ? `For ${escapeHtml(ct.recipientName)}`
-              : ct.signedAt
-                ? `Signed by ${escapeHtml(ct.signerName || 'staff')}`
-                : 'Staff signing copy';
-            return `<div class="mm-contract-row">
-              <div class="mm-contract-row-main">
-                <div class="mm-contract-row-title">${escapeHtml(ct.title || 'Workers Agreement')}</div>
-                <div class="mm-small">${who} • Created ${escapeHtml(fmtDate(ct.createdAt))}</div>
-                ${
-                  ct.includeAgentSignature
-                    ? `<div class="mm-small">Elite signature included${ct.agentSignatureDate ? ` • ${escapeHtml(ct.agentSignatureDate)}` : ''}</div>`
-                    : ''
-                }
-                ${
-                  ct.signedAt
-                    ? `<div class="mm-small">Signed ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerName || 'staff')}</div>`
-                    : ''
-                }
-              </div>
-              <div class="mm-contract-row-actions">
-                <span class="mm-status-badge ${stClass}">${stLabel}</span>
-                <button type="button" class="btn-mm-tiny" data-wa-preview-sent="${escapeHtml(ct.id)}">Preview</button>
-                <button type="button" class="btn-mm-tiny" data-wa-open-sent="${escapeHtml(ct.signPath)}">Open signing page</button>
-                <button type="button" class="btn-mm-tiny" data-wa-copy-sent="${escapeHtml(ct.signPath)}">Copy link</button>
-                ${
-                  ct.signedDocumentPath
-                    ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.signedDocumentPath)}" target="_blank" rel="noopener" style="text-decoration:none;">Signed file</a>`
-                    : ''
-                }
-                <button type="button" class="btn-mm-tiny-danger" data-wa-delete-sent="${escapeHtml(ct.id)}">Delete</button>
-              </div>
-            </div>`;
-          })
-          .join('')
-      : '<p class="mm-muted">No signing copies yet. Generate one to get an electronic signing link.</p>';
+    waCopiesCache = [];
 
     tool.innerHTML = `
-      <p class="mm-muted">This uses the Elite Cleaning Cleaner Agreement master (2 pages, no signatures). Generate copies it, adds only the Elite Cleaning owner signature, and creates the staff signing link.</p>
+      <p class="mm-muted">Generate a copy of the Elite Cleaning Cleaner Agreement, add the Elite owner signature, and send the staff signing link. Every copy stays here so you can see who signed and download the signed PDF.</p>
       <div class="mm-sug-row" style="margin-top:10px;">
         <div>
           <div style="font-weight:600;">Elite signature</div>
@@ -519,41 +625,100 @@
         </div>
         <span class="mm-status-badge ${eliteReady ? 'mm-st-done' : 'mm-st-todo'}">${eliteReady ? 'Ready' : 'Missing'}</span>
       </div>
-      <div class="mm-sug-row" style="margin-top:8px;">
-        <div>
-          <div style="font-weight:600;">Master agreement</div>
-          <div class="mm-small">${escapeHtml(source.title)} — clean source PDF, Elite signature added only when you generate.</div>
-        </div>
-        <span class="mm-status-badge mm-st-done">Ready</span>
-      </div>
       <label class="mm-notes-label" for="mm-wa-recipient">Staff member name (optional)</label>
       <input type="text" id="mm-wa-recipient" class="mm-input" maxlength="200" placeholder="e.g. Jane Doe" />
       <div class="mm-wa-actions">
         <button type="button" class="btn-mm" id="mm-wa-create">Generate signing PDF</button>
         <button type="button" class="btn-mm-ghost" id="mm-wa-preview">Preview master</button>
-        ${
-          latest?.signPath
-            ? `<button type="button" class="btn-mm-ghost" id="mm-wa-copy-latest">Copy latest link</button>`
-            : ''
-        }
+        <button type="button" class="btn-mm-ghost" id="mm-wa-copy-latest" hidden>Copy latest link</button>
+        <button type="button" class="btn-mm-ghost" id="mm-wa-refresh-copies">Refresh status</button>
       </div>
-      <div class="mm-wa-preview" id="mm-wa-preview-box">
-        <iframe title="Workers agreement master preview" src="${escapeHtml(previewSrc)}"></iframe>
+      <div class="mm-wa-copies-head">
+        <h4 class="mm-like-title" style="margin:0;">Signing copies</h4>
+        <span class="mm-small" id="mm-wa-copy-counts"></span>
       </div>
-      <h4 class="mm-like-title" style="margin-top:18px;">Signing copies</h4>
-      <div class="mm-contract-list">${sentHtml}</div>
+      <div class="mm-wa-filter">
+        <button type="button" class="btn-mm-tiny${waCopiesFilter === 'all' ? ' is-active' : ''}" data-wa-filter="all">All</button>
+        <button type="button" class="btn-mm-tiny${waCopiesFilter === 'pending' ? ' is-active' : ''}" data-wa-filter="pending">Awaiting</button>
+        <button type="button" class="btn-mm-tiny${waCopiesFilter === 'signed' ? ' is-active' : ''}" data-wa-filter="signed">Signed</button>
+      </div>
+      <div class="mm-contract-list" id="mm-wa-copies-list">
+        <p class="mm-muted">Loading signing copies…</p>
+      </div>
+      <details class="mm-campaign-details" id="mm-wa-master-preview" style="margin-top:16px;">
+        <summary>Preview master PDF</summary>
+        <div class="mm-wa-preview" id="mm-wa-preview-box">
+          <iframe title="Workers agreement master preview" src="${escapeHtml(previewSrc)}"></iframe>
+        </div>
+      </details>
     `;
+
+    bindWorkersAgreementLiveReload();
+    loadWorkersAgreementCopies(cust);
+
+    tool.addEventListener('click', async (e) => {
+      const filterBtn = e.target.closest('[data-wa-filter]');
+      if (filterBtn) {
+        waCopiesFilter = filterBtn.getAttribute('data-wa-filter') || 'all';
+        fillWorkersAgreementCopies(cust, waCopiesCache.length ? waCopiesCache : workersAgreementSent(cust));
+        return;
+      }
+      const previewBtn = e.target.closest('[data-wa-preview-sent]');
+      if (previewBtn) {
+        const p = previewBtn.getAttribute('data-wa-preview-sent');
+        if (p) window.open(p, '_blank', 'noopener');
+        return;
+      }
+      const openBtn = e.target.closest('[data-wa-open-sent]');
+      if (openBtn) {
+        const p = openBtn.getAttribute('data-wa-open-sent');
+        if (p) window.open(p, '_blank', 'noopener');
+        return;
+      }
+      const copyBtn = e.target.closest('[data-wa-copy-sent]');
+      if (copyBtn) {
+        const p = copyBtn.getAttribute('data-wa-copy-sent');
+        if (!p) return;
+        const full = `${window.location.origin}${p}`;
+        const ok = await copyText(full);
+        if (ok) alert('Signing link copied.');
+        else prompt('Copy signing link', full);
+        return;
+      }
+      const delBtn = e.target.closest('[data-wa-delete-sent]');
+      if (delBtn) {
+        const contractId = delBtn.getAttribute('data-wa-delete-sent');
+        if (!contractId) return;
+        if (!confirm('Delete this signing copy? Signed files are removed too.')) return;
+        await api(`/api/marketing-manager/customers/${cust.id}/contracts/${contractId}`, {
+          method: 'DELETE'
+        });
+        await refresh();
+      }
+    });
 
     $('#mm-wa-preview')?.addEventListener('click', () => {
       window.open(source.documentPath, '_blank', 'noopener');
     });
 
     $('#mm-wa-copy-latest')?.addEventListener('click', async () => {
-      if (!latest?.signPath) return;
-      const full = `${window.location.origin}${latest.signPath}`;
+      const latestBtn = $('#mm-wa-copy-latest');
+      const signPath = latestBtn?.dataset?.signPath;
+      if (!signPath) return;
+      const full = `${window.location.origin}${signPath}`;
       const ok = await copyText(full);
       if (ok) alert('Signing link copied.');
       else prompt('Copy signing link', full);
+    });
+
+    $('#mm-wa-refresh-copies')?.addEventListener('click', async () => {
+      const btn = $('#mm-wa-refresh-copies');
+      if (btn) btn.disabled = true;
+      try {
+        await reloadWorkersAgreementCopies();
+      } finally {
+        if (btn) btn.disabled = false;
+      }
     });
 
     $('#mm-wa-create')?.addEventListener('click', async () => {
@@ -579,7 +744,7 @@
           const full = `${window.location.origin}${signPath}`;
           alert(
             copied
-              ? 'Signing PDF created with the Elite signature. The staff signing link is on your clipboard.'
+              ? 'Signing PDF created with the Elite signature. The staff signing link is on your clipboard. After they sign, refresh this list to download the signed copy.'
               : `Signing PDF created with the Elite signature. Copy this link:\n${full}`
           );
         }
@@ -592,43 +757,6 @@
           createBtn.disabled = false;
         }
       }
-    });
-
-    tool.querySelectorAll('[data-wa-preview-sent]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const id = btn.getAttribute('data-wa-preview-sent');
-        const ct = sent.find((x) => x.id === id);
-        if (!ct) return;
-        if (ct.documentPath) window.open(ct.documentPath, '_blank', 'noopener');
-        else if (ct.signPath) window.open(ct.signPath, '_blank', 'noopener');
-      });
-    });
-    tool.querySelectorAll('[data-wa-open-sent]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const p = btn.getAttribute('data-wa-open-sent');
-        if (p) window.open(p, '_blank', 'noopener');
-      });
-    });
-    tool.querySelectorAll('[data-wa-copy-sent]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const p = btn.getAttribute('data-wa-copy-sent');
-        if (!p) return;
-        const full = `${window.location.origin}${p}`;
-        const ok = await copyText(full);
-        if (ok) alert('Signing link copied.');
-        else prompt('Copy signing link', full);
-      });
-    });
-    tool.querySelectorAll('[data-wa-delete-sent]').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        const contractId = btn.getAttribute('data-wa-delete-sent');
-        if (!contractId) return;
-        if (!confirm('Delete this signing copy?')) return;
-        await api(`/api/marketing-manager/customers/${cust.id}/contracts/${contractId}`, {
-          method: 'DELETE'
-        });
-        await refresh();
-      });
     });
   }
 
@@ -1496,9 +1624,9 @@
                   <button type="button" class="btn-mm-tiny" data-copy-contract="${escapeHtml(ct.signPath)}">Copy link</button>
                   ${
                     ct.status === 'signed' && ct.signedDocumentPath
-                      ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.signedDocumentPath)}" target="_blank" rel="noopener" style="text-decoration:none;">Signed doc</a>`
+                      ? `<a class="btn-mm-tiny mm-wa-download" href="${escapeHtml(ct.downloadSignedPath || ct.signedDocumentPath + '?download=1')}" download>Download signed PDF</a>`
                       : ct.documentPath
-                        ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.documentPath)}" target="_blank" rel="noopener" style="text-decoration:none;">Doc</a>`
+                        ? `<a class="btn-mm-tiny" href="${escapeHtml(ct.downloadDocumentPath || ct.documentPath + '?download=1')}" download>Download PDF</a>`
                         : ''
                   }
                   <button type="button" class="btn-mm-tiny-danger" data-delete-contract="${escapeHtml(ct.id)}">Delete</button>

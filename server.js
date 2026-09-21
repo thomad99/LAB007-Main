@@ -3643,6 +3643,10 @@ function mmContractView(c, customerName) {
     documentName: c.originalName || '',
     documentPath: c.filePath ? `/api/marketing-manager/contracts/${c.id}/document` : '',
     signedDocumentPath: signedDocPath,
+    downloadDocumentPath: c.filePath
+      ? `/api/marketing-manager/contracts/${c.id}/document?download=1`
+      : '',
+    downloadSignedPath: signedDocPath ? `${signedDocPath}?download=1` : '',
     includeAgentSignature: Boolean(c.includeAgentSignature),
     agentSignatureDate: c.agentSignatureDate || '',
     agentName: c.agentName || '',
@@ -3653,7 +3657,8 @@ function mmContractView(c, customerName) {
     sourceContractId: c.sourceContractId || '',
     sourceTaskId: c.sourceTaskId || '',
     recipientName: c.recipientName || '',
-    isWorkersAgreementTemplate: Boolean(c.isWorkersAgreementTemplate)
+    isWorkersAgreementTemplate: Boolean(c.isWorkersAgreementTemplate),
+    documentKind: c.documentKind || ''
   };
 }
 
@@ -3684,6 +3689,33 @@ const mmWorkersAgreementMasterDocx = path.join(
   'Elite_Cleaning_Cleaner_Agreement.docx'
 );
 
+function mmFindWorkersAgreementSource(customerId) {
+  return mmWorkersAgreementMasterSource(customerId);
+}
+
+function mmSafeDownloadName(name, fallback) {
+  const raw = String(name || fallback || 'document.pdf')
+    .replace(/[<>:"/\\|?*\u0000-\u001f]+/g, '_')
+    .replace(/\s+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^[._]+|[._]+$/g, '')
+    .slice(0, 120);
+  return raw || fallback || 'document.pdf';
+}
+
+function mmContentDisposition(filename, asDownload) {
+  const safe = mmSafeDownloadName(filename, 'document.pdf').replace(/"/g, '');
+  const ascii = safe.replace(/[^\x20-\x7E]+/g, '_');
+  const kind = asDownload ? 'attachment' : 'inline';
+  return `${kind}; filename="${ascii}"; filename*=UTF-8''${encodeURIComponent(safe)}`;
+}
+
+function mmSendContractFile(res, filePath, mimeType, filename, asDownload) {
+  if (mimeType) res.type(mimeType);
+  res.setHeader('Content-Disposition', mmContentDisposition(filename, asDownload));
+  return res.sendFile(path.resolve(filePath));
+}
+
 function mmWorkersAgreementMasterSource(customerId) {
   if (!fs.existsSync(mmWorkersAgreementMasterPdf)) return null;
   let fileSize = 0;
@@ -3711,8 +3743,55 @@ function mmWorkersAgreementMasterSource(customerId) {
   };
 }
 
-function mmFindWorkersAgreementSource(customerId) {
-  return mmWorkersAgreementMasterSource(customerId);
+function mmIsWorkersAgreementCopy(contract, task) {
+  if (!contract || mmIsTemplateContract(contract)) return false;
+  if (contract.documentKind === 'workers_agreement') return true;
+  if (String(contract.sourceContractId || '') === MM_WORKERS_AGREEMENT_MASTER_ID) return true;
+  if (task && String(contract.sourceTaskId || '') === String(task.id)) return true;
+  if (task && Array.isArray(task.agreementIds) && task.agreementIds.includes(contract.id)) return true;
+  return contract.sourceType === 'cloned' && mmWorkersAgreementSourceScore(contract) >= 50;
+}
+
+function mmListWorkersAgreementCopies(customer) {
+  const tracked = mmTrackWorkersAgreementCopies(customer);
+  return tracked.copies;
+}
+
+function mmTrackWorkersAgreementCopies(customer) {
+  const task = (customer.tasks || []).find((t) => t.kind === 'workers_agreement') || null;
+  const data = readMarketingContracts();
+  let contractsDirty = false;
+  const matching = data.contracts.filter(
+    (x) => x.customerId === customer.id && mmIsWorkersAgreementCopy(x, task)
+  );
+  matching.forEach((x) => {
+    if (x.documentKind !== 'workers_agreement') {
+      x.documentKind = 'workers_agreement';
+      contractsDirty = true;
+    }
+  });
+  if (contractsDirty) writeMarketingContracts(data);
+
+  let stateDirty = false;
+  if (task) {
+    if (!Array.isArray(task.agreementIds)) {
+      task.agreementIds = [];
+      stateDirty = true;
+    }
+    matching.forEach((x) => {
+      if (!task.agreementIds.includes(x.id)) {
+        task.agreementIds.push(x.id);
+        stateDirty = true;
+      }
+    });
+  }
+  return {
+    task,
+    stateDirty,
+    copies: matching
+      .sort((a, b) => String(b.createdAt || '').localeCompare(String(a.createdAt || '')))
+      .map((x) => mmContractView(x, customer.name || 'Customer'))
+  };
 }
 
 function mmEnsureWorkersAgreementTask(customer) {
@@ -3731,6 +3810,7 @@ function mmEnsureWorkersAgreementTask(customer) {
     status: 'not_started',
     notes: '',
     sourceContractId: '',
+    agreementIds: [],
     createdAt: now,
     updatedAt: now
   };
@@ -3882,6 +3962,7 @@ function mmCloneContractForSigning(source, opts = {}) {
     signDate: '',
     signatureDataUrl: '',
     sourceType: 'cloned',
+    documentKind: opts.documentKind || '',
     sourceContractId: source.id,
     sourceTaskId: String(opts.sourceTaskId || '').trim(),
     recipientName,
@@ -5487,6 +5568,29 @@ app.post('/api/marketing-manager/customers/:customerId/workers-agreement/templat
   });
 });
 
+app.get('/api/marketing-manager/customers/:customerId/workers-agreement', (req, res) => {
+  try {
+    const state = readMarketingManagerState();
+    const c = mmFindCustomer(state, req.params.customerId);
+    if (!c) return res.status(404).json({ error: 'Customer not found' });
+    const tracked = mmTrackWorkersAgreementCopies(c);
+    if (tracked.stateDirty) writeMarketingManagerState(state);
+    const copies = tracked.copies;
+    const pending = copies.filter((x) => (x.status || 'pending') !== 'signed').length;
+    const signed = copies.filter((x) => x.status === 'signed').length;
+    const master = mmWorkersAgreementMasterSource(c.id);
+    return res.json({
+      task: tracked.task,
+      copies,
+      pending,
+      signed,
+      master: master ? mmContractView(master, c.name) : null
+    });
+  } catch (error) {
+    return res.status(500).json({ error: error.message });
+  }
+});
+
 app.post('/api/marketing-manager/customers/:customerId/workers-agreement', (req, res) => {
   try {
     const state = readMarketingManagerState();
@@ -5515,6 +5619,7 @@ app.post('/api/marketing-manager/customers/:customerId/workers-agreement', (req,
       agentIdentity: 'Elite Cleaning (Owner)',
       forceAgentStamp: true,
       sourceTaskId: task.id,
+      documentKind: 'workers_agreement',
       recipientName: req.body?.recipientName,
       title: source.title || 'Workers Agreement'
     });
@@ -5523,6 +5628,10 @@ app.post('/api/marketing-manager/customers/:customerId/workers-agreement', (req,
     task.sourceContractId = source.id;
     task.updatedAt = now;
     if (task.status === 'not_started') task.status = 'in_progress';
+    if (!Array.isArray(task.agreementIds)) task.agreementIds = [];
+    if (!task.agreementIds.includes(cloned.contract.id)) {
+      task.agreementIds.unshift(cloned.contract.id);
+    }
     writeMarketingManagerState(state);
     const data = readMarketingContracts();
     data.contracts.push(cloned.contract);
@@ -5929,8 +6038,16 @@ app.get('/api/marketing-manager/contracts/:contractId/document', (req, res) => {
     if (!contract.filePath || !fs.existsSync(contract.filePath)) {
       return res.status(404).json({ error: 'Document file not found' });
     }
-    if (contract.mimeType) res.type(contract.mimeType);
-    return res.sendFile(path.resolve(contract.filePath));
+    const asDownload = String(req.query.download || '') === '1';
+    const fallback = contract.originalName || `${contract.title || 'document'}.pdf`;
+    const filename = mmSafeDownloadName(req.query.filename, fallback);
+    return mmSendContractFile(
+      res,
+      contract.filePath,
+      contract.mimeType || 'application/pdf',
+      filename,
+      asDownload
+    );
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
@@ -5944,13 +6061,23 @@ app.get('/api/marketing-manager/contracts/:contractId/signed-document', (req, re
     if ((contract.status || 'pending') !== 'signed') {
       return res.status(404).json({ error: 'Signed document not found' });
     }
+    const asDownload = String(req.query.download || '') === '1';
+    const who = String(contract.signerName || contract.recipientName || 'signed')
+      .replace(/\s+/g, '_')
+      .slice(0, 40);
+    const fallback = `${contract.title || 'agreement'}-${who}-signed.pdf`;
+    const filename = mmSafeDownloadName(req.query.filename, fallback);
     if (contract.signedPdfPath && fs.existsSync(contract.signedPdfPath)) {
-      res.type('application/pdf');
-      return res.sendFile(path.resolve(contract.signedPdfPath));
+      return mmSendContractFile(res, contract.signedPdfPath, 'application/pdf', filename, asDownload);
     }
     if (contract.signedTextPath && fs.existsSync(contract.signedTextPath)) {
-      res.type('text/plain; charset=utf-8');
-      return res.sendFile(path.resolve(contract.signedTextPath));
+      return mmSendContractFile(
+        res,
+        contract.signedTextPath,
+        'text/plain; charset=utf-8',
+        filename.replace(/\.pdf$/i, '.txt'),
+        asDownload
+      );
     }
     return res.status(404).json({ error: 'Signed document not found' });
   } catch (error) {
