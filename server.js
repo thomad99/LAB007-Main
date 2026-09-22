@@ -6255,7 +6255,7 @@ app.post('/api/marketing-manager/contracts/sign/:token', (req, res) => {
     const fullName = String(req.body?.fullName || '').trim();
     const signDate = String(req.body?.date || '').trim();
     const signatureDataUrl = String(req.body?.signatureDataUrl || '').trim();
-    if (!fullName) return res.status(400).json({ error: 'Full name is required' });
+    if (!fullName || fullName.length < 2) return res.status(400).json({ error: 'Full name is required' });
     if (!signDate) return res.status(400).json({ error: 'Date is required' });
     if (!mmValidSignatureDataUrl(signatureDataUrl)) {
       return res.status(400).json({ error: 'Signature is required' });
