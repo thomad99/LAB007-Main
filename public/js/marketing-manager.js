@@ -488,7 +488,7 @@
             }
             ${
               signed
-                ? `<div class="mm-small">Signed ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerName || 'staff')}</div>`
+                ? `<div class="mm-small">Signed ${escapeHtml(fmtDate(ct.signedAt))} by ${escapeHtml(ct.signerName || 'staff')}${ct.signerEmail ? ` • ${escapeHtml(ct.signerEmail)}` : ''}</div>`
                 : '<div class="mm-small">Waiting for staff to sign the link.</div>'
             }
           </div>

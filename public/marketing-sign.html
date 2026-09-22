@@ -129,6 +129,9 @@
       <h2 style="font-size:17px; margin-bottom:10px;" id="signHeading">Sign below</h2>
       <label for="fullName" id="fullNameLabel">Full name (required)</label>
       <input id="fullName" type="text" required minlength="2" maxlength="120" autocomplete="name" placeholder="Your full name" />
+      <label for="signerEmail" id="signerEmailLabel">Email address (required)</label>
+      <input id="signerEmail" type="email" required maxlength="200" autocomplete="email" placeholder="you@example.com" />
+      <p class="muted" style="font-size:13px;margin:6px 0 0;">We’ll email you a signed copy after you sign.</p>
       <label for="signDate">Date</label>
       <input id="signDate" type="date" />
       <label>Signature</label>
@@ -159,6 +162,8 @@
       const viewContractFullBtn = document.getElementById('viewContractFullBtn');
       const nameEl = document.getElementById('fullName');
       const nameLabelEl = document.getElementById('fullNameLabel');
+      const emailEl = document.getElementById('signerEmail');
+      const emailLabelEl = document.getElementById('signerEmailLabel');
       const signHeadingEl = document.getElementById('signHeading');
       const dateEl = document.getElementById('signDate');
       const signBtn = document.getElementById('signBtn');
@@ -173,6 +178,10 @@
       let hasInk = false;
       let signed = false;
       let signerRoleLabel = 'Customer';
+
+      function isValidEmail(value) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+      }
 
       function fillCanvasWhite() {
         ctx.save();
@@ -250,6 +259,7 @@
         signed = true;
         signBtn.disabled = true;
         nameEl.disabled = true;
+        if (emailEl) emailEl.disabled = true;
         dateEl.disabled = true;
         if (postSignActions) postSignActions.style.display = '';
       }
@@ -281,6 +291,11 @@
           nameLabelEl.textContent = signerRoleLabel + ' full name (required)';
           nameEl.placeholder = 'Your full name (' + signerRoleLabel + ')';
           nameEl.required = true;
+          if (emailLabelEl) emailLabelEl.textContent = 'Email address (required)';
+          if (emailEl) {
+            emailEl.required = true;
+            if (c.signerEmail) emailEl.value = c.signerEmail;
+          }
           if (c.hasDocument && c.documentPath) {
             bodyEl.style.display = 'none';
             const docUrl = c.documentPath;
@@ -342,8 +357,10 @@
 
       signBtn.addEventListener('click', async function () {
         const fullName = nameEl.value.trim();
+        const email = (emailEl?.value || '').trim();
         const date = dateEl.value;
         nameEl.classList.remove('is-invalid');
+        if (emailEl) emailEl.classList.remove('is-invalid');
         if (!fullName || fullName.length < 2) {
           nameEl.classList.add('is-invalid');
           nameEl.focus();
@@ -354,6 +371,18 @@
           return;
         }
         nameEl.setCustomValidity('');
+        if (!isValidEmail(email)) {
+          if (emailEl) {
+            emailEl.classList.add('is-invalid');
+            emailEl.focus();
+            emailEl.setCustomValidity('A valid email address is required.');
+            emailEl.reportValidity();
+          }
+          msgEl.className = 'error';
+          msgEl.textContent = 'A valid email address is required so we can send your signed copy.';
+          return;
+        }
+        if (emailEl) emailEl.setCustomValidity('');
         if (!date) {
           msgEl.className = 'error';
           msgEl.textContent = 'Date is required.';
@@ -372,9 +401,14 @@
         const t0 = Date.now();
         const minSavingMs = 550;
         try {
-          await api('/api/marketing-manager/contracts/sign/' + token, {
+          const resp = await api('/api/marketing-manager/contracts/sign/' + token, {
             method: 'POST',
-            body: JSON.stringify({ fullName, date, signatureDataUrl: canvas.toDataURL('image/jpeg', 0.92) })
+            body: JSON.stringify({
+              fullName,
+              email,
+              date,
+              signatureDataUrl: canvas.toDataURL('image/jpeg', 0.92)
+            })
           });
           const elapsed = Date.now() - t0;
           if (elapsed < minSavingMs) await new Promise((r) => setTimeout(r, minSavingMs - elapsed));
@@ -382,7 +416,9 @@
           setSignedUi();
           animateSignatureSuccess();
           msgEl.className = 'ok';
-          msgEl.textContent = 'Contract signed and stored successfully.';
+          msgEl.textContent = resp?.emailSent
+            ? 'Signed. A copy was emailed to ' + email + '.'
+            : 'Signed and stored. We could not email the copy — use Download signed copy below.';
         } catch (err) {
           sigPadWrap.classList.remove('sig-saving');
           signBtn.disabled = false;
@@ -395,6 +431,10 @@
       nameEl.addEventListener('input', function () {
         nameEl.classList.remove('is-invalid');
         nameEl.setCustomValidity('');
+      });
+      emailEl?.addEventListener('input', function () {
+        emailEl.classList.remove('is-invalid');
+        emailEl.setCustomValidity('');
       });
       viewBtn.addEventListener('click', function () {
         if (!signed) return;

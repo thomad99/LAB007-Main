@@ -3642,12 +3642,26 @@ function mmSignerRoleLabel(role) {
 }
 
 function mmSigningPageTitle(contract, customer) {
+  return mmIsEliteOnboardingAgreement(contract, customer)
+    ? 'Elite Cleaning Agreement'
+    : 'LAB007 Contract Signing';
+}
+
+function mmIsEliteOnboardingAgreement(contract, customer) {
   const eliteCustomer = /elite\s*cleaning/i.test(String(customer?.name || ''));
-  const workers =
+  return (
     contract?.documentKind === 'workers_agreement' ||
     String(contract?.sourceContractId || '') === MM_WORKERS_AGREEMENT_MASTER_ID ||
-    (mmNormalizeSignerRole(contract?.signerRole) === 'employee' && eliteCustomer);
-  return workers ? 'Elite Cleaning Agreement' : 'LAB007 Contract Signing';
+    (mmNormalizeSignerRole(contract?.signerRole) === 'employee' && eliteCustomer)
+  );
+}
+
+function mmFirstName(fullName) {
+  const part = String(fullName || '')
+    .trim()
+    .split(/\s+/)
+    .find(Boolean);
+  return part || 'there';
 }
 
 /** Label used inside signature blocks ("Client" kept for customer docs for continuity). */
@@ -3671,6 +3685,7 @@ function mmContractView(c, customerName) {
     createdAt: c.createdAt,
     signedAt: c.signedAt || null,
     signerName: c.signerName || '',
+    signerEmail: c.signerEmail || '',
     signerRole: mmNormalizeSignerRole(c.signerRole),
     signerRoleLabel: mmSignerRoleLabel(c.signerRole),
     signDate: c.signDate || '',
@@ -4799,6 +4814,72 @@ async function mmSendSignedCopyByEmail(contract, customerName, toEmail) {
       }
     ]
   });
+}
+
+function mmEliteOnboardingCopyEmail(firstName) {
+  const name = String(firstName || 'there').trim() || 'there';
+  const text = [
+    `Hi ${name},`,
+    '',
+    'Thank you for completing your onboarding agreement. Attached is a copy of your signed document for your records.',
+    '',
+    'Elite Cleaning Services will retain the agreement and associated signature records throughout your employment or engagement and for at least 12 months afterwards, with longer retention where reasonably necessary for legal compliance or contractual claims, as explained in the agreement.',
+    '',
+    'Please keep your copy and let us know if you have any difficulty opening the attachment.',
+    '',
+    'Please also remember that any confidentiality and client-protection obligations that continue after your work with us ends remain subject to the terms and time limits in your signed agreement.',
+    '',
+    'This email provides your copy and does not amend the agreement.',
+    '',
+    'Kind regards,',
+    'Petra Thomas',
+    'Elite Cleaning Services'
+  ].join('\n');
+  const html = [
+    `<p>Hi ${mmEscapeHtml(name)},</p>`,
+    '<p>Thank you for completing your onboarding agreement. Attached is a copy of your signed document for your records.</p>',
+    '<p>Elite Cleaning Services will retain the agreement and associated signature records throughout your employment or engagement and for at least 12 months afterwards, with longer retention where reasonably necessary for legal compliance or contractual claims, as explained in the agreement.</p>',
+    '<p>Please keep your copy and let us know if you have any difficulty opening the attachment.</p>',
+    '<p>Please also remember that any confidentiality and client-protection obligations that continue after your work with us ends remain subject to the terms and time limits in your signed agreement.</p>',
+    '<p>This email provides your copy and does not amend the agreement.</p>',
+    '<p>Kind regards,<br />Petra Thomas<br />Elite Cleaning Services</p>'
+  ].join('\n');
+  return {
+    subject: 'Elite Cleaning Onboarding contract - Signed Copy',
+    text,
+    html
+  };
+}
+
+async function mmSendSignerSignedCopy(contract, customer, toEmail) {
+  if (!emailTransporter) throw new Error('Email service is not configured');
+  if (!mmValidEmail(toEmail)) throw new Error('Valid email address is required');
+  if ((contract.status || 'pending') !== 'signed') throw new Error('Contract is not signed yet');
+  const customerName = customer?.name || 'Customer';
+  const pdf =
+    contract.signedPdfPath && fs.existsSync(contract.signedPdfPath)
+      ? fs.readFileSync(contract.signedPdfPath)
+      : mmBuildSignedContractPdf(contract, customerName);
+  const fromAddr = process.env.SMTP_USER || 'noreply@lab007.ai';
+  if (mmIsEliteOnboardingAgreement(contract, customer)) {
+    const mail = mmEliteOnboardingCopyEmail(mmFirstName(contract.signerName));
+    await emailTransporter.sendMail({
+      from: `"Elite Cleaning Services" <${fromAddr}>`,
+      to: toEmail,
+      subject: mail.subject,
+      text: mail.text,
+      html: mail.html,
+      attachments: [
+        {
+          filename: 'Elite_Cleaning_Onboarding_contract-Signed_Copy.pdf',
+          content: pdf,
+          contentType: 'application/pdf'
+        }
+      ]
+    });
+    return;
+  }
+  await mmSendSignedCopyByEmail(contract, customerName, toEmail);
 }
 
 function mmNewId(prefix) {
@@ -6141,6 +6222,7 @@ app.get('/api/marketing-manager/contracts/sign/:token', (req, res) => {
         status: contract.status || 'pending',
         customerName: customer?.name || 'Customer',
         signerName: contract.signerName || '',
+        signerEmail: contract.signerEmail || '',
         signerRole: mmNormalizeSignerRole(contract.signerRole),
         signerRoleLabel: mmSignerRoleLabel(contract.signerRole),
         signDate: contract.signDate || '',
@@ -6241,21 +6323,25 @@ app.post('/api/marketing-manager/contracts/sign/:token/email-copy', async (req, 
     } catch (regenError) {
       console.warn('[Marketing Manager] Could not refresh signed artifacts for email:', regenError.message);
     }
-    await mmSendSignedCopyByEmail(contract, customer?.name || 'Customer', toEmail);
+    await mmSendSignerSignedCopy(contract, customer, toEmail);
     return res.json({ success: true });
   } catch (error) {
     return res.status(500).json({ error: error.message });
   }
 });
 
-app.post('/api/marketing-manager/contracts/sign/:token', (req, res) => {
+app.post('/api/marketing-manager/contracts/sign/:token', async (req, res) => {
   try {
     const token = String(req.params.token || '').trim();
     if (!token) return res.status(400).json({ error: 'Invalid token' });
     const fullName = String(req.body?.fullName || '').trim();
+    const signerEmail = String(req.body?.email || req.body?.signerEmail || '')
+      .trim()
+      .toLowerCase();
     const signDate = String(req.body?.date || '').trim();
     const signatureDataUrl = String(req.body?.signatureDataUrl || '').trim();
     if (!fullName || fullName.length < 2) return res.status(400).json({ error: 'Full name is required' });
+    if (!mmValidEmail(signerEmail)) return res.status(400).json({ error: 'A valid email address is required' });
     if (!signDate) return res.status(400).json({ error: 'Date is required' });
     if (!mmValidSignatureDataUrl(signatureDataUrl)) {
       return res.status(400).json({ error: 'Signature is required' });
@@ -6267,6 +6353,7 @@ app.post('/api/marketing-manager/contracts/sign/:token', (req, res) => {
     if (contract.status === 'signed') return res.status(409).json({ error: 'Contract already signed' });
 
     contract.signerName = fullName;
+    contract.signerEmail = signerEmail;
     contract.signDate = signDate;
     contract.signatureDataUrl = signatureDataUrl;
     contract.status = 'signed';
@@ -6283,11 +6370,20 @@ app.post('/api/marketing-manager/contracts/sign/:token', (req, res) => {
     }
     mmCreateSignedArtifacts(contract, customer?.name || 'Customer');
     writeMarketingContracts(data);
+    let emailSent = false;
+    try {
+      await mmSendSignerSignedCopy(contract, customer, signerEmail);
+      emailSent = true;
+      contract.signerCopyEmailedAt = new Date().toISOString();
+      writeMarketingContracts(data);
+    } catch (emailErr) {
+      console.warn('[Marketing Manager] Signer copy email failed:', emailErr.message);
+    }
     mmNotifyContractSigned(contract, customer?.name || 'Customer').catch((notifyErr) => {
       console.warn('[Marketing Manager] Signed contract notification failed:', notifyErr.message);
     });
 
-    return res.json({ success: true, signedAt: contract.signedAt });
+    return res.json({ success: true, signedAt: contract.signedAt, emailSent });
   } catch (error) {
     const msg = String(error.message || 'Signing failed');
     if (/Could not stamp original PDF/i.test(msg)) {
