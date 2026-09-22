@@ -657,6 +657,11 @@
       pointer-events: auto;
       opacity: 1;
     }
+    body.admin-mode.readonly .admin-settings-field input,
+    body.admin-mode.readonly .admin-settings-field select {
+      pointer-events: auto;
+      opacity: 1;
+    }
     .onboard {
       width: min(920px, 100%);
       margin: 8px auto 0;
@@ -1620,8 +1625,8 @@
       gap: 10px 14px;
       align-items: center;
     }
-    .hours-table .hours-times-2 { display: none; }
-    .hours-table tr.is-split:not(.is-closed) .hours-times-2 { display: grid; }
+    .hours-table .hours-times.hours-times-2 { display: none; }
+    .hours-table tr.is-split:not(.is-closed) .hours-times.hours-times-2 { display: grid; }
     .hours-table .time-dash { color: var(--muted); font-weight: 700; }
     .hours-table .hours-times .time-label {
       font-size: 1.15rem;
@@ -1865,6 +1870,50 @@
       grid-column: 2;
       grid-row: 2;
     }
+    /* Portrait on a laptop: tools on the left so the tall canvas can use the height. */
+    .design-layout.canvas-portrait {
+      grid-template-columns: 220px 118px minmax(0, 1fr);
+      grid-template-rows: minmax(0, 1fr);
+    }
+    .design-layout.canvas-portrait > .controls {
+      grid-column: 1;
+      grid-row: 1;
+    }
+    .design-layout.canvas-portrait > .canvas-tools {
+      grid-column: 2;
+      grid-row: 1;
+      align-content: start;
+      overflow: auto;
+      padding: 10px 8px;
+    }
+    .design-layout.canvas-portrait > .design-canvas-col {
+      grid-column: 3;
+      grid-row: 1;
+    }
+    .design-layout.canvas-portrait .canvas-tools .elements-grid {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+    .design-layout.canvas-portrait .el-add-btn {
+      min-height: 52px;
+      padding: 6px 4px 5px;
+      font-size: .64rem;
+      gap: 4px;
+      white-space: normal;
+    }
+    .design-layout.canvas-portrait .el-add-btn svg {
+      width: 18px;
+      height: 18px;
+    }
+    .design-layout.canvas-portrait .canvas-tools-footer {
+      flex-direction: column;
+      flex-wrap: nowrap;
+    }
+    .design-layout.canvas-portrait .canvas-tools-footer > button {
+      width: 100%;
+      min-height: 40px;
+      font-size: .72rem;
+    }
     @media (max-width: 900px) {
       .design-layout {
         grid-template-columns: minmax(0, 1fr);
@@ -1883,6 +1932,36 @@
       .design-layout > .controls {
         grid-column: 1;
         grid-row: 3;
+      }
+      .design-layout.canvas-portrait {
+        grid-template-columns: minmax(0, 1fr);
+        grid-template-rows: auto;
+      }
+      .design-layout.canvas-portrait > .design-canvas-col {
+        grid-column: 1;
+        grid-row: 1;
+      }
+      .design-layout.canvas-portrait > .canvas-tools {
+        grid-column: 1;
+        grid-row: 2;
+        overflow: visible;
+        padding: 12px;
+      }
+      .design-layout.canvas-portrait > .controls {
+        grid-column: 1;
+        grid-row: 3;
+      }
+      .design-layout.canvas-portrait .canvas-tools .elements-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+      .design-layout.canvas-portrait .el-add-btn {
+        min-height: 72px;
+        padding: 10px 6px 8px;
+        font-size: .72rem;
+      }
+      .design-layout.canvas-portrait .canvas-tools-footer {
+        flex-direction: row;
+        flex-wrap: wrap;
       }
     }
     .design-canvas-col {
@@ -1951,6 +2030,7 @@
     .el-add-btn svg [fill="currentColor"] { fill: currentColor; }
     @media (max-width: 1100px) {
       .canvas-tools .elements-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+      .design-layout.canvas-portrait .canvas-tools .elements-grid { grid-template-columns: 1fr; }
     }
     @media (max-width: 720px) {
       .canvas-tools .elements-grid {
@@ -2084,7 +2164,7 @@
     .tablet-scale-wrap {
       position: relative;
       flex: 0 0 auto;
-      overflow: visible;
+      overflow: hidden;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -2103,8 +2183,8 @@
       flex-shrink: 0;
       width: 800px;
       height: 480px;
-      /* Allow dragging elements slightly outside the screen for alignment */
-      overflow: visible;
+      overflow: hidden;
+      contain: paint;
       border-radius: 0;
       background: #ffffff;
       transform-origin: center center;
@@ -2788,6 +2868,8 @@
         max-width: none;
         align-items: center;
       }
+      .hours-table .hours-times.hours-times-2 { display: none; }
+      .hours-table tr.is-split:not(.is-closed) .hours-times.hours-times-2 { display: grid; }
       .hours-table .time-dash { color: var(--muted); font-weight: 700; }
       .hours-table input[type="time"] {
         font-size: .88rem;
@@ -3107,7 +3189,8 @@
         overflow: visible !important;
         max-width: 100%;
       }
-      .design-layout {
+      .design-layout,
+      .design-layout.canvas-portrait {
         display: grid !important;
         grid-template-columns: minmax(0, 1fr);
         grid-template-rows: auto;
@@ -3118,21 +3201,24 @@
         min-height: 0;
         max-width: 100%;
       }
-      .design-layout > .design-canvas-col {
+      .design-layout > .design-canvas-col,
+      .design-layout.canvas-portrait > .design-canvas-col {
         grid-column: 1;
         grid-row: 1;
         min-height: 0;
         overflow: hidden;
         max-width: 100%;
       }
-      .design-layout > .canvas-tools {
+      .design-layout > .canvas-tools,
+      .design-layout.canvas-portrait > .canvas-tools {
         grid-column: 1;
         grid-row: 2;
         overflow: visible;
         padding: 8px;
         gap: 6px;
       }
-      .design-layout > .controls {
+      .design-layout > .controls,
+      .design-layout.canvas-portrait > .controls {
         grid-column: 1;
         grid-row: 3;
         max-height: none;
@@ -4288,7 +4374,7 @@
                   </div>
                   <div class="add-row">
                     <button type="button" class="btn-secondary" id="designSetLiveBtn" title="Show this design on the live display">Set Live</button>
-                    <button type="button" class="btn-secondary" id="designNewBtn" title="Copy current design into a new slot (max 5)">+ New</button>
+                    <button type="button" class="btn-secondary" id="designNewBtn" title="Add a blank canvas (max 5)">+ New</button>
                     <button type="button" class="btn-danger" id="designDeleteBtn" title="Delete this design slot">Delete</button>
                   </div>
                 </div>
@@ -4632,7 +4718,27 @@
                   <option value="on" selected>On</option>
                   <option value="off">Off</option>
                 </select>
-                <p class="field-hint">Overnight: sleeps 2 hours after close, wakes 2 hours before open. Also wakes at opening and at closing so OPEN/CLOSED flips on time.</p>
+                <p class="field-hint" id="fieldDeepSleepHint">Overnight: sleeps 2 hours after close, wakes 2 hours before open. Also wakes at opening and at closing so OPEN/CLOSED flips on time.</p>
+              </div>
+              <div class="admin-only admin-settings-field">
+                <label for="deepSleepBeforeOpenHours">Check in before open (all displays)</label>
+                <div class="field-with-icon">
+                  <input id="deepSleepBeforeOpenHours" type="number" min="0" max="12" step="0.5" value="2" title="Hours before opening that every display still checks in before overnight deep sleep.">
+                  <span class="field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  </span>
+                </div>
+                <p class="field-hint">Hours before opening that all displays wake and keep checking in. Default 2. Applies to every device.</p>
+              </div>
+              <div class="admin-only admin-settings-field">
+                <label for="deepSleepAfterCloseHours">Check in after close (all displays)</label>
+                <div class="field-with-icon">
+                  <input id="deepSleepAfterCloseHours" type="number" min="0" max="12" step="0.5" value="2" title="Hours after closing that every display still checks in before overnight deep sleep.">
+                  <span class="field-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                  </span>
+                </div>
+                <p class="field-hint">Hours after closing that all displays still check in before deep sleep. Default 2. Applies to every device.</p>
               </div>
               <div class="device-battery-field">
                 <label for="fieldLowBatteryAlert">Low Battery Alert</label>
@@ -4952,11 +5058,12 @@
       let selectedId = null;
       let selectedElId = null;
       let editingDesignId = null;
+      let saveAsSource = null;
       let editingTextId = null;
       let logoDataUrl = null;
       const MAX_DESIGNS = 5;
-      const GRID_SIZE = 40;
-      const SNAP_EDGE = 28;
+      const GRID_SIZE = 8;
+      const SNAP_EDGE = 10;
       let canvasPreviewScale = 1;
       let canvasPreviewRotation = 0;
       let dragState = null;
@@ -4964,7 +5071,7 @@
       let sketchPad = { open: false, elId: null, drawing: false, lastX: 0, lastY: 0, cssW: 0, cssH: 0 };
       let suppressPropsSync = false;
       let syncingScreenFields = false;
-      let settings = { autoSyncIntervalHours: 24 };
+      let settings = { autoSyncIntervalHours: 24, deepSleepBeforeOpenHours: 2, deepSleepAfterCloseHours: 2 };
       let templateLibrary = { categories: [], templates: [] };
       let symbolLibrary = [
         { id: 'hanger', name: 'Hanger', url: '/SmartHours/assets/symbols/hanger.png?v=3' },
@@ -5000,7 +5107,7 @@
         { id: 'key', name: 'Key', url: '/SmartHours/assets/symbols/key.png?v=3' },
         { id: 'chef-hat', name: 'Chef hat', url: '/SmartHours/assets/symbols/chef-hat.png?v=3' }
       ];
-      let pickerState = { purpose: 'image', categoryId: '', orientation: 'portrait' };
+      let pickerState = { purpose: 'image', categoryId: '', orientation: 'portrait', replaceSelected: false };
       let adminTplOrientFilter = '';
       let suppressAutosave = 0;
       let autosaveTimer = null;
@@ -5175,6 +5282,10 @@
         TABLET.height = Math.max(120, Math.min(2500, Number(height) || 480));
         tabletFrame.style.width = TABLET.width + 'px';
         tabletFrame.style.height = TABLET.height + 'px';
+        const portrait = TABLET.height > TABLET.width;
+        document.body.classList.toggle('canvas-portrait', portrait);
+        const layout = document.querySelector('.design-layout');
+        if (layout) layout.classList.toggle('canvas-portrait', portrait);
         scaleTablet();
       }
 
@@ -5789,7 +5900,7 @@
 
       function snapScalar(value, size, max) {
         const grid = GRID_SIZE;
-        const edge = SNAP_EDGE;
+        const edge = Math.min(3, Math.floor(grid / 2));
         let v = Math.round(value);
         const candidates = [0, max];
         for (let g = grid; g < max; g += grid) candidates.push(g);
@@ -5942,6 +6053,7 @@
 
         tabletFrame.style.width = TABLET.width + 'px';
         tabletFrame.style.height = TABLET.height + 'px';
+        tabletFrame.style.overflow = 'hidden';
         tabletFrame.style.margin = '0';
         if (phone) {
           tabletFrame.style.position = 'absolute';
@@ -5961,7 +6073,7 @@
           wrap.style.width = scaledW + 'px';
           wrap.style.maxWidth = '100%';
           wrap.style.height = scaledH + 'px';
-          wrap.style.overflow = phone ? 'hidden' : '';
+          wrap.style.overflow = 'hidden';
           const bg = (tabletFrame.style.background || '#ffffff').trim() || '#ffffff';
           wrap.style.background = bg;
         }
@@ -6190,22 +6302,38 @@
         return cust.designs.find((d) => d.id === editingDesignId) || cust.designs[0] || null;
       }
 
-      function flushEditorToDesignSlot() {
+      function snapshotEditorDesign(c) {
+        const cust = c || selected();
+        const design = readDesignFromForm((cust && cust.design) || defaultDesign());
+        if (cust && cust.design && Array.isArray(cust.design.layout)) design.layout = cust.design.layout;
+        if (cust && cust.design && cust.design.logoUrl && !logoDataUrl) design.logoUrl = cust.design.logoUrl;
+        delete design._legacyShowApplied;
+        return cloneDesignData(design);
+      }
+
+      function flushEditorToDesignSlot(options) {
+        const opts = options || {};
         const c = selected();
         if (!c) return;
         ensureCustomerDesigns(c);
         const slot = editingDesignSlot(c);
         if (!slot) return;
-        const design = readDesignFromForm(c.design || defaultDesign());
-        if (c.design && Array.isArray(c.design.layout)) design.layout = c.design.layout;
-        if (c.design && c.design.logoUrl && !logoDataUrl) design.logoUrl = c.design.logoUrl;
-        delete design._legacyShowApplied;
-        const nameEl = document.getElementById('designSlotName');
-        const name = (nameEl && nameEl.value.trim()) || slot.name || 'Design';
-        slot.name = name.slice(0, 40);
+        const design = snapshotEditorDesign(c);
+        if (!opts.preserveName) {
+          const nameEl = document.getElementById('designSlotName');
+          const name = (nameEl && nameEl.value.trim()) || slot.name || 'Design';
+          slot.name = name.slice(0, 40);
+        }
         slot.design = design;
         slot.updatedAt = new Date().toISOString();
-        c.design = design;
+        c.design = cloneDesignData(design);
+      }
+
+      function rememberSaveAsSource() {
+        const slot = editingDesignSlot(selected());
+        saveAsSource = slot
+          ? { id: slot.id, name: String(slot.name || 'Design') }
+          : null;
       }
 
       function loadDesignSlotIntoEditor(slotId) {
@@ -6383,6 +6511,21 @@
         if (had) renderCanvas();
       }
 
+      function nextImagePlacement(layout, extras) {
+        const src = extras || {};
+        if (src.x != null || src.y != null || src.w != null || src.h != null) return {};
+        const count = (layout || []).filter((e) => e && e.type === 'image').length;
+        if (!count) return {};
+        const pad = Math.min(48 + ((count - 1) % 5) * 28, Math.max(24, TABLET.width - 200));
+        return {
+          x: pad,
+          y: pad,
+          w: Math.max(160, Math.round(TABLET.width * 0.52)),
+          h: Math.max(140, Math.round(TABLET.height * 0.38)),
+          fit: src.fit || 'cover'
+        };
+      }
+
       function addLayoutElement(type, extras) {
         const c = selected();
         if (!c) return;
@@ -6401,7 +6544,12 @@
             return;
           }
         }
-        const el = Object.assign(defaultSlot(type), extras || {});
+        const extra = extras || {};
+        const el = Object.assign(
+          defaultSlot(type),
+          type === 'image' ? nextImagePlacement(layout, extra) : {},
+          extra
+        );
         if (type === 'image' && !el.mediaId) {
           const first = (c.media || [])[0];
           if (first) el.mediaId = first.id;
@@ -6714,20 +6862,26 @@
         scheduleAutosave(200);
       }
 
-      function openImagePicker(purpose) {
+      function openImagePicker(purpose, options) {
+        const opts = options || {};
         pickerState.purpose = purpose || 'image';
         pickerState.categoryId = '';
         pickerState.orientation = currentScreenOrientation();
+        pickerState.replaceSelected = purpose !== 'status-pair' && Boolean(opts.replaceSelected);
         const modal = document.getElementById('imagePicker');
         const title = document.getElementById('imagePickerTitle');
         const hint = document.getElementById('imagePickerHint');
         if (purpose === 'status-pair') {
           title.textContent = 'Open / closed templates';
           hint.textContent = 'Choose a paired open and closed image, or pick two singles.';
+        } else if (pickerState.replaceSelected) {
+          title.textContent = 'Replace image';
+          hint.textContent = 'This replaces the selected image. To add another, use Add Elements → Image.';
         } else {
-          title.textContent = 'Choose image';
-          hint.textContent = 'Matching ' + pickerState.orientation + ' templates for this screen. Switch filters if you need the other orientation.';
+          title.textContent = 'Add image';
+          hint.textContent = 'Adds another image to the canvas. Matching ' + pickerState.orientation + ' templates for this screen.';
         }
+        if (modal) modal.dataset.replaceSelected = pickerState.replaceSelected ? '1' : '0';
         setPickerTab('templates');
         renderPicker();
         modal.classList.add('open');
@@ -6887,13 +7041,13 @@
       function applyCanvasTemplate(templateId) {
         const c = selected();
         if (!c) return;
-        let el = selectedLayoutEl();
-        if (!el || el.type !== 'image') {
-          addLayoutElement('image', { mediaId: templateId });
-        } else {
+        const el = selectedLayoutEl();
+        if (pickerState.replaceSelected && el && el.type === 'image') {
           el.mediaId = templateId;
           renderCanvas();
           scheduleAutosave(200);
+        } else {
+          addLayoutElement('image', { mediaId: templateId });
         }
         closeImagePicker();
       }
@@ -7478,6 +7632,7 @@
         if (lowBattEl) lowBattEl.value = customer.lowBatteryAlert !== false ? 'on' : 'off';
         const deepSleepEl = document.getElementById('fieldDeepSleep');
         if (deepSleepEl) deepSleepEl.value = customer.deepSleep !== false ? 'on' : 'off';
+        fillDeepSleepPadFields();
         renderSlideshowList(customer);
         renderDesignSlotsUi();
         logoDataUrl = null;
@@ -7546,6 +7701,7 @@
         settings = data.settings || settings;
         const autoEl = document.getElementById('autoSyncHours');
         if (autoEl) autoEl.value = String(settings.autoSyncIntervalHours ?? 24);
+        fillDeepSleepPadFields();
         if (!selectedId && customers.length) selectedId = customers[0].id;
         renderList();
         if (selectedId) {
@@ -8327,6 +8483,53 @@
         setStatus('');
       }
 
+      function fillDeepSleepPadFields() {
+        const beforeEl = document.getElementById('deepSleepBeforeOpenHours');
+        const afterEl = document.getElementById('deepSleepAfterCloseHours');
+        const before = settings.deepSleepBeforeOpenHours ?? 2;
+        const after = settings.deepSleepAfterCloseHours ?? 2;
+        if (beforeEl) beforeEl.value = String(before);
+        if (afterEl) afterEl.value = String(after);
+        const hint = document.getElementById('fieldDeepSleepHint');
+        if (hint) {
+          const beforeLabel = before === 1 ? '1 hour' : `${before} hours`;
+          const afterLabel = after === 1 ? '1 hour' : `${after} hours`;
+          hint.textContent =
+            `Overnight: sleeps ${afterLabel} after close, wakes ${beforeLabel} before open. Also wakes at opening and at closing so OPEN/CLOSED flips on time.`;
+        }
+      }
+
+      async function saveDeepSleepPads() {
+        if (!IS_ADMIN) return;
+        const beforeEl = document.getElementById('deepSleepBeforeOpenHours');
+        const afterEl = document.getElementById('deepSleepAfterCloseHours');
+        const before = Number(beforeEl && beforeEl.value);
+        const after = Number(afterEl && afterEl.value);
+        if (!Number.isFinite(before) || !Number.isFinite(after)) {
+          fillDeepSleepPadFields();
+          throw new Error('Enter hours between 0 and 12.');
+        }
+        if (
+          before === (settings.deepSleepBeforeOpenHours ?? 2) &&
+          after === (settings.deepSleepAfterCloseHours ?? 2)
+        ) {
+          return;
+        }
+        const res = await apiFetch('/api/smarthours/settings', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            deepSleepBeforeOpenHours: before,
+            deepSleepAfterCloseHours: after
+          })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not save deep sleep windows');
+        settings = data.settings || settings;
+        fillDeepSleepPadFields();
+        setStatus('Deep sleep windows saved for all displays.');
+      }
+
       async function saveCustomer(options) {
         const opts = options || {};
         const payload = collectPayload();
@@ -8518,6 +8721,7 @@
           .then((c) => {
             if (!c) return;
             renderDesignSlotsUi();
+            setStatus('Saved “' + ((editingDesignSlot(c) && editingDesignSlot(c).name) || 'Design') + '”.');
           })
           .catch((err) => setStatus(err.message, true))
           .finally(() => setBusy(btn, false));
@@ -8530,40 +8734,63 @@
           setStatus('Maximum of 5 designs. Delete one to add another.', true);
           return;
         }
+        if (!saveAsSource) rememberSaveAsSource();
+        const sourceId = (saveAsSource && saveAsSource.id) || (editingDesignSlot(c) && editingDesignSlot(c).id);
+        const sourceName = (saveAsSource && saveAsSource.name) || (editingDesignSlot(c) && editingDesignSlot(c).name) || 'Design';
+        clearTimeout(autosaveTimer);
+        autosaveTimer = null;
+        suppressAutosave += 1;
+        const copied = snapshotEditorDesign(c);
         const suggested = nextDesignName(c.designs);
-        const typed = window.prompt('Name this canvas', suggested);
-        if (typed == null) return;
+        const typed = window.prompt('Save this canvas as a new name', suggested);
+        if (typed == null) {
+          saveAsSource = null;
+          suppressAutosave = Math.max(0, suppressAutosave - 1);
+          return;
+        }
         const name = typed.trim().slice(0, 40) || suggested;
-        const design = readDesignFromForm(c.design || defaultDesign());
-        if (c.design && Array.isArray(c.design.layout)) design.layout = c.design.layout;
-        if (c.design && c.design.logoUrl && !logoDataUrl) design.logoUrl = c.design.logoUrl;
-        delete design._legacyShowApplied;
+        const sourceSlot = sourceId ? c.designs.find((d) => d.id === sourceId) : null;
+        if (sourceSlot && sourceName) sourceSlot.name = sourceName;
         const slot = {
           id: newDesignSlotId(),
           name,
-          design: cloneDesignData(design),
+          design: copied,
           updatedAt: new Date().toISOString()
         };
         c.designs.push(slot);
         editingDesignId = slot.id;
-        c.design = cloneDesignData(slot.design);
+        c.design = cloneDesignData(copied);
+        selectedElId = null;
         const nameEl = document.getElementById('designSlotName');
         if (nameEl) nameEl.value = slot.name;
-        selectedElId = null;
+        writeDesignToForm(c.design);
         renderDesignSlotsUi();
         renderCanvas();
+        saveAsSource = null;
         const btn = document.getElementById('saveDesignAsBtn');
         setBusy(btn, true, 'Saving…');
         saveCustomer()
           .then((saved) => {
             if (!saved) return;
-            renderDesignSlotsUi();
+            if (sourceId) {
+              const original = (saved.designs || []).find((d) => d.id === sourceId);
+              if (original && sourceName) original.name = sourceName;
+            }
+            loadDesignSlotIntoEditor(slot.id);
+            setStatus('Saved as “' + slot.name + '”. “' + (sourceName || 'Design') + '” was left unchanged.');
           })
           .catch((err) => setStatus(err.message, true))
-          .finally(() => setBusy(btn, false));
+          .finally(() => {
+            suppressAutosave = Math.max(0, suppressAutosave - 1);
+            setBusy(btn, false);
+          });
       }
       document.getElementById('saveDesignBtn').addEventListener('click', saveDesignNow);
+      document.getElementById('saveDesignAsBtn').addEventListener('pointerdown', rememberSaveAsSource);
       document.getElementById('saveDesignAsBtn').addEventListener('click', saveDesignAs);
+      document.querySelectorAll('[data-trigger="saveDesignAsBtn"]').forEach((btn) => {
+        btn.addEventListener('pointerdown', rememberSaveAsSource);
+      });
       document.getElementById('designSlotSelect').addEventListener('change', () => {
         const nextId = document.getElementById('designSlotSelect').value;
         if (!nextId || nextId === editingDesignId) return;
@@ -8662,6 +8889,16 @@
           });
         });
       }
+      ['deepSleepBeforeOpenHours', 'deepSleepAfterCloseHours'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        el.addEventListener('change', () => {
+          saveDeepSleepPads().catch((err) => {
+            fillDeepSleepPadFields();
+            setStatus(err.message, true);
+          });
+        });
+      });
 
       document.getElementById('deleteBtn').addEventListener('click', async () => {
         const c = selected();
@@ -9273,7 +9510,7 @@
         });
       });
       renderPaletteSwatches();
-      applyTabletSize(800, 480);
+      applyDesignCanvasFromForm();
 
       // Keep canvas OPEN/CLOSED badge in sync with the clock
       setInterval(() => {
@@ -9332,14 +9569,12 @@
         const { dx, dy } = screenDeltaToDesign(screenDx, screenDy);
         if (Math.abs(dx) > 2 || Math.abs(dy) > 2) dragState.moved = true;
         if (dragState.mode === 'move') {
-          // Allow placing partly outside the tablet so image content can be lined up to edges
+          // Pixel-accurate while dragging; snap lightly on release.
           el.x = Math.round(dragState.startLeft + dx);
           el.y = Math.round(dragState.startTop + dy);
-          snapMove(el);
         } else {
           el.w = Math.max(20, Math.round(dragState.startW + dx));
           el.h = Math.max(16, Math.round(dragState.startH + dy));
-          snapResize(el);
         }
         renderCanvas();
       }, { passive: false });
@@ -9607,7 +9842,7 @@
       const pickerClose = document.getElementById('imagePickerClose');
       if (pickerClose) pickerClose.addEventListener('click', () => closeImagePicker());
       const pickImageBtn = document.getElementById('pickImageBtn');
-      if (pickImageBtn) pickImageBtn.addEventListener('click', () => openImagePicker('image'));
+      if (pickImageBtn) pickImageBtn.addEventListener('click', () => openImagePicker('image', { replaceSelected: true }));
       const pickSymbolBtn = document.getElementById('pickSymbolBtn');
       if (pickSymbolBtn) pickSymbolBtn.addEventListener('click', () => openSymbolPicker('replace'));
       const symbolPickerClose = document.getElementById('symbolPickerClose');
@@ -9637,7 +9872,7 @@
             }).catch((err) => setStatus(err.message, true));
             return;
           }
-          uploadCanvasImageFile(file, { replaceSelected: true }).then(() => closeImagePicker()).catch((err) => setStatus(err.message, true));
+          uploadCanvasImageFile(file, { replaceSelected: pickerState.replaceSelected }).then(() => closeImagePicker()).catch((err) => setStatus(err.message, true));
         });
       }
       const pickerCamera = document.getElementById('pickerCameraFile');
@@ -9660,7 +9895,7 @@
             }).catch((err) => setStatus(err.message, true));
             return;
           }
-          uploadCanvasImageFile(file, { replaceSelected: true })
+          uploadCanvasImageFile(file, { replaceSelected: pickerState.replaceSelected })
             .then(() => closeImagePicker())
             .catch((err) => setStatus(err.message, true));
         });
