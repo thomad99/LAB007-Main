@@ -296,11 +296,17 @@ function createTodoRow(item, savedState) {
   const detailsCell = document.createElement('td');
   detailsCell.colSpan = 5;
   
+  const moreLink =
+    '<p class="todo-more-wrap"><a class="todo-more-link" href="todo-guide.html?id=' +
+    encodeURIComponent(item.id) +
+    '">More...</a></p>';
+
   // Special handling for Horizon Client - add command line builder tool
   if (item.id === 'horizon-client') {
     detailsCell.innerHTML =
       '<div class="todo-details-box">' +
       `<p>${item.details}</p>` +
+      moreLink +
       '<div id="horizon-command-builder" style="margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">' +
       '<h3 style="margin-top: 0; color: #2d3561; font-size: 1.2rem; margin-bottom: 15px;">Horizon Client Command Line Builder</h3>' +
       '<div id="horizon-builder-form"></div>' +
@@ -314,6 +320,7 @@ function createTodoRow(item, savedState) {
     detailsCell.innerHTML =
       '<div class="todo-details-box">' +
       `<p>${item.details}</p>` +
+      moreLink +
       '<div id="horizon-agent-command-builder" style="margin-top: 20px; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #dee2e6;">' +
       '<h3 style="margin-top: 0; color: #2d3561; font-size: 1.2rem; margin-bottom: 15px;">Horizon Agent Command Line Builder</h3>' +
       '<div id="horizon-agent-builder-form"></div>' +
@@ -327,6 +334,7 @@ function createTodoRow(item, savedState) {
     detailsCell.innerHTML =
       '<div class="todo-details-box">' +
       `<p>${item.details}</p>` +
+      moreLink +
       '</div>';
   }
   

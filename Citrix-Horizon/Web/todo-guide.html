@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-SDLJQHH25Q"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-SDLJQHH25Q');
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LAB007 Horizon Design Guide</title>
+    <link rel="icon" type="image/png" href="images/lab007%20Icon.PNG">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <img src="images/LAB007-LOGO-TRANS.png" alt="Lab007 Logo" class="logo">
+                <div class="header-title">
+                    <p class="header-subtitle" style="font-size: 1.5rem; margin: 0;">Horizon Design Guide</p>
+                </div>
+            </div>
+            <div class="refresh-controls">
+                <a href="todo.html" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Back to Build</a>
+                <a href="index.html" class="btn btn-secondary" style="text-decoration: none; display: inline-block;">Dashboard</a>
+            </div>
+        </header>
+
+        <div class="guide-layout">
+            <nav class="guide-nav" id="guideNav" aria-label="Design topics"></nav>
+            <article class="guide-article" id="guideArticle">
+                <p>Loading guide…</p>
+            </article>
+        </div>
+    </div>
+
+    <script src="todo-guides.js"></script>
+    <script>
+      document.addEventListener('DOMContentLoaded', function () {
+        const id = new URLSearchParams(window.location.search).get('id') || '';
+        if (typeof renderTodoGuide === 'function') {
+          renderTodoGuide(id);
+        }
+      });
+    </script>
+</body>
+</html>
