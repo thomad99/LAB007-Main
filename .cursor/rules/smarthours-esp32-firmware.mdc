@@ -1,0 +1,18 @@
+---
+description: SmartHours ESP32 firmware lives in the Arduino sketch folder, not this website repo.
+alwaysApply: true
+---
+
+# SmartHours ESP32 firmware location
+
+Production ESP32 firmware (the files that get flashed) is:
+
+`C:\Users\tomo\Documents\AI\22.SmartHours-ESP32\SmartHours_ESP32`
+
+Open `SmartHours_ESP32.ino` in Arduino IDE from that folder.
+
+When the user asks to change SmartHours ESP32 behavior — buttons, setup hotspot page, firmware version, deep sleep, WiFi join, check-in, e-ink panel, Spectra 6 — **edit that sketch**, not `lib/smarthoursEink.js`.
+
+`lib/smarthoursEink.js` in this LAB007 repo is website/server only: BMP/PNG render, `eink.json`, public `/api/smarthours/public/esp32/setup.html`, and an optional generated `.ino` download. It is **not** what the 7.3" Spectra 6 units run.
+
+Firmware version the admin page shows comes from `FW_VERSION` in `config.h` of that Arduino project, after the board is flashed and checks in.
