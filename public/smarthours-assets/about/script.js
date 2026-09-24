@@ -1,51 +1,117 @@
-const asset = '/SmartHours/assets/about/';
-const themes = {
-  autumn: {
-    src: asset + 'theme-autumn.webp',
-    alt: 'Autumn background with warm leaves and space for opening hours',
-    title: 'Autumn / warm & welcoming'
-  },
-  christmas: {
-    src: asset + 'theme-christmas.webp',
-    alt: 'Christmas opening-hours artwork with a tree, snowman and festive border',
-    title: 'Christmas / a festive welcome'
-  },
-  barber: {
-    src: asset + 'theme-barber.webp',
-    alt: 'Portrait barber shop background with a barber pole and space for opening hours',
-    title: 'Barber shop / made for your business'
-  },
-  neon: {
-    src: asset + 'theme-neon.webp',
-    alt: 'Autumn opening-hours artwork with a neon-style design',
-    title: 'Neon style / a bold seasonal look'
+(function () {
+  const track = document.getElementById('themeTrack');
+  const prev = document.querySelector('.theme-nav.prev');
+  const next = document.querySelector('.theme-nav.next');
+  const dotsWrap = document.getElementById('themeDots');
+  const status = document.getElementById('themeStatus');
+  if (!track || !prev || !next || !dotsWrap) return;
+
+  const slides = [...track.querySelectorAll('.theme-slide')];
+  let index = 0;
+  let drag = null;
+
+  slides.forEach((slide, i) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'theme-dot';
+    button.setAttribute('role', 'tab');
+    const name = slide.querySelector('figcaption strong');
+    button.setAttribute('aria-label', name ? name.textContent : 'Theme ' + (i + 1));
+    button.addEventListener('click', () => go(i));
+    dotsWrap.appendChild(button);
+  });
+  const dots = [...dotsWrap.children];
+
+  function go(i, smooth = true) {
+    index = (i + slides.length) % slides.length;
+    const slide = slides[index];
+    const trackRect = track.getBoundingClientRect();
+    const slideRect = slide.getBoundingClientRect();
+    const left = track.scrollLeft + (slideRect.left - trackRect.left) + slideRect.width / 2 - track.clientWidth / 2;
+    track.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
+    update();
   }
-};
-const tabs = [...document.querySelectorAll('[role="tab"]')];
-function selectTheme(tab, focus = false) {
-  const theme = themes[tab.dataset.theme];
-  tabs.forEach((item) => {
-    const active = item === tab;
-    item.setAttribute('aria-selected', String(active));
-    item.tabIndex = active ? 0 : -1;
+
+  function nearest() {
+    const mid = track.scrollLeft + track.clientWidth / 2;
+    let best = 0;
+    let dist = Infinity;
+    slides.forEach((slide, i) => {
+      const center = slide.offsetLeft + slide.offsetWidth / 2;
+      const d = Math.abs(center - mid);
+      if (d < dist) {
+        dist = d;
+        best = i;
+      }
+    });
+    index = best;
+    update();
+  }
+
+  function update() {
+    dots.forEach((dot, i) => {
+      const active = i === index;
+      if (active) dot.setAttribute('aria-current', 'true');
+      else dot.removeAttribute('aria-current');
+      dot.tabIndex = active ? 0 : -1;
+    });
+    const name = slides[index].querySelector('figcaption strong');
+    if (status && name) {
+      status.textContent = name.textContent + ' · ' + (index + 1) + ' of ' + slides.length;
+    }
+  }
+
+  prev.addEventListener('click', () => go(index - 1));
+  next.addEventListener('click', () => go(index + 1));
+
+  track.addEventListener('scroll', () => {
+    window.clearTimeout(track._snapTimer);
+    track._snapTimer = window.setTimeout(nearest, 90);
+  }, { passive: true });
+
+  track.addEventListener('keydown', (event) => {
+    if (event.key === 'ArrowRight') {
+      event.preventDefault();
+      go(index + 1);
+    } else if (event.key === 'ArrowLeft') {
+      event.preventDefault();
+      go(index - 1);
+    } else if (event.key === 'Home') {
+      event.preventDefault();
+      go(0);
+    } else if (event.key === 'End') {
+      event.preventDefault();
+      go(slides.length - 1);
+    }
   });
-  const image = document.getElementById('theme-image');
-  image.src = theme.src;
-  image.alt = theme.alt;
-  document.getElementById('theme-title').textContent = theme.title;
-  document.getElementById('theme-panel').setAttribute('aria-labelledby', tab.id);
-  if (focus) tab.focus();
-}
-tabs.forEach((tab, index) => {
-  tab.addEventListener('click', () => selectTheme(tab));
-  tab.addEventListener('keydown', (event) => {
-    let next = index;
-    if (['ArrowDown', 'ArrowRight'].includes(event.key)) next = (index + 1) % tabs.length;
-    else if (['ArrowUp', 'ArrowLeft'].includes(event.key)) next = (index + tabs.length - 1) % tabs.length;
-    else if (event.key === 'Home') next = 0;
-    else if (event.key === 'End') next = tabs.length - 1;
-    else return;
-    event.preventDefault();
-    selectTheme(tabs[next], true);
+
+  track.addEventListener('pointerdown', (event) => {
+    if (event.pointerType !== 'mouse' || event.button !== 0) return;
+    drag = {
+      id: event.pointerId,
+      x: event.clientX,
+      scroll: track.scrollLeft
+    };
+    track.classList.add('is-dragging');
+    track.setPointerCapture(event.pointerId);
   });
-});
+
+  track.addEventListener('pointermove', (event) => {
+    if (!drag || event.pointerId !== drag.id) return;
+    track.scrollLeft = drag.scroll - (event.clientX - drag.x);
+  });
+
+  function endDrag(event) {
+    if (!drag || event.pointerId !== drag.id) return;
+    const dx = event.clientX - drag.x;
+    drag = null;
+    track.classList.remove('is-dragging');
+    if (Math.abs(dx) > 40) go(index + (dx < 0 ? 1 : -1));
+    else nearest();
+  }
+
+  track.addEventListener('pointerup', endDrag);
+  track.addEventListener('pointercancel', endDrag);
+
+  update();
+})();

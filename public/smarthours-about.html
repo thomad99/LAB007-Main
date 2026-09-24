@@ -83,7 +83,7 @@
     ]
   }
   </script>
-  <link rel="stylesheet" href="/SmartHours/assets/about/style.css?v=1">
+  <link rel="stylesheet" href="/SmartHours/assets/about/style.css?v=5">
 </head>
 <body>
   <header class="header">
@@ -124,16 +124,22 @@
     </section>
     <div class="facts">
       <div class="container fact-grid">
-        <div><span class="fact-symbol" aria-hidden="true">01</span><p><strong>Black or white</strong><span>A frame to suit your space</span></p></div>
-        <div><span class="fact-symbol" aria-hidden="true">02</span><p><strong>Mount or hang</strong><span>Magnets or a clip-on chain</span></p></div>
-        <div><span class="fact-symbol" aria-hidden="true">03</span><p><strong>7″ or 13″ screen</strong><span>Two sizes to suit your space</span></p></div>
-        <div><span class="fact-symbol" aria-hidden="true">04</span><p><strong>3 months</strong><span>Battery life between charges</span></p></div>
+        <div><span class="fact-symbol" aria-hidden="true">01</span><p><strong>3 month battery</strong><span>No power cable on display</span></p></div>
+        <div><span class="fact-symbol" aria-hidden="true">02</span><p><strong>Mount or Hang</strong><span>Magnets or a clip-on chain</span></p></div>
+        <div><span class="fact-symbol" aria-hidden="true">03</span><p><strong>7″ or 13″ display</strong><span>Two sizes to suit your space</span></p></div>
+        <div><span class="fact-symbol" aria-hidden="true">04</span><p><strong>WIFI connected</strong><span>Updates without a cable</span></p></div>
       </div>
     </div>
     <section class="container works section" id="how-it-works">
-      <div class="section-top">
-        <p class="eyebrow">SMALL SIGN. SIMPLE SETUP.</p>
-        <h2>Update in seconds.<br>From wherever you work.</h2>
+      <div class="works-layout">
+        <div class="works-copy">
+          <p class="eyebrow">SMALL SIGN. SIMPLE SETUP.</p>
+          <h2>Update in seconds.<br>From wherever you work.</h2>
+          <p class="works-intro">Change your hours on your phone. The sign in the window updates with you.</p>
+        </div>
+        <figure class="works-photo">
+          <img src="/SmartHours/assets/about/update-from-phone.webp" alt="A SmartHours frame on a shop door while someone updates opening hours from a smartphone" width="1280" height="720" loading="lazy">
+        </figure>
       </div>
       <div class="steps">
         <article>
@@ -236,28 +242,163 @@
             <p class="eyebrow">A FRESH LOOK, ANY TIME</p>
             <h2>Use our themes.</h2>
           </div>
-          <p>Professional looks for every business and season. Choose an everyday style or give your opening hours a seasonal refresh.</p>
+          <p>Professional looks for every business and season. Swipe left or right to browse more examples — each one shows sample hours and OPEN signage.</p>
         </div>
-        <div class="theme-layout">
-          <div class="theme-controls">
-            <div role="tablist" aria-label="Theme examples" aria-orientation="vertical">
-              <button type="button" role="tab" id="tab-autumn" aria-controls="theme-panel" aria-selected="true" data-theme="autumn" tabindex="0"><span>01</span>Autumn<span aria-hidden="true">↗</span></button>
-              <button type="button" role="tab" id="tab-christmas" aria-controls="theme-panel" aria-selected="false" data-theme="christmas" tabindex="-1"><span>02</span>Christmas<span aria-hidden="true">↗</span></button>
-              <button type="button" role="tab" id="tab-barber" aria-controls="theme-panel" aria-selected="false" data-theme="barber" tabindex="-1"><span>03</span>Barber shop<span aria-hidden="true">↗</span></button>
-              <button type="button" role="tab" id="tab-neon" aria-controls="theme-panel" aria-selected="false" data-theme="neon" tabindex="-1"><span>04</span>Neon style<span aria-hidden="true">↗</span></button>
-            </div>
-            <p class="theme-help">A few examples from the theme collection. Add your opening hours and make them your own.</p>
+        <div class="theme-carousel" id="themeCarousel" aria-roledescription="carousel" aria-label="Theme examples">
+          <button type="button" class="theme-nav prev" aria-label="Previous theme">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M15.5 4.5 8 12l7.5 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div class="theme-track" id="themeTrack" tabindex="0">
+            <figure class="theme-slide is-landscape tone-autumn">
+              <div class="theme-sign">
+                <img src="/SmartHours/assets/about/theme-autumn.webp" alt="Autumn theme with OPEN signage and sample opening hours" width="1400" height="840" loading="lazy">
+                <div class="theme-overlay overlay-center">
+                  <span class="open-badge">OPEN</span>
+                  <dl class="hours-list">
+                    <div><dt>Mon – Fri</dt><dd>9:00 AM – 5:30 PM</dd></div>
+                    <div><dt>Saturday</dt><dd>9:00 AM – 4:00 PM</dd></div>
+                    <div><dt>Sunday</dt><dd class="closed">Closed</dd></div>
+                  </dl>
+                </div>
+              </div>
+              <figcaption><strong>Autumn</strong><span>Warm &amp; welcoming</span></figcaption>
+            </figure>
+            <figure class="theme-slide is-landscape tone-xmas">
+              <div class="theme-sign">
+                <img src="/SmartHours/assets/templates/christmas-landscape.png" alt="Christmas theme with OPEN hours designed on the artwork" width="1619" height="971" loading="lazy">
+              </div>
+              <figcaption><strong>Christmas</strong><span>A festive welcome</span></figcaption>
+            </figure>
+            <figure class="theme-slide is-portrait tone-barber">
+              <div class="theme-sign">
+                <img src="/SmartHours/assets/about/theme-barber.webp" alt="Portrait barber shop theme with OPEN signage and sample opening hours" width="840" height="1400" loading="lazy">
+                <div class="theme-overlay overlay-portrait">
+                  <span class="open-badge">OPEN</span>
+                  <dl class="hours-list">
+                    <div><dt>Tue – Fri</dt><dd>9:00 AM – 6:00 PM</dd></div>
+                    <div><dt>Saturday</dt><dd>8:00 AM – 4:00 PM</dd></div>
+                    <div><dt>Sun – Mon</dt><dd class="closed">Closed</dd></div>
+                  </dl>
+                </div>
+              </div>
+              <figcaption><strong>Barber shop</strong><span>Portrait display</span></figcaption>
+            </figure>
+            <figure class="theme-slide is-wide tone-neon">
+              <div class="theme-sign">
+                <img src="/SmartHours/assets/about/theme-neon.webp" alt="Neon autumn theme with OPEN hours already designed on the sign" width="1247" height="381" loading="lazy">
+              </div>
+              <figcaption><strong>Neon style</strong><span>Bold seasonal look</span></figcaption>
+            </figure>
+            <figure class="theme-slide is-landscape tone-coffee">
+              <div class="theme-sign">
+                <img src="/SmartHours/assets/templates/coffee.png" alt="Coffee shop theme with OPEN signage and sample opening hours" width="1619" height="971" loading="lazy">
+                <div class="theme-overlay overlay-center overlay-mid">
+                  <span class="open-badge">OPEN</span>
+                  <dl class="hours-list">
+                    <div><dt>Mon – Fri</dt><dd>7:00 AM – 4:00 PM</dd></div>
+                    <div><dt>Saturday</dt><dd>8:00 AM – 3:00 PM</dd></div>
+                    <div><dt>Sunday</dt><dd class="closed">Closed</dd></div>
+                  </dl>
+                </div>
+              </div>
+              <figcaption><strong>Coffee shop</strong><span>Everyday café hours</span></figcaption>
+            </figure>
+            <figure class="theme-slide is-landscape tone-florist">
+              <div class="theme-sign">
+                <img src="/SmartHours/assets/templates/florist.png" alt="Florist theme with OPEN signage and sample opening hours" width="789" height="498" loading="lazy">
+                <div class="theme-overlay overlay-center overlay-mid">
+                  <span class="open-badge">OPEN</span>
+                  <dl class="hours-list">
+                    <div><dt>Mon – Sat</dt><dd>9:00 AM – 5:00 PM</dd></div>
+                    <div><dt>Sunday</dt><dd>10:00 AM – 2:00 PM</dd></div>
+                  </dl>
+                </div>
+              </div>
+              <figcaption><strong>Florist</strong><span>Soft seasonal florals</span></figcaption>
+            </figure>
+            <figure class="theme-slide is-landscape tone-nails">
+              <div class="theme-sign">
+                <img src="/SmartHours/assets/templates/nails.png" alt="Nail salon theme with OPEN signage and sample opening hours" width="1619" height="971" loading="lazy">
+                <div class="theme-overlay overlay-center overlay-mid">
+                  <span class="open-badge">OPEN</span>
+                  <dl class="hours-list">
+                    <div><dt>Tue – Fri</dt><dd>10:00 AM – 6:00 PM</dd></div>
+                    <div><dt>Saturday</dt><dd>9:00 AM – 5:00 PM</dd></div>
+                    <div><dt>Sun – Mon</dt><dd class="closed">Closed</dd></div>
+                  </dl>
+                </div>
+              </div>
+              <figcaption><strong>Nail salon</strong><span>Soft blush and gold</span></figcaption>
+            </figure>
+            <figure class="theme-slide is-landscape tone-pizza">
+              <div class="theme-sign">
+                <img src="/SmartHours/assets/templates/pizza.png" alt="Pizza shop theme with OPEN signage and sample opening hours" width="727" height="490" loading="lazy">
+                <div class="theme-overlay overlay-center overlay-mid">
+                  <span class="open-badge">OPEN</span>
+                  <dl class="hours-list">
+                    <div><dt>Mon – Thu</dt><dd>11:00 AM – 9:00 PM</dd></div>
+                    <div><dt>Fri – Sat</dt><dd>11:00 AM – 10:00 PM</dd></div>
+                    <div><dt>Sunday</dt><dd>12:00 PM – 8:00 PM</dd></div>
+                  </dl>
+                </div>
+              </div>
+              <figcaption><strong>Pizza shop</strong><span>Evening opening hours</span></figcaption>
+            </figure>
+            <figure class="theme-slide is-landscape tone-ice">
+              <div class="theme-sign">
+                <img src="/SmartHours/assets/templates/ice-cream.png" alt="Ice cream theme with OPEN signage and sample opening hours" width="1619" height="972" loading="lazy">
+                <div class="theme-overlay overlay-center overlay-mid">
+                  <span class="open-badge">OPEN</span>
+                  <dl class="hours-list">
+                    <div><dt>Mon – Thu</dt><dd>12:00 PM – 8:00 PM</dd></div>
+                    <div><dt>Fri – Sat</dt><dd>12:00 PM – 9:00 PM</dd></div>
+                    <div><dt>Sunday</dt><dd>12:00 PM – 7:00 PM</dd></div>
+                  </dl>
+                </div>
+              </div>
+              <figcaption><strong>Ice cream</strong><span>Summer scoop shop</span></figcaption>
+            </figure>
+            <figure class="theme-slide is-landscape tone-gift">
+              <div class="theme-sign">
+                <img src="/SmartHours/assets/templates/gift-shop.png" alt="Gift shop theme with OPEN signage and sample opening hours" width="772" height="514" loading="lazy">
+                <div class="theme-overlay overlay-center overlay-mid">
+                  <span class="open-badge">OPEN</span>
+                  <dl class="hours-list">
+                    <div><dt>Mon – Sat</dt><dd>10:00 AM – 5:00 PM</dd></div>
+                    <div><dt>Sunday</dt><dd>11:00 AM – 4:00 PM</dd></div>
+                  </dl>
+                </div>
+              </div>
+              <figcaption><strong>Gift shop</strong><span>Clean gold details</span></figcaption>
+            </figure>
+            <figure class="theme-slide is-landscape tone-chalk">
+              <div class="theme-sign">
+                <img src="/SmartHours/assets/templates/barber-1.png" alt="Dark barber shop theme with OPEN signage and sample opening hours" width="736" height="477" loading="lazy">
+                <div class="theme-overlay overlay-center overlay-mid">
+                  <span class="open-badge">OPEN</span>
+                  <dl class="hours-list">
+                    <div><dt>Tue – Fri</dt><dd>9:00 AM – 6:00 PM</dd></div>
+                    <div><dt>Saturday</dt><dd>8:00 AM – 4:00 PM</dd></div>
+                    <div><dt>Sun – Mon</dt><dd class="closed">Closed</dd></div>
+                  </dl>
+                </div>
+              </div>
+              <figcaption><strong>Classic barber</strong><span>Chalkboard look</span></figcaption>
+            </figure>
+            <figure class="theme-slide is-landscape tone-fall">
+              <div class="theme-sign">
+                <img src="/SmartHours/assets/templates/fall.png" alt="Autumn opening hours template with OPEN hours designed on the artwork" width="1619" height="971" loading="lazy">
+              </div>
+              <figcaption><strong>Harvest hours</strong><span>Ready-made seasonal sign</span></figcaption>
+            </figure>
           </div>
-          <div class="theme-panel" id="theme-panel" role="tabpanel" aria-labelledby="tab-autumn" tabindex="0">
-            <div class="theme-art">
-              <img id="theme-image" src="/SmartHours/assets/about/theme-autumn.webp" alt="Autumn theme background with warm leaves and space for opening hours" width="1619" height="971" loading="lazy">
-            </div>
-            <div class="theme-foot">
-              <span id="theme-title">Autumn / warm &amp; welcoming</span>
-              <span>Theme artwork preview</span>
-            </div>
-          </div>
+          <button type="button" class="theme-nav next" aria-label="Next theme">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.5 4.5 16 12l-7.5 7.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
+        <p class="theme-status" id="themeStatus" aria-live="polite">Autumn · 1 of 12</p>
+        <div class="theme-dots" id="themeDots" role="tablist" aria-label="Choose a theme example"></div>
+        <p class="theme-help">Swipe or use the arrows. Add your own hours, logo and colours to any theme.</p>
       </div>
     </section>
     <section class="custom container section" id="custom">
@@ -290,6 +431,6 @@
     <p>Opening hours that work for you.</p>
     <a href="/SmartHours">Open your SmartHours page ↗</a>
   </footer>
-  <script src="/SmartHours/assets/about/script.js?v=1"></script>
+  <script src="/SmartHours/assets/about/script.js?v=3"></script>
 </body>
 </html>
