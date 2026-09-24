@@ -832,6 +832,26 @@
       gap: 10px;
     }
     .setup-save:hover { filter: brightness(1.08); }
+    .about-smart-hours-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      min-height: 52px;
+      margin: 16px 0 0;
+      padding: 12px 16px;
+      border-radius: 14px;
+      background: var(--accent);
+      color: var(--accent-ink);
+      font-weight: 800;
+      font-size: 1.02rem;
+      letter-spacing: .04em;
+      text-decoration: none;
+      text-align: center;
+      box-sizing: border-box;
+    }
+    .about-smart-hours-btn:hover { filter: brightness(1.08); }
+    #tab-info .about-smart-hours-btn { margin-top: 14px; }
     .setup-status { min-height: 1.2em; margin: 8px 0 0; text-align: left; }
     @media (max-width: 760px) {
       .setup-row {
@@ -4158,6 +4178,7 @@
           <input id="onboardEmail" type="email" placeholder="you@business.com" autocomplete="email">
         </div>
       </div>
+      <a class="about-smart-hours-btn" href="/SmartHours/about">ABOUT SMART HOURS</a>
       <p class="hint setup-status" id="onboardSlugStatus"></p>
       <p class="slug-preview" id="onboardSlugPreview" hidden></p>
       <p class="hint setup-status" id="onboardMapsStatus"></p>
@@ -4274,6 +4295,7 @@
                 </div>
               </article>
             </div>
+            <a class="about-smart-hours-btn" href="/SmartHours/about">ABOUT SMART HOURS</a>
             <div class="auto-sync-bar admin-only">
               <div>
                 <label for="autoSyncHours">Auto Google sync</label>
