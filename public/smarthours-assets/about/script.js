@@ -67,7 +67,7 @@
   function restart() {
     window.clearInterval(timer);
     if (reduced) return;
-    timer = window.setInterval(() => go(index + 1), 4200);
+    timer = window.setInterval(() => go(index + 1), 2000);
   }
 
   prev.addEventListener('click', () => go(index - 1));

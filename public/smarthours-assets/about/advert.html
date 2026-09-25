@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>SmartHours advert</title>
+  <link rel="icon" href="/SmartHours/assets/smarthours-favicon.ico?v=6">
+  <style>
+    :root{--ink:#172629;--lime:#d8f480;--muted:#c5d0cb;--card:#243033}
+    *{box-sizing:border-box}
+    html,body{margin:0;height:100%;background:#0b1213;color:#fff;font-family:Arial,Helvetica,sans-serif;overflow:hidden}
+    .viewport{width:100vw;height:100vh;display:grid;place-items:center}
+    .stage{width:1920px;height:1080px;position:relative;overflow:hidden;background:var(--ink);transform-origin:center center}
+    .scene{position:absolute;inset:0;opacity:0;pointer-events:none;transition:opacity .32s ease}
+    .scene.on{opacity:1;pointer-events:auto}
+    .pad{position:absolute;inset:72px 90px}
+    img{display:block;width:100%;height:100%;object-fit:cover}
+    .logo{height:56px;width:auto}
+    .eyebrow{font-size:18px;letter-spacing:.28em;font-weight:700;color:var(--lime);margin:0 0 18px}
+    h1,h2{margin:0;font-weight:600;letter-spacing:-2px;line-height:1.08}
+    h1{font-size:78px}
+    h2{font-size:64px}
+    .copy{font-size:28px;line-height:1.45;color:var(--muted);max-width:720px}
+    .photo{border-radius:22px;overflow:hidden;box-shadow:0 30px 80px rgba(0,0,0,.35)}
+    .ken img{animation:ken 2.4s ease-out forwards}
+    @keyframes ken{from{transform:scale(1.1)}to{transform:scale(1)}}
+    .facts{display:grid;grid-template-columns:repeat(5,1fr);gap:16px;margin-top:40px}
+    .fact{background:#fff;color:var(--ink);border-radius:16px;min-height:92px;display:grid;place-items:center;text-align:center;padding:16px;font-size:22px;font-weight:700;opacity:0;transform:translateY(16px) scale(.96)}
+    .scene.on .fact{animation:up .4s ease forwards}
+    .scene.on .fact:nth-child(2){animation-delay:.07s}
+    .scene.on .fact:nth-child(3){animation-delay:.14s}
+    .scene.on .fact:nth-child(4){animation-delay:.21s}
+    .scene.on .fact:nth-child(5){animation-delay:.28s}
+    @keyframes up{to{opacity:1;transform:none}}
+    .word{display:inline-block;opacity:0;transform:translateY(16px);filter:blur(8px)}
+    .scene.on .word{animation:wordIn .38s cubic-bezier(.2,.8,.2,1) forwards;animation-delay:var(--d,0ms)}
+    @keyframes wordIn{to{opacity:1;transform:none;filter:none}}
+    .split{display:grid;grid-template-columns:.9fr 1.1fr;gap:56px;height:100%;align-items:center}
+    .two{display:grid;grid-template-columns:1fr 1fr;gap:28px;height:640px}
+    .label{position:absolute;left:18px;top:18px;background:#fff;color:var(--ink);border-radius:6px;font-size:14px;font-weight:700;letter-spacing:.12em;padding:8px 12px}
+    .rel{position:relative;height:100%}
+    .sizes{display:grid;grid-template-columns:1fr 1fr;gap:28px}
+    .size{border-radius:22px;padding:48px 44px;min-height:420px;opacity:0;transform:translateY(24px)}
+    .scene.on .size{animation:up .45s ease forwards}
+    .scene.on .size.b{animation-delay:.12s}
+    .size.a{background:#f2f5f4;color:var(--ink)}
+    .size.b{background:var(--lime);color:var(--ink)}
+    .size span{font-size:16px;letter-spacing:.18em;font-weight:700}
+    .size b{display:block;font-size:140px;line-height:1;letter-spacing:-8px;font-weight:500;margin:18px 0 8px}
+    .size b i{font-style:normal;font-size:72px;vertical-align:top}
+    .size p{margin:0;font-size:24px}
+    .cta-scene{display:grid;place-items:center;height:100%;text-align:center}
+    .cta .btn{display:inline-block;background:var(--lime);color:var(--ink);border-radius:10px;padding:18px 34px;font-size:28px;font-weight:700;margin-top:36px}
+    .cta .url{margin-top:18px;font-size:26px;color:var(--muted)}
+    .progress{position:absolute;left:0;right:0;bottom:0;height:6px;background:#2a383a}
+    .progress>i{display:block;height:100%;width:0;background:var(--lime)}
+    .playing .progress>i{animation:bar 19.8s linear forwards}
+    @keyframes bar{to{width:100%}}
+    .bar{position:fixed;left:16px;bottom:16px;z-index:5;display:flex;gap:10px}
+    .bar button,.bar a{
+      background:#fff;color:var(--ink);border:0;border-radius:8px;padding:10px 14px;font:600 14px Arial;cursor:pointer;text-decoration:none
+    }
+    body.record .bar{display:none}
+    .caption{margin-top:16px;display:flex;justify-content:space-between;font-size:22px;color:var(--muted)}
+    .caption strong{color:#fff}
+    .shot{height:640px}
+    .end-logo{height:78px;width:auto;margin:0 auto 28px;display:block}
+    .photo.slide-in{opacity:0;transform:translateX(28px)}
+    .scene.on .photo.slide-in{animation:up .5s ease forwards}
+  </style>
+</head>
+<body>
+  <audio id="vo" src="/SmartHours/assets/about/smarthours-advert.mp3" preload="auto"></audio>
+  <div class="bar">
+    <button type="button" id="replay">Replay</button>
+    <button type="button" id="mute">Mute</button>
+    <a href="/SmartHours/about">About page</a>
+    <a href="/SmartHours/assets/about/smarthours-advert.mp4" download>Download MP4</a>
+  </div>
+  <div class="viewport">
+    <div class="stage" id="stage">
+      <section class="scene on" data-scene="0">
+        <div class="pad split">
+          <div>
+            <img class="logo" src="/SmartHours/assets/smarthours-logo-white.png" alt="SmartHours">
+            <h1 style="margin-top:48px">Opening hours<br>that work for you.</h1>
+            <p class="copy" style="margin-top:28px">A digital opening-hours sign that fits your business.</p>
+          </div>
+          <div class="photo ken shot slide-in"><img src="/SmartHours/assets/about/autumn-chain.webp" alt=""></div>
+        </div>
+      </section>
+
+      <section class="scene" data-scene="1">
+        <div class="pad">
+          <p class="eyebrow">THE SIGN FOR YOUR DOOR</p>
+          <h2>Built for real shop windows.</h2>
+          <div class="facts">
+            <div class="fact">3 month battery</div>
+            <div class="fact">Mount or Hang</div>
+            <div class="fact">7″ or 13″ display</div>
+            <div class="fact">WIFI connected</div>
+            <div class="fact">Google sync</div>
+          </div>
+          <div class="photo ken" style="height:520px;margin-top:36px"><img src="/SmartHours/assets/about/shot-autumn.webp" alt=""></div>
+        </div>
+      </section>
+
+      <section class="scene" data-scene="2">
+        <div class="pad">
+          <p class="eyebrow">MAKE IT YOURS</p>
+          <h2>Use our templates.</h2>
+          <div class="photo shot" style="margin-top:28px;height:620px">
+            <img id="tplImg" src="/SmartHours/assets/about/shot-christmas.webp" alt="">
+          </div>
+          <div class="caption"><strong id="tplName">Christmas</strong><span>Seasonal storefront</span></div>
+        </div>
+      </section>
+
+      <section class="scene" data-scene="3">
+        <div class="pad split">
+          <div>
+            <p class="eyebrow">FROM YOUR PHONE</p>
+            <h2>Easy to update.</h2>
+            <p class="copy" style="margin-top:22px">Change the message. The sign updates with you.</p>
+          </div>
+          <div class="photo ken shot slide-in"><img src="/SmartHours/assets/about/shot-update.webp" alt=""></div>
+        </div>
+      </section>
+
+      <section class="scene" data-scene="4">
+        <div class="pad">
+          <p class="eyebrow">FITS YOUR SPACE</p>
+          <h2>Easy to mount.</h2>
+          <div class="two" style="margin-top:28px">
+            <div class="photo rel"><img src="/SmartHours/assets/about/christmas-magnetic.webp" alt=""><span class="label">MAGNETIC MOUNT</span></div>
+            <div class="photo rel"><img src="/SmartHours/assets/about/barber-portrait.webp" alt="" style="object-position:30% center"><span class="label">CHAIN MOUNT</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="scene" data-scene="5">
+        <div class="pad">
+          <p class="eyebrow">CHOOSE YOUR SIZE</p>
+          <h2>Available in 2 sizes.</h2>
+          <div class="sizes" style="margin-top:36px">
+            <div class="size a"><span>THE COMPACT OPTION</span><b>7<i>″</i></b><p>A compact display for your opening hours.</p></div>
+            <div class="size b"><span>THE LARGER OPTION</span><b>13<i>″</i></b><p>A larger display to give your hours more space.</p></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="scene" data-scene="6">
+        <div class="pad cta-scene">
+          <div class="cta">
+            <img class="end-logo" src="/SmartHours/assets/smarthours-logo-white.png" alt="SmartHours">
+            <h2>Explore SmartHours.</h2>
+            <div class="btn">Opening hours that work for you</div>
+            <div class="url">lab007.ai/SmartHours</div>
+          </div>
+        </div>
+      </section>
+      <div class="progress"><i></i></div>
+    </div>
+  </div>
+  <script>
+    const stage = document.getElementById('stage');
+    const vo = document.getElementById('vo');
+    const muteBtn = document.getElementById('mute');
+    const scenes = [...document.querySelectorAll('.scene')];
+    const starts = [0, 3400, 6800, 12800, 14400, 15800, 17700];
+    const TOTAL = 19800;
+    const templates = [
+      {src:'/SmartHours/assets/about/shot-christmas.webp', name:'Christmas', note:'Seasonal storefront'},
+      {src:'/SmartHours/assets/about/shot-icecream.webp', name:'Ice cream', note:'Chain mounted'},
+      {src:'/SmartHours/assets/about/shot-christmas-magnetic.webp', name:'Christmas', note:'Magnetic mount'},
+      {src:'/SmartHours/assets/about/shot-autumn.webp', name:'Autumn', note:'Warm seasonal look'},
+      {src:'/SmartHours/assets/about/shot-coffee.webp', name:'Coffee shop', note:'Everyday café hours'},
+      {src:'/SmartHours/assets/about/shot-florist.webp', name:'Florist', note:'Soft floral design'}
+    ];
+    let timers = [];
+    let tplTimer = null;
+    let tplIndex = 0;
+
+    function wrapWords(el) {
+      const walk = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while (walk.nextNode()) {
+        if (walk.currentNode.parentElement.closest('.fact,.label,.btn,.url,.caption,.size')) continue;
+        if (!walk.currentNode.textContent.trim()) continue;
+        nodes.push(walk.currentNode);
+      }
+      nodes.forEach((node) => {
+        const parts = node.textContent.split(/(\s+)/);
+        const frag = document.createDocumentFragment();
+        parts.forEach((part) => {
+          if (!part) return;
+          if (/^\s+$/.test(part)) {
+            frag.appendChild(document.createTextNode(part));
+            return;
+          }
+          const span = document.createElement('span');
+          span.className = 'word';
+          span.textContent = part;
+          frag.appendChild(span);
+        });
+        node.parentNode.replaceChild(frag, node);
+      });
+      [...el.querySelectorAll('.word')].forEach((span, i) => {
+        span.style.setProperty('--d', (i * 42) + 'ms');
+      });
+    }
+    scenes.forEach(wrapWords);
+
+    function fit() {
+      const vv = window.visualViewport;
+      const vw = vv ? vv.width : document.documentElement.clientWidth;
+      const vh = vv ? vv.height : document.documentElement.clientHeight;
+      const s = Math.min(vw / 1920, vh / 1080);
+      stage.style.transform = 'none';
+      stage.style.zoom = String(s);
+    }
+    window.addEventListener('resize', fit);
+    window.visualViewport && window.visualViewport.addEventListener('resize', fit);
+    fit();
+
+    templates.forEach((item) => { const img = new Image(); img.src = item.src; });
+
+    function showTpl(i) {
+      tplIndex = i % templates.length;
+      const item = templates[tplIndex];
+      const img = document.getElementById('tplImg');
+      img.style.opacity = '0';
+      setTimeout(() => {
+        img.src = item.src;
+        document.getElementById('tplName').textContent = item.name;
+        img.parentElement.nextElementSibling.querySelector('span').textContent = item.note;
+        img.style.opacity = '1';
+      }, 90);
+    }
+    document.getElementById('tplImg').style.transition = 'opacity .18s';
+
+    function clearTimers() {
+      timers.forEach(clearTimeout);
+      timers = [];
+      clearInterval(tplTimer);
+    }
+
+    function setScene(i) {
+      scenes.forEach((scene, n) => scene.classList.toggle('on', n === i));
+      clearInterval(tplTimer);
+      if (i === 2) {
+        showTpl(0);
+        tplTimer = setInterval(() => showTpl(tplIndex + 1), 2000);
+      }
+    }
+
+    function play() {
+      clearTimers();
+      document.body.classList.remove('playing');
+      void document.body.offsetWidth;
+      document.body.classList.add('playing');
+      vo.currentTime = 0;
+      vo.play().catch(() => {});
+      starts.forEach((time, i) => {
+        timers.push(setTimeout(() => setScene(i), time));
+      });
+      setScene(0);
+    }
+
+    muteBtn.addEventListener('click', () => {
+      vo.muted = !vo.muted;
+      muteBtn.textContent = vo.muted ? 'Unmute' : 'Mute';
+    });
+    document.getElementById('replay').addEventListener('click', play);
+    if (new URLSearchParams(location.search).has('record')) {
+      document.body.classList.add('record');
+      vo.muted = true;
+    }
+    play();
+  </script>
+</body>
+</html>
