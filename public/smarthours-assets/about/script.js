@@ -1,4 +1,5 @@
 (function () {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const track = document.getElementById('themeTrack');
   const prev = document.querySelector('.theme-nav.prev');
   const next = document.querySelector('.theme-nav.next');
@@ -9,6 +10,7 @@
   const slides = [...track.querySelectorAll('.theme-slide')];
   let index = 0;
   let drag = null;
+  let timer = null;
 
   slides.forEach((slide, i) => {
     const button = document.createElement('button');
@@ -16,7 +18,7 @@
     button.className = 'theme-dot';
     button.setAttribute('role', 'tab');
     const name = slide.querySelector('figcaption strong');
-    button.setAttribute('aria-label', name ? name.textContent : 'Theme ' + (i + 1));
+    button.setAttribute('aria-label', name ? name.textContent : 'Example ' + (i + 1));
     button.addEventListener('click', () => go(i));
     dotsWrap.appendChild(button);
   });
@@ -30,6 +32,7 @@
     const left = track.scrollLeft + (slideRect.left - trackRect.left) + slideRect.width / 2 - track.clientWidth / 2;
     track.scrollTo({ left: Math.max(0, left), behavior: smooth ? 'smooth' : 'auto' });
     update();
+    restart();
   }
 
   function nearest() {
@@ -61,6 +64,12 @@
     }
   }
 
+  function restart() {
+    window.clearInterval(timer);
+    if (reduced) return;
+    timer = window.setInterval(() => go(index + 1), 4200);
+  }
+
   prev.addEventListener('click', () => go(index - 1));
   next.addEventListener('click', () => go(index + 1));
 
@@ -76,24 +85,15 @@
     } else if (event.key === 'ArrowLeft') {
       event.preventDefault();
       go(index - 1);
-    } else if (event.key === 'Home') {
-      event.preventDefault();
-      go(0);
-    } else if (event.key === 'End') {
-      event.preventDefault();
-      go(slides.length - 1);
     }
   });
 
   track.addEventListener('pointerdown', (event) => {
     if (event.pointerType !== 'mouse' || event.button !== 0) return;
-    drag = {
-      id: event.pointerId,
-      x: event.clientX,
-      scroll: track.scrollLeft
-    };
+    drag = { id: event.pointerId, x: event.clientX, scroll: track.scrollLeft };
     track.classList.add('is-dragging');
     track.setPointerCapture(event.pointerId);
+    window.clearInterval(timer);
   });
 
   track.addEventListener('pointermove', (event) => {
@@ -107,11 +107,17 @@
     drag = null;
     track.classList.remove('is-dragging');
     if (Math.abs(dx) > 40) go(index + (dx < 0 ? 1 : -1));
-    else nearest();
+    else {
+      nearest();
+      restart();
+    }
   }
 
   track.addEventListener('pointerup', endDrag);
   track.addEventListener('pointercancel', endDrag);
+  track.addEventListener('mouseenter', () => window.clearInterval(timer));
+  track.addEventListener('mouseleave', restart);
 
   update();
+  restart();
 })();
