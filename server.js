@@ -7014,7 +7014,7 @@ async function sendEliteInvoiceEmail(client, invoiceNumber, amount, pdfBuffer) {
 
   const from = process.env.ELITE_INVOICES_FROM || process.env.SMTP_FROM || process.env.SMTP_USER || 'noreply@lab007.ai';
   const replyTo = process.env.ELITE_INVOICES_REPLY_TO || 'petra@EliteCleaningServices.us';
-  const formattedAmount = `$${Number(amount || 0).toFixed(0)}`;
+  const formattedAmount = `$${Number(amount || 0).toFixed(2)}`;
   const greetingName = client.billToName || client.displayName || 'there';
 
   await emailTransporter.sendMail({

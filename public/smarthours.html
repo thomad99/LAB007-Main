@@ -4424,6 +4424,13 @@
                   </div>
                   <div class="panel-size-row">
                     <div>
+                      <label for="einkPanelPresetDesign">Panel</label>
+                      <select id="einkPanelPresetDesign" title="Physical e-ink panel">
+                        <option value="800x480">7.3" Spectra 6 — 800×480</option>
+                        <option value="1600x1200">13.3" Spectra 6 — 1600×1200</option>
+                      </select>
+                    </div>
+                    <div>
                       <label for="einkWidthDesign">Panel W</label>
                       <input id="einkWidthDesign" type="number" min="200" max="2500" value="800" title="Physical panel width (framebuffer)">
                     </div>
@@ -4769,6 +4776,14 @@
                   <option value="off">Off</option>
                 </select>
                 <p class="field-hint">Email you when a display drops below 10%. Uses the email on Customer Info.</p>
+              </div>
+              <div class="admin-only">
+                <label for="einkPanelPreset">Panel</label>
+                <select id="einkPanelPreset" title="Physical e-ink panel size sent to the display">
+                  <option value="800x480">7.3" Spectra 6 — 800×480</option>
+                  <option value="1600x1200">13.3" Spectra 6 — 1600×1200</option>
+                </select>
+                <p class="field-hint">The first display that checks in for this URL sets the canvas size automatically.</p>
               </div>
               <div class="admin-only">
                 <label for="einkWidth">Panel width (px)</label>
@@ -5311,6 +5326,38 @@
         scaleTablet();
       }
 
+      function panelPresetValue(width, height) {
+        const w = Number(width) || 800;
+        const h = Number(height) || 480;
+        if (w === 1600 && h === 1200) return '1600x1200';
+        return '800x480';
+      }
+
+      function syncPanelPresetSelects() {
+        const val = panelPresetValue(
+          document.getElementById('einkWidth').value,
+          document.getElementById('einkHeight').value
+        );
+        const a = document.getElementById('einkPanelPreset');
+        const b = document.getElementById('einkPanelPresetDesign');
+        if (a) a.value = val;
+        if (b) b.value = val;
+      }
+
+      function applyPanelPreset(val, fromDesign) {
+        const parts = String(val || '800x480').split('x');
+        const w = Number(parts[0]) || 800;
+        const h = Number(parts[1]) || 480;
+        document.getElementById('einkWidth').value = w;
+        document.getElementById('einkHeight').value = h;
+        document.getElementById('einkWidthDesign').value = w;
+        document.getElementById('einkHeightDesign').value = h;
+        syncPanelPresetSelects();
+        applyDesignCanvasFromForm();
+        if (fromDesign) syncScreenFields(true);
+        else syncScreenFields(false);
+      }
+
       function panelSizeFromForm() {
         let pw = Math.max(200, Math.min(2500, Number(document.getElementById('einkWidthDesign').value) || 800));
         let ph = Math.max(120, Math.min(2500, Number(document.getElementById('einkHeightDesign').value) || 480));
@@ -5360,6 +5407,7 @@
           }
           applyDesignCanvasFromForm();
           renderPaletteSwatches();
+          syncPanelPresetSelects();
         } finally {
           syncingScreenFields = false;
         }
@@ -5393,16 +5441,19 @@
         if (oldLandscape === newLandscape) {
           const sx = nw / ow;
           const sy = nh / oh;
+          const s = Math.min(sx, sy);
           return (layout || []).map((el) => {
             const w = Math.max(20, Math.round(el.w * sx));
             const h = Math.max(16, Math.round(el.h * sy));
-            return {
+            const next = {
               ...el,
               w: Math.min(w, nw),
               h: Math.min(h, nh),
               x: clamp(Math.round(el.x * sx), 0, Math.max(0, nw - Math.min(w, nw))),
               y: clamp(Math.round(el.y * sy), 0, Math.max(0, nh - Math.min(h, nh)))
             };
+            if (el.fontSize != null) next.fontSize = Math.max(10, Math.min(220, Math.round(Number(el.fontSize) * s)));
+            return next;
           });
         }
         // Aspect flipped: rotate layout 90° so content stays upright on the new canvas
@@ -5426,13 +5477,16 @@
           }
           w = Math.max(20, Math.min(nw, w));
           h = Math.max(16, Math.min(nh, h));
-          return {
+          const s = Math.min(nw / oh, nh / ow);
+          const next = {
             ...el,
             w,
             h,
             x: clamp(x, 0, Math.max(0, nw - w)),
             y: clamp(y, 0, Math.max(0, nh - h))
           };
+          if (el.fontSize != null) next.fontSize = Math.max(10, Math.min(220, Math.round(Number(el.fontSize) * s)));
+          return next;
         });
       }
 
@@ -7693,6 +7747,9 @@
         if (data.customer) {
           rememberStudioSlug(data.customer.slug);
           fillEditor(data.customer);
+          if (syncCanvasFromCheckedInDevice()) {
+            setStatus('Canvas matched to your display (' + document.getElementById('einkWidth').value + ' × ' + document.getElementById('einkHeight').value + ').');
+          }
         }
         if (k) {
           history.replaceState(null, '', '/SmartHours/' + encodeURIComponent(data.customer.slug));
@@ -7936,10 +7993,16 @@
         const on = deviceOnline(d);
         const expanded = expandedDevices.has(d.id);
         const firmwareCell = opts.firmware
-          ? `<td class="device-detail" data-label="Firmware">${escapeHtml(d.fwVersion || '—')}</td>`
+          ? `<td class="device-detail" data-label="Firmware"><span class="cell-stack">${escapeHtml(d.fwVersion || '—')}${d.board ? `<span class="hint nowrap">${escapeHtml(d.board)}</span>` : ''}${d.panelWidth && d.panelHeight ? `<span class="hint nowrap">${d.panelWidth}×${d.panelHeight}</span>` : ''}</span></td>`
           : '';
         const fwHint = !opts.firmware && d.fwVersion
           ? `<span class="hint nowrap">${escapeHtml(d.fwVersion)}</span>`
+          : '';
+        const boardBits = [d.board, d.panelWidth && d.panelHeight ? `${d.panelWidth}×${d.panelHeight}` : '']
+          .filter(Boolean)
+          .join(' · ');
+        const boardHint = boardBits
+          ? `<span class="hint nowrap">${escapeHtml(boardBits)}</span>`
           : '';
         return `<tr class="device-row${expanded ? ' is-expanded' : ''}${on ? '' : ' is-offline'}" data-device-row="${escapeHtml(d.id)}">
           <td class="device-summary">
@@ -7960,7 +8023,7 @@
             </div>
           </td>
           <td class="device-detail ${on ? 'pill-on' : 'pill-off'}" data-label="Status">${on ? 'Online' : 'Offline'}</td>
-          <td class="device-detail" data-label="Device"><span class="cell-stack">${deviceNameInputHtml(d)}<span class="hint nowrap">${escapeHtml(d.id)}</span>${fwHint}</span></td>
+          <td class="device-detail" data-label="Device"><span class="cell-stack">${deviceNameInputHtml(d)}<span class="hint nowrap">${escapeHtml(d.id)}</span>${fwHint}${boardHint}</span></td>
           ${firmwareCell}
           <td class="device-detail admin-net-only" data-label="WiFi">${formatWifi(d)}</td>
           <td class="device-detail" data-label="Signal">${formatWifiSignal(d)}</td>
@@ -7990,7 +8053,7 @@
                 <path d="M67 55l9 9"/>
               </svg>
               <strong>No devices have checked in for this URL yet.</strong>
-              <span>Once your display connects, it will appear here.</span>
+              <span>Once your display connects, the studio canvas matches that screen size.</span>
             </div>
           </td></tr>`;
           return;
@@ -8025,6 +8088,45 @@
         renderFleetDevices();
       }
 
+      function syncCanvasFromCheckedInDevice() {
+        const c = selected();
+        if (!c) return false;
+        const list = visibleDevices();
+        if (list.length !== 1) return false;
+        const d = list[0];
+        const pw = Number(d.panelWidth);
+        const ph = Number(d.panelHeight);
+        if (!pw || !ph) return false;
+        let w = pw;
+        let h = ph;
+        if (h > w) {
+          const t = w;
+          w = h;
+          h = t;
+        }
+        const cur = panelSizeFromForm();
+        if (cur.width === w && cur.height === h) return false;
+        const orient = document.getElementById('screenOrientation').value;
+        const oldDesign = designSizeFromPanel(orient, cur);
+        const newDesign = designSizeFromPanel(orient, { width: w, height: h });
+        if (c.design && Array.isArray(c.design.layout)) {
+          c.design.layout = remapLayoutForCanvasSize(
+            c.design.layout,
+            oldDesign.width,
+            oldDesign.height,
+            newDesign.width,
+            newDesign.height
+          );
+        }
+        if (c.eink) {
+          c.eink.width = w;
+          c.eink.height = h;
+        }
+        applyPanelPreset(w + 'x' + h, true);
+        renderCanvas();
+        return true;
+      }
+
       async function loadDevices() {
         if (!IS_ADMIN) {
           const c = selected();
@@ -8037,6 +8139,9 @@
         const data = await res.json();
         devices = data.devices || [];
         renderDevices();
+        if (syncCanvasFromCheckedInDevice()) {
+          setStatus('Canvas matched to your display (' + document.getElementById('einkWidth').value + ' × ' + document.getElementById('einkHeight').value + ').');
+        }
       }
 
       async function saveDeviceCustomName(id, value) {
@@ -8426,6 +8531,7 @@
         document.getElementById('einkColorMode').value = resolveColorMode(e.colorMode);
         document.getElementById('einkInverted').checked = !!e.inverted;
         syncScreenFields(false);
+        syncPanelPresetSelects();
         if (!document.getElementById('espBaseUrl').value) {
           document.getElementById('espBaseUrl').value = location.origin;
         }
@@ -9522,6 +9628,20 @@
           renderCanvas();
         });
       });
+      const panelPresetDesign = document.getElementById('einkPanelPresetDesign');
+      if (panelPresetDesign) {
+        panelPresetDesign.addEventListener('change', () => {
+          applyPanelPreset(panelPresetDesign.value, true);
+          renderCanvas();
+        });
+      }
+      const panelPreset = document.getElementById('einkPanelPreset');
+      if (panelPreset) {
+        panelPreset.addEventListener('change', () => {
+          applyPanelPreset(panelPreset.value, false);
+          renderCanvas();
+        });
+      }
 
       // Snap free color typing to the active palette
       ['bgColor', 'textColor', 'accentColor'].forEach((id) => {

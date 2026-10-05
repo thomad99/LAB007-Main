@@ -1425,8 +1425,18 @@
           .replace(/"/g, '&quot;');
       }
 
+      function roundMoney(value) {
+        const n = Number(value);
+        if (!Number.isFinite(n) || n <= 0) return 0;
+        return Math.round(n * 100) / 100;
+      }
+
       function formatMoney(amount) {
-        return '$' + Number(amount || 0).toFixed(0);
+        return '$' + roundMoney(amount).toFixed(2);
+      }
+
+      function moneyInputValue(amount) {
+        return roundMoney(amount).toFixed(2);
       }
 
       function startOfWeekMonday(date = new Date()) {
@@ -1536,7 +1546,7 @@
             .split('\n')
             .map((line) => line.trim())
             .filter(Boolean),
-          defaultAmount: Number(row.querySelector('[data-field="defaultAmount"]').value || 0),
+          defaultAmount: roundMoney(row.querySelector('[data-field="defaultAmount"]').value || 0),
           lineItems: (clients.find((c) => c.id === row.dataset.id) || {}).lineItems || [],
           serviceDate: inputDateToServiceDate(row.querySelector('[data-field="serviceDate"]').value),
           invoicePrefix: row.querySelector('[data-field="invoicePrefix"]').value.trim().toUpperCase(),
@@ -2030,7 +2040,7 @@
               <td><textarea data-field="billToLines" rows="1">${escapeHtml(address)}</textarea></td>
               <td>
                 <div class="amount-cell">
-                  <input class="amount" type="number" min="0" step="1" data-field="defaultAmount" value="${amount}" ${client.lineItems && client.lineItems.length ? 'readonly title="Managed by detailed billing lines"' : ''}>
+                  <input class="amount" type="number" min="0" step="0.01" data-field="defaultAmount" value="${moneyInputValue(amount)}" ${client.lineItems && client.lineItems.length ? 'readonly title="Managed by detailed billing lines"' : ''}>
                   <button type="button" class="icon-btn" data-action="edit-lines" title="Detailed billing">✎</button>
                 </div>
               </td>
@@ -2487,8 +2497,8 @@
             return `
               <tr data-index="${index}">
                 <td><input type="text" data-field="description" value="${escapeHtml(item.description || '')}" placeholder="Description"></td>
-                <td class="num-col"><input type="number" min="0" step="1" data-field="qty" value="${Number(item.qty || 0)}"></td>
-                <td class="num-col"><input type="number" min="0" step="1" data-field="amount" value="${Number(item.amount || 0)}"></td>
+                <td class="num-col"><input type="number" min="0" step="0.01" data-field="qty" value="${Number(item.qty || 0)}"></td>
+                <td class="num-col"><input type="number" min="0" step="0.01" data-field="amount" value="${moneyInputValue(item.amount)}"></td>
                 <td class="total-col">${formatMoney(lineTotal)}</td>
                 <td><button type="button" class="icon-btn danger" data-action="remove-line" title="Remove line">×</button></td>
               </tr>
@@ -2502,7 +2512,7 @@
         return Array.from(lineItemRows.querySelectorAll('tr[data-index]')).map((row) => ({
           description: row.querySelector('[data-field="description"]').value.trim(),
           qty: Number(row.querySelector('[data-field="qty"]').value || 0),
-          amount: Number(row.querySelector('[data-field="amount"]').value || 0)
+          amount: roundMoney(row.querySelector('[data-field="amount"]').value || 0)
         }));
       }
 
