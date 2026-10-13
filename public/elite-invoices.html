@@ -126,7 +126,7 @@
     }
     #clientsTable {
       table-layout: fixed;
-      min-width: 0;
+      min-width: 1400px;
     }
     #clientsTable th,
     #clientsTable td {
@@ -137,21 +137,23 @@
     #clientsTable th:nth-child(1),
     #clientsTable td:nth-child(1) { width: 11%; }
     #clientsTable th:nth-child(2),
-    #clientsTable td:nth-child(2) { width: 12%; }
+    #clientsTable td:nth-child(2) { width: 11%; }
     #clientsTable th:nth-child(3),
-    #clientsTable td:nth-child(3) { width: 14%; }
+    #clientsTable td:nth-child(3) { width: 13%; }
     #clientsTable th:nth-child(4),
-    #clientsTable td:nth-child(4) { width: 18%; }
+    #clientsTable td:nth-child(4) { width: 12%; }
     #clientsTable th:nth-child(5),
-    #clientsTable td:nth-child(5) { width: 7%; }
+    #clientsTable td:nth-child(5) { width: 14%; }
     #clientsTable th:nth-child(6),
-    #clientsTable td:nth-child(6) { width: 11%; }
+    #clientsTable td:nth-child(6) { width: 7%; }
     #clientsTable th:nth-child(7),
-    #clientsTable td:nth-child(7) { width: 7%; }
+    #clientsTable td:nth-child(7) { width: 9%; }
     #clientsTable th:nth-child(8),
-    #clientsTable td:nth-child(8) { width: 6%; }
+    #clientsTable td:nth-child(8) { width: 5%; }
     #clientsTable th:nth-child(9),
-    #clientsTable td:nth-child(9) { width: 14%; }
+    #clientsTable td:nth-child(9) { width: 5%; }
+    #clientsTable th:nth-child(10),
+    #clientsTable td:nth-child(10) { width: 13%; }
     #clientsTable input[type="text"],
     #clientsTable input[type="number"],
     #clientsTable input[type="email"],
@@ -620,6 +622,56 @@
       font-size: .86rem;
       line-height: 1.5;
     }
+    .bank-kpis {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin: 14px 0;
+    }
+    .bank-kpi {
+      min-width: 140px;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(21, 21, 21, .92);
+    }
+    .bank-kpi label {
+      display: block;
+      font-size: .72rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--soft-gold);
+      margin-bottom: 4px;
+    }
+    .bank-kpi strong { font-size: 1.25rem; }
+    .bank-file { color: var(--text); font-size: .9rem; }
+    .bank-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin: 14px 0;
+    }
+    .bank-note { margin: 0 0 8px; color: var(--muted); }
+    .bank-desc { max-width: 360px; white-space: normal; }
+    .bank-paid-note {
+      margin-top: 4px;
+      color: var(--paid);
+      font-size: .75rem;
+    }
+    .badge.likely {
+      background: rgba(242, 210, 123, .14);
+      color: var(--soft-gold);
+      border: 1px solid rgba(242, 210, 123, .35);
+    }
+    #bankReview select {
+      width: 100%;
+      min-width: 220px;
+      background: #0d0d0d;
+      color: var(--text);
+      border: 1px solid rgba(215, 173, 75, .25);
+      border-radius: 6px;
+      padding: 6px 8px;
+    }
     .muted-same {
       color: var(--muted);
       opacity: .7;
@@ -1006,7 +1058,7 @@
       header { align-items: flex-start; }
       #clientsTable {
         table-layout: auto;
-        min-width: 980px;
+        min-width: 1400px;
       }
       #clientsTable .actions {
         flex-wrap: wrap;
@@ -1043,6 +1095,7 @@
         <button type="button" class="btn-secondary active" id="clientsTab">Invoices</button>
         <button type="button" class="btn-secondary" id="clientFullTab">Client Database</button>
         <button type="button" class="btn-secondary" id="invoicesTab">View Invoices</button>
+        <button type="button" class="btn-secondary" id="bankTab">Bank Deposits</button>
         <button type="button" class="btn-secondary" id="weeklyTab">Billing Totals</button>
         <button type="button" class="btn-secondary" id="contractsTab">Contracts</button>
         <button type="button" class="btn" id="addClientBtn">Add Client</button>
@@ -1059,7 +1112,7 @@
           type="search"
           id="clientSearch"
           list="clientSearchList"
-          placeholder="Type client name, bill to, email, or prefix..."
+          placeholder="Type client name, bill to, email, deposit name, or prefix..."
           autocomplete="off"
         >
         <datalist id="clientSearchList"></datalist>
@@ -1072,6 +1125,7 @@
               <th class="sortable is-active" data-sort="client" title="Sort by Client">Client <span class="sort-ind" aria-hidden="true">▲</span></th>
               <th class="sortable" data-sort="billTo" title="Sort by Bill To Name">Bill To Name <span class="sort-ind" aria-hidden="true"></span></th>
               <th>Email</th>
+              <th>Deposit Name</th>
               <th>Address Lines</th>
               <th>Amount ($)</th>
               <th>Cleaning Date</th>
@@ -1083,6 +1137,10 @@
           <tbody id="clientRows"></tbody>
         </table>
       </div>
+      <p class="hint">
+        <strong>Deposit Name</strong> is the text you expect to see on the customer's bank deposit.
+        Save Changes before matching a statement on the Bank Deposits tab.
+      </p>
     </section>
 
     <section class="panel-section" id="clientFullPanel">
@@ -1139,13 +1197,14 @@
         <table id="invoicesTable">
           <thead>
             <tr>
-              <th>Invoice #</th>
-              <th>Client</th>
-              <th>Bill To</th>
-              <th>Invoice Date</th>
-              <th>Cleaning Date</th>
-              <th>Amount</th>
-              <th>Status</th>
+              <th class="sortable" data-sort="number" title="Sort by invoice number">Invoice # <span class="sort-ind" aria-hidden="true"></span></th>
+              <th class="sortable" data-sort="client" title="Sort by client">Client <span class="sort-ind" aria-hidden="true"></span></th>
+              <th class="sortable" data-sort="billTo" title="Sort by bill to">Bill To <span class="sort-ind" aria-hidden="true"></span></th>
+              <th class="sortable is-active" data-sort="date" title="Sort by invoice date">Invoice Date <span class="sort-ind" aria-hidden="true">▼</span></th>
+              <th class="sortable" data-sort="cleaning" title="Sort by cleaning date">Cleaning Date <span class="sort-ind" aria-hidden="true"></span></th>
+              <th class="sortable" data-sort="amount" title="Sort by amount">Amount <span class="sort-ind" aria-hidden="true"></span></th>
+              <th class="sortable" data-sort="status" title="Sort by paid status">Status <span class="sort-ind" aria-hidden="true"></span></th>
+              <th class="sortable" data-sort="paidDate" title="Sort by payment date">Payment Date <span class="sort-ind" aria-hidden="true"></span></th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -1154,9 +1213,28 @@
         <div class="invoice-totals" id="invoiceTotals" aria-live="polite"></div>
       </div>
       <p class="hint">
-        mark invoices as paid when payment is received, use <strong>View</strong> to open the PDF in a new tab,
-        or <strong>Delete</strong> to remove an invoice permanently.
+        Click a column heading to sort. Use <strong>Status: Unpaid</strong> to list only open invoices, then sort those by date or amount.
+        <strong>Mark Unpaid</strong> clears the paid status and the payment date.
+        Bank deposits can also mark invoices paid from the <strong>Bank Deposits</strong> tab.
       </p>
+    </section>
+
+    <section class="panel-section" id="bankPanel">
+      <p class="hint" style="margin-top:0;">
+        Upload a bank statement PDF, including several months in one file. Every unpaid invoice is checked,
+        including older ones. A deposit matches when the <strong>Deposit Name</strong> and amount agree and the
+        payment is on or after the invoice date. Nothing is marked paid until you approve the matches.
+      </p>
+      <div class="filters">
+        <div>
+          <label for="bankStatementFile">Bank statement PDF</label>
+          <input class="bank-file" type="file" id="bankStatementFile" accept="application/pdf,.pdf">
+        </div>
+        <div>
+          <button type="button" class="btn" id="bankUploadBtn">Read statement</button>
+        </div>
+      </div>
+      <div id="bankReview"></div>
     </section>
 
     <section class="panel-section" id="weeklyPanel">
@@ -1283,11 +1361,13 @@
       const clientsTab = document.getElementById('clientsTab');
       const clientFullTab = document.getElementById('clientFullTab');
       const invoicesTab = document.getElementById('invoicesTab');
+      const bankTab = document.getElementById('bankTab');
       const weeklyTab = document.getElementById('weeklyTab');
       const contractsTab = document.getElementById('contractsTab');
       const clientsPanel = document.getElementById('clientsPanel');
       const clientFullPanel = document.getElementById('clientFullPanel');
       const invoicesPanel = document.getElementById('invoicesPanel');
+      const bankPanel = document.getElementById('bankPanel');
       const weeklyPanel = document.getElementById('weeklyPanel');
       const contractsPanel = document.getElementById('contractsPanel');
       const filterClient = document.getElementById('filterClient');
@@ -1329,11 +1409,14 @@
       let clients = [];
       let eliteContractsUi = null;
       let invoices = [];
+      let bankReview = null;
       let invoiceGrandTotal = 0;
       let clientFull = { columns: [], rows: [], photoCounts: {} };
       let clientSearchQuery = '';
       let clientSortMode = 'client';
       let clientSortDir = 'asc';
+      let invoiceSortMode = 'date';
+      let invoiceSortDir = 'desc';
       let clientFullSearchQuery = '';
       let clientFullLoaded = false;
       let clientFullEditingIndex = null;
@@ -1479,16 +1562,19 @@
         const isClients = name === 'clients';
         const isClientFull = name === 'clientfull';
         const isInvoices = name === 'invoices';
+        const isBank = name === 'bank';
         const isWeekly = name === 'weekly';
         const isContracts = name === 'contracts';
         clientsPanel.classList.toggle('active', isClients);
         clientFullPanel.classList.toggle('active', isClientFull);
         invoicesPanel.classList.toggle('active', isInvoices);
+        bankPanel.classList.toggle('active', isBank);
         weeklyPanel.classList.toggle('active', isWeekly);
         contractsPanel.classList.toggle('active', isContracts);
         clientsTab.classList.toggle('active', isClients);
         clientFullTab.classList.toggle('active', isClientFull);
         invoicesTab.classList.toggle('active', isInvoices);
+        bankTab.classList.toggle('active', isBank);
         weeklyTab.classList.toggle('active', isWeekly);
         contractsTab.classList.toggle('active', isContracts);
         saveBtn.style.display = isClients ? '' : 'none';
@@ -1518,6 +1604,7 @@
           billToName: '',
           billToLines: [],
           email: '',
+          depositName: '',
           defaultAmount: 0,
           lineItems: [],
           invoicePrefix: '',
@@ -1542,6 +1629,7 @@
           displayName: row.querySelector('[data-field="displayName"]').value.trim(),
           billToName: row.querySelector('[data-field="billToName"]').value.trim(),
           email: row.querySelector('[data-field="email"]').value.trim(),
+          depositName: row.querySelector('[data-field="depositName"]').value.trim(),
           billToLines: row.querySelector('[data-field="billToLines"]').value
             .split('\n')
             .map((line) => line.trim())
@@ -1946,6 +2034,7 @@
           client.displayName,
           client.billToName,
           client.email,
+          client.depositName,
           (client.billToLines || []).join(' '),
           client.invoicePrefix
         ].join(' ').toLowerCase();
@@ -2017,7 +2106,7 @@
         updateSortHeaders();
 
         if (!visibleClients.length) {
-          rowsEl.innerHTML = `<tr><td colspan="9" class="empty">${clientSearchQuery.trim() ? 'No clients match your search.' : 'No clients yet. Click Add Client.'}</td></tr>`;
+          rowsEl.innerHTML = `<tr><td colspan="10" class="empty">${clientSearchQuery.trim() ? 'No clients match your search.' : 'No clients yet. Click Add Client.'}</td></tr>`;
           renderClientFilterOptions();
           return;
         }
@@ -2037,6 +2126,7 @@
               <td><input type="text" data-field="displayName" value="${escapeHtml(client.displayName)}"></td>
               <td><input type="text" data-field="billToName" value="${escapeHtml(client.billToName)}"></td>
               <td><input type="email" data-field="email" value="${escapeHtml(client.email || '')}" placeholder="client@email.com"></td>
+              <td><input type="text" data-field="depositName" maxlength="120" value="${escapeHtml(client.depositName || '')}" placeholder="Name on bank deposit"></td>
               <td><textarea data-field="billToLines" rows="1">${escapeHtml(address)}</textarea></td>
               <td>
                 <div class="amount-cell">
@@ -2083,16 +2173,77 @@
         invoiceTotalsEl.innerHTML = parts.join('');
       }
 
+      function invoiceDateValue(value) {
+        const match = String(value || '').trim().match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/);
+        if (!match) {
+          const iso = String(value || '').trim().match(/^(\d{4})-(\d{2})-(\d{2})/);
+          if (!iso) return 0;
+          return Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+        }
+        let year = parseInt(match[3], 10);
+        if (year < 100) year += 2000;
+        return Date.UTC(year, parseInt(match[1], 10) - 1, parseInt(match[2], 10));
+      }
+
+      function paymentMadeLabel(invoice) {
+        if (!invoice || !invoice.paid) return '';
+        if (invoice.bankDepositDate) return isoToUs(invoice.bankDepositDate);
+        const paidAt = String(invoice.paidAt || '').trim();
+        if (!paidAt) return '';
+        const parsed = new Date(paidAt);
+        if (Number.isNaN(parsed.getTime())) return isoToUs(paidAt);
+        const mm = String(parsed.getMonth() + 1).padStart(2, '0');
+        const dd = String(parsed.getDate()).padStart(2, '0');
+        return `${mm}/${dd}/${parsed.getFullYear()}`;
+      }
+
+      function paymentMadeValue(invoice) {
+        if (!invoice || !invoice.paid) return 0;
+        if (invoice.bankDepositDate) return invoiceDateValue(invoice.bankDepositDate);
+        return invoiceDateValue(paymentMadeLabel(invoice));
+      }
+
+      function updateInvoiceSortHeaders() {
+        const head = document.querySelector('#invoicesTable thead');
+        if (!head) return;
+        head.querySelectorAll('th.sortable').forEach((th) => {
+          const active = th.dataset.sort === invoiceSortMode;
+          th.classList.toggle('is-active', active);
+          const ind = th.querySelector('.sort-ind');
+          if (ind) ind.textContent = active ? (invoiceSortDir === 'asc' ? '▲' : '▼') : '';
+        });
+      }
+
+      function sortedInvoices(list) {
+        const dir = invoiceSortDir === 'desc' ? -1 : 1;
+        const text = (value) => String(value || '').toLocaleLowerCase();
+        return list.slice().sort((a, b) => {
+          let cmp = 0;
+          if (invoiceSortMode === 'number') cmp = text(a.invoiceNumber).localeCompare(text(b.invoiceNumber));
+          else if (invoiceSortMode === 'client') cmp = text(a.clientDisplayName).localeCompare(text(b.clientDisplayName));
+          else if (invoiceSortMode === 'billTo') cmp = text(a.billToName).localeCompare(text(b.billToName));
+          else if (invoiceSortMode === 'cleaning') cmp = invoiceDateValue(a.serviceDate) - invoiceDateValue(b.serviceDate);
+          else if (invoiceSortMode === 'amount') cmp = Number(a.amount || 0) - Number(b.amount || 0);
+          else if (invoiceSortMode === 'status') cmp = Number(Boolean(a.paid)) - Number(Boolean(b.paid));
+          else if (invoiceSortMode === 'paidDate') cmp = paymentMadeValue(a) - paymentMadeValue(b);
+          else cmp = invoiceDateValue(a.date) - invoiceDateValue(b.date);
+          if (cmp === 0) cmp = text(a.invoiceNumber).localeCompare(text(b.invoiceNumber));
+          return cmp * dir;
+        });
+      }
+
       function renderInvoiceRows() {
+        updateInvoiceSortHeaders();
         if (!invoices.length) {
-          invoiceRowsEl.innerHTML = '<tr><td colspan="8" class="empty">No invoices match your filters.</td></tr>';
+          invoiceRowsEl.innerHTML = '<tr><td colspan="9" class="empty">No invoices match your filters.</td></tr>';
           renderInvoiceTotals();
           return;
         }
-        invoiceRowsEl.innerHTML = invoices.map((invoice) => {
+        invoiceRowsEl.innerHTML = sortedInvoices(invoices).map((invoice) => {
           const invoiceDate = String(invoice.date || '').trim();
           const cleanDate = String(invoice.serviceDate || '').trim();
           const cleanDiffers = cleanDate && cleanDate !== invoiceDate;
+          const paidDate = paymentMadeLabel(invoice);
           return `
           <tr data-id="${escapeHtml(invoice.id)}">
             <td><strong>${escapeHtml(invoice.invoiceNumber)}</strong></td>
@@ -2104,6 +2255,7 @@
             <td>
               <span class="badge ${invoice.paid ? 'paid' : 'unpaid'}">${invoice.paid ? 'Paid' : 'Unpaid'}</span>
             </td>
+            <td>${paidDate ? escapeHtml(paidDate) : '<span class="muted-same">—</span>'}</td>
             <td class="actions">
               <button type="button" class="btn-secondary btn-small" data-action="view">View</button>
               <button type="button" class="btn btn-small" data-action="resend">Resend</button>
@@ -2392,7 +2544,7 @@
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.error || 'Update failed');
           await loadInvoices();
-          setStatus(data.invoice.paid ? 'Marked as paid.' : 'Marked as unpaid.');
+          setStatus(data.invoice.paid ? 'Marked as paid.' : 'Marked as unpaid. Payment date removed.');
           setTimeout(() => setStatus(''), 1800);
         } catch (err) {
           setStatus(err.message, true);
@@ -2819,14 +2971,200 @@
         if (clientPhotosModal.classList.contains('open')) closeClientPhotosModal();
       });
 
+      function isoToUs(iso) {
+        const match = String(iso || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        return match ? `${match[2]}/${match[3]}/${match[1]}` : String(iso || '');
+      }
+
+      function bankConfidenceBadge(confidence) {
+        if (confidence === 'high') return '<span class="badge paid">Ready</span>';
+        if (confidence === 'medium') return '<span class="badge likely">Likely</span>';
+        if (confidence === 'ambiguous') return '<span class="badge unpaid">Choose</span>';
+        return '<span class="badge unpaid">Check date</span>';
+      }
+
+      function invoiceOptionLabel(invoice) {
+        return [
+          invoice.invoiceNumber,
+          invoice.clientDisplayName || '',
+          invoice.date || '',
+          formatMoney(invoice.amount)
+        ].filter(Boolean).join(' · ');
+      }
+
+      function renderBankReview() {
+        const root = document.getElementById('bankReview');
+        if (!root) return;
+        if (!bankReview) {
+          root.innerHTML = '';
+          return;
+        }
+        const review = bankReview;
+        const period = review.period
+          ? `${isoToUs(review.period.start)} – ${isoToUs(review.period.end)}`
+          : 'Not detected';
+        const matchRows = (review.matches || []).map((match) => {
+          const choices = [match.invoice].concat(match.alternatives || []);
+          const invoiceCell = choices.length > 1
+            ? `<select data-bank-invoice="${escapeHtml(match.id)}">${choices.map((invoice) =>
+                `<option value="${escapeHtml(invoice.id)}"${invoice.id === match.invoice.id ? ' selected' : ''}>${escapeHtml(invoiceOptionLabel(invoice))}</option>`
+              ).join('')}</select>`
+            : `<strong>${escapeHtml(match.invoice.invoiceNumber)}</strong><div class="bank-note">${escapeHtml(match.invoice.clientDisplayName || '')} · ${escapeHtml(match.invoice.date || '')}</div>`;
+          return `
+            <tr>
+              <td><input type="checkbox" data-bank-approve="${escapeHtml(match.id)}" ${match.checked ? 'checked' : ''} aria-label="Approve match ${escapeHtml(match.id)}"></td>
+              <td>${escapeHtml(match.deposit.displayDate || match.deposit.date || '')}</td>
+              <td class="bank-desc">${escapeHtml(match.deposit.description || '')}</td>
+              <td>${formatMoney(match.deposit.amount)}</td>
+              <td>${invoiceCell}</td>
+              <td>${bankConfidenceBadge(match.confidence)}<div class="bank-note">${escapeHtml(match.dateNote || '')}</div><div class="bank-note">${escapeHtml(match.reason || '')}</div></td>
+            </tr>`;
+        }).join('');
+        const unmatchedRows = (review.unmatchedDeposits || []).map((deposit) => `
+          <tr>
+            <td>${escapeHtml(deposit.displayDate || deposit.date || '')}</td>
+            <td class="bank-desc">${escapeHtml(deposit.description || '')}</td>
+            <td>${formatMoney(deposit.amount)}</td>
+            <td>${escapeHtml(deposit.reason || '')}</td>
+          </tr>`).join('');
+        const notes = (review.notes || []).map((note) => `<p class="bank-note">${escapeHtml(note)}</p>`).join('');
+        const preview = (review.previewLines || []).map((line) => escapeHtml(line)).join('\n');
+        const found = Number(review.depositCount || 0);
+        root.innerHTML = `
+          <div class="bank-kpis">
+            <div class="bank-kpi"><label>Statement</label><strong>${escapeHtml(review.fileName || 'PDF')}</strong></div>
+            <div class="bank-kpi"><label>Deposits found</label><strong>${found}</strong></div>
+            <div class="bank-kpi"><label>Suggested matches</label><strong>${(review.matches || []).length}</strong></div>
+            <div class="bank-kpi"><label>Not matched</label><strong>${(review.unmatchedDeposits || []).length}</strong></div>
+          </div>
+          <p class="bank-note">Statement period: ${escapeHtml(period)}. Withdrawals skipped: ${Number(review.skippedDebits || 0)}.</p>
+          ${notes}
+          <h2 style="font-size:1.05rem;margin:18px 0 8px;">Suggested matches</h2>
+          ${(review.matches || []).length ? `
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Approve</th>
+                    <th>Deposit date</th>
+                    <th>Bank description</th>
+                    <th>Amount</th>
+                    <th>Invoice</th>
+                    <th>Match</th>
+                  </tr>
+                </thead>
+                <tbody>${matchRows}</tbody>
+              </table>
+            </div>
+            <div class="bank-actions">
+              <button type="button" class="btn" id="bankApplyBtn">Approve selected and mark paid</button>
+              <button type="button" class="btn-secondary" id="bankClearBtn">Discard this review</button>
+            </div>` : '<p class="empty">No unpaid invoices matched these deposits. Check Deposit Name, the amount, and that the invoice is still unpaid.</p>'}
+          ${(review.unmatchedDeposits || []).length ? `
+            <h2 style="font-size:1.05rem;margin:18px 0 8px;">Deposits not matched</h2>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr><th>Date</th><th>Bank description</th><th>Amount</th><th>Why</th></tr>
+                </thead>
+                <tbody>${unmatchedRows}</tbody>
+              </table>
+            </div>` : ''}
+          <details style="margin-top:16px;">
+            <summary>Text read from the PDF</summary>
+            <pre style="white-space:pre-wrap;color:var(--muted);font-size:.82rem;">${preview || 'No text found in this PDF.'}</pre>
+          </details>
+        `;
+      }
+
+      async function uploadBankStatement() {
+        const input = document.getElementById('bankStatementFile');
+        const file = input && input.files && input.files[0];
+        if (!file) {
+          setStatus('Choose a bank statement PDF first.', true);
+          return;
+        }
+        const body = new FormData();
+        body.append('statement', file);
+        const uploadBtn = document.getElementById('bankUploadBtn');
+        if (uploadBtn) uploadBtn.disabled = true;
+        setStatus('Reading bank statement...');
+        try {
+          const res = await apiFetch('/api/elite-invoices/bank-statements', { method: 'POST', body });
+          if (res.status === 401) {
+            sessionStorage.removeItem(AUTH_KEY);
+            showLogin('Session expired. Enter password again.');
+            return;
+          }
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || 'Could not read that statement.');
+          bankReview = data;
+          renderBankReview();
+          const matched = (data.matches || []).length;
+          const found = Number(data.depositCount || 0);
+          setStatus(found
+            ? `Found ${found} deposit${found === 1 ? '' : 's'} and ${matched} suggested match${matched === 1 ? '' : 'es'}. Approve the ones you want marked paid.`
+            : 'No deposits were found in that PDF.');
+        } finally {
+          if (uploadBtn) uploadBtn.disabled = false;
+        }
+      }
+
+      async function applyBankReview() {
+        if (!bankReview) return;
+        const root = document.getElementById('bankReview');
+        const approvals = Array.from(root.querySelectorAll('[data-bank-approve]:checked')).map((box) => {
+          const matchId = box.getAttribute('data-bank-approve');
+          const select = root.querySelector('[data-bank-invoice="' + matchId + '"]');
+          return { matchId, invoiceId: select ? select.value : '' };
+        });
+        if (!approvals.length) {
+          setStatus('Select at least one match to mark paid.', true);
+          return;
+        }
+        setStatus('Marking approved invoices paid...');
+        const res = await apiFetch('/api/elite-invoices/bank-statements/' + encodeURIComponent(bankReview.id) + '/apply', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ approvals })
+        });
+        if (res.status === 401) {
+          sessionStorage.removeItem(AUTH_KEY);
+          showLogin('Session expired. Enter password again.');
+          return;
+        }
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) throw new Error(data.error || 'Could not apply matches.');
+        const numbers = (data.applied || []).map((row) => row.invoiceNumber).join(', ');
+        bankReview = null;
+        renderBankReview();
+        const input = document.getElementById('bankStatementFile');
+        if (input) input.value = '';
+        setStatus(`Marked paid: ${numbers}`);
+      }
+
       clientsTab.addEventListener('click', () => showPanel('clients'));
       clientFullTab.addEventListener('click', () => showPanel('clientfull'));
       invoicesTab.addEventListener('click', () => showPanel('invoices'));
+      bankTab.addEventListener('click', () => showPanel('bank'));
       weeklyTab.addEventListener('click', () => showPanel('weekly'));
       contractsTab.addEventListener('click', () => showPanel('contracts'));
       addClientBtn.addEventListener('click', addClient);
       saveBtn.addEventListener('click', () => saveClients().catch((err) => setStatus(err.message, true)));
       refreshInvoicesBtn.addEventListener('click', () => loadInvoices().catch((err) => setStatus(err.message, true)));
+      document.getElementById('bankUploadBtn').addEventListener('click', () => {
+        uploadBankStatement().catch((err) => setStatus(err.message, true));
+      });
+      document.getElementById('bankReview').addEventListener('click', (event) => {
+        if (event.target.closest('#bankApplyBtn')) {
+          applyBankReview().catch((err) => setStatus(err.message, true));
+        }
+        if (event.target.closest('#bankClearBtn')) {
+          bankReview = null;
+          renderBankReview();
+          setStatus('Bank statement review discarded. Invoices were not changed.');
+        }
+      });
       filterClient.addEventListener('change', () => loadInvoices().catch((err) => setStatus(err.message, true)));
       filterPaid.addEventListener('change', () => loadInvoices().catch((err) => setStatus(err.message, true)));
       clientSearch.addEventListener('input', () => {
@@ -2845,6 +3183,21 @@
             clientSortDir = 'asc';
           }
           renderClientRows();
+        });
+      }
+      const invoicesTableHead = document.querySelector('#invoicesTable thead');
+      if (invoicesTableHead) {
+        invoicesTableHead.addEventListener('click', (event) => {
+          const th = event.target.closest('th.sortable[data-sort]');
+          if (!th) return;
+          const next = th.dataset.sort;
+          if (invoiceSortMode === next) {
+            invoiceSortDir = invoiceSortDir === 'asc' ? 'desc' : 'asc';
+          } else {
+            invoiceSortMode = next;
+            invoiceSortDir = next === 'date' || next === 'cleaning' || next === 'paidDate' || next === 'amount' ? 'desc' : 'asc';
+          }
+          renderInvoiceRows();
         });
       }
       document.querySelectorAll('[data-dash-mode]').forEach((btn) => {

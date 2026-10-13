@@ -51,6 +51,14 @@ const {
   deleteClientPhoto,
   clientPhotoCounts
 } = require('./lib/elite-invoices');
+const {
+  createBankReview,
+  readBankReview,
+  resolveBankApprovals,
+  markBankReviewApplied,
+  depositNameMatches,
+  moneyCents: bankMoneyCents
+} = require('./lib/elite-bank-match');
 const { createContractEsign } = require('./lib/contractEsign');
 registerCursorAiTelegramHandlers(registerTelegramInboundHandler);
 registerCronTelegramHandlers(registerTelegramInboundHandler);
@@ -7562,13 +7570,102 @@ app.patch('/api/elite-invoices/invoices/:id', (req, res) => {
     invoices[index] = normalizeInvoice({
       ...invoices[index],
       paid,
-      paidAt: paid ? new Date().toISOString() : null
+      paidAt: paid ? new Date().toISOString() : null,
+      paidSource: paid ? invoices[index].paidSource : '',
+      paidNote: paid ? invoices[index].paidNote : '',
+      bankDepositDate: paid ? invoices[index].bankDepositDate : '',
+      bankStatementId: paid ? invoices[index].bankStatementId : ''
     });
     writeEliteInvoiceHistory(invoices);
     res.json({ ok: true, invoice: invoices[index] });
   } catch (err) {
     console.error('[EliteInvoices] PATCH invoice error:', err);
     res.status(500).json({ error: err.message });
+  }
+});
+
+const eliteBankStatementUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 15 * 1024 * 1024, files: 1 }
+});
+
+app.post('/api/elite-invoices/bank-statements', (req, res) => {
+  eliteBankStatementUpload.single('statement')(req, res, async (err) => {
+    if (err) {
+      const message = err.code === 'LIMIT_FILE_SIZE'
+        ? 'Bank statement PDF must be under 15MB.'
+        : (err.message || 'Could not upload the bank statement.');
+      return res.status(400).json({ error: message });
+    }
+    try {
+      const file = req.file;
+      if (!file || !file.buffer || !file.buffer.length) {
+        return res.status(400).json({ error: 'Choose a bank statement PDF to upload.' });
+      }
+      const name = String(file.originalname || '');
+      const isPdf = file.mimetype === 'application/pdf' || /\.pdf$/i.test(name);
+      if (!isPdf) return res.status(400).json({ error: 'Bank statement must be a PDF.' });
+      const review = await createBankReview(eliteInvoicesDataDir, {
+        fileName: name || 'statement.pdf',
+        pdfBuffer: file.buffer,
+        invoices: readEliteInvoiceHistory(),
+        clients: readEliteInvoiceClients()
+      });
+      return res.json(review);
+    } catch (uploadErr) {
+      console.error('[EliteInvoices] bank statement upload error:', uploadErr);
+      return res.status(uploadErr.status || 500).json({ error: uploadErr.message || 'Could not read that PDF.' });
+    }
+  });
+});
+
+app.post('/api/elite-invoices/bank-statements/:id/apply', (req, res) => {
+  try {
+    const review = readBankReview(eliteInvoicesDataDir, req.params.id);
+    if (!review) return res.status(404).json({ error: 'That bank statement review was not found. Upload it again.' });
+    if (review.status === 'applied') {
+      return res.status(409).json({ error: 'This statement was already applied. Upload it again if you still need to match other invoices.' });
+    }
+    const accepted = resolveBankApprovals(review, req.body?.approvals);
+    if (!accepted.length) {
+      return res.status(400).json({ error: 'Select at least one match to mark paid.' });
+    }
+    const invoices = readEliteInvoiceHistory();
+    const clients = readEliteInvoiceClients();
+    const applied = [];
+    accepted.forEach(({ match, invoiceId }) => {
+      const index = invoices.findIndex((row) => row.id === invoiceId);
+      if (index < 0 || invoices[index].paid) return;
+      if (bankMoneyCents(invoices[index].amount) !== bankMoneyCents(match.deposit?.amount)) return;
+      const client = clients.find((row) => row.id === invoices[index].clientId);
+      if (!client || !depositNameMatches(match.deposit?.description, client.depositName)) return;
+      const invoiceNumber = invoices[index].invoiceNumber;
+      invoices[index] = normalizeInvoice({
+        ...invoices[index],
+        paid: true,
+        paidAt: new Date().toISOString(),
+        paidSource: 'bank-statement',
+        paidNote: match.deposit.description,
+        bankDepositDate: match.deposit.date,
+        bankStatementId: review.id
+      });
+      applied.push({
+        matchId: match.id,
+        invoiceId,
+        invoiceNumber,
+        amount: invoices[index].amount,
+        depositDate: match.deposit.displayDate || match.deposit.date
+      });
+    });
+    if (!applied.length) {
+      return res.status(409).json({ error: 'Those invoices were already paid or no longer match the deposit.' });
+    }
+    writeEliteInvoiceHistory(invoices);
+    markBankReviewApplied(eliteInvoicesDataDir, review, applied);
+    return res.json({ ok: true, applied });
+  } catch (err) {
+    console.error('[EliteInvoices] bank statement apply error:', err);
+    return res.status(err.status || 500).json({ error: err.message });
   }
 });
 
