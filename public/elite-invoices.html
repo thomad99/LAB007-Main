@@ -748,6 +748,72 @@
       text-align: center;
       color: var(--muted);
     }
+    .unpaid-dash {
+      display: grid;
+      grid-template-columns: minmax(140px, 180px) minmax(160px, 220px) minmax(240px, 1fr);
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .unpaid-kpi {
+      background: rgba(255, 180, 180, .06);
+      border: 1px solid rgba(255, 180, 180, .22);
+      border-radius: 12px;
+      padding: 14px 16px;
+    }
+    .unpaid-kpi label {
+      display: block;
+      font-size: .72rem;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--unpaid);
+      margin-bottom: 6px;
+    }
+    .unpaid-kpi strong {
+      font-size: 1.6rem;
+      color: var(--cream);
+    }
+    .unpaid-top ol {
+      margin: 0;
+      padding: 0;
+      list-style: none;
+      display: grid;
+      gap: 8px;
+      max-width: 460px;
+    }
+    .unpaid-customer {
+      width: 100%;
+      max-width: 460px;
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: 16px;
+      text-align: left;
+      background: transparent;
+      color: var(--text);
+      border: 0;
+      border-radius: 8px;
+      padding: 0;
+      font: inherit;
+      cursor: pointer;
+    }
+    .unpaid-customer:hover .unpaid-customer-name {
+      color: var(--soft-gold);
+    }
+    .unpaid-customer-name {
+      font-weight: 700;
+    }
+    .unpaid-customer-meta {
+      color: var(--muted);
+      white-space: nowrap;
+      font-size: .9rem;
+    }
+    .unpaid-empty {
+      margin: 0;
+      color: var(--muted);
+    }
+    @media (max-width: 800px) {
+      .unpaid-dash { grid-template-columns: 1fr; }
+    }
     .invoice-totals {
       display: flex;
       flex-wrap: wrap;
@@ -1097,7 +1163,7 @@
         </div>
       </div>
       <div class="toolbar">
-        <button type="button" class="btn-secondary active" id="clientsTab">Invoices</button>
+        <button type="button" class="btn-secondary active" id="clientsTab">Create Invoices</button>
         <button type="button" class="btn-secondary" id="clientFullTab">Client Database</button>
         <button type="button" class="btn-secondary" id="invoicesTab">View Invoices</button>
         <button type="button" class="btn-secondary" id="bankTab">Bank Deposits</button>
@@ -1155,7 +1221,7 @@
           type="search"
           id="clientFullSearch"
           list="clientFullSearchList"
-          placeholder="Search name, phone, email, address, cleaner, payment..."
+          placeholder="Search name, deposit name, phone, email, address, cleaner, payment..."
           autocomplete="off"
         >
         <datalist id="clientFullSearchList"></datalist>
@@ -1168,12 +1234,27 @@
         </table>
       </div>
       <p class="hint">
-        Full client list from <strong>Client List NEW</strong>. Use <strong>Images</strong> (right column) to view or upload property photos from phone or PC.
-        Use <strong>Edit</strong> to change any field or add Notes, then <strong>Save</strong>. Data is private, password protected, and not indexed by search engines.
+        Full client list from <strong>Client List NEW</strong>. <strong>Deposit Name</strong> is the text you expect on the customer's bank deposit, and you can edit it here or on the Create Invoices tab.
+        Use <strong>Images</strong> (right column) to view or upload property photos from phone or PC.
+        Use <strong>Edit</strong> to change any field, then <strong>Save</strong>. Data is private, password protected, and not indexed by search engines.
       </p>
     </section>
 
     <section class="panel-section" id="invoicesPanel">
+      <div class="unpaid-dash" id="unpaidDash" aria-live="polite">
+        <div class="unpaid-kpi">
+          <label>Unpaid invoices</label>
+          <strong id="unpaidCount">0</strong>
+        </div>
+        <div class="unpaid-kpi">
+          <label>Unpaid invoice total</label>
+          <strong id="unpaidAmount">$0.00</strong>
+        </div>
+        <div class="unpaid-kpi unpaid-top">
+          <label>Top 3 customers with outstanding invoices</label>
+          <ol id="unpaidTopCustomers"><li class="unpaid-empty">No outstanding invoices.</li></ol>
+        </div>
+      </div>
       <div class="filters">
         <div>
           <label for="filterClient">Client</label>
@@ -1672,7 +1753,7 @@
 
       function renderClientFullSearchOptions() {
         clientFullSearchList.innerHTML = clientFull.rows.map((row) => {
-          const label = [row['Client ID'], row.Name, row.Email, row.Address, row.Notes]
+          const label = [row['Client ID'], row.Name, row['Deposit Name'], row.Email, row.Address, row.Notes]
             .filter(Boolean)
             .join(' — ');
           return `<option value="${escapeHtml(label)}"></option>`;
@@ -1900,8 +1981,13 @@
 
       function clientFullDisplayColumns() {
         const columns = (clientFull.columns || []).filter(Boolean);
-        if (columns.includes('Notes')) return columns;
-        return columns.concat(['Notes']);
+        const next = columns.slice();
+        if (!next.some((col) => col.toLowerCase() === 'deposit name')) {
+          const nameIndex = next.findIndex((col) => col.toLowerCase() === 'name');
+          next.splice(nameIndex >= 0 ? nameIndex + 1 : 0, 0, 'Deposit Name');
+        }
+        if (!next.some((col) => col.toLowerCase() === 'notes')) next.push('Notes');
+        return next;
       }
 
       function clientFullFieldIsNotes(col) {
@@ -1918,6 +2004,9 @@
         }
         if (clientFullFieldIsNotes(col) || col === 'Address') {
           return `<td class="${clientFullFieldIsNotes(col) ? 'notes-cell' : ''}"><textarea class="client-full-field" data-field="${escapeHtml(col)}" rows="3">${escapeHtml(value)}</textarea></td>`;
+        }
+        if (col.toLowerCase() === 'deposit name') {
+          return `<td><input class="client-full-field" type="text" maxlength="120" data-field="${escapeHtml(col)}" value="${escapeHtml(value)}" placeholder="Name on bank deposit"></td>`;
         }
         return `<td><input class="client-full-field" type="text" data-field="${escapeHtml(col)}" value="${escapeHtml(value)}"></td>`;
       }
@@ -1995,9 +2084,7 @@
           const data = await res.json().catch(() => ({}));
           if (!res.ok) throw new Error(data.error || 'Failed to save client');
           clientFull.rows[index] = data.row || payload;
-          if (!clientFull.columns.includes('Notes')) {
-            clientFull.columns = clientFull.columns.concat(['Notes']);
-          }
+          clientFull.columns = clientFullDisplayColumns();
           clientFullEditingIndex = null;
           renderClientFullRows();
           setStatus('Client saved.');
@@ -2074,8 +2161,11 @@
 
       function renderClientFilterOptions() {
         const current = filterClient.value;
+        const sorted = clients.slice().sort((a, b) =>
+          String(a.displayName || '').localeCompare(String(b.displayName || ''), undefined, { sensitivity: 'base' })
+        );
         filterClient.innerHTML = '<option value="">All clients</option>' +
-          clients.map((client) =>
+          sorted.map((client) =>
             `<option value="${escapeHtml(client.id)}">${escapeHtml(client.displayName)}</option>`
           ).join('');
         filterClient.value = current;
@@ -2158,6 +2248,53 @@
 
       function sumInvoiceAmounts(list) {
         return (list || []).reduce((sum, invoice) => sum + Number(invoice.amount || 0), 0);
+      }
+
+      function outstandingCustomers(list) {
+        const grouped = new Map();
+        (list || []).forEach((invoice) => {
+          if (!invoice || invoice.paid) return;
+          const key = String(invoice.clientId || invoice.clientDisplayName || 'unknown');
+          const current = grouped.get(key) || {
+            clientId: String(invoice.clientId || ''),
+            name: String(invoice.clientDisplayName || invoice.billToName || 'Unknown').trim() || 'Unknown',
+            count: 0,
+            amount: 0
+          };
+          current.count += 1;
+          current.amount += Number(invoice.amount || 0);
+          grouped.set(key, current);
+        });
+        return Array.from(grouped.values()).sort((a, b) => {
+          if (b.amount !== a.amount) return b.amount - a.amount;
+          return a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+        });
+      }
+
+      function renderUnpaidDashboard(allInvoices) {
+        const unpaidCountEl = document.getElementById('unpaidCount');
+        const unpaidAmountEl = document.getElementById('unpaidAmount');
+        const topEl = document.getElementById('unpaidTopCustomers');
+        if (!unpaidCountEl || !unpaidAmountEl || !topEl) return;
+        const unpaid = (allInvoices || []).filter((invoice) => invoice && !invoice.paid);
+        unpaidCountEl.textContent = String(unpaid.length);
+        unpaidAmountEl.textContent = formatMoney(sumInvoiceAmounts(unpaid));
+        const top = outstandingCustomers(unpaid).slice(0, 3);
+        if (!top.length) {
+          topEl.innerHTML = '<li class="unpaid-empty">No outstanding invoices.</li>';
+          return;
+        }
+        topEl.innerHTML = top.map((customer, index) => {
+          const meta = `${customer.count} invoice${customer.count === 1 ? '' : 's'} · ${formatMoney(customer.amount)}`;
+          const button = customer.clientId
+            ? `<button type="button" class="unpaid-customer" data-client-id="${escapeHtml(customer.clientId)}">
+                <span class="unpaid-customer-name">${index + 1}. ${escapeHtml(customer.name)}</span>
+                <span class="unpaid-customer-meta">${escapeHtml(meta)}</span>
+              </button>`
+            : `<span class="unpaid-customer-name">${index + 1}. ${escapeHtml(customer.name)}</span>
+               <span class="unpaid-customer-meta">${escapeHtml(meta)}</span>`;
+          return `<li>${button}</li>`;
+        }).join('');
       }
 
       function renderInvoiceTotals() {
@@ -2310,6 +2447,7 @@
         invoices = await res.json();
         const allInvoices = await grandRes.json();
         invoiceGrandTotal = sumInvoiceAmounts(allInvoices);
+        renderUnpaidDashboard(allInvoices);
         renderInvoiceRows();
       }
 
@@ -3297,6 +3435,13 @@
           renderBankReview();
           setStatus('Bank statement review discarded. Invoices were not changed.');
         }
+      });
+      document.getElementById('unpaidTopCustomers').addEventListener('click', (event) => {
+        const button = event.target.closest('[data-client-id]');
+        if (!button) return;
+        filterClient.value = button.dataset.clientId;
+        filterPaid.value = 'unpaid';
+        loadInvoices().catch((err) => setStatus(err.message, true));
       });
       filterClient.addEventListener('change', () => loadInvoices().catch((err) => setStatus(err.message, true)));
       filterPaid.addEventListener('change', () => loadInvoices().catch((err) => setStatus(err.message, true)));

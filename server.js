@@ -6876,20 +6876,33 @@ function writeEliteInvoiceHistory(invoices) {
   saveEliteInvoiceHistory(eliteInvoicesHistoryFile, invoices);
 }
 
+function withEliteClientListColumns(columns) {
+  const next = (Array.isArray(columns) ? columns : []).filter(Boolean);
+  if (!next.some((col) => col.toLowerCase() === 'deposit name')) {
+    const nameIndex = next.findIndex((col) => col.toLowerCase() === 'name');
+    next.splice(nameIndex >= 0 ? nameIndex + 1 : 0, 0, 'Deposit Name');
+  }
+  if (!next.some((col) => col.toLowerCase() === 'notes')) next.push('Notes');
+  return next;
+}
+
 function normalizeEliteClientFull(raw) {
   const data = raw && typeof raw === 'object' ? raw : {};
   const baseColumns = Array.isArray(data.columns)
     ? data.columns.map((col) => String(col || '').trim()).filter(Boolean)
     : [];
-  const columns = baseColumns.includes('Notes') ? baseColumns.slice() : baseColumns.concat(['Notes']);
+  const columns = withEliteClientListColumns(baseColumns);
   const rows = Array.isArray(data.rows)
     ? data.rows.map((row) => {
         const next = {};
         columns.forEach((col) => {
           const value = row && row[col] != null ? row[col] : '';
-          next[col] = typeof value === 'string' ? value : String(value);
+          let text = typeof value === 'string' ? value : String(value);
+          if (col.toLowerCase() === 'deposit name') text = text.trim().slice(0, 120);
+          next[col] = text;
         });
         if (!Object.prototype.hasOwnProperty.call(next, 'Notes')) next.Notes = '';
+        if (!Object.prototype.hasOwnProperty.call(next, 'Deposit Name')) next['Deposit Name'] = '';
         return next;
       })
     : [];
