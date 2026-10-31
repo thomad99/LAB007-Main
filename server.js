@@ -7051,6 +7051,7 @@ async function sendEliteInvoiceEmail(client, invoiceNumber, amount, pdfBuffer) {
       'Payment options:',
       'Send Zelle to 941 287 7237',
       'Cheque payable to My Smart Life LLC',
+      'ACH Transfer: Routing 267084131, Account 588326671',
       '',
       'Thank you,',
       'Elite Cleaning Services'
@@ -7062,6 +7063,7 @@ async function sendEliteInvoiceEmail(client, invoiceNumber, amount, pdfBuffer) {
       <ul>
         <li>Send Zelle to 941 287 7237</li>
         <li>Cheque payable to My Smart Life LLC</li>
+        <li>ACH Transfer: Routing 267084131, Account 588326671</li>
       </ul>
       <p>Thank you,<br>Elite Cleaning Services</p>
     `,
