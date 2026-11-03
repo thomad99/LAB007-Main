@@ -4917,7 +4917,7 @@
           </span>
           <div>
             <h2>Image templates</h2>
-            <p>Shared with every customer. Indexed by category and portrait/landscape — amend names or orientation here anytime.</p>
+            <p>Shared with every customer. Upload one image, several images, or a ZIP, then amend names or orientation here anytime.</p>
           </div>
         </div>
         <div class="form-grid" style="gap:10px;margin-bottom:14px;">
@@ -4930,11 +4930,12 @@
           </div>
           <div>
             <label for="templateUploadName">Image name (optional)</label>
-            <input id="templateUploadName" type="text" placeholder="e.g. Coffee shop" maxlength="80">
+            <input id="templateUploadName" type="text" placeholder="Single image only" maxlength="80">
           </div>
           <div>
-            <label for="templateUploadFile">Upload image</label>
-            <input id="templateUploadFile" type="file" accept="image/*">
+            <label for="templateUploadFile">Upload images or a ZIP</label>
+            <input id="templateUploadFile" type="file" accept="image/*,.zip,application/zip" multiple>
+            <p class="hint" style="margin-top:6px;">Select one image, many images, or a ZIP under 32MB. Category and orientation apply to every file. The name and open/closed pair apply only when you upload a single image.</p>
           </div>
           <div>
             <label for="templateUploadCategory">Category</label>
@@ -10060,36 +10061,89 @@
           }).catch((err) => setStatus(err.message, true));
         });
       }
+      function readUploadDataUrl(file) {
+        return new Promise((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result || ''));
+          reader.onerror = () => reject(new Error('Could not read ' + (file.name || 'that file') + '.'));
+          reader.readAsDataURL(file);
+        });
+      }
+      function isZipUpload(file) {
+        const name = String(file && file.name || '').toLowerCase();
+        const type = String(file && file.type || '').toLowerCase();
+        return name.endsWith('.zip') || type === 'application/zip' || type === 'application/x-zip-compressed';
+      }
       const templateUploadFile = document.getElementById('templateUploadFile');
       if (templateUploadFile) {
-        templateUploadFile.addEventListener('change', (event) => {
-          const file = event.target.files && event.target.files[0];
+        templateUploadFile.addEventListener('change', async (event) => {
+          const files = Array.from(event.target.files || []);
           event.target.value = '';
-          if (!file) return;
-          const reader = new FileReader();
-          reader.onload = () => {
-            apiFetch('/api/smarthours/admin/templates', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                dataUrl: String(reader.result || ''),
-                name: (document.getElementById('templateUploadName') && document.getElementById('templateUploadName').value.trim()) || file.name,
-                categoryId: document.getElementById('templateUploadCategory').value,
-                orientation: document.getElementById('templateUploadOrientation').value,
-                pairRole: document.getElementById('templateUploadRole').value,
-                pairId: document.getElementById('templateUploadPairId').value
-              })
-            }).then(async (res) => {
-              const data = await res.json().catch(() => ({}));
-              if (!res.ok) throw new Error(data.error || 'Upload failed');
-              applyTemplateLibrary(data);
-              const nameField = document.getElementById('templateUploadName');
-              if (nameField) nameField.value = '';
-              renderAdminTemplates();
-              }).catch((err) => setStatus(err.message, true));
-          };
-          reader.onerror = () => setStatus('Could not read that image.', true);
-          reader.readAsDataURL(file);
+          if (!files.length) return;
+          const categoryId = document.getElementById('templateUploadCategory').value;
+          const orientation = document.getElementById('templateUploadOrientation').value;
+          const nameField = document.getElementById('templateUploadName');
+          const customName = nameField ? nameField.value.trim() : '';
+          const singleImage = files.length === 1 && !isZipUpload(files[0]);
+          const problems = [];
+          let added = 0;
+          templateUploadFile.disabled = true;
+          setStatus(files.length > 1 ? 'Uploading 1 of ' + files.length + '…' : 'Uploading…', false, true);
+          try {
+            for (let i = 0; i < files.length; i += 1) {
+              const file = files[i];
+              if (files.length > 1) setStatus('Uploading ' + (i + 1) + ' of ' + files.length + '…', false, true);
+              try {
+                if (isZipUpload(file)) {
+                  if (file.size > 32 * 1024 * 1024) throw new Error((file.name || 'ZIP') + ' must be under 32MB.');
+                  const zipDataUrl = await readUploadDataUrl(file);
+                  const res = await apiFetch('/api/smarthours/admin/templates/bulk', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ zipDataUrl, categoryId, orientation })
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(data.error || 'ZIP upload failed');
+                  applyTemplateLibrary(data);
+                  added += Number(data.added) || 0;
+                  (data.skipped || []).forEach((item) => {
+                    problems.push((item.name ? item.name + ': ' : '') + (item.error || 'skipped'));
+                  });
+                } else {
+                  if (file.size > 4 * 1024 * 1024) throw new Error((file.name || 'Image') + ' must be under 4MB.');
+                  const dataUrl = await readUploadDataUrl(file);
+                  const res = await apiFetch('/api/smarthours/admin/templates', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      dataUrl,
+                      name: (singleImage && customName) || file.name,
+                      categoryId,
+                      orientation,
+                      pairRole: singleImage ? document.getElementById('templateUploadRole').value : '',
+                      pairId: singleImage ? document.getElementById('templateUploadPairId').value : ''
+                    })
+                  });
+                  const data = await res.json().catch(() => ({}));
+                  if (!res.ok) throw new Error(data.error || ((file.name || 'Image') + ' failed'));
+                  applyTemplateLibrary(data);
+                  added += 1;
+                }
+              } catch (err) {
+                problems.push(err.message || (file.name || 'Upload failed'));
+              }
+            }
+          } finally {
+            templateUploadFile.disabled = false;
+          }
+          if (added && nameField) nameField.value = '';
+          renderAdminTemplates();
+          if (!added) setStatus(problems[0] || 'Upload failed', true);
+          else if (problems.length) {
+            setStatus('Added ' + added + '. Skipped ' + problems.length + ': ' + problems.slice(0, 3).join('; '), true);
+          } else {
+            setStatus(added === 1 ? 'Image added.' : 'Added ' + added + ' images.');
+          }
         });
       }
 
