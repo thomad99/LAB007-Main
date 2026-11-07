@@ -6987,7 +6987,7 @@ async function createEliteInvoiceForClient(clientId, inlineClient) {
 
   const invoice = {
     invoiceNumber,
-    date: formatInvoiceDate(new Date()),
+    date: formatInvoiceDate(),
     serviceDate,
     billToName: merged.billToName,
     billToLines: merged.billToLines,

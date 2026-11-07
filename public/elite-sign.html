@@ -370,7 +370,12 @@
               'Signed by ' + signerRoleLabel + (c.signerName ? ' ' + c.signerName : '') +
               ' on ' + (c.signedAt || c.signDate || 'saved date');
           } else {
-            dateEl.value = new Date().toISOString().slice(0, 10);
+            dateEl.value = new Intl.DateTimeFormat('en-CA', {
+              timeZone: 'America/New_York',
+              year: 'numeric',
+              month: '2-digit',
+              day: '2-digit'
+            }).format(new Date());
           }
         } catch (err) {
           msgEl.className = 'error';

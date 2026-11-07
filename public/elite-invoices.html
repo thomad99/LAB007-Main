@@ -1611,7 +1611,40 @@
         return roundMoney(amount).toFixed(2);
       }
 
-      function startOfWeekMonday(date = new Date()) {
+      const EASTERN_TIME_ZONE = 'America/New_York';
+      const EASTERN_WEEKDAY_INDEX = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+
+      function easternParts(date) {
+        const instant = date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date();
+        const parts = new Intl.DateTimeFormat('en-US', {
+          timeZone: EASTERN_TIME_ZONE,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          weekday: 'short'
+        }).formatToParts(instant);
+        const get = (type) => {
+          const part = parts.find((item) => item.type === type);
+          return part ? part.value : '';
+        };
+        return {
+          year: Number(get('year')),
+          month: Number(get('month')),
+          day: Number(get('day')),
+          weekday: get('weekday').replace(/\./g, '').slice(0, 3)
+        };
+      }
+
+      function easternLocalDate(date) {
+        const p = easternParts(date);
+        return new Date(p.year, p.month - 1, p.day, 12, 0, 0, 0);
+      }
+
+      function formatIsoDate(year, month, day) {
+        return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+      }
+
+      function startOfWeekMonday(date = easternLocalDate()) {
         const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
         const day = d.getDay();
         const diff = day === 0 ? -6 : 1 - day;
@@ -1627,21 +1660,57 @@
       }
 
       function todayInputDate() {
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        return `${yyyy}-${mm}-${dd}`;
+        const p = easternParts(new Date());
+        return formatIsoDate(p.year, p.month, p.day);
+      }
+
+      // Most recent weekday on or before today in Eastern Time.
+      // If today is that weekday, the cleaning date stays today.
+      function recentWeekdayInput(targetDow, date) {
+        const p = easternParts(date || new Date());
+        const currentDow = EASTERN_WEEKDAY_INDEX[p.weekday];
+        const steps = ((Number.isFinite(currentDow) ? currentDow : 0) - targetDow + 7) % 7;
+        const utc = new Date(Date.UTC(p.year, p.month - 1, p.day));
+        utc.setUTCDate(utc.getUTCDate() - steps);
+        return formatIsoDate(utc.getUTCFullYear(), utc.getUTCMonth() + 1, utc.getUTCDate());
+      }
+
+      function clientCleanWeekday(client) {
+        const label = [client && client.displayName, client && client.billToName]
+          .filter(Boolean)
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+        if (/office\s*asg/i.test(label) || /bayonet(?:\s+plumbing)?/i.test(label)) return 5;
+        if (/falahee/i.test(label) || /\bmegan\b/i.test(label)) return 4;
+        return null;
+      }
+
+      function cleaningDateDefault(client) {
+        const weekday = clientCleanWeekday(client);
+        if (weekday === 5) {
+          return {
+            value: recentWeekdayInput(5),
+            title: 'Defaults to the most recent Friday, Eastern Time'
+          };
+        }
+        if (weekday === 4) {
+          return {
+            value: recentWeekdayInput(4),
+            title: 'Defaults to the most recent Thursday, Eastern Time'
+          };
+        }
+        return { value: todayInputDate(), title: 'Today, Eastern Time' };
       }
 
       function inputDateToServiceDate(value) {
         const raw = String(value || '').trim();
         const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
         if (!match) {
-          const now = new Date();
-          const mm = String(now.getMonth() + 1).padStart(2, '0');
-          const dd = String(now.getDate()).padStart(2, '0');
-          const yy = String(now.getFullYear()).slice(-2);
+          const p = easternParts(new Date());
+          const mm = String(p.month).padStart(2, '0');
+          const dd = String(p.day).padStart(2, '0');
+          const yy = String(p.year).slice(-2);
           return `${mm}/${dd}/${yy}`;
         }
         return `${match[2]}/${match[3]}/${match[1].slice(-2)}`;
@@ -1671,7 +1740,7 @@
         if (isInvoices) loadInvoices().catch((err) => setStatus(err.message, true));
         if (isClientFull) loadClientFull().catch((err) => setStatus(err.message, true));
         if (isWeekly) {
-          weekCursor = normalizeDashCursor(new Date());
+          weekCursor = normalizeDashCursor(easternLocalDate());
           loadWeeklyDashboard().catch((err) => setStatus(err.message, true));
         }
         if (isContracts) {
@@ -2209,11 +2278,11 @@
           return;
         }
 
-        const defaultCleaningDate = todayInputDate();
         rowsEl.innerHTML = visibleClients.map((client) => {
           const address = (client.billToLines || []).join('\n');
           const nextLabel = String(client.nextSequence || 0).padStart(4, '0');
-          const cleaningDate = existingDates.get(client.id) || defaultCleaningDate;
+          const cleaningDefault = cleaningDateDefault(client);
+          const cleaningDate = existingDates.get(client.id) || cleaningDefault.value;
           const amount = Number(
             (client.lineItems && client.lineItems.length
               ? sumLineItems(client.lineItems)
@@ -2232,7 +2301,7 @@
                   <button type="button" class="icon-btn" data-action="edit-lines" title="Detailed billing">✎</button>
                 </div>
               </td>
-              <td><input class="cleaning-date" type="date" data-field="serviceDate" value="${escapeHtml(cleaningDate)}"></td>
+              <td><input class="cleaning-date" type="date" data-field="serviceDate" title="${escapeHtml(cleaningDefault.title)}" value="${escapeHtml(cleaningDate)}"></td>
               <td><input class="prefix" type="text" data-field="invoicePrefix" value="${escapeHtml(client.invoicePrefix || '')}" placeholder="MV"></td>
               <td><input class="amount" type="number" min="0" max="9999" step="1" data-field="nextSequence" value="${Number(client.nextSequence || 0)}" title="Next invoice suffix ${nextLabel}"></td>
               <td class="actions">
@@ -2337,9 +2406,8 @@
         if (!paidAt) return '';
         const parsed = new Date(paidAt);
         if (Number.isNaN(parsed.getTime())) return isoToUs(paidAt);
-        const mm = String(parsed.getMonth() + 1).padStart(2, '0');
-        const dd = String(parsed.getDate()).padStart(2, '0');
-        return `${mm}/${dd}/${parsed.getFullYear()}`;
+        const p = easternParts(parsed);
+        return `${String(p.month).padStart(2, '0')}/${String(p.day).padStart(2, '0')}/${p.year}`;
       }
 
       function paymentMadeValue(invoice) {
@@ -2499,7 +2567,7 @@
         }
         if (filterPaid.value === 'paid' || filterPaid.value === 'unpaid') parts.push(filterPaid.value);
         if (filterSearch.value.trim()) parts.push('search');
-        parts.push(new Date().toISOString().slice(0, 10));
+        parts.push(todayInputDate());
         return parts.join('-') + '.csv';
       }
 
@@ -3060,27 +3128,25 @@
         }
       }
 
-      function formatLocalDateKey(date = new Date()) {
+      function formatLocalDateKey(date = easternLocalDate()) {
         const d = date instanceof Date ? date : new Date(date);
-        if (Number.isNaN(d.getTime())) {
-          const now = new Date();
-          return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-        }
+        if (!(d instanceof Date) || Number.isNaN(d.getTime())) return todayInputDate();
         return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
       }
 
       function parseLocalDateKey(value) {
         const raw = String(value || '').trim();
-        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+        const match = raw.match(/^(\d{4})-(\d{2})-(\d{2})$/);
         if (match) {
           return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
         }
+        if (!raw) return easternLocalDate();
         const parsed = new Date(raw);
-        return Number.isNaN(parsed.getTime()) ? new Date() : parsed;
+        return Number.isNaN(parsed.getTime()) ? easternLocalDate() : easternLocalDate(parsed);
       }
 
-      function normalizeDashCursor(date = new Date()) {
-        const safe = date instanceof Date && !Number.isNaN(date.getTime()) ? date : new Date();
+      function normalizeDashCursor(date = easternLocalDate()) {
+        const safe = date instanceof Date && !Number.isNaN(date.getTime()) ? date : easternLocalDate();
         if (dashMode === 'month') {
           return new Date(safe.getFullYear(), 0, 1);
         }
@@ -3091,7 +3157,7 @@
       }
 
       function jumpDashToToday() {
-        weekCursor = normalizeDashCursor(new Date());
+        weekCursor = normalizeDashCursor(easternLocalDate());
       }
 
       function shiftDashCursor(direction) {

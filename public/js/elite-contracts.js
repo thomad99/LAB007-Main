@@ -38,11 +38,18 @@
       ).join('');
 
     function fmtDate(value) {
-      const s = String(value || '');
+      const s = String(value || '').trim();
       if (!s) return '';
+      const dayOnly = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (dayOnly) return `${Number(dayOnly[2])}/${Number(dayOnly[3])}/${dayOnly[1]}`;
       const d = new Date(s);
       if (Number.isNaN(d.getTime())) return s.slice(0, 10);
-      return d.toLocaleDateString();
+      return new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/New_York',
+        year: 'numeric',
+        month: 'numeric',
+        day: 'numeric'
+      }).format(d);
     }
 
     async function api(path, options) {
