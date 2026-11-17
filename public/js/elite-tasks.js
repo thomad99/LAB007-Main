@@ -23,7 +23,7 @@
     saving: false,
     staffPicked: false,
     recurrencePicked: false,
-    zoomDays: MODE === 'manager' ? 2 : (Number(localStorage.getItem('eliteTasksZoomDays')) || 0),
+    zoomDays: defaultDays(),
     calendarMode: 'zoom',
     fitDays: 0,
     fitHourPx: 0,
@@ -88,18 +88,6 @@
 
   function prettyDate(iso) {
     return dateParts(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  }
-
-  function weekTitle(start) {
-    const left = dateParts(start);
-    const end = dateParts(addDays(start, 6));
-    if (left.getMonth() === end.getMonth() && left.getFullYear() === end.getFullYear()) {
-      return left.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
-    }
-    if (left.getFullYear() === end.getFullYear()) {
-      return `${left.toLocaleDateString(undefined, { month: 'short' })} – ${end.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`;
-    }
-    return `${left.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} – ${end.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`;
   }
 
   function formatTime(value) {
@@ -404,9 +392,11 @@
     const filters = MODE === 'manager' ? renderFilters() : '';
     const fitIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
     const zoomIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"></circle><path d="M15.2 15.2L20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>';
+    const days = defaultDays();
+    const cogIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 3.5v2.2M12 18.3V21M3.5 12H5.7M18.3 12H21M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8l-1.6 1.6M7.4 16.6l-1.6 1.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>';
     const viewButtons = MODE === 'manager'
-      ? `<button type="button" class="btn ghost icon-btn" data-action="fit-calendar" aria-label="Fit booked cleans" aria-pressed="${state.calendarMode === 'fit' ? 'true' : 'false'}">${fitIcon}</button>
-          <button type="button" class="btn ghost icon-btn" data-action="zoom-two" aria-label="Zoom, next 2 days" aria-pressed="${state.calendarMode === 'zoom' ? 'true' : 'false'}">${zoomIcon}</button>`
+      ? `<button type="button" class="btn ghost icon-btn" data-action="zoom-two" aria-label="Zoom, next ${days} days" aria-pressed="${state.calendarMode === 'zoom' ? 'true' : 'false'}">${zoomIcon}</button>
+          <button type="button" class="btn ghost icon-btn" data-action="fit-calendar" aria-label="Fit, next 7 days" aria-pressed="${state.calendarMode === 'fit' ? 'true' : 'false'}">${fitIcon}</button>`
       : `<button type="button" class="btn ghost" data-action="zoom-out" aria-label="Zoom out">−</button>
           <button type="button" class="btn ghost" data-action="zoom-in" aria-label="Zoom in">+</button>`;
     toolbar.innerHTML = `
@@ -416,10 +406,9 @@
           <button type="button" class="btn ghost" data-action="this-week">Today</button>
           <button type="button" class="btn ghost week-arrow" data-action="next-week" aria-label="Next week">›</button>
           ${viewButtons}
-          <button type="button" class="btn ghost" data-action="phone-calendar">Phone calendar</button>
+          <button type="button" class="btn ghost icon-btn" data-action="open-settings" aria-label="Settings">${cogIcon}</button>
         </div>
         <div class="week-title">
-          <strong>${esc(weekTitle(state.weekStart))}</strong>
           ${summary}
         </div>
       </div>
@@ -502,10 +491,7 @@
       state.savedScroll = null;
       return;
     }
-    const anchorDate = state.calendarMode === 'fit'
-      ? ((jobs.map((job) => job.date).sort()[0]) || state.weekStart)
-      : state.weekStart;
-    const head = scroller.querySelector(`.gcal-dayhead[data-date="${anchorDate}"]`);
+    const head = scroller.querySelector(`.gcal-dayhead[data-date="${state.weekStart}"]`);
     const gutter = scroller.querySelector('.gcal-head .gcal-time');
     if (head && gutter) {
       const delta = head.getBoundingClientRect().left - (scroller.getBoundingClientRect().left + gutter.getBoundingClientRect().width);
@@ -526,18 +512,22 @@
     return window.matchMedia('(max-width: 760px)').matches;
   }
 
-  function daySpan(from, to) {
-    const [ys, ms, ds] = String(from).split('-').map(Number);
-    const [ye, me, de] = String(to).split('-').map(Number);
-    return Math.round((Date.UTC(ye, me - 1, de) - Date.UTC(ys, ms - 1, ds)) / 86400000) + 1;
+  function defaultDays() {
+    const saved = Number(localStorage.getItem('eliteTasksDefaultDays'));
+    if (saved >= 1 && saved <= 7) return saved;
+    if (MODE !== 'manager') {
+      const legacy = Number(localStorage.getItem('eliteTasksZoomDays'));
+      if (legacy >= 1 && legacy <= 7) return legacy;
+      return mobileCalendar() ? 2 : 7;
+    }
+    return 2;
   }
 
   function zoomDays() {
     if (MODE === 'manager' && state.calendarMode === 'fit' && state.fitDays >= 1) return state.fitDays;
     const chosen = Number(state.zoomDays);
     if (chosen >= 1 && chosen <= 7) return chosen;
-    if (MODE === 'manager') return 2;
-    return mobileCalendar() ? 2 : 7;
+    return defaultDays();
   }
 
   function calendarHourPx() {
@@ -561,7 +551,7 @@
     const next = Math.min(7, Math.max(1, days));
     if (next === zoomDays() && state.zoomDays === next) return;
     state.zoomDays = next;
-    localStorage.setItem('eliteTasksZoomDays', String(next));
+    localStorage.setItem('eliteTasksDefaultDays', String(next));
     render();
   }
 
@@ -620,29 +610,16 @@
   });
 
   function gridWindow(jobs) {
-    if (state.calendarMode === 'fit' && jobs.length) {
-      let start = 24 * 60;
-      let end = 0;
-      jobs.forEach((job) => {
-        const begin = minutesOf(job.startTime);
-        const finish = begin + (Number(job.durationMinutes) || 60);
-        start = Math.min(start, Math.floor(begin / 60) * 60);
-        end = Math.max(end, Math.ceil(finish / 60) * 60);
-      });
-      if (end <= start) end = start + 60;
-      return { start: Math.max(0, start), end: Math.min(24 * 60, end) };
-    }
-    let start = 10 * 60;
+    const start = 10 * 60;
     let end = 19 * 60;
-    jobs.forEach((job) => {
-      const begin = minutesOf(job.startTime);
-      const finish = begin + (Number(job.durationMinutes) || 60);
-      start = Math.min(start, Math.floor(begin / 60) * 60);
+    const list = state.calendarMode === 'fit'
+      ? jobs.filter((job) => job.date >= state.weekStart && job.date <= addDays(state.weekStart, 6))
+      : jobs;
+    list.forEach((job) => {
+      const finish = minutesOf(job.startTime) + (Number(job.durationMinutes) || 60);
       end = Math.max(end, Math.ceil(finish / 60) * 60);
     });
-    start = Math.max(0, start);
-    end = Math.min(24 * 60, Math.max(end, start + 60));
-    return { start, end };
+    return { start, end: Math.min(24 * 60, Math.max(end, start + 60)) };
   }
 
   function minutesToTime(total) {
@@ -785,6 +762,35 @@
 
   function calendarHttps(token) {
     return `${location.origin}/Elite-TaskMgmt/calendar/${token}.ics`;
+  }
+
+  function calendarSyncOn() {
+    return !state.data || state.data.calendarSync !== false;
+  }
+
+  function openSettings() {
+    const syncOn = calendarSyncOn();
+    const days = defaultDays();
+    const token = MODE === 'cleaner' ? TOKEN : (state.data && state.data.calendarToken);
+    const https = token ? calendarHttps(token) : '';
+    const webcal = https.replace(/^https?:/i, 'webcal:');
+    const syncBody = !syncOn
+      ? '<p class="hint">Calendar sync is off. A phone that already subscribed drops these cleans the next time it refreshes.</p>'
+      : !https
+        ? '<p class="hint">The calendar link is not ready yet.</p>'
+        : `<p class="hint">${MODE === 'cleaner' ? 'Your accepted cleans.' : 'Every accepted clean.'} A clean shows on the phone after it is acknowledged, and leaves the phone calendar if it is un-acknowledged. The phone refreshes about once an hour.</p>
+          <a class="btn primary block" href="${esc(webcal)}">Subscribe on this phone</a>
+          <label>Google Calendar link<input type="text" readonly value="${esc(https)}"></label>
+          <button type="button" class="btn ghost block" data-action="copy-text" data-text="${esc(https)}">Copy link</button>`;
+    openSheet(`<div>
+      ${sheetHead('Settings')}
+      <label>Calendar sync</label>
+      ${choiceButtons('calendarSync', [['1', 'On'], ['0', 'Off']], syncOn ? '1' : '0')}
+      <label>Default view</label>
+      ${choiceButtons('defaultDays', [1, 2, 3, 4, 5, 6, 7].map((count) => [String(count), `${count} day${count === 1 ? '' : 's'}`]), String(days))}
+      <p class="hint">The calendar opens on today and the next days you choose. Fit still shows 7 days.</p>
+      <div id="syncBox">${syncBody}</div>
+    </div>`);
   }
 
   function openPhoneCalendar(token, label) {
@@ -1284,21 +1290,19 @@
     }
     if (action === 'zoom-two') {
       state.calendarMode = 'zoom';
-      state.zoomDays = 2;
+      state.zoomDays = defaultDays();
       state.fitHourPx = 0;
       state.weekStart = todayISO();
       guard(() => loadWeek());
       return;
     }
     if (action === 'fit-calendar') {
-      const jobs = visibleJobs();
-      const dates = jobs.map((job) => job.date).sort();
       state.calendarMode = 'fit';
       state.fitHourPx = 0;
       state.fitLocked = false;
-      state.fitDays = dates.length ? Math.max(1, Math.min(28, daySpan(dates[0], dates[dates.length - 1]))) : 2;
-      if (!dates.length) toast('No cleans to fit.');
-      render();
+      state.fitDays = 7;
+      state.weekStart = todayISO();
+      guard(() => loadWeek());
       return;
     }
     if (action === 'refresh') {
@@ -1351,6 +1355,34 @@
       if (box) box.remove();
       const cleaner = form && form.querySelector('[data-action="toggle-cleaner"]');
       if (cleaner) cleaner.focus();
+      return;
+    }
+    if (action === 'open-settings') {
+      openSettings();
+      return;
+    }
+    if (action === 'pick-choice' && target.dataset.group === 'calendarSync') {
+      guard(async () => {
+        const on = target.dataset.value === '1';
+        const path = MODE === 'cleaner' ? '/api/elite-tasks/me/settings' : '/api/elite-tasks/settings';
+        await api(path, { method: 'POST', body: JSON.stringify({ calendarSync: on }) });
+        if (state.data) state.data.calendarSync = on;
+        toast(on ? 'Calendar sync on' : 'Calendar sync off');
+        openSettings();
+      });
+      return;
+    }
+    if (action === 'pick-choice' && target.dataset.group === 'defaultDays') {
+      const days = Math.min(7, Math.max(1, Number(target.dataset.value) || 2));
+      localStorage.setItem('eliteTasksDefaultDays', String(days));
+      state.calendarMode = 'zoom';
+      state.zoomDays = days;
+      state.fitHourPx = 0;
+      state.weekStart = todayISO();
+      target.parentElement.querySelectorAll('[data-group="defaultDays"]').forEach((button) => {
+        button.setAttribute('aria-pressed', button.dataset.value === String(days) ? 'true' : 'false');
+      });
+      guard(() => loadWeek());
       return;
     }
     if (action === 'pick-choice') {

@@ -603,6 +603,22 @@ async function testAssignmentEmail() {
     const allCalendar = await (await fetch(`${base}/Elite-TaskMgmt/calendar/${booked.calendarToken}.ics`)).text();
     assert.ok(allCalendar.includes('SUMMARY:Sarah · Beach road'));
     assert.ok(!allCalendar.includes('20261125T150000Z'));
+    const paused = await fetch(`${base}/api/elite-tasks/settings`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ calendarSync: false })
+    });
+    assert.strictEqual(paused.status, 200);
+    const pausedFeed = await (await fetch(`${base}/Elite-TaskMgmt/calendar/${booked.calendarToken}.ics`)).text();
+    assert.ok(!pausedFeed.includes('BEGIN:VEVENT'));
+    const staffPaused = await fetch(`${base}/api/elite-tasks/me/settings`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': sarah.token },
+      body: JSON.stringify({ calendarSync: false })
+    });
+    assert.strictEqual(staffPaused.status, 200);
+    const staffFeed = await (await fetch(`${base}/Elite-TaskMgmt/calendar/${sarah.token}.ics`)).text();
+    assert.ok(!staffFeed.includes('BEGIN:VEVENT'));
     const missing = await fetch(`${base}/Elite-TaskMgmt/calendar/${'ab'.repeat(20)}.ics`);
     assert.strictEqual(missing.status, 404);
   } finally {
