@@ -23,9 +23,8 @@
     saving: false,
     staffPicked: false,
     recurrencePicked: false,
-    alertPreset: 'hour'
+    zoomDays: Number(localStorage.getItem('eliteTasksZoomDays')) || 0
   };
-  let alertTimer = 0;
 
   const gate = document.getElementById('gate');
   const shell = document.getElementById('shell');
@@ -109,40 +108,6 @@
       return `${hours} hr`;
     }
     return `${n} min`;
-  }
-
-  function defaultAlert(date, startTime) {
-    const total = minutesOf(startTime) - 60;
-    if (total < 0) return { alertDate: addDays(date, -1), alertTime: minutesToClock(total + 24 * 60) };
-    return { alertDate: date, alertTime: minutesToClock(total) };
-  }
-
-  function minutesToClock(total) {
-    const hour = Math.floor(total / 60) % 24;
-    const minute = total % 60;
-    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-  }
-
-  function localStamp(date) {
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-  }
-
-  function alertStamp(job) {
-    if (!job || !job.alertDate || !job.alertTime) return '';
-    return `${job.alertDate}T${job.alertTime}`;
-  }
-
-  function upcomingAlerts() {
-    const now = new Date();
-    const start = localStamp(new Date(now.getTime() - 12 * 60 * 60 * 1000));
-    const end = localStamp(new Date(now.getTime() + 36 * 60 * 60 * 1000));
-    return ((state.data && state.data.jobs) || [])
-      .filter((job) => {
-        const stamp = alertStamp(job);
-        return stamp && job.status !== 'completed' && stamp >= start && stamp <= end;
-      })
-      .sort((a, b) => alertStamp(a).localeCompare(alertStamp(b)));
   }
 
   function formatRange(start, minutes) {
@@ -304,8 +269,18 @@
     window.scrollTo(0, keep ? y : 0);
   }
 
+  function jobStaffIds(job) {
+    const ids = Array.isArray(job && job.staffIds) ? job.staffIds.filter(Boolean) : [];
+    if (job && job.staffId && !ids.includes(job.staffId)) ids.unshift(job.staffId);
+    return ids;
+  }
+
   function people() {
-    return (state.data && state.data.staff) || [];
+    const list = ((state.data && state.data.staff) || []).slice();
+    return list.sort((a, b) => {
+      const rank = (person) => String(person && person.name || '').toLowerCase() === 'petra' ? 0 : 1;
+      return rank(a) - rank(b);
+    });
   }
 
   function activePeople() {
@@ -317,7 +292,7 @@
     const jobs = (state.data && state.data.jobs) || [];
     return jobs.filter((job) => {
       if (state.filter === 'needs') return job.status === 'scheduled';
-      if (state.filter !== 'all') return job.staffId === state.filter;
+      if (state.filter !== 'all') return jobStaffIds(job).includes(state.filter);
       return true;
     });
   }
@@ -336,7 +311,8 @@
       return hour * 60 + minute;
     };
     return jobs.some((other) => {
-      if (other.id === job.id || other.staffId !== job.staffId || other.date !== job.date) return false;
+      if (other.id === job.id || other.date !== job.date) return false;
+      if (!jobStaffIds(job).some((id) => jobStaffIds(other).includes(id))) return false;
       const a = start(job.startTime);
       const b = start(other.startTime);
       return a < b + other.durationMinutes && b < a + job.durationMinutes;
@@ -355,10 +331,6 @@
     }
     renderNav();
     renderToolbar();
-    if (state.data) {
-      showDueAlerts();
-      if (!alertTimer) alertTimer = setInterval(showDueAlerts, 60000);
-    }
     if (state.screen === 'properties' && MODE === 'manager') renderProperties();
     else if (state.screen === 'staff' && MODE === 'manager') renderStaff();
     else renderWeek();
@@ -399,69 +371,34 @@
           ? `<span class="summary warn">${skipped} completed without acknowledgement</span>`
           : '<span class="summary ok">All acknowledged</span>';
     const filters = MODE === 'manager' ? renderFilters() : '';
-    const phoneAlerts = typeof Notification === 'undefined' || Notification.permission === 'granted'
-      ? ''
-      : Notification.permission === 'denied'
-        ? '<p class="hint">Phone alerts are blocked in the browser settings.</p>'
-        : '<button type="button" class="btn ghost small" data-action="enable-alerts">Turn on phone alerts</button>';
     toolbar.innerHTML = `
-      ${renderAlertList()}
       <div class="weekbar">
         <div class="week-nav">
           <button type="button" class="btn ghost" data-action="prev-week" aria-label="Previous week">‹</button>
           <button type="button" class="btn ghost" data-action="this-week">Today</button>
           <button type="button" class="btn ghost" data-action="next-week" aria-label="Next week">›</button>
+          <button type="button" class="btn ghost" data-action="zoom-out" aria-label="Zoom out">−</button>
+          <button type="button" class="btn ghost" data-action="zoom-in" aria-label="Zoom in">+</button>
         </div>
         <div class="week-title">
           <strong>${esc(weekTitle(state.weekStart))}</strong>
           ${summary}
         </div>
       </div>
-      ${phoneAlerts}
       ${filters}`;
   }
 
   function renderFilters() {
-    const list = people().filter((person) => person.active || (state.data.jobs || []).some((job) => job.staffId === person.id));
+    const list = people().filter((person) => person.active || (state.data.jobs || []).some((job) => jobStaffIds(job).includes(person.id)));
     const waiting = (state.data.jobs || []).filter((job) => job.status === 'scheduled').length;
     const chips = [
       ['all', 'All'],
-      ['needs', waiting ? `Needs ack (${waiting})` : 'Needs ack'],
+      ['needs', waiting ? `Waiting Ack (${waiting})` : 'Waiting Ack'],
       ...list.map((person) => [person.id, person.name])
     ];
     return `<div class="filters">${chips.map(([id, label]) =>
       `<button type="button" class="chip ${state.filter === id ? 'on' : ''}" data-action="filter" data-filter="${esc(id)}">${esc(label)}</button>`
     ).join('')}</div>`;
-  }
-
-  function renderAlertList() {
-    const now = localStamp(new Date());
-    const rows = upcomingAlerts();
-    if (!rows.length) return '';
-    return `<div class="alert-list">${rows.map((job) => {
-      const due = alertStamp(job) <= now;
-      const place = placeLabel(job);
-      const who = MODE === 'manager' && job.staffName ? ` · ${job.staffName}` : '';
-      return `<button type="button" class="alert-item ${due ? 'due' : ''}" data-action="open-job" data-id="${esc(job.id)}">
-        <strong>${due ? 'Alert due' : 'Alert'} ${esc(prettyDate(job.alertDate))} · ${esc(formatTime(job.alertTime))}</strong>
-        <span>${esc(place)}${job.address ? ` · ${esc(job.address)}` : ''}${esc(who)} · clean ${esc(prettyDate(job.date))} at ${esc(formatTime(job.startTime))}</span>
-      </button>`;
-    }).join('')}</div>`;
-  }
-
-  function showDueAlerts() {
-    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
-    const now = localStamp(new Date());
-    upcomingAlerts().forEach((job) => {
-      const stamp = alertStamp(job);
-      if (!stamp || stamp > now) return;
-      const key = `eliteAlert:${job.id}:${stamp}`;
-      if (sessionStorage.getItem(key)) return;
-      sessionStorage.setItem(key, '1');
-      const place = placeLabel(job);
-      const body = `${prettyDate(job.date)} at ${formatTime(job.startTime)}${job.address ? ` · ${job.address}` : ''}`;
-      try { new Notification(place, { body, tag: key }); } catch (err) { /* the banner still shows */ }
-    });
   }
 
   function renderWeek() {
@@ -473,7 +410,7 @@
     const span = gridWindow(jobs);
     const hours = [];
     for (let minute = span.start; minute < span.end; minute += 60) hours.push(minute);
-    const hourPx = 52;
+    const hourPx = calendarHourPx();
     const height = hours.length * hourPx;
     const nowTop = nowLineTop(today, span, hourPx);
     view.innerHTML = `<div class="gcal" id="gcal">
@@ -485,16 +422,10 @@
           ${MODE === 'manager' ? `<button type="button" class="gcal-plus" data-action="add" data-date="${date}" aria-label="Add a clean on ${esc(prettyDate(date))}">+</button>` : ''}
         </div>`).join('')}
       </div>
-      <div class="gcal-allday">
-        <div class="gcal-time gcal-allday-label">all-day</div>
-        ${days.map((date) => `<div class="gcal-allday-cell">${blocksOn(date).map((block) => `<div class="unavail">${esc(block.staffName || state.data.staff?.name || 'Unavailable')}${block.note ? ` · ${esc(block.note)}` : ''}
-          <button type="button" class="btn danger small" data-action="delete-block" data-id="${esc(block.id)}" data-label="${esc(block.staffName || '')}">Clear</button>
-        </div>`).join('')}<button type="button" class="gcal-block" data-action="block-day" data-date="${date}">Block</button></div>`).join('')}
-      </div>
       <div class="gcal-body">
         <div class="gcal-time">${hours.map((minute) => `<div class="gcal-hour"><span>${esc(formatTime(minutesToTime(minute)))}</span></div>`).join('')}</div>
         ${days.map((date) => {
-          const placed = placeJobs(jobs.filter((job) => job.date === date));
+          const placed = placeJobs(jobs.filter((job) => job.date === date)).placed;
           return `<div class="gcal-col ${date === today ? 'today' : ''}" style="height:${height}px">
             ${date === today && nowTop != null ? `<div class="gcal-now" style="top:${nowTop}px"></div>` : ''}
             ${placed.map((item) => renderEvent(item, span, hourPx, allJobs)).join('')}
@@ -504,9 +435,8 @@
     </div>${renderBlockedList()}`;
     const scroller = document.getElementById('gcal');
     if (!scroller) return;
-    const col = Math.max(112, Math.floor((scroller.clientWidth - 56) / 7));
-    scroller.style.setProperty('--day-count', String(days.length));
-    scroller.style.setProperty('--day-col', `${col}px`);
+    layoutCalendar();
+    bindCalendarZoom(scroller);
     if (state.savedScroll) {
       scroller.scrollLeft = state.savedScroll.left;
       scroller.scrollTop = state.savedScroll.top;
@@ -525,6 +455,71 @@
       scroller.scrollTop = Math.max(0, lineTop - 90);
     }
   }
+
+  function mobileCalendar() {
+    return window.matchMedia('(max-width: 760px)').matches;
+  }
+
+  function zoomDays() {
+    const chosen = Number(state.zoomDays);
+    if (chosen >= 1 && chosen <= 7) return chosen;
+    return mobileCalendar() ? 2 : 7;
+  }
+
+  function calendarHourPx() {
+    const base = mobileCalendar() ? 2 : 7;
+    return Math.max(40, Math.min(110, Math.round(52 * base / zoomDays())));
+  }
+
+  function setZoomDays(days) {
+    const next = Math.min(7, Math.max(1, days));
+    if (next === zoomDays() && state.zoomDays === next) return;
+    state.zoomDays = next;
+    localStorage.setItem('eliteTasksZoomDays', String(next));
+    render();
+  }
+
+  function layoutCalendar() {
+    const scroller = document.getElementById('gcal');
+    if (!scroller) return;
+    const count = scroller.querySelectorAll('.gcal-dayhead').length || 28;
+    const slot = Math.max(1, Math.floor((scroller.clientWidth - 56) / zoomDays()));
+    const columns = `56px ${Array.from({ length: count }, () => `${slot}px`).join(' ')}`;
+    scroller.style.setProperty('--hour-px', `${calendarHourPx()}px`);
+    scroller.querySelectorAll('.gcal-head, .gcal-body').forEach((row) => {
+      row.style.gridTemplateColumns = columns;
+    });
+  }
+
+  function bindCalendarZoom(scroller) {
+    let pinch = null;
+    const distance = (event) => {
+      const [a, b] = event.touches;
+      return Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+    };
+    scroller.addEventListener('touchstart', (event) => {
+      if (event.touches.length === 2) pinch = distance(event);
+    }, { passive: true });
+    scroller.addEventListener('touchmove', (event) => {
+      if (event.touches.length !== 2 || !pinch) return;
+      const next = distance(event);
+      if (next > pinch * 1.2) {
+        pinch = next;
+        setZoomDays(zoomDays() - 1);
+      } else if (next < pinch * 0.8) {
+        pinch = next;
+        setZoomDays(zoomDays() + 1);
+      }
+    }, { passive: true });
+    scroller.addEventListener('touchend', () => { pinch = null; });
+    scroller.addEventListener('wheel', (event) => {
+      if (!event.ctrlKey) return;
+      event.preventDefault();
+      setZoomDays(zoomDays() + (event.deltaY > 0 ? 1 : -1));
+    }, { passive: false });
+  }
+
+  window.addEventListener('resize', () => layoutCalendar());
 
   function gridWindow(jobs) {
     let start = 10 * 60;
@@ -557,22 +552,44 @@
   }
 
   function placeJobs(dayJobs) {
-    const sorted = [...dayJobs].sort((a, b) => minutesOf(a.startTime) - minutesOf(b.startTime) || String(a.id).localeCompare(String(b.id)));
-    const laneEnds = [];
-    const placed = sorted.map((job) => {
+    const sorted = [...dayJobs].sort((a, b) =>
+      minutesOf(a.startTime) - minutesOf(b.startTime) ||
+      String(a.staffName || '').localeCompare(String(b.staffName || '')) ||
+      String(a.id).localeCompare(String(b.id))
+    );
+    const items = sorted.map((job) => {
       const start = minutesOf(job.startTime);
       const end = start + (Number(job.durationMinutes) || 60);
-      let lane = laneEnds.findIndex((until) => until <= start);
-      if (lane < 0) {
-        lane = laneEnds.length;
-        laneEnds.push(end);
-      } else {
-        laneEnds[lane] = Math.max(laneEnds[lane], end);
-      }
-      return { job, lane, start, end };
+      return { job, start, end, lane: 0, laneCount: 1 };
     });
-    const laneCount = Math.max(1, laneEnds.length);
-    return placed.map((item) => ({ ...item, laneCount }));
+    let maxLanes = 1;
+    let index = 0;
+    while (index < items.length) {
+      let clusterEnd = items[index].end;
+      let next = index + 1;
+      const cluster = [items[index]];
+      while (next < items.length && items[next].start < clusterEnd) {
+        cluster.push(items[next]);
+        clusterEnd = Math.max(clusterEnd, items[next].end);
+        next += 1;
+      }
+      const laneEnds = [];
+      cluster.forEach((item) => {
+        let lane = laneEnds.findIndex((until) => until <= item.start);
+        if (lane < 0) {
+          lane = laneEnds.length;
+          laneEnds.push(item.end);
+        } else {
+          laneEnds[lane] = item.end;
+        }
+        item.lane = lane;
+      });
+      const laneCount = Math.max(1, laneEnds.length);
+      cluster.forEach((item) => { item.laneCount = laneCount; });
+      maxLanes = Math.max(maxLanes, laneCount);
+      index = next;
+    }
+    return { placed: items, lanes: maxLanes };
   }
 
   function renderEvent(item, span, hourPx, allJobs) {
@@ -583,11 +600,12 @@
     const tone = job.status === 'acknowledged' || job.status === 'completed' ? job.status : 'scheduled';
     const flags = [];
     if (overlaps(job, allJobs)) flags.push('Overlaps');
-    if (blocksOn(job.date).some((block) => !block.staffId || block.staffId === job.staffId)) flags.push('Unavailable');
+    if (blocksOn(job.date).some((block) => !block.staffId || jobStaffIds(job).includes(block.staffId))) flags.push('Unavailable');
     const who = MODE === 'manager' ? job.staffName || '' : '';
     const place = placeLabel(job);
     return `<button type="button" class="gcal-event ${tone}" data-action="open-job" data-id="${esc(job.id)}" title="${esc(`${formatRange(job.startTime, job.durationMinutes)} ${place}`)}" style="top:${top}px;height:${height}px;left:calc(${item.lane * width}% + 2px);width:calc(${width}% - 4px)">
       <strong>${esc(formatTime(job.startTime))}${who ? ` · ${esc(who)}` : ''}</strong>
+      ${job.deepClean ? '<span>Deep clean</span>' : ''}
       <span>${esc(place)}</span>
       ${job.address ? `<span>${esc(job.address)}</span>` : ''}
       ${flags.length && height > 46 ? `<span>${esc(flags.join(' · '))}</span>` : ''}
@@ -694,6 +712,33 @@
     return `<div class="sheet-head"><h2 id="sheetTitle" tabindex="-1">${title}</h2><button type="button" class="btn ghost small" data-action="close-sheet">Close</button></div>`;
   }
 
+  function staffButtons(selected) {
+    const on = new Set(selected);
+    const list = activePeople();
+    people().forEach((person) => {
+      if (on.has(person.id) && !list.some((item) => item.id === person.id)) list.push(person);
+    });
+    if (!list.length) return '<p class="hint">Add a cleaner on the Staff tab first.</p>';
+    return `<div class="choices">${list.map((person) =>
+      `<button type="button" class="choice" data-action="toggle-cleaner" data-value="${esc(person.id)}" aria-pressed="${on.has(person.id) ? 'true' : 'false'}">${esc(person.name)}</button>`
+    ).join('')}</div>`;
+  }
+
+  function selectedStaff(form) {
+    return String(form.elements.namedItem('staffIds').value || '').split(',').map((id) => id.trim()).filter(Boolean);
+  }
+
+  function setStaff(form, ids) {
+    const unique = [];
+    ids.forEach((id) => {
+      if (id && !unique.includes(id)) unique.push(id);
+    });
+    form.elements.namedItem('staffIds').value = unique.join(',');
+    form.querySelectorAll('[data-action="toggle-cleaner"]').forEach((button) => {
+      button.setAttribute('aria-pressed', unique.includes(button.dataset.value) ? 'true' : 'false');
+    });
+  }
+
   function choiceButtons(group, options, selected) {
     return `<div class="choices">${options.map(([value, label]) =>
       `<button type="button" class="choice" data-action="pick-choice" data-group="${group}" data-value="${esc(value)}" aria-pressed="${value === selected ? 'true' : 'false'}">${esc(label)}</button>`
@@ -704,58 +749,48 @@
     const preset = state.filter !== 'all' && state.filter !== 'needs' ? state.filter : '';
     state.staffPicked = Boolean(preset);
     state.recurrencePicked = false;
-    state.alertPreset = 'hour';
-    const alert = defaultAlert(date, '10:00');
     openSheet(jobForm({
       mode: 'create',
       date,
-      staffId: preset,
+      staffIds: preset ? [preset] : [],
       startTime: '10:00',
       durationMinutes: 120,
       recurrence: 'once',
       weeksAhead: 26,
-      visitNote: '',
-      alertDate: alert.alertDate,
-      alertTime: alert.alertTime
+      visitNote: ''
     }));
   }
 
   function openEdit(job) {
     state.staffPicked = true;
     state.recurrencePicked = true;
-    state.alertPreset = job.alertDate && job.alertTime ? 'custom' : 'none';
     openSheet(jobForm({ mode: 'edit', ...job }));
   }
 
   function jobForm(job) {
     const editing = job.mode === 'edit';
-    const peopleButtons = activePeople().map((person) => [person.id, person.name]);
+    const chosen = jobStaffIds(job);
     return `<form id="jobForm" data-mode="${editing ? 'edit' : 'create'}" data-id="${esc(job.id || '')}">
       ${sheetHead(editing ? 'Edit clean' : 'Add a clean')}
       <input type="hidden" name="propertyId" value="${esc(job.propertyId || '')}">
-      <input type="hidden" name="staffId" value="${esc(job.staffId || '')}">
+      <input type="hidden" name="staffIds" value="${esc(chosen.join(','))}">
       <input type="hidden" name="recurrence" value="${esc(job.recurrence || 'once')}">
       <label>Property
-        <input id="propertySearch" type="search" placeholder="Property or address" autocomplete="off">
+        <input id="propertySearch" type="search" placeholder="Search or type a new name" autocomplete="off">
       </label>
-      <div id="propertyChosen">${job.propertyId ? `<p class="hint">Selected: ${esc(placeLabel(job))}${job.address ? ` · ${esc(job.address)}` : ''}</p>` : '<p class="hint">Search by property or address.</p>'}</div>
+      <div id="propertyChosen">${job.propertyId ? `<p class="hint">Selected: ${esc(placeLabel(job))}${job.address ? ` · ${esc(job.address)}` : ''}</p>` : '<p class="hint">Search an existing customer, or type a new name to add one.</p>'}</div>
       <div id="propertyResults"></div>
       <label>Date<input name="date" type="date" required value="${esc(job.date || '')}"></label>
       <label>Start time</label>
       ${choiceButtons('time', TIMES.map((time) => [time, formatTime(time)]), job.startTime || '10:00')}
       <input name="startTime" type="time" min="10:00" required value="${esc(job.startTime || '10:00')}" style="margin-top:8px">
-      <label>Likely duration</label>
-      ${choiceButtons('duration', DURATIONS.map((mins) => [String(mins), formatDuration(mins)]), String(job.durationMinutes || 120))}
+      <label>Expected time</label>
+      <input type="hidden" name="deepClean" value="${job.deepClean ? '1' : '0'}">
+      ${choiceButtons('duration', DURATIONS.map((mins) => [String(mins), formatDuration(mins)]).concat([['deep', 'Deep clean']]), job.deepClean ? 'deep' : String(job.durationMinutes || 120))}
       <input name="durationMinutes" type="number" min="15" max="480" step="15" required value="${esc(job.durationMinutes || 120)}" style="margin-top:8px">
-      <label>Cleaner</label>
-      ${peopleButtons.length ? choiceButtons('staffId', peopleButtons, job.staffId || '') : '<p class="hint">Add a cleaner on the Staff tab first.</p>'}
-      <label>Alert</label>
-      ${choiceButtons('alert', [['none', 'No alert'], ['hour', '1 hour before'], ['morning', 'Morning of the clean'], ['night', 'Night before']], state.alertPreset === 'custom' ? '' : state.alertPreset)}
-      <div id="alertBox" ${state.alertPreset === 'none' ? 'hidden' : ''}>
-        <label>Alert date<input name="alertDate" type="date" value="${esc(job.alertDate || '')}"></label>
-        <label>Alert time<input name="alertTime" type="time" value="${esc(job.alertTime || '')}"></label>
-        <p class="hint">The cleaner sees the alert with this clean's date, time, and address. Repeats keep the same gap before each visit.</p>
-      </div>
+      <label>Cleaners</label>
+      <p class="hint">Select each cleaner on this clean.</p>
+      ${staffButtons(chosen)}
       ${editing ? '' : `<label>Repeat</label>${choiceButtons('recurrence', Object.entries(REC), job.recurrence || 'once')}
         <div id="aheadBox" ${job.recurrence && job.recurrence !== 'once' ? '' : 'hidden'}>
           <label>Schedule ahead
@@ -798,8 +833,7 @@
     </div>`;
     openSheet(`<div>
       ${sheetHead(esc(placeLabel(job)))}
-      <p><strong>${esc(prettyDate(job.date))}</strong> · ${esc(formatRange(job.startTime, job.durationMinutes))}</p>
-      ${job.alertDate && job.alertTime ? `<p class="summary warn">Alert ${esc(prettyDate(job.alertDate))} at ${esc(formatTime(job.alertTime))}</p>` : '<p class="hint">No alert set.</p>'}
+      <p><strong>${esc(prettyDate(job.date))}</strong> · ${esc(formatRange(job.startTime, job.durationMinutes))}${job.deepClean ? ' · Deep clean' : ''}</p>
       ${job.address ? `<p>${esc(job.address)}</p>` : ''}
       ${MODE === 'manager' ? `<p class="person"><span class="dot" style="background:${safeColor(job.staffColor)}"></span>${esc(job.staffName || 'Unassigned')}</p>` : ''}
       <p><span class="pill ${esc(job.status)}">${esc(statusLabel(job.status))}</span> ${job.seriesId ? esc(REC[job.recurrence] || '') : ''}</p>
@@ -853,18 +887,40 @@
     const form = document.getElementById('jobForm');
     if (!box || !form) return;
     const selected = form.elements.namedItem('propertyId').value;
-    const q = String(query || '').trim().toLowerCase();
+    const raw = String(query || '').trim();
+    const q = raw.toLowerCase();
     const props = (state.data && state.data.properties) || [];
     let list = [];
-    if (q) list = props.filter((property) => `${property.label} ${property.address}`.toLowerCase().includes(q)).slice(0, 12);
+    if (q) list = props.filter((property) => `${property.name || ''} ${property.label || ''} ${property.address || ''}`.toLowerCase().includes(q)).slice(0, 12);
     else if (selected) list = props.filter((property) => property.id === selected);
-    if (!list.length) {
-      box.innerHTML = q ? '<p class="hint">No matching property.</p>' : '';
-      return;
-    }
-    box.innerHTML = list.map((property) => `<button type="button" class="pick ${property.id === selected ? 'on' : ''}" data-action="pick-property" data-id="${esc(property.id)}">
-      <strong>${esc(property.label)}</strong><span>${esc(property.address || 'No address')}</span>
+    const keptAddress = document.getElementById('newPropertyAddress')?.value || '';
+    const matches = list.map((property) => `<button type="button" class="pick ${property.id === selected ? 'on' : ''}" data-action="pick-property" data-id="${esc(property.id)}">
+      <strong>${esc(property.label || property.name)}</strong><span>${esc(property.address || 'No address')}</span>
     </button>`).join('');
+    const addNew = raw ? `<div class="pick">
+      <strong>Add ${esc(raw)}</strong>
+      <label>Address<input id="newPropertyAddress" type="text" maxlength="240" placeholder="Street address" value="${esc(keptAddress)}"></label>
+      <button type="button" class="btn primary" data-action="add-booking-property" data-name="${esc(raw)}">Add customer</button>
+    </div>` : '';
+    box.innerHTML = matches || addNew ? `${matches}${addNew}` : (q ? '<p class="hint">No matching customer.</p>' : '');
+  }
+
+  async function addBookingProperty(name) {
+    const address = document.getElementById('newPropertyAddress')?.value || '';
+    if (!String(name || '').trim()) return toast('Type the customer name.');
+    if (!String(address).trim()) return toast('Enter the address.');
+    const created = await api('/api/elite-tasks/properties', {
+      method: 'POST',
+      body: JSON.stringify({ name, address })
+    });
+    const property = { ...created.property, label: created.property.name };
+    if (!state.data.properties) state.data.properties = [];
+    state.data.properties.push(property);
+    state.data.properties.sort((a, b) => String(a.name || a.label).localeCompare(String(b.name || b.label), undefined, { numeric: true, sensitivity: 'base' }));
+    const search = document.getElementById('propertySearch');
+    if (search) search.value = '';
+    pickProperty(property.id);
+    toast('Customer added');
   }
 
   function pickProperty(id) {
@@ -878,7 +934,7 @@
     }
     if (property && !state.staffPicked) {
       const suggested = suggestStaffId(property.cleaner, people());
-      if (suggested) setChoice(form, 'staffId', suggested);
+      if (suggested) setStaff(form, [suggested]);
     }
     if (property && !state.recurrencePicked && form.dataset.mode !== 'edit') {
       setChoice(form, 'recurrence', suggestRecurrence(property.frequency));
@@ -891,32 +947,58 @@
   async function submitJob(form, applyTo) {
     const body = {
       propertyId: form.elements.namedItem('propertyId').value,
-      staffId: form.elements.namedItem('staffId').value,
+      staffIds: selectedStaff(form),
       date: form.elements.namedItem('date').value,
       startTime: form.elements.namedItem('startTime').value,
       durationMinutes: Number(form.elements.namedItem('durationMinutes').value),
+      deepClean: form.elements.namedItem('deepClean').value === '1',
       visitNote: form.elements.namedItem('visitNote').value,
-      alertDate: state.alertPreset === 'none' ? '' : form.elements.namedItem('alertDate').value,
-      alertTime: state.alertPreset === 'none' ? '' : form.elements.namedItem('alertTime').value,
+      allowClash: form.dataset.allowClash === '1',
       applyTo
     };
     if (!body.propertyId) return toast('Choose a property.');
-    if (!body.staffId) return toast('Choose a cleaner.');
+    if (!body.staffIds.length) return toast('Choose a cleaner.');
     if (!body.date || !body.startTime) return toast('Choose a date and start time.');
     if (minutesOf(body.startTime) < 10 * 60) return toast('The earliest start time is 10:00 AM.');
-    if (form.dataset.mode === 'edit') {
-      await api(`/api/elite-tasks/jobs/${encodeURIComponent(form.dataset.id)}`, { method: 'PATCH', body: JSON.stringify(body) });
-      toast(applyTo === 'future' ? 'Updated this visit and the future visits.' : 'Visit updated.');
-    } else {
-      body.recurrence = form.elements.namedItem('recurrence').value || 'once';
-      body.weeksAhead = Number((form.elements.namedItem('weeksAhead') || {}).value || 26);
-      const result = await api('/api/elite-tasks/jobs', { method: 'POST', body: JSON.stringify(body) });
-      const extra = (result.warnings || []).join(' ');
-      const noun = result.count === 1 ? 'clean' : 'cleans';
-      toast(`Booked ${result.count} ${noun} through ${prettyDate(result.lastDate)}. ${extra}`.trim());
+    try {
+      if (form.dataset.mode === 'edit') {
+        await api(`/api/elite-tasks/jobs/${encodeURIComponent(form.dataset.id)}`, { method: 'PATCH', body: JSON.stringify(body) });
+        toast(applyTo === 'future' ? 'Updated this visit and the future visits.' : 'Visit updated.');
+      } else {
+        body.recurrence = form.elements.namedItem('recurrence').value || 'once';
+        body.weeksAhead = Number((form.elements.namedItem('weeksAhead') || {}).value || 26);
+        const result = await api('/api/elite-tasks/jobs', { method: 'POST', body: JSON.stringify(body) });
+        const noun = result.count === 1 ? 'clean' : 'cleans';
+        toast(`Booked ${result.count} ${noun} through ${prettyDate(result.lastDate)}.`);
+      }
+    } catch (err) {
+      if (err.status === 409) {
+        showClash(form, err.message, applyTo);
+        return;
+      }
+      throw err;
     }
     closeSheet();
     await loadWeek({ keepScroll: true });
+  }
+
+  function showClash(form, message, applyTo) {
+    let box = form.querySelector('#clashBox');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'clashBox';
+      box.className = 'clash';
+      const actions = form.querySelector('.stack');
+      form.insertBefore(box, actions || null);
+    }
+    box.hidden = false;
+    box.dataset.apply = applyTo || 'one';
+    box.innerHTML = `<p><strong>Already booked</strong></p><p>${esc(message)}</p>
+      <div class="stack">
+        <button type="button" class="btn primary" data-action="clash-continue">Continue anyway</button>
+        <button type="button" class="btn ghost" data-action="clash-change">Change cleaner</button>
+      </div>`;
+    box.scrollIntoView({ block: 'nearest' });
   }
 
   document.addEventListener('click', (event) => {
@@ -941,10 +1023,14 @@
       guard(() => loadWeek());
       return;
     }
-    if (action === 'enable-alerts') {
-      if (typeof Notification !== 'undefined' && Notification.requestPermission) {
-        Notification.requestPermission().then(() => render());
-      }
+    if (action === 'zoom-in' || action === 'zoom-out') {
+      setZoomDays(zoomDays() + (action === 'zoom-in' ? -1 : 1));
+      return;
+    }
+    if (action === 'refresh') {
+      const button = target.closest('button');
+      button.classList.add('spin');
+      Promise.resolve(guard(() => loadWeek({ keepScroll: true }))).finally(() => button.classList.remove('spin'));
       return;
     }
     if (action === 'add') return openAdd(target.dataset.date);
@@ -964,8 +1050,35 @@
       });
       return;
     }
-    if (action === 'block-day') return openBlock(target.dataset.date);
     if (action === 'block-range') return openBlock(todayISO());
+    if (action === 'toggle-cleaner') {
+      const form = target.closest('#jobForm');
+      if (!form) return;
+      state.staffPicked = true;
+      form.dataset.allowClash = '';
+      const clash = form.querySelector('#clashBox');
+      if (clash) clash.remove();
+      const current = selectedStaff(form);
+      const id = target.dataset.value;
+      setStaff(form, current.includes(id) ? current.filter((item) => item !== id) : current.concat(id));
+      return;
+    }
+    if (action === 'clash-continue') {
+      const form = target.closest('#jobForm');
+      if (!form) return;
+      form.dataset.allowClash = '1';
+      guard(() => submitJob(form, target.closest('#clashBox').dataset.apply || 'one'));
+      return;
+    }
+    if (action === 'clash-change') {
+      const form = target.closest('#jobForm');
+      const box = target.closest('#clashBox');
+      if (form) form.dataset.allowClash = '';
+      if (box) box.remove();
+      const cleaner = form && form.querySelector('[data-action="toggle-cleaner"]');
+      if (cleaner) cleaner.focus();
+      return;
+    }
     if (action === 'pick-choice') {
       const form = target.closest('form');
       if (!form) return;
@@ -977,12 +1090,19 @@
         if (ahead) ahead.hidden = target.dataset.value === 'once';
       }
       if (target.dataset.group === 'time') form.elements.namedItem('startTime').value = target.dataset.value;
-      if (target.dataset.group === 'duration') form.elements.namedItem('durationMinutes').value = target.dataset.value;
-      if (target.dataset.group === 'alert') fillAlert(form, target.dataset.value);
-      if (target.dataset.group === 'time' && ['hour', 'morning', 'night'].includes(state.alertPreset)) fillAlert(form, state.alertPreset);
+      if (target.dataset.group === 'duration') {
+        const deep = target.dataset.value === 'deep';
+        form.elements.namedItem('deepClean').value = deep ? '1' : '0';
+        if (deep) form.elements.namedItem('durationMinutes').value = '360';
+        else form.elements.namedItem('durationMinutes').value = target.dataset.value;
+      }
       return;
     }
     if (action === 'pick-property') return pickProperty(target.dataset.id);
+    if (action === 'add-booking-property') {
+      guard(() => addBookingProperty(target.dataset.name));
+      return;
+    }
     if (action === 'copy-text') {
       guard(async () => {
         await navigator.clipboard.writeText(target.dataset.text || '');
@@ -1097,6 +1217,13 @@
     }
   });
 
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Enter' || event.target.id !== 'newPropertyAddress') return;
+    event.preventDefault();
+    const button = document.querySelector('[data-action="add-booking-property"]');
+    if (button) button.click();
+  });
+
   document.addEventListener('input', (event) => {
     if (event.target.id === 'propertySearch') renderPropertyResults(event.target.value);
     if (event.target.id === 'propFilter') {
@@ -1106,42 +1233,11 @@
     const form = event.target.closest('#jobForm');
     if (!form) return;
     if (event.target.name === 'startTime') setChoice(form, 'time', event.target.value);
-    if (event.target.name === 'durationMinutes') setChoice(form, 'duration', event.target.value);
-    if (event.target.name === 'date' && ['hour', 'morning', 'night'].includes(state.alertPreset)) fillAlert(form, state.alertPreset);
-    if (event.target.name === 'startTime' && state.alertPreset === 'hour') fillAlert(form, 'hour');
-    if (event.target.name === 'alertDate' || event.target.name === 'alertTime') state.alertPreset = 'custom';
+    if (event.target.name === 'durationMinutes') {
+      const deep = form.elements.namedItem('deepClean').value === '1';
+      setChoice(form, 'duration', deep ? 'deep' : event.target.value);
+    }
   });
-
-  function fillAlert(form, preset) {
-    state.alertPreset = preset;
-    const box = document.getElementById('alertBox');
-    const date = form.elements.namedItem('date').value;
-    const start = form.elements.namedItem('startTime').value || '10:00';
-    form.querySelectorAll('[data-group="alert"]').forEach((button) => {
-      button.setAttribute('aria-pressed', button.dataset.value === preset ? 'true' : 'false');
-    });
-    if (preset === 'none' || !date) {
-      if (box) box.hidden = preset === 'none';
-      if (preset === 'none') {
-        form.elements.namedItem('alertDate').value = '';
-        form.elements.namedItem('alertTime').value = '';
-      }
-      return;
-    }
-    if (box) box.hidden = false;
-    let alertDate = date;
-    let alertTime = '08:00';
-    if (preset === 'hour') {
-      const shift = defaultAlert(date, start);
-      alertDate = shift.alertDate;
-      alertTime = shift.alertTime;
-    } else if (preset === 'night') {
-      alertDate = addDays(date, -1);
-      alertTime = '18:00';
-    }
-    form.elements.namedItem('alertDate').value = alertDate;
-    form.elements.namedItem('alertTime').value = alertTime;
-  }
 
   document.addEventListener('submit', (event) => {
     const form = event.target;

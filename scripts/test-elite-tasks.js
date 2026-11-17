@@ -59,11 +59,12 @@ async function testStore() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'elite-tasks-'));
   const store = createStore(dir);
   const snap = await store.snapshot({ from: '2026-11-16', to: '2026-11-22', today: '2026-11-16' });
-  assert.deepStrictEqual(snap.staff.map((person) => person.name), ['Petra', 'Sarah', 'Jill', 'Kylie', 'Petr', 'Maya']);
-  const petr = snap.staff.find((person) => person.name === 'Petr');
+  assert.deepStrictEqual(snap.staff.map((person) => person.name), ['Petra', 'Sarah', 'Jill', 'Kylie']);
+  const sarah = snap.staff.find((person) => person.name === 'Sarah');
+  const jill = snap.staff.find((person) => person.name === 'Jill');
   const created = await store.createJobs({
     property: { id: '85', clientId: '#85', name: 'Tracy', address: 'Siesta' },
-    staffId: petr.id,
+    staffId: sarah.id,
     date: '2026-11-16',
     startTime: '10:00',
     durationMinutes: 120,
@@ -76,36 +77,89 @@ async function testStore() {
   assert.strictEqual(created.count, 4);
   await assert.rejects(() => store.createJobs({
     property: { id: '85', clientId: '#85', name: 'Tracy', address: 'Siesta' },
-    staffId: petr.id,
+    staffId: sarah.id,
     date: '2026-11-16',
     startTime: '09:30',
     durationMinutes: 120,
     recurrence: 'once',
     weeksAhead: 1
   }), /10:00 AM/);
+  await store.createJobs({
+    property: { id: '85', clientId: '#85', name: 'Tracy', address: 'Siesta' },
+    staffId: sarah.id,
+    date: '2026-11-17',
+    startTime: '10:00',
+    durationMinutes: 360,
+    deepClean: true,
+    recurrence: 'once',
+    weeksAhead: 1
+  });
   const week = await store.snapshot({ from: '2026-11-16', to: '2026-12-31', today: '2026-11-16' });
   assert.strictEqual(week.jobs[0].alertDate, '2026-11-16');
   assert.strictEqual(week.jobs[0].alertTime, '08:00');
-  assert.strictEqual(week.jobs[1].alertDate, '2026-11-23');
-  assert.strictEqual(week.jobs[1].alertTime, '08:00');
+  assert.strictEqual(week.jobs[0].deepClean, false);
+  const deep = week.jobs.find((job) => job.date === '2026-11-17');
+  assert.strictEqual(deep.deepClean, true);
+  assert.strictEqual(deep.durationMinutes, 360);
+  const nextWeekly = week.jobs.find((job) => job.date === '2026-11-23');
+  assert.strictEqual(nextWeekly.alertDate, '2026-11-23');
+  assert.strictEqual(nextWeekly.alertTime, '08:00');
   const first = week.jobs[0];
-  await store.setStatus(first.id, 'acknowledged', petr.id);
+  await store.setStatus(first.id, 'acknowledged', sarah.id);
   await assert.rejects(() => store.setStatus(first.id, 'acknowledged', 'jill'), /Clean not found/);
   const after = await store.snapshot({ from: '2026-11-16', to: '2026-11-16', today: '2026-11-16' });
   assert.strictEqual(after.jobs[0].status, 'acknowledged');
-  const cleared = await store.unacknowledge(first.id, petr.id);
+  const cleared = await store.unacknowledge(first.id, sarah.id);
   assert.strictEqual(cleared.status, 'scheduled');
   assert.strictEqual(cleared.acknowledgedAt, null);
-  await assert.rejects(() => store.unacknowledge(first.id, petr.id), /not acknowledged/);
-  await store.setStatus(first.id, 'acknowledged', petr.id);
-  await store.setStatus(first.id, 'completed', petr.id);
+  await assert.rejects(() => store.unacknowledge(first.id, sarah.id), /not acknowledged/);
+  await store.setStatus(first.id, 'acknowledged', sarah.id);
+  await store.setStatus(first.id, 'completed', sarah.id);
   const done = await store.snapshot({ from: '2026-11-16', to: '2026-11-16', today: '2026-11-16' });
   assert.strictEqual(done.jobs[0].status, 'completed');
   assert.ok(done.jobs[0].acknowledgedAt);
-  const removed = await store.deleteJobs(week.jobs[1].id, 'future');
+  const removed = await store.deleteJobs(nextWeekly.id, 'future');
   assert.strictEqual(removed.removed, 3);
   const left = await store.snapshot({ from: '2026-11-16', to: '2026-12-31', today: '2026-11-16' });
-  assert.strictEqual(left.jobs.length, 1);
+  assert.strictEqual(left.jobs.length, 2);
+  assert.ok(left.jobs.some((job) => job.deepClean && job.date === '2026-11-17'));
+  await store.createJobs({
+    property: { id: '85', clientId: '#85', name: 'Tracy', address: 'Siesta' },
+    staffIds: [sarah.id, jill.id],
+    date: '2026-11-18',
+    startTime: '11:00',
+    durationMinutes: 120,
+    recurrence: 'once',
+    weeksAhead: 1
+  });
+  const paired = await store.snapshot({ from: '2026-11-18', to: '2026-11-18', today: '2026-11-16' });
+  const shared = paired.jobs.find((job) => job.startTime === '11:00');
+  assert.deepStrictEqual(shared.staffIds, [sarah.id, jill.id]);
+  const bySarah = await store.setStatus(shared.id, 'acknowledged', sarah.id);
+  assert.strictEqual(bySarah.status, 'acknowledged');
+  await assert.rejects(() => store.setStatus(shared.id, 'completed', 'kylie'), /Clean not found/);
+  await assert.rejects(() => store.createJobs({
+    property: { id: '85', clientId: '#85', name: 'Tracy', address: 'Siesta' },
+    staffId: sarah.id,
+    date: '2026-11-18',
+    startTime: '11:00',
+    durationMinutes: 120,
+    recurrence: 'once',
+    weeksAhead: 1
+  }), /already booked/i);
+  const held = await store.snapshot({ from: '2026-11-18', to: '2026-11-18', today: '2026-11-16' });
+  assert.strictEqual(held.jobs.filter((job) => job.startTime === '11:00').length, 1);
+  const forced = await store.createJobs({
+    property: { id: '85', clientId: '#85', name: 'Tracy', address: 'Siesta' },
+    staffId: sarah.id,
+    date: '2026-11-18',
+    startTime: '11:00',
+    durationMinutes: 120,
+    recurrence: 'once',
+    weeksAhead: 1,
+    allowClash: true
+  });
+  assert.strictEqual(forced.count, 1);
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
@@ -211,13 +265,24 @@ async function testHttp() {
     assert.strictEqual(week.role, 'manager');
     assert.ok(week.properties.some((item) => item.name === 'Tracy' && item.doorCode === '1111' && item.address === 'Siesta Key'));
     assert.ok(!JSON.stringify(week.properties).match(/Price per Visit|"Pay"/));
-    const petr = week.staff.find((person) => person.name === 'Petr');
+    const sarah = week.staff.find((person) => person.name === 'Sarah');
     const jill = week.staff.find((person) => person.name === 'Jill');
+    assert.deepStrictEqual(week.staff.map((person) => person.name), ['Petra', 'Sarah', 'Jill', 'Kylie']);
+    for (const name of ['Petr', 'Maya']) {
+      const added = await fetch(`${base}/api/elite-tasks/staff`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ name })
+      });
+      assert.strictEqual(added.status, 201);
+    }
+    const hidden = await (await fetch(`${base}/api/elite-tasks/week?from=2026-11-16&to=2026-12-31&today=2026-11-16`, { headers })).json();
+    assert.deepStrictEqual(hidden.staff.map((person) => person.name), ['Petra', 'Sarah', 'Jill', 'Kylie']);
     const property = week.properties.find((item) => item.name === 'Tracy');
     const adminPage = await fetch(`${base}/Elite-TaskMgmt`);
     assert.match(adminPage.headers.get('x-robots-tag') || '', /noindex/i);
     await adminPage.text();
-    const staffPage = await fetch(`${base}/Elite-TaskMgmt/petr/${petr.token}`);
+    const staffPage = await fetch(`${base}/Elite-TaskMgmt/sarah/${sarah.token}`);
     assert.strictEqual(staffPage.status, 200);
     assert.match(staffPage.headers.get('x-robots-tag') || '', /noindex/i);
     await staffPage.text();
@@ -226,7 +291,7 @@ async function testHttp() {
       headers,
       body: JSON.stringify({
         propertyId: property.id,
-        staffId: petr.id,
+        staffId: sarah.id,
         date: '2026-11-16',
         startTime: '10:00',
         durationMinutes: 90,
@@ -254,23 +319,23 @@ async function testHttp() {
     assert.strictEqual(wrongAck.status, 404);
     const ackRes = await fetch(`${base}/api/elite-tasks/me/jobs/${booked.jobs[0].id}/ack`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': petr.token },
+      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': sarah.token },
       body: '{}'
     });
     assert.strictEqual(ackRes.status, 200);
     const mineRes = await fetch(`${base}/api/elite-tasks/me?from=2026-11-16&to=2026-12-31&today=2026-11-16`, {
-      headers: { 'x-elite-tasks-token': petr.token }
+      headers: { 'x-elite-tasks-token': sarah.token }
     });
     const mine = await mineRes.json();
-    assert.strictEqual(mine.staff.name, 'Petr');
+    assert.strictEqual(mine.staff.name, 'Sarah');
     assert.strictEqual(mine.staff.token, undefined);
     assert.strictEqual(mine.properties, undefined);
-    assert.ok(mine.jobs.every((job) => job.staffId === petr.id));
+    assert.ok(mine.jobs.every((job) => job.staffId === sarah.id));
     assert.strictEqual(mine.jobs[0].status, 'acknowledged');
     assert.strictEqual(mine.jobs[0].doorCode, '1111');
     const unackRes = await fetch(`${base}/api/elite-tasks/me/jobs/${mine.jobs[0].id}/unack`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': petr.token },
+      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': sarah.token },
       body: '{}'
     });
     assert.strictEqual(unackRes.status, 200);
@@ -279,13 +344,13 @@ async function testHttp() {
     assert.strictEqual(unacked.acknowledgedAt, null);
     const reackRes = await fetch(`${base}/api/elite-tasks/me/jobs/${mine.jobs[0].id}/ack`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': petr.token },
+      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': sarah.token },
       body: '{}'
     });
     assert.strictEqual(reackRes.status, 200);
     const doneRes = await fetch(`${base}/api/elite-tasks/me/jobs/${mine.jobs[0].id}/complete`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': petr.token },
+      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': sarah.token },
       body: '{}'
     });
     assert.strictEqual(doneRes.status, 200);
@@ -327,7 +392,7 @@ async function testHttp() {
     assert.ok(!afterDelete.properties.some((item) => item.name === 'Gulf Cottage'));
     const blockRes = await fetch(`${base}/api/elite-tasks/me/blocks`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': petr.token },
+      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': sarah.token },
       body: JSON.stringify({ startDate: '2026-11-20', endDate: '2026-11-22', note: 'Off' })
     });
     assert.strictEqual(blockRes.status, 201);
@@ -336,7 +401,7 @@ async function testHttp() {
       headers,
       body: JSON.stringify({
         propertyId: property.id,
-        staffId: petr.id,
+        staffId: sarah.id,
         date: '2026-11-20',
         startTime: '10:00',
         durationMinutes: 60,
@@ -344,8 +409,21 @@ async function testHttp() {
       })
     });
     const warn = await warnRes.json();
-    assert.strictEqual(warn.count, 1);
-    assert.ok(warn.warnings.some((line) => /unavailable/i.test(line)));
+    assert.strictEqual(warnRes.status, 400);
+    assert.ok(/blocked/i.test(warn.error));
+    const openRes = await fetch(`${base}/api/elite-tasks/jobs`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({
+        propertyId: property.id,
+        staffId: jill.id,
+        date: '2026-11-20',
+        startTime: '10:00',
+        durationMinutes: 60,
+        recurrence: 'once'
+      })
+    });
+    assert.strictEqual(openRes.status, 201);
   } finally {
     await new Promise((resolve) => server.close(resolve));
     fs.rmSync(dir, { recursive: true, force: true });
