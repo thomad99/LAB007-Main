@@ -523,7 +523,7 @@ async function testAssignmentEmail() {
     const week = await (await fetch(`${base}/api/elite-tasks/week?from=2026-11-18&to=2026-12-31&today=2026-11-18`, { headers })).json();
     const sarah = week.staff.find((person) => person.name === 'Sarah');
     const jill = week.staff.find((person) => person.name === 'Jill');
-    const property = week.properties[0];
+    const property = week.properties.find((item) => item.propertyName === 'Beach road');
     const blocked = await fetch(`${base}/api/elite-tasks/staff/${sarah.id}`, {
       method: 'PATCH',
       headers,
@@ -721,6 +721,33 @@ async function testManagementCopy() {
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
+async function testExtraProperties() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'elite-tasks-extra-'));
+  const store = createStore(dir);
+  await store.seedCustomers([
+    { id: 'alameda', name: 'Alameda', label: 'Alameda', address: '2400 Alameda Ave', doorCode: '44', notes: 'Dogs' }
+  ]);
+  const first = await store.mergeExtraProperties();
+  assert.strictEqual(first.added, first.total - 1);
+  assert.ok(first.total >= 29);
+  const list = await store.listCustomers();
+  const alameda = list.find((item) => item.propertyName === 'Alameda');
+  assert.strictEqual(alameda.doorCode, '44');
+  assert.strictEqual(alameda.notes, 'Dogs');
+  assert.strictEqual(alameda.address, '2400 Alameda Ave');
+  const cottage = list.find((item) => item.propertyName === 'Bay Shore Cottage');
+  assert.strictEqual(cottage.address, '4522 Bayshore Rd Front Cottage');
+  const house = list.find((item) => item.propertyName === 'The Beach House');
+  assert.strictEqual(house.address, '564 Beach Rd (All 3 Units)');
+  const second = await store.mergeExtraProperties();
+  assert.strictEqual(second.added, 0);
+  await store.deleteCustomer(cottage.id);
+  const third = await store.mergeExtraProperties();
+  assert.strictEqual(third.added, 0);
+  assert.ok(!(await store.listCustomers()).some((item) => item.propertyName === 'Bay Shore Cottage'));
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
 async function main() {
   const previousTasks = process.env.ELITE_TASKS_PASSWORD;
   const previousElite = process.env.ELITE_INVOICES_AUTH_PASS;
@@ -742,6 +769,7 @@ async function main() {
   await testPetraAndAlerts();
   await testCustomers();
   await testManagementCopy();
+  await testExtraProperties();
   await testPaymentReport();
   await testHttp();
   await testAssignmentEmail();

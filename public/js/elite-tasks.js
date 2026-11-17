@@ -683,18 +683,18 @@
   function renderProperties() {
     const query = state.propertyQuery;
     view.innerHTML = `
-      <p class="hint">Client and address lines are copied from Elite Management. Door code and notes are saved here.</p>
-      <label>Find a customer
-        <input id="propFilter" type="search" placeholder="Client or address" value="${esc(query)}">
+      <p class="hint">Property name and address are stored here. Door code and notes show when a booking is opened, and stay off the calendar.</p>
+      <label>Find a property
+        <input id="propFilter" type="search" placeholder="Property or address" value="${esc(query)}">
       </label>
       <div id="propertyList" class="stack"></div>
       <form id="addPropertyForm" class="panel" style="margin-top:12px">
-        <h2>Add a customer</h2>
-        <label>Client<input name="name" type="text" maxlength="160" required placeholder="Client"></label>
-        <label>Address lines<textarea name="address" maxlength="1000" rows="3" required placeholder="Street, city, postal code"></textarea></label>
+        <h2>Add a property</h2>
+        <label>Property name<input name="name" type="text" maxlength="160" required placeholder="Property name"></label>
+        <label>Address<textarea name="address" maxlength="1000" rows="3" required placeholder="Street, city, postal code"></textarea></label>
         <label>Door code<input name="doorCode" type="text" maxlength="80" autocomplete="off" placeholder="Optional"></label>
         <label>Notes<textarea name="notes" maxlength="4000" rows="3" placeholder="Optional"></textarea></label>
-        <button class="btn primary block" type="submit">Add customer</button>
+        <button class="btn primary block" type="submit">Add property</button>
       </form>`;
     renderPropertyList();
   }
@@ -708,19 +708,19 @@
       return `${property.propertyName || ''} ${property.name || ''} ${property.label || ''} ${property.address || ''} ${property.doorCode || ''} ${property.notes || ''}`.toLowerCase().includes(q);
     });
     if (!list.length) {
-      box.innerHTML = '<p class="hint">No customers yet. Add one below.</p>';
+      box.innerHTML = '<p class="hint">No properties yet. Add one below.</p>';
       return;
     }
     box.innerHTML = list.map((property) => `<article class="prop-card">
-      <p class="hint">Client</p>
-      <h3>${esc(property.propertyName || property.label || property.name || 'Client')}</h3>
-      <p class="hint">Address lines</p>
-      <p class="pre">${property.address ? esc(property.address) : '<span class="hint">No address lines</span>'}</p>
-      <p><strong>Door code:</strong> ${property.doorCode ? esc(property.doorCode) : '<span class="hint">not set</span>'}</p>
-      ${property.notes ? `<p class="pre">${esc(property.notes)}</p>` : ''}
+      <h3>${esc(property.propertyName || property.label || property.name || 'Property')}</h3>
+      <div class="detail-grid">
+        <div class="detail-tile wide"><span class="tile-label">Address</span><strong class="pre">${property.address ? esc(property.address) : 'No address'}</strong></div>
+        <div class="detail-tile code"><span class="tile-label">Door code</span><strong>${property.doorCode ? esc(property.doorCode) : 'Not set'}</strong></div>
+        <div class="detail-tile"><span class="tile-label">Notes</span><strong class="pre">${property.notes ? esc(property.notes) : 'None'}</strong></div>
+      </div>
       <div class="row-actions">
         <button type="button" class="btn primary" data-action="edit-property" data-id="${esc(property.id)}">Edit</button>
-        <button type="button" class="btn danger" data-action="delete-property" data-id="${esc(property.id)}" data-name="${esc(property.name || 'this customer')}">Delete</button>
+        <button type="button" class="btn danger" data-action="delete-property" data-id="${esc(property.id)}" data-name="${esc(property.propertyName || property.name || 'this property')}">Delete</button>
       </div>
     </article>`).join('');
   }
@@ -950,8 +950,6 @@
   function openJob(id) {
     const job = ((state.data && state.data.jobs) || []).find((item) => item.id === id);
     if (!job) return;
-    const href = phoneHref(job.phone);
-    const phone = job.phone ? (href ? `<p><a href="${esc(href)}">${esc(job.phone)}</a></p>` : `<p>${esc(job.phone)}</p>`) : '';
     const ackLine = job.acknowledgedAt ? `<p class="hint">Acknowledged ${esc(formatStamp(job.acknowledgedAt))}</p>` : (job.status === 'completed' ? '<p class="hint">Completed without a separate acknowledgement.</p>' : '<p class="summary warn">Not acknowledged yet.</p>');
     const doneLine = job.completedAt ? `<p class="hint">Completed ${esc(formatStamp(job.completedAt))}</p>` : '';
     const managerActions = MODE === 'manager' ? `<div class="stack">
@@ -968,19 +966,31 @@
     </div>`;
     openSheet(`<div>
       ${sheetHead(esc(placeLabel(job)))}
-      <p><strong>${esc(prettyDate(job.date))}</strong> · ${esc(formatRange(job.startTime, job.durationMinutes))}${job.deepClean ? ' · Deep clean' : ''}</p>
-      ${job.address ? `<p class="pre">${esc(job.address)}</p>` : ''}
-      ${MODE === 'manager' ? `<p class="person"><span class="dot" style="background:${safeColor(job.staffColor)}"></span>${esc(job.staffName || 'Unassigned')}</p>` : ''}
-      <p><span class="pill ${esc(job.status)}">${esc(statusLabel(job.status))}</span> ${job.seriesId ? esc(REC[job.recurrence] || '') : ''}</p>
+      ${job.seriesId ? `<p class="hint">${esc(REC[job.recurrence] || '')}</p>` : ''}
+      ${detailTiles(job)}
       ${paymentDetail(job)}
       ${ackLine}${doneLine}
       ${job.seriesId && job.status === 'scheduled' ? '<p class="hint">Acknowledging covers every visit on this schedule with the same cleaner.</p>' : ''}
-      <div class="code-box"><span>Door code</span><strong>${job.doorCode ? esc(job.doorCode) : 'None on file'}</strong>${job.doorCode ? `<button type="button" class="btn ghost small" data-action="copy-text" data-text="${esc(job.doorCode)}">Copy code</button>` : ''}</div>
-      ${phone}
-      ${job.propertyNotes ? `<p class="pre"><strong>Property notes</strong><br>${esc(job.propertyNotes)}</p>` : ''}
-      ${job.visitNote ? `<p class="pre"><strong>This visit</strong><br>${esc(job.visitNote)}</p>` : ''}
       ${managerActions}
     </div>`);
+  }
+
+  function detailTiles(job) {
+    const href = phoneHref(job.phone);
+    const tiles = [
+      `<div class="detail-tile"><span class="tile-label">Date</span><strong>${esc(prettyDate(job.date))}</strong></div>`,
+      `<div class="detail-tile"><span class="tile-label">Time</span><strong>${esc(formatRange(job.startTime, job.durationMinutes))}${job.deepClean ? ' · Deep clean' : ''}</strong></div>`
+    ];
+    if (MODE === 'manager') {
+      tiles.push(`<div class="detail-tile"><span class="tile-label">Cleaner</span><strong class="person"><span class="dot" style="background:${safeColor(job.staffColor)}"></span>${esc(job.staffName || 'Unassigned')}</strong></div>`);
+    }
+    tiles.push(`<div class="detail-tile"><span class="tile-label">Status</span><strong><span class="pill ${esc(job.status)}">${esc(statusLabel(job.status))}</span></strong></div>`);
+    tiles.push(`<div class="detail-tile wide"><span class="tile-label">Address</span><strong class="pre">${job.address ? esc(job.address) : 'No address on file'}</strong></div>`);
+    tiles.push(`<div class="detail-tile wide code"><span class="tile-label">Door code</span><strong>${job.doorCode ? esc(job.doorCode) : 'None on file'}</strong>${job.doorCode ? `<button type="button" class="btn ghost small" data-action="copy-text" data-text="${esc(job.doorCode)}">Copy code</button>` : ''}</div>`);
+    if (job.phone) tiles.push(`<div class="detail-tile wide"><span class="tile-label">Phone</span><strong>${href ? `<a href="${esc(href)}">${esc(job.phone)}</a>` : esc(job.phone)}</strong></div>`);
+    if (job.propertyNotes) tiles.push(`<div class="detail-tile wide"><span class="tile-label">Property notes</span><strong class="pre">${esc(job.propertyNotes)}</strong></div>`);
+    if (job.visitNote) tiles.push(`<div class="detail-tile wide"><span class="tile-label">This visit</span><strong class="pre">${esc(job.visitNote)}</strong></div>`);
+    return `<div class="detail-grid">${tiles.join('')}</div>`;
   }
 
   function paymentDetail(job) {
@@ -1098,13 +1108,13 @@
     const property = ((state.data && state.data.properties) || []).find((item) => item.id === id);
     if (!property) return;
     openSheet(`<form id="propertyForm" data-id="${esc(property.id)}">
-      ${sheetHead('Edit customer')}
-      <label>Client<input name="propertyName" type="text" maxlength="160" required value="${esc(property.propertyName || property.label || property.name || '')}"></label>
-      <label>Address lines<textarea name="address" maxlength="1000" rows="4">${esc(property.address || '')}</textarea></label>
+      ${sheetHead('Edit property')}
+      <label>Property name<input name="propertyName" type="text" maxlength="160" required value="${esc(property.propertyName || property.label || property.name || '')}"></label>
+      <label>Address<textarea name="address" maxlength="1000" rows="4">${esc(property.address || '')}</textarea></label>
       <label>Door code<input name="doorCode" type="text" maxlength="80" autocomplete="off" value="${esc(property.doorCode || '')}"></label>
       <label>Notes<textarea name="notes" maxlength="4000" rows="4">${esc(property.notes || '')}</textarea></label>
       <p class="hint">Saved only on this schedule.</p>
-      <button class="btn primary block" type="submit">Save customer</button>
+      <button class="btn primary block" type="submit">Save property</button>
     </form>`);
   }
 

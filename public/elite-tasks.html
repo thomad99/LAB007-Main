@@ -144,6 +144,14 @@
     .report-kpi { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
     .report-kpi span { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
     .report-kpi strong { display: block; margin-top: 4px; font-size: 2rem; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
+    .detail-tile { background: #f8fafc; border: 1px solid var(--line); border-radius: 16px; padding: 12px; min-width: 0; }
+    .detail-tile.wide { grid-column: 1 / -1; }
+    .detail-tile .tile-label { display: block; color: var(--muted); font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
+    .detail-tile strong { display: block; margin-top: 4px; font-size: 1.02rem; font-weight: 750; word-break: break-word; }
+    .detail-tile strong.person { display: flex; align-items: center; }
+    .detail-tile.code strong { font-size: 1.45rem; letter-spacing: .04em; }
+    .detail-tile .btn { margin-top: 8px; }
     .report-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
     .report-table th, .report-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
     .report-table th { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
@@ -230,6 +238,6 @@
     </div>
   </div>
   <div id="toast" class="toast" hidden></div>
-  <script src="/js/elite-tasks.js?v=39"></script>
+  <script src="/js/elite-tasks.js?v=40"></script>
 </body>
 </html>
