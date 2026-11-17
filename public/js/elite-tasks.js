@@ -15,7 +15,7 @@
 
   const state = {
     password: localStorage.getItem(PASS_KEY) || '',
-    weekStart: mondayOf(todayISO()),
+    weekStart: sundayOf(todayISO()),
     screen: 'week',
     filter: 'all',
     propertyQuery: '',
@@ -60,12 +60,21 @@
     return date.toISOString().slice(0, 10);
   }
 
-  function mondayOf(iso) {
+  function sundayOf(iso) {
     const [year, month, day] = String(iso).split('-').map(Number);
     const date = new Date(Date.UTC(year, month - 1, day));
-    const weekday = date.getUTCDay();
-    date.setUTCDate(date.getUTCDate() + (weekday === 0 ? -6 : 1 - weekday));
+    date.setUTCDate(date.getUTCDate() - date.getUTCDay());
     return date.toISOString().slice(0, 10);
+  }
+
+  function weekdayIndex(iso) {
+    const [year, month, day] = String(iso).split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  }
+
+  function minutesOf(value) {
+    const [hour, minute] = String(value || '00:00').split(':').map(Number);
+    return (hour || 0) * 60 + (minute || 0);
   }
 
   function prettyDate(iso) {
@@ -73,10 +82,15 @@
   }
 
   function weekTitle(start) {
+    const left = dateParts(start);
     const end = dateParts(addDays(start, 6));
-    const left = dateParts(start).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-    const right = end.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
-    return `${left} – ${right}`;
+    if (left.getMonth() === end.getMonth() && left.getFullYear() === end.getFullYear()) {
+      return left.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    }
+    if (left.getFullYear() === end.getFullYear()) {
+      return `${left.toLocaleDateString(undefined, { month: 'short' })} – ${end.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`;
+    }
+    return `${left.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })} – ${end.toLocaleDateString(undefined, { month: 'short', year: 'numeric' })}`;
   }
 
   function formatTime(value) {
@@ -339,20 +353,17 @@
           ? `<span class="summary warn">${skipped} completed without acknowledgement</span>`
           : '<span class="summary ok">All acknowledged</span>';
     const filters = MODE === 'manager' ? renderFilters() : '';
-    const thisWeek = state.weekStart === mondayOf(todayISO())
-      ? ''
-      : '<button type="button" class="btn text" data-action="this-week">Back to this week</button>';
     toolbar.innerHTML = `
       <div class="weekbar">
+        <div class="week-nav">
+          <button type="button" class="btn ghost" data-action="prev-week" aria-label="Previous week">‹</button>
+          <button type="button" class="btn ghost" data-action="this-week">Today</button>
+          <button type="button" class="btn ghost" data-action="next-week" aria-label="Next week">›</button>
+        </div>
         <div class="week-title">
           <strong>${esc(weekTitle(state.weekStart))}</strong>
           ${summary}
         </div>
-        <div class="week-nav">
-          <button type="button" class="btn ghost" data-action="prev-week">Previous</button>
-          <button type="button" class="btn primary" data-action="next-week">Next week</button>
-        </div>
-        ${thisWeek}
       </div>
       ${filters}`;
   }
@@ -375,48 +386,112 @@
     const allJobs = (state.data && state.data.jobs) || [];
     const today = todayISO();
     const days = Array.from({ length: 7 }, (_, index) => addDays(state.weekStart, index));
-    view.innerHTML = `<div class="days">${days.map((date) => {
-      const dayJobs = jobs.filter((job) => job.date === date);
-      const blocks = blocksOn(date);
-      return `<article class="day ${date === today ? 'today' : ''}">
-        <div class="day-head">
-          <div><span class="dow">${esc(dateParts(date).toLocaleDateString(undefined, { weekday: 'short' }))}${date === today ? ' · Today' : ''}</span><span class="dom">${dateParts(date).getDate()}</span></div>
-          <div class="day-actions">
-            <button type="button" class="btn ghost small" data-action="block-day" data-date="${date}">Block</button>
-            ${MODE === 'manager' ? `<button type="button" class="plus" data-action="add" data-date="${date}" aria-label="Add a clean on ${esc(prettyDate(date))}">+</button>` : ''}
-          </div>
-        </div>
-        ${blocks.map((block) => `<div class="unavail">${esc(block.staffName || state.data.staff?.name || 'Unavailable')}${block.startDate === block.endDate ? '' : ` · ${esc(prettyDate(block.startDate))} – ${esc(prettyDate(block.endDate))}`}${block.note ? ` · ${esc(block.note)}` : ''}
-          <div><button type="button" class="btn danger small" data-action="delete-block" data-id="${esc(block.id)}" data-label="${esc(block.staffName || '')}">Clear</button></div>
+    const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const span = gridWindow(jobs);
+    const hours = [];
+    for (let minute = span.start; minute < span.end; minute += 60) hours.push(minute);
+    const hourPx = 52;
+    const height = hours.length * hourPx;
+    const nowTop = nowLineTop(today, span, hourPx);
+    view.innerHTML = `<div class="gcal" id="gcal">
+      <div class="gcal-head">
+        <div class="gcal-time"></div>
+        ${days.map((date) => `<div class="gcal-dayhead ${date === today ? 'today' : ''}">
+          <span class="gcal-dow">${names[weekdayIndex(date)]}</span>
+          <span class="gcal-dom ${date === today ? 'today' : ''}">${dateParts(date).getDate()}</span>
+          ${MODE === 'manager' ? `<button type="button" class="gcal-plus" data-action="add" data-date="${date}" aria-label="Add a clean on ${esc(prettyDate(date))}">+</button>` : ''}
         </div>`).join('')}
-        <div class="jobs">${dayJobs.length ? dayJobs.map((job) => renderJob(job, allJobs)).join('') : '<p class="hint">No cleans</p>'}</div>
-      </article>`;
-    }).join('')}</div>${renderBlockedList()}`;
+      </div>
+      <div class="gcal-allday">
+        <div class="gcal-time gcal-allday-label">all-day</div>
+        ${days.map((date) => `<div class="gcal-allday-cell">${blocksOn(date).map((block) => `<div class="unavail">${esc(block.staffName || state.data.staff?.name || 'Unavailable')}${block.note ? ` · ${esc(block.note)}` : ''}
+          <button type="button" class="btn danger small" data-action="delete-block" data-id="${esc(block.id)}" data-label="${esc(block.staffName || '')}">Clear</button>
+        </div>`).join('')}<button type="button" class="gcal-block" data-action="block-day" data-date="${date}">Block</button></div>`).join('')}
+      </div>
+      <div class="gcal-body">
+        <div class="gcal-time">${hours.map((minute) => `<div class="gcal-hour"><span>${esc(formatTime(minutesToTime(minute)))}</span></div>`).join('')}</div>
+        ${days.map((date) => {
+          const placed = placeJobs(jobs.filter((job) => job.date === date));
+          return `<div class="gcal-col ${date === today ? 'today' : ''}" style="height:${height}px">
+            ${date === today && nowTop != null ? `<div class="gcal-now" style="top:${nowTop}px"></div>` : ''}
+            ${placed.map((item) => renderEvent(item, span, hourPx, allJobs)).join('')}
+          </div>`;
+        }).join('')}
+      </div>
+    </div>${renderBlockedList()}`;
+    const scroller = document.getElementById('gcal');
+    const line = scroller && scroller.querySelector('.gcal-now');
+    if (scroller && line) {
+      const lineTop = line.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+      scroller.scrollTop = Math.max(0, lineTop - 90);
+    } else if (scroller) {
+      scroller.scrollTop = 0;
+    }
   }
 
-  function renderJob(job, allJobs) {
+  function gridWindow(jobs) {
+    let start = 7 * 60;
+    let end = 19 * 60;
+    jobs.forEach((job) => {
+      const begin = minutesOf(job.startTime);
+      const finish = begin + (Number(job.durationMinutes) || 60);
+      start = Math.min(start, Math.floor(begin / 60) * 60);
+      end = Math.max(end, Math.ceil(finish / 60) * 60);
+    });
+    start = Math.max(0, start);
+    end = Math.min(24 * 60, Math.max(end, start + 60));
+    return { start, end };
+  }
+
+  function minutesToTime(total) {
+    const hour = Math.floor(total / 60) % 24;
+    const minute = total % 60;
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  }
+
+  function nowLineTop(today, span, hourPx) {
+    if (state.weekStart > today || addDays(state.weekStart, 6) < today) return null;
+    const now = new Date();
+    const minutes = now.getHours() * 60 + now.getMinutes();
+    if (minutes < span.start || minutes > span.end) return null;
+    return ((minutes - span.start) / 60) * hourPx;
+  }
+
+  function placeJobs(dayJobs) {
+    const sorted = [...dayJobs].sort((a, b) => minutesOf(a.startTime) - minutesOf(b.startTime) || String(a.id).localeCompare(String(b.id)));
+    const laneEnds = [];
+    const placed = sorted.map((job) => {
+      const start = minutesOf(job.startTime);
+      const end = start + (Number(job.durationMinutes) || 60);
+      let lane = laneEnds.findIndex((until) => until <= start);
+      if (lane < 0) {
+        lane = laneEnds.length;
+        laneEnds.push(end);
+      } else {
+        laneEnds[lane] = Math.max(laneEnds[lane], end);
+      }
+      return { job, lane, start, end };
+    });
+    const laneCount = Math.max(1, laneEnds.length);
+    return placed.map((item) => ({ ...item, laneCount }));
+  }
+
+  function renderEvent(item, span, hourPx, allJobs) {
+    const job = item.job;
+    const top = ((item.start - span.start) / 60) * hourPx;
+    const height = Math.max(22, ((item.end - item.start) / 60) * hourPx - 3);
+    const width = 100 / item.laneCount;
+    const color = safeColor(job.staffColor);
     const flags = [];
-    if (overlaps(job, allJobs)) flags.push('Overlaps another clean');
-    if (blocksOn(job.date).some((block) => !block.staffId || block.staffId === job.staffId)) flags.push('Booked on an unavailable day');
-    const who = MODE === 'manager' ? `<span class="person"><span class="dot" style="background:${safeColor(job.staffColor)}"></span>${esc(job.staffName || 'Unassigned')}</span>` : '';
-    const repeat = job.seriesId ? `<span class="hint">${esc(REC[job.recurrence] || 'Repeats')}</span>` : '';
-    const label = job.status === 'completed' && !job.acknowledgedAt ? 'Completed, not acknowledged' : statusLabel(job.status);
-    const door = job.doorCode ? `<span class="door"><span>Door code</span><strong>${esc(job.doorCode)}</strong></span>` : '';
-    const actions = MODE === 'cleaner' && job.status !== 'completed' ? `<div class="job-actions">
-      ${job.status === 'scheduled' ? `<button type="button" class="btn blue" data-action="ack" data-id="${esc(job.id)}">Acknowledge</button>` : ''}
-      <button type="button" class="btn primary" data-action="complete" data-id="${esc(job.id)}">Mark completed</button>
-    </div>` : '';
-    return `<article class="job ${esc(job.status)}">
-      <button type="button" class="job-main" data-action="open-job" data-id="${esc(job.id)}">
-        <span class="job-time">${esc(formatRange(job.startTime, job.durationMinutes))} · ${esc(formatDuration(job.durationMinutes))}</span>
-        <span class="job-place">${esc(job.clientId ? `${job.clientId} · ${job.propertyName}` : (job.propertyName || 'Property'))}</span>
-        ${job.address ? `<span class="job-addr">${esc(job.address)}</span>` : ''}
-        ${flags.map((flag) => `<span class="job-flag">${esc(flag)}</span>`).join('')}
-        ${door}
-        <span class="job-meta">${who}<span class="pill ${esc(job.status)}">${esc(label)}</span>${repeat}</span>
-      </button>
-      ${actions}
-    </article>`;
+    if (overlaps(job, allJobs)) flags.push('Overlaps');
+    if (blocksOn(job.date).some((block) => !block.staffId || block.staffId === job.staffId)) flags.push('Unavailable');
+    const who = MODE === 'manager' ? job.staffName || '' : '';
+    const place = job.clientId ? `${job.clientId} ${job.propertyName || ''}`.trim() : (job.propertyName || 'Clean');
+    return `<button type="button" class="gcal-event" data-action="open-job" data-id="${esc(job.id)}" title="${esc(`${formatRange(job.startTime, job.durationMinutes)} ${place}`)}" style="top:${top}px;height:${height}px;left:calc(${item.lane * width}% + 2px);width:calc(${width}% - 4px);background:${color}22;border-left:3px solid ${color};color:#1c1917">
+      <strong>${esc(formatTime(job.startTime))}${who ? ` · ${esc(who)}` : ''}</strong>
+      <span>${esc(place)}</span>
+      ${flags.length && height > 46 ? `<span>${esc(flags.join(' · '))}</span>` : ''}
+    </button>`;
   }
 
   function renderBlockedList() {
@@ -731,7 +806,7 @@
     if (action === 'next-week' || action === 'prev-week' || action === 'this-week') {
       if (action === 'next-week') state.weekStart = addDays(state.weekStart, 7);
       if (action === 'prev-week') state.weekStart = addDays(state.weekStart, -7);
-      if (action === 'this-week') state.weekStart = mondayOf(todayISO());
+      if (action === 'this-week') state.weekStart = sundayOf(todayISO());
       guard(() => loadWeek());
       return;
     }
