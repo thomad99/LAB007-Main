@@ -6934,7 +6934,11 @@ function writeEliteClientFull(data) {
 
 registerEliteTasksRoutes(app, {
   readClientFull: readEliteClientFull,
-  writeClientFull: writeEliteClientFull
+  writeClientFull: writeEliteClientFull,
+  readClients: readEliteInvoiceClients,
+  sendMail: emailTransporter
+    ? (mail) => emailTransporter.sendMail({ from: process.env.SMTP_USER || 'noreply@lab007.ai', ...mail })
+    : null
 });
 
 async function getEliteInvoicePdfBuffer(invoice) {

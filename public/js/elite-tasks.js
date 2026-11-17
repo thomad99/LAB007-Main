@@ -23,7 +23,15 @@
     saving: false,
     staffPicked: false,
     recurrencePicked: false,
-    zoomDays: Number(localStorage.getItem('eliteTasksZoomDays')) || 0
+    zoomDays: MODE === 'manager' ? 2 : (Number(localStorage.getItem('eliteTasksZoomDays')) || 0),
+    calendarMode: 'zoom',
+    fitDays: 0,
+    fitHourPx: 0,
+    fitLocked: false,
+    fitTrimmed: false,
+    report: null,
+    reportLoading: false,
+    reportWeek: sundayOf(todayISO())
   };
 
   const gate = document.getElementById('gate');
@@ -174,9 +182,28 @@
     if (boot) boot.hidden = true;
   }
 
+  function enterKiosk() {
+    const root = document.documentElement;
+    if (document.fullscreenElement || typeof root.requestFullscreen !== 'function') return;
+    try {
+      const pending = root.requestFullscreen({ navigationUI: 'hide' });
+      if (pending && typeof pending.catch === 'function') pending.catch(() => {});
+    } catch {
+      try { root.requestFullscreen(); } catch { /* the page still fills the window */ }
+    }
+  }
+
+  let kioskArmed = false;
+  function armKiosk() {
+    if (kioskArmed) return;
+    kioskArmed = true;
+    document.addEventListener('pointerdown', () => enterKiosk(), { once: true });
+  }
+
   function showLogin(message) {
     if (MODE === 'cleaner') return showCleanerError(message || 'This link is not valid.');
     hideBoot();
+    document.body.classList.remove('kiosk');
     document.body.classList.add('login');
     gate.hidden = false;
     shell.hidden = true;
@@ -188,6 +215,7 @@
 
   function showCleanerError(message) {
     hideBoot();
+    document.body.classList.remove('kiosk');
     document.body.classList.add('login');
     gate.hidden = false;
     shell.hidden = true;
@@ -197,8 +225,10 @@
   function showShell() {
     hideBoot();
     document.body.classList.remove('login');
+    document.body.classList.add('kiosk');
     gate.hidden = true;
     shell.hidden = false;
+    armKiosk();
   }
 
   async function api(url, options) {
@@ -331,8 +361,10 @@
     }
     renderNav();
     renderToolbar();
+    view.classList.toggle('fill', state.screen === 'week');
     if (state.screen === 'properties' && MODE === 'manager') renderProperties();
     else if (state.screen === 'staff' && MODE === 'manager') renderStaff();
+    else if (state.screen === 'reports' && MODE === 'manager') renderReports();
     else renderWeek();
   }
 
@@ -342,16 +374,15 @@
       bottomNav.hidden = true;
       return;
     }
-    const html = [['week', 'Week'], ['properties', 'Properties'], ['staff', 'Staff']].map(([id, label]) =>
-      `<button type="button" data-action="screen" data-screen="${id}" class="${state.screen === id ? 'on' : ''}">${label}</button>`
-    ).join('');
-    tabs.innerHTML = html;
-    bottomNav.innerHTML = html;
+    const main = [['week', 'Tasks'], ['properties', 'Properties'], ['staff', 'Staff']];
+    const button = ([id, label]) => `<button type="button" data-action="screen" data-screen="${id}" class="${state.screen === id ? 'on' : ''}">${label}</button>`;
+    tabs.innerHTML = main.concat([['reports', 'Reports']]).map(button).join('');
+    bottomNav.innerHTML = main.map(button).join('');
     bottomNav.hidden = false;
   }
 
   function placeLabel(job) {
-    return job.clientId || job.propertyName || 'Property';
+    return job.propertyName || 'Property';
   }
 
   function renderToolbar() {
@@ -371,14 +402,21 @@
           ? `<span class="summary warn">${skipped} completed without acknowledgement</span>`
           : '<span class="summary ok">All acknowledged</span>';
     const filters = MODE === 'manager' ? renderFilters() : '';
+    const fitIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+    const zoomIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"></circle><path d="M15.2 15.2L20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>';
+    const viewButtons = MODE === 'manager'
+      ? `<button type="button" class="btn ghost icon-btn" data-action="fit-calendar" aria-label="Fit booked cleans" aria-pressed="${state.calendarMode === 'fit' ? 'true' : 'false'}">${fitIcon}</button>
+          <button type="button" class="btn ghost icon-btn" data-action="zoom-two" aria-label="Zoom, next 2 days" aria-pressed="${state.calendarMode === 'zoom' ? 'true' : 'false'}">${zoomIcon}</button>`
+      : `<button type="button" class="btn ghost" data-action="zoom-out" aria-label="Zoom out">−</button>
+          <button type="button" class="btn ghost" data-action="zoom-in" aria-label="Zoom in">+</button>`;
     toolbar.innerHTML = `
       <div class="weekbar">
         <div class="week-nav">
-          <button type="button" class="btn ghost" data-action="prev-week" aria-label="Previous week">‹</button>
+          <button type="button" class="btn ghost week-arrow" data-action="prev-week" aria-label="Previous week">‹</button>
           <button type="button" class="btn ghost" data-action="this-week">Today</button>
-          <button type="button" class="btn ghost" data-action="next-week" aria-label="Next week">›</button>
-          <button type="button" class="btn ghost" data-action="zoom-out" aria-label="Zoom out">−</button>
-          <button type="button" class="btn ghost" data-action="zoom-in" aria-label="Zoom in">+</button>
+          <button type="button" class="btn ghost week-arrow" data-action="next-week" aria-label="Next week">›</button>
+          ${viewButtons}
+          <button type="button" class="btn ghost" data-action="phone-calendar">Phone calendar</button>
         </div>
         <div class="week-title">
           <strong>${esc(weekTitle(state.weekStart))}</strong>
@@ -437,17 +475,45 @@
     if (!scroller) return;
     layoutCalendar();
     bindCalendarZoom(scroller);
+    if (state.calendarMode === 'fit' && !state.fitLocked) {
+      const next = measureFitHour();
+      if (next && next !== state.fitHourPx) {
+        state.fitHourPx = next;
+        state.fitLocked = true;
+        renderWeek();
+        state.fitLocked = false;
+        return;
+      }
+    }
+    if (state.calendarMode === 'fit' && state.fitLocked && !state.fitTrimmed) {
+      const overflow = scroller.scrollHeight - scroller.clientHeight;
+      if (overflow > 4) {
+        const hours = scroller.querySelectorAll('.gcal-hour').length || 1;
+        state.fitHourPx = Math.max(16, state.fitHourPx - Math.ceil(overflow / hours));
+        state.fitTrimmed = true;
+        renderWeek();
+        state.fitTrimmed = false;
+        return;
+      }
+    }
     if (state.savedScroll) {
       scroller.scrollLeft = state.savedScroll.left;
       scroller.scrollTop = state.savedScroll.top;
       state.savedScroll = null;
       return;
     }
-    const head = scroller.querySelector(`.gcal-dayhead[data-date="${state.weekStart}"]`);
+    const anchorDate = state.calendarMode === 'fit'
+      ? ((jobs.map((job) => job.date).sort()[0]) || state.weekStart)
+      : state.weekStart;
+    const head = scroller.querySelector(`.gcal-dayhead[data-date="${anchorDate}"]`);
     const gutter = scroller.querySelector('.gcal-head .gcal-time');
     if (head && gutter) {
       const delta = head.getBoundingClientRect().left - (scroller.getBoundingClientRect().left + gutter.getBoundingClientRect().width);
       scroller.scrollLeft += delta;
+    }
+    if (state.calendarMode === 'fit') {
+      scroller.scrollTop = 0;
+      return;
     }
     const line = scroller.querySelector('.gcal-now');
     if (line) {
@@ -460,18 +526,38 @@
     return window.matchMedia('(max-width: 760px)').matches;
   }
 
+  function daySpan(from, to) {
+    const [ys, ms, ds] = String(from).split('-').map(Number);
+    const [ye, me, de] = String(to).split('-').map(Number);
+    return Math.round((Date.UTC(ye, me - 1, de) - Date.UTC(ys, ms - 1, ds)) / 86400000) + 1;
+  }
+
   function zoomDays() {
+    if (MODE === 'manager' && state.calendarMode === 'fit' && state.fitDays >= 1) return state.fitDays;
     const chosen = Number(state.zoomDays);
     if (chosen >= 1 && chosen <= 7) return chosen;
+    if (MODE === 'manager') return 2;
     return mobileCalendar() ? 2 : 7;
   }
 
   function calendarHourPx() {
+    if (MODE === 'manager' && state.calendarMode === 'fit' && state.fitHourPx) return state.fitHourPx;
     const base = mobileCalendar() ? 2 : 7;
     return Math.max(40, Math.min(110, Math.round(52 * base / zoomDays())));
   }
 
+  function measureFitHour() {
+    const scroller = document.getElementById('gcal');
+    if (!scroller) return 0;
+    const head = scroller.querySelector('.gcal-head');
+    const headH = head ? head.offsetHeight : 52;
+    const hours = scroller.querySelectorAll('.gcal-hour').length || 1;
+    const available = Math.max(48, scroller.clientHeight - headH - 2);
+    return Math.max(16, Math.floor(available / hours));
+  }
+
   function setZoomDays(days) {
+    state.calendarMode = 'zoom';
     const next = Math.min(7, Math.max(1, days));
     if (next === zoomDays() && state.zoomDays === next) return;
     state.zoomDays = next;
@@ -519,9 +605,33 @@
     }, { passive: false });
   }
 
-  window.addEventListener('resize', () => layoutCalendar());
+  window.addEventListener('resize', () => {
+    if (state.screen === 'reports') {
+      renderReports();
+      return;
+    }
+    if (state.calendarMode === 'fit' && document.getElementById('gcal')) {
+      state.fitHourPx = 0;
+      state.fitLocked = false;
+      renderWeek();
+      return;
+    }
+    layoutCalendar();
+  });
 
   function gridWindow(jobs) {
+    if (state.calendarMode === 'fit' && jobs.length) {
+      let start = 24 * 60;
+      let end = 0;
+      jobs.forEach((job) => {
+        const begin = minutesOf(job.startTime);
+        const finish = begin + (Number(job.durationMinutes) || 60);
+        start = Math.min(start, Math.floor(begin / 60) * 60);
+        end = Math.max(end, Math.ceil(finish / 60) * 60);
+      });
+      if (end <= start) end = start + 60;
+      return { start: Math.max(0, start), end: Math.min(24 * 60, end) };
+    }
     let start = 10 * 60;
     let end = 19 * 60;
     jobs.forEach((job) => {
@@ -607,7 +717,6 @@
       <strong>${esc(formatTime(job.startTime))}${who ? ` · ${esc(who)}` : ''}</strong>
       ${job.deepClean ? '<span>Deep clean</span>' : ''}
       <span>${esc(place)}</span>
-      ${job.address ? `<span>${esc(job.address)}</span>` : ''}
       ${flags.length && height > 46 ? `<span>${esc(flags.join(' · '))}</span>` : ''}
     </button>`;
   }
@@ -624,17 +733,17 @@
   function renderProperties() {
     const query = state.propertyQuery;
     view.innerHTML = `
-      <p class="hint">This customer list is only for scheduling.</p>
+      <p class="hint">Client and address lines are copied from Elite Management. Door code and notes are saved here.</p>
       <label>Find a customer
-        <input id="propFilter" type="search" placeholder="Name or address" value="${esc(query)}">
+        <input id="propFilter" type="search" placeholder="Client or address" value="${esc(query)}">
       </label>
       <div id="propertyList" class="stack"></div>
       <form id="addPropertyForm" class="panel" style="margin-top:12px">
         <h2>Add a customer</h2>
-        <label>Name<input name="name" type="text" maxlength="160" required placeholder="Customer or property name"></label>
-        <label>Address<input name="address" type="text" maxlength="240" required placeholder="Street address"></label>
-        <label>Phone<input name="phone" type="text" maxlength="80" placeholder="Optional"></label>
+        <label>Client<input name="name" type="text" maxlength="160" required placeholder="Client"></label>
+        <label>Address lines<textarea name="address" maxlength="1000" rows="3" required placeholder="Street, city, postal code"></textarea></label>
         <label>Door code<input name="doorCode" type="text" maxlength="80" autocomplete="off" placeholder="Optional"></label>
+        <label>Notes<textarea name="notes" maxlength="4000" rows="3" placeholder="Optional"></textarea></label>
         <button class="btn primary block" type="submit">Add customer</button>
       </form>`;
     renderPropertyList();
@@ -646,15 +755,17 @@
     const q = state.propertyQuery.trim().toLowerCase();
     const list = ((state.data && state.data.properties) || []).filter((property) => {
       if (!q) return true;
-      return `${property.name || ''} ${property.label || ''} ${property.address || ''} ${property.doorCode || ''} ${property.notes || ''}`.toLowerCase().includes(q);
+      return `${property.propertyName || ''} ${property.name || ''} ${property.label || ''} ${property.address || ''} ${property.doorCode || ''} ${property.notes || ''}`.toLowerCase().includes(q);
     });
     if (!list.length) {
       box.innerHTML = '<p class="hint">No customers yet. Add one below.</p>';
       return;
     }
     box.innerHTML = list.map((property) => `<article class="prop-card">
-      <h3>${esc(property.name || property.label || 'Customer')}</h3>
-      <p class="hint">${esc(property.address || 'No address')}</p>
+      <p class="hint">Client</p>
+      <h3>${esc(property.propertyName || property.label || property.name || 'Client')}</h3>
+      <p class="hint">Address lines</p>
+      <p class="pre">${property.address ? esc(property.address) : '<span class="hint">No address lines</span>'}</p>
       <p><strong>Door code:</strong> ${property.doorCode ? esc(property.doorCode) : '<span class="hint">not set</span>'}</p>
       ${property.notes ? `<p class="pre">${esc(property.notes)}</p>` : ''}
       <div class="row-actions">
@@ -672,6 +783,24 @@
     return `${location.origin}/Elite-TaskMgmt/${staffSlug(person.name)}/${person.token}`;
   }
 
+  function calendarHttps(token) {
+    return `${location.origin}/Elite-TaskMgmt/calendar/${token}.ics`;
+  }
+
+  function openPhoneCalendar(token, label) {
+    if (!token) return toast('The calendar link is not ready yet.');
+    const https = calendarHttps(token);
+    const webcal = https.replace(/^https?:/i, 'webcal:');
+    openSheet(`<div>
+      ${sheetHead('Phone calendar')}
+      <p class="hint">${esc(label)} A clean shows on the phone after it is acknowledged, and leaves the phone calendar if it is un-acknowledged. The phone refreshes the list about once an hour.</p>
+      <a class="btn primary block" href="${esc(webcal)}">Subscribe on this phone</a>
+      <label>Google Calendar link<input type="text" readonly value="${esc(https)}"></label>
+      <button type="button" class="btn ghost block" data-action="copy-text" data-text="${esc(https)}">Copy link</button>
+      <p class="hint">iPhone: tap Subscribe. Android: open Google Calendar, choose Add calendar, then From URL, and paste the link.</p>
+    </div>`);
+  }
+
   function renderStaff() {
     const list = people();
     view.innerHTML = `<p class="hint">Copy a private link and text it to that cleaner. The link is their sign-in. These pages are hidden from Google.</p>
@@ -679,12 +808,18 @@
         const url = staffUrl(person);
         return `<article class="staff-card">
           <h3 class="person"><span class="dot" style="background:${safeColor(person.color)}"></span>${esc(person.name)}${person.active ? '' : ' · inactive'}</h3>
-          <p class="hint">${person.upcoming || 0} upcoming · ${person.needsAck || 0} not acknowledged${person.name === 'Petra' ? ' · admin, can be assigned cleans' : ''}</p>
+          <div class="totals">
+            <span class="completed">Completed<strong>${person.completed || 0}</strong></span>
+            <span class="acknowledged">Acknowledged<strong>${person.acknowledged || 0}</strong></span>
+            <span class="outstanding">Outstanding<strong>${person.outstanding || 0}</strong></span>
+          </div>
+          <p class="hint">${person.email ? esc(person.email) : 'No email saved'} · Email alerts ${person.emailAlerts ? 'on' : 'off'}</p>
+          ${person.name === 'Petra' ? '<p class="hint">Admin, can be assigned cleans</p>' : ''}
           <label>Private link for ${esc(person.name)}<input type="text" readonly value="${esc(url)}" data-link-for="${esc(person.id)}"></label>
           <div class="row-actions">
-            <button type="button" class="btn primary" data-action="copy-link" data-id="${esc(person.id)}">Copy ${esc(person.name)}'s link</button>
-            <button type="button" class="btn ghost" data-action="rotate-link" data-id="${esc(person.id)}" data-name="${esc(person.name)}">New link</button>
-            <button type="button" class="btn ghost" data-action="rename-staff" data-id="${esc(person.id)}" data-name="${esc(person.name)}">Rename</button>
+            <button type="button" class="btn primary" data-action="edit-staff" data-id="${esc(person.id)}">Edit</button>
+            <button type="button" class="btn ghost" data-action="copy-link" data-id="${esc(person.id)}">Copy ${esc(person.name)}'s link</button>
+            <button type="button" class="btn ghost" data-action="phone-calendar" data-id="${esc(person.id)}">Phone calendar</button>
             <button type="button" class="btn ghost" data-action="toggle-staff" data-id="${esc(person.id)}" data-name="${esc(person.name)}" data-next="${person.active ? 'false' : 'true'}">${person.active ? 'Deactivate' : 'Activate'}</button>
           </div>
         </article>`;
@@ -694,6 +829,27 @@
         <label>Name<input name="name" type="text" maxlength="40" required placeholder="Name"></label>
         <button class="btn primary block" type="submit">Add cleaner</button>
       </form>`;
+  }
+
+  function mailNote(result) {
+    if (result && Array.isArray(result.emailed) && result.emailed.length) return ` Emailed ${result.emailed.join(', ')}.`;
+    if (result && result.emailPending) return ' Email alerts are on, but outgoing email is not configured yet.';
+    return '';
+  }
+
+  function openStaffEditor(id) {
+    const person = people().find((item) => item.id === id);
+    if (!person) return;
+    openSheet(`<form id="staffForm" data-id="${esc(person.id)}">
+      ${sheetHead('Edit cleaner')}
+      <label>Name<input name="name" type="text" maxlength="40" required value="${esc(person.name || '')}"></label>
+      <label>Email<input name="email" type="email" maxlength="120" value="${esc(person.email || '')}" placeholder="name@email.com"></label>
+      <label>Email alerts</label>
+      <input type="hidden" name="emailAlerts" value="${person.emailAlerts ? '1' : '0'}">
+      ${choiceButtons('emailAlerts', [['1', 'On'], ['0', 'Off']], person.emailAlerts ? '1' : '0')}
+      <p class="hint">When alerts are on, assigning a clean emails the property, address, time, and door code.</p>
+      <button class="btn primary block" type="submit" style="margin-top:14px">Save</button>
+    </form>`);
   }
 
   function openSheet(html) {
@@ -801,7 +957,7 @@
               <option value="52">1 year</option>
             </select>
           </label>
-          <p class="hint">Weekly and every-2-weeks cleans are booked now, one visit at a time, so each can be acknowledged.</p>
+          <p class="hint">Acknowledging one visit covers every visit on this schedule with the same cleaner. A swapped cleaner acknowledges their own visits.</p>
         </div>`}
       <label>Note for this visit<textarea name="visitNote" maxlength="500" placeholder="Side door, bring supplies, extra oven...">${esc(job.visitNote || '')}</textarea></label>
       ${editing ? '<p class="hint">Changing the time, cleaner, or property asks them to acknowledge again.</p>' : ''}
@@ -834,16 +990,116 @@
     openSheet(`<div>
       ${sheetHead(esc(placeLabel(job)))}
       <p><strong>${esc(prettyDate(job.date))}</strong> · ${esc(formatRange(job.startTime, job.durationMinutes))}${job.deepClean ? ' · Deep clean' : ''}</p>
-      ${job.address ? `<p>${esc(job.address)}</p>` : ''}
+      ${job.address ? `<p class="pre">${esc(job.address)}</p>` : ''}
       ${MODE === 'manager' ? `<p class="person"><span class="dot" style="background:${safeColor(job.staffColor)}"></span>${esc(job.staffName || 'Unassigned')}</p>` : ''}
       <p><span class="pill ${esc(job.status)}">${esc(statusLabel(job.status))}</span> ${job.seriesId ? esc(REC[job.recurrence] || '') : ''}</p>
+      ${paymentDetail(job)}
       ${ackLine}${doneLine}
+      ${job.seriesId && job.status === 'scheduled' ? '<p class="hint">Acknowledging covers every visit on this schedule with the same cleaner.</p>' : ''}
       <div class="code-box"><span>Door code</span><strong>${job.doorCode ? esc(job.doorCode) : 'None on file'}</strong>${job.doorCode ? `<button type="button" class="btn ghost small" data-action="copy-text" data-text="${esc(job.doorCode)}">Copy code</button>` : ''}</div>
       ${phone}
       ${job.propertyNotes ? `<p class="pre"><strong>Property notes</strong><br>${esc(job.propertyNotes)}</p>` : ''}
       ${job.visitNote ? `<p class="pre"><strong>This visit</strong><br>${esc(job.visitNote)}</p>` : ''}
       ${managerActions}
     </div>`);
+  }
+
+  function paymentDetail(job) {
+    if (MODE !== 'manager') return '';
+    const mark = job.payment === 'paid'
+      ? '<p class="pay-mark">$$ Paid</p>'
+      : job.payment === 'invoiced'
+        ? '<p class="pay-mark">$ Payment requested</p>'
+        : '<p class="hint">No invoice sent</p>';
+    const paidButton = job.payment === 'paid'
+      ? ''
+      : `<button type="button" class="btn primary" data-action="payment" data-id="${esc(job.id)}" data-payment="paid">Paid</button>`;
+    const invoiceButton = job.payment === 'paid'
+      ? `<button type="button" class="btn ghost" data-action="payment" data-id="${esc(job.id)}" data-payment="invoiced">Undo paid</button>`
+      : job.payment === 'invoiced'
+        ? `<button type="button" class="btn ghost" data-action="payment" data-id="${esc(job.id)}" data-payment="none">Undo invoice</button>`
+        : `<button type="button" class="btn ghost" data-action="payment" data-id="${esc(job.id)}" data-payment="invoiced">Invoice sent</button>`;
+    return `<div class="pay-box">${mark}<div class="row-actions">${invoiceButton}${paidButton}</div></div>`;
+  }
+
+  function weekLabel(start, end) {
+    const startYear = String(start).slice(0, 4);
+    const endYear = String(end).slice(0, 4);
+    if (startYear === endYear) return `${prettyDate(start)} – ${prettyDate(end)}, ${startYear}`;
+    return `${prettyDate(start)}, ${startYear} – ${prettyDate(end)}, ${endYear}`;
+  }
+
+  function reportBounds() {
+    const weeks = (state.report && state.report.weeks) || [];
+    const today = sundayOf(todayISO());
+    if (!weeks.length) return { min: today, max: today };
+    const starts = weeks.map((week) => week.start).sort();
+    const latest = starts[starts.length - 1];
+    return { min: starts[0], max: latest > today ? latest : today };
+  }
+
+  function selectedReportWeek() {
+    const start = state.reportWeek || sundayOf(todayISO());
+    const end = addDays(start, 6);
+    const found = ((state.report && state.report.weeks) || []).find((week) => week.start === start);
+    return found || { start, end, total: 0, paid: 0, outstandingCount: 0, cleaners: [], outstanding: [] };
+  }
+
+  async function loadReport() {
+    state.report = await api('/api/elite-tasks/report');
+    const bounds = reportBounds();
+    if (state.reportWeek < bounds.min) state.reportWeek = bounds.min;
+    if (state.reportWeek > bounds.max) state.reportWeek = bounds.max;
+    renderReports();
+  }
+
+  function renderReports() {
+    if (window.matchMedia('(max-width: 799px)').matches) {
+      view.innerHTML = '<p class="hint">Reports are for a larger screen.</p>';
+      return;
+    }
+    if (!state.report) {
+      view.innerHTML = '<p class="hint">Loading report…</p>';
+      if (!state.reportLoading) {
+        state.reportLoading = true;
+        Promise.resolve(guard(() => loadReport())).finally(() => { state.reportLoading = false; });
+      }
+      return;
+    }
+    const bounds = reportBounds();
+    const week = selectedReportWeek();
+    const cleanerRows = week.cleaners.length
+      ? week.cleaners.map((person) => `<tr><td>${esc(person.name)}</td><td>${person.count}</td></tr>`).join('')
+      : '<tr><td colspan="2">No cleans this week</td></tr>';
+    const outstandingRows = week.outstanding.length
+      ? week.outstanding.map((job) => `<tr><td>${esc(prettyDate(job.date))}</td><td>${esc(job.propertyName)}</td><td>${esc(job.staffName || 'Unassigned')}</td><td>$ Payment requested</td></tr>`).join('')
+      : '<tr><td colspan="4">No outstanding payments this week</td></tr>';
+    const history = (state.report.weeks || []).map((item) => `<tr class="${item.start === week.start ? 'on' : ''}">
+      <td><button type="button" data-action="report-week" data-start="${esc(item.start)}">${esc(weekLabel(item.start, item.end))}</button></td>
+      <td>${item.total}</td>
+      <td>${esc(item.cleaners.map((person) => `${person.name} ${person.count}`).join(', ') || '—')}</td>
+      <td>${item.outstandingCount}</td>
+      <td>${item.paid}</td>
+    </tr>`).join('');
+    view.innerHTML = `<div class="report">
+      <div class="week-nav">
+        <button type="button" class="btn ghost week-arrow" data-action="report-prev" aria-label="Previous report week" ${week.start <= bounds.min ? 'disabled' : ''}>‹</button>
+        <strong>${esc(weekLabel(week.start, week.end))}</strong>
+        <button type="button" class="btn ghost week-arrow" data-action="report-next" aria-label="Next report week" ${week.start >= bounds.max ? 'disabled' : ''}>›</button>
+      </div>
+      <p class="hint">Sunday through Saturday. A clean with more than one cleaner counts for each person.</p>
+      <div class="report-grid">
+        <div class="report-kpi"><span>Total cleans</span><strong>${week.total}</strong></div>
+        <div class="report-kpi"><span>Outstanding payments</span><strong>${week.outstandingCount}</strong></div>
+        <div class="report-kpi"><span>Paid</span><strong>${week.paid}</strong></div>
+      </div>
+      <h2>Cleans per cleaner</h2>
+      <table class="report-table"><thead><tr><th>Cleaner</th><th>Cleans</th></tr></thead><tbody>${cleanerRows}</tbody></table>
+      <h2>Outstanding payments</h2>
+      <table class="report-table"><thead><tr><th>Date</th><th>Client</th><th>Cleaner</th><th>Payment</th></tr></thead><tbody>${outstandingRows}</tbody></table>
+      <h2>Past weeks</h2>
+      <table class="report-table"><thead><tr><th>Week</th><th>Total cleans</th><th>Cleans per cleaner</th><th>Outstanding</th><th>Paid</th></tr></thead><tbody>${history || '<tr><td colspan="5">No cleans yet</td></tr>'}</tbody></table>
+    </div>`;
   }
 
   function openBlock(date) {
@@ -864,11 +1120,10 @@
     if (!property) return;
     openSheet(`<form id="propertyForm" data-id="${esc(property.id)}">
       ${sheetHead('Edit customer')}
-      <label>Name<input name="name" type="text" maxlength="160" required value="${esc(property.name || '')}"></label>
-      <label>Address<input name="address" type="text" maxlength="240" required value="${esc(property.address || '')}"></label>
-      <label>Phone<input name="phone" type="text" maxlength="80" value="${esc(property.phone || '')}"></label>
+      <label>Client<input name="propertyName" type="text" maxlength="160" required value="${esc(property.propertyName || property.label || property.name || '')}"></label>
+      <label>Address lines<textarea name="address" maxlength="1000" rows="4">${esc(property.address || '')}</textarea></label>
       <label>Door code<input name="doorCode" type="text" maxlength="80" autocomplete="off" value="${esc(property.doorCode || '')}"></label>
-      <label>Notes<textarea name="notes" maxlength="4000">${esc(property.notes || '')}</textarea></label>
+      <label>Notes<textarea name="notes" maxlength="4000" rows="4">${esc(property.notes || '')}</textarea></label>
       <p class="hint">Saved only on this schedule.</p>
       <button class="btn primary block" type="submit">Save customer</button>
     </form>`);
@@ -891,7 +1146,7 @@
     const q = raw.toLowerCase();
     const props = (state.data && state.data.properties) || [];
     let list = [];
-    if (q) list = props.filter((property) => `${property.name || ''} ${property.label || ''} ${property.address || ''}`.toLowerCase().includes(q)).slice(0, 12);
+    if (q) list = props.filter((property) => `${property.propertyName || ''} ${property.name || ''} ${property.label || ''} ${property.address || ''}`.toLowerCase().includes(q)).slice(0, 12);
     else if (selected) list = props.filter((property) => property.id === selected);
     const keptAddress = document.getElementById('newPropertyAddress')?.value || '';
     const matches = list.map((property) => `<button type="button" class="pick ${property.id === selected ? 'on' : ''}" data-action="pick-property" data-id="${esc(property.id)}">
@@ -899,7 +1154,7 @@
     </button>`).join('');
     const addNew = raw ? `<div class="pick">
       <strong>Add ${esc(raw)}</strong>
-      <label>Address<input id="newPropertyAddress" type="text" maxlength="240" placeholder="Street address" value="${esc(keptAddress)}"></label>
+      <label>Address lines<textarea id="newPropertyAddress" maxlength="1000" rows="3" placeholder="Street, city, postal code">${esc(keptAddress)}</textarea></label>
       <button type="button" class="btn primary" data-action="add-booking-property" data-name="${esc(raw)}">Add customer</button>
     </div>` : '';
     box.innerHTML = matches || addNew ? `${matches}${addNew}` : (q ? '<p class="hint">No matching customer.</p>' : '');
@@ -962,14 +1217,14 @@
     if (minutesOf(body.startTime) < 10 * 60) return toast('The earliest start time is 10:00 AM.');
     try {
       if (form.dataset.mode === 'edit') {
-        await api(`/api/elite-tasks/jobs/${encodeURIComponent(form.dataset.id)}`, { method: 'PATCH', body: JSON.stringify(body) });
-        toast(applyTo === 'future' ? 'Updated this visit and the future visits.' : 'Visit updated.');
+        const result = await api(`/api/elite-tasks/jobs/${encodeURIComponent(form.dataset.id)}`, { method: 'PATCH', body: JSON.stringify(body) });
+        toast(`${applyTo === 'future' ? 'Updated this visit and the future visits.' : 'Visit updated.'}${mailNote(result)}`);
       } else {
         body.recurrence = form.elements.namedItem('recurrence').value || 'once';
         body.weeksAhead = Number((form.elements.namedItem('weeksAhead') || {}).value || 26);
         const result = await api('/api/elite-tasks/jobs', { method: 'POST', body: JSON.stringify(body) });
         const noun = result.count === 1 ? 'clean' : 'cleans';
-        toast(`Booked ${result.count} ${noun} through ${prettyDate(result.lastDate)}.`);
+        toast(`Booked ${result.count} ${noun} through ${prettyDate(result.lastDate)}.${mailNote(result)}`);
       }
     } catch (err) {
       if (err.status === 409) {
@@ -1025,6 +1280,25 @@
     }
     if (action === 'zoom-in' || action === 'zoom-out') {
       setZoomDays(zoomDays() + (action === 'zoom-in' ? -1 : 1));
+      return;
+    }
+    if (action === 'zoom-two') {
+      state.calendarMode = 'zoom';
+      state.zoomDays = 2;
+      state.fitHourPx = 0;
+      state.weekStart = todayISO();
+      guard(() => loadWeek());
+      return;
+    }
+    if (action === 'fit-calendar') {
+      const jobs = visibleJobs();
+      const dates = jobs.map((job) => job.date).sort();
+      state.calendarMode = 'fit';
+      state.fitHourPx = 0;
+      state.fitLocked = false;
+      state.fitDays = dates.length ? Math.max(1, Math.min(28, daySpan(dates[0], dates[dates.length - 1]))) : 2;
+      if (!dates.length) toast('No cleans to fit.');
+      render();
       return;
     }
     if (action === 'refresh') {
@@ -1110,6 +1384,21 @@
       });
       return;
     }
+    if (action === 'phone-calendar') {
+      if (target.dataset.id) {
+        const person = people().find((item) => item.id === target.dataset.id);
+        if (!person) return;
+        openPhoneCalendar(person.token, `${person.name}'s accepted cleans.`);
+        return;
+      }
+      const token = MODE === 'cleaner' ? TOKEN : (state.data && state.data.calendarToken);
+      openPhoneCalendar(token, MODE === 'cleaner' ? 'Your accepted cleans.' : 'Every accepted clean.');
+      return;
+    }
+    if (action === 'edit-staff') {
+      openStaffEditor(target.dataset.id);
+      return;
+    }
     if (action === 'copy-link') {
       const input = document.querySelector(`[data-link-for="${CSS.escape(target.dataset.id)}"]`);
       const text = input ? input.value : '';
@@ -1127,10 +1416,37 @@
     if (action === 'ack' || action === 'complete' || action === 'unack') {
       guard(async () => {
         const path = action === 'ack' ? 'ack' : action === 'unack' ? 'unack' : 'complete';
-        await api(`/api/elite-tasks/me/jobs/${encodeURIComponent(target.dataset.id)}/${path}`, { method: 'POST', body: '{}' });
-        toast(action === 'ack' ? 'Acknowledged' : action === 'unack' ? 'Not acknowledged' : 'Marked completed');
+        const data = await api(`/api/elite-tasks/me/jobs/${encodeURIComponent(target.dataset.id)}/${path}`, { method: 'POST', body: '{}' });
+        toast(action === 'ack' ? (data.count > 1 ? 'Acknowledged this schedule' : 'Acknowledged') : action === 'unack' ? 'Not acknowledged' : 'Marked completed');
         closeSheet();
         await loadWeek({ keepScroll: true });
+      });
+      return;
+    }
+    if (action === 'report-prev' || action === 'report-next') {
+      const bounds = reportBounds();
+      const next = addDays(state.reportWeek, action === 'report-next' ? 7 : -7);
+      if (next < bounds.min || next > bounds.max) return;
+      state.reportWeek = next;
+      renderReports();
+      return;
+    }
+    if (action === 'report-week') {
+      state.reportWeek = target.dataset.start;
+      renderReports();
+      return;
+    }
+    if (action === 'payment') {
+      const id = target.dataset.id;
+      const payment = target.dataset.payment;
+      guard(async () => {
+        await api(`/api/elite-tasks/jobs/${encodeURIComponent(id)}/payment`, {
+          method: 'POST',
+          body: JSON.stringify({ payment })
+        });
+        toast(payment === 'paid' ? 'Marked paid' : payment === 'invoiced' ? 'Invoice sent' : 'Invoice cleared');
+        await loadWeek({ keepScroll: true });
+        openJob(id);
       });
       return;
     }
@@ -1164,7 +1480,7 @@
           method: 'POST',
           body: JSON.stringify({ weeks: 12 })
         });
-        toast(`Added ${result.added} more visits through ${prettyDate(result.lastDate)}.`);
+        toast(`Added ${result.added} more visits through ${prettyDate(result.lastDate)}.${mailNote(result)}`);
         closeSheet();
         await loadWeek({ keepScroll: true });
       });
@@ -1181,26 +1497,6 @@
         toast('Unavailable dates cleared');
         await loadWeek({ keepScroll: true });
       });
-      return;
-    }
-    if (action === 'rotate-link') {
-      if (!window.confirm(`Create a new link for ${target.dataset.name}? The old link will stop working.`)) return;
-      guard(async () => {
-        await api(`/api/elite-tasks/staff/${encodeURIComponent(target.dataset.id)}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ rotateToken: true })
-        });
-        toast('New link ready');
-        await loadWeek({ keepScroll: true });
-      });
-      return;
-    }
-    if (action === 'rename-staff') {
-      openSheet(`<form id="renameForm" data-id="${esc(target.dataset.id)}">
-        ${sheetHead('Rename cleaner')}
-        <label>Name<input name="name" type="text" maxlength="40" required value="${esc(target.dataset.name || '')}"></label>
-        <button class="btn primary block" type="submit" style="margin-top:14px">Save name</button>
-      </form>`);
       return;
     }
     if (action === 'toggle-staff') {
@@ -1243,6 +1539,7 @@
     const form = event.target;
     if (form.id === 'loginForm') {
       event.preventDefault();
+      enterKiosk();
       const password = new FormData(form).get('password');
       guard(async () => {
         const response = await fetch('/api/elite-tasks/auth/login', {
@@ -1288,9 +1585,8 @@
         await api(`/api/elite-tasks/properties/${encodeURIComponent(form.dataset.id)}`, {
           method: 'PUT',
           body: JSON.stringify({
-            name: form.elements.namedItem('name').value,
+            propertyName: form.elements.namedItem('propertyName').value,
             address: form.elements.namedItem('address').value,
-            phone: form.elements.namedItem('phone').value,
             doorCode: form.elements.namedItem('doorCode').value,
             notes: form.elements.namedItem('notes').value
           })
@@ -1309,12 +1605,29 @@
           body: JSON.stringify({
             name: form.elements.namedItem('name').value,
             address: form.elements.namedItem('address').value,
-            phone: form.elements.namedItem('phone').value,
-            doorCode: form.elements.namedItem('doorCode').value
+            doorCode: form.elements.namedItem('doorCode').value,
+            notes: form.elements.namedItem('notes').value
           })
         });
         toast('Customer added');
         state.propertyQuery = '';
+        await loadWeek({ keepScroll: true });
+      });
+      return;
+    }
+    if (form.id === 'staffForm') {
+      event.preventDefault();
+      guard(async () => {
+        await api(`/api/elite-tasks/staff/${encodeURIComponent(form.dataset.id)}`, {
+          method: 'PATCH',
+          body: JSON.stringify({
+            name: form.elements.namedItem('name').value,
+            email: form.elements.namedItem('email').value,
+            emailAlerts: form.elements.namedItem('emailAlerts').value === '1'
+          })
+        });
+        toast('Cleaner saved');
+        closeSheet();
         await loadWeek({ keepScroll: true });
       });
       return;
@@ -1330,18 +1643,6 @@
         await loadWeek({ keepScroll: true });
       });
       return;
-    }
-    if (form.id === 'renameForm') {
-      event.preventDefault();
-      guard(async () => {
-        await api(`/api/elite-tasks/staff/${encodeURIComponent(form.dataset.id)}`, {
-          method: 'PATCH',
-          body: JSON.stringify({ name: form.elements.namedItem('name').value })
-        });
-        toast('Name saved');
-        closeSheet();
-        await loadWeek({ keepScroll: true });
-      });
     }
   });
 
