@@ -21,6 +21,7 @@ const { startScheduledJobsRunner } = require('./lib/scheduledJobsRunner');
 const { registerTrade007Routes } = require('./lib/trade007');
 const { registerSmartHoursRoutes } = require('./lib/smarthoursRoutes');
 const { registerDesignStudioRoutes } = require('./lib/designStudioRoutes');
+const { registerEliteTasksRoutes } = require('./lib/eliteTasksRoutes');
 const {
   eliteInvoicesDataPath,
   eliteInvoicesHistoryPath,
@@ -6930,6 +6931,11 @@ function writeEliteClientFull(data) {
   fs.writeFileSync(eliteClientFullPath, JSON.stringify(normalized, null, 2), 'utf8');
   return normalized;
 }
+
+registerEliteTasksRoutes(app, {
+  readClientFull: readEliteClientFull,
+  writeClientFull: writeEliteClientFull
+});
 
 async function getEliteInvoicePdfBuffer(invoice) {
   const pdfPath = invoicePdfPath(eliteInvoicesPdfDir, invoice.invoiceNumber);

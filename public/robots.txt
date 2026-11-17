@@ -11,6 +11,11 @@ Disallow: /Elite-Management
 Disallow: /elite-management
 Disallow: /api/elite-invoices
 Disallow: /api/elite-invoices/
+Disallow: /Elite-TaskMgmt
+Disallow: /elite-taskmgmt
+Disallow: /elite-tasks.html
+Disallow: /api/elite-tasks
+Disallow: /api/elite-tasks/
 Disallow: /SmartHours-Admin
 Disallow: /api/smarthours
 

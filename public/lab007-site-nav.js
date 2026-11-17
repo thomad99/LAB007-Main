@@ -10,6 +10,7 @@
     ['BUCK', 'https://buck-lab007.onrender.com/'],
     // ['007Trade', '/007trade'],
     ['Elite Management', '/Elite-Management'],
+    ['Elite-TaskMgmt', '/Elite-TaskMgmt'],
     ['Clever-CRM', '/Clever-CRM'],
     ['SmartHours', '/SmartHours'],
     ['Design Studio', '/design-studio'],
