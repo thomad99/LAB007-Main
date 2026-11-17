@@ -59,25 +59,45 @@ async function testStore() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'elite-tasks-'));
   const store = createStore(dir);
   const snap = await store.snapshot({ from: '2026-11-16', to: '2026-11-22', today: '2026-11-16' });
-  assert.deepStrictEqual(snap.staff.map((person) => person.name), ['Sarah', 'Jill', 'Kylie', 'Petr', 'Maya']);
+  assert.deepStrictEqual(snap.staff.map((person) => person.name), ['Petra', 'Sarah', 'Jill', 'Kylie', 'Petr', 'Maya']);
   const petr = snap.staff.find((person) => person.name === 'Petr');
   const created = await store.createJobs({
     property: { id: '85', clientId: '#85', name: 'Tracy', address: 'Siesta' },
     staffId: petr.id,
     date: '2026-11-16',
-    startTime: '09:00',
+    startTime: '10:00',
     durationMinutes: 120,
     recurrence: 'weekly',
     weeksAhead: 4,
-    visitNote: 'Oven'
+    visitNote: 'Oven',
+    alertDate: '2026-11-16',
+    alertTime: '08:00'
   });
   assert.strictEqual(created.count, 4);
+  await assert.rejects(() => store.createJobs({
+    property: { id: '85', clientId: '#85', name: 'Tracy', address: 'Siesta' },
+    staffId: petr.id,
+    date: '2026-11-16',
+    startTime: '09:30',
+    durationMinutes: 120,
+    recurrence: 'once',
+    weeksAhead: 1
+  }), /10:00 AM/);
   const week = await store.snapshot({ from: '2026-11-16', to: '2026-12-31', today: '2026-11-16' });
+  assert.strictEqual(week.jobs[0].alertDate, '2026-11-16');
+  assert.strictEqual(week.jobs[0].alertTime, '08:00');
+  assert.strictEqual(week.jobs[1].alertDate, '2026-11-23');
+  assert.strictEqual(week.jobs[1].alertTime, '08:00');
   const first = week.jobs[0];
   await store.setStatus(first.id, 'acknowledged', petr.id);
   await assert.rejects(() => store.setStatus(first.id, 'acknowledged', 'jill'), /Clean not found/);
   const after = await store.snapshot({ from: '2026-11-16', to: '2026-11-16', today: '2026-11-16' });
   assert.strictEqual(after.jobs[0].status, 'acknowledged');
+  const cleared = await store.unacknowledge(first.id, petr.id);
+  assert.strictEqual(cleared.status, 'scheduled');
+  assert.strictEqual(cleared.acknowledgedAt, null);
+  await assert.rejects(() => store.unacknowledge(first.id, petr.id), /not acknowledged/);
+  await store.setStatus(first.id, 'acknowledged', petr.id);
   await store.setStatus(first.id, 'completed', petr.id);
   const done = await store.snapshot({ from: '2026-11-16', to: '2026-11-16', today: '2026-11-16' });
   assert.strictEqual(done.jobs[0].status, 'completed');
@@ -86,6 +106,62 @@ async function testStore() {
   assert.strictEqual(removed.removed, 3);
   const left = await store.snapshot({ from: '2026-11-16', to: '2026-12-31', today: '2026-11-16' });
   assert.strictEqual(left.jobs.length, 1);
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+async function testPetraAndAlerts() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'elite-tasks-petra-'));
+  fs.writeFileSync(path.join(dir, 'tasks.json'), JSON.stringify({
+    version: 1,
+    staff: [{ id: 'sarah', name: 'Sarah', token: 'a'.repeat(32), color: '#0f6e56', active: true }],
+    jobs: [],
+    blocks: []
+  }));
+  const store = createStore(dir);
+  const snap = await store.snapshot({ from: '2026-11-15', to: '2026-11-21', today: '2026-11-16' });
+  const petra = snap.staff.find((person) => person.name === 'Petra');
+  assert.ok(petra && petra.active);
+  const saved = JSON.parse(fs.readFileSync(path.join(dir, 'tasks.json'), 'utf8'));
+  assert.ok(saved.staff.some((person) => person.name === 'Petra'));
+  const created = await store.createJobs({
+    property: { id: '85', clientId: '#85', name: 'Tracy', address: 'Siesta' },
+    staffId: petra.id,
+    date: '2026-11-16',
+    startTime: '10:00',
+    durationMinutes: 120,
+    recurrence: 'weekly',
+    weeksAhead: 2,
+    alertDate: '2026-11-15',
+    alertTime: '18:00'
+  });
+  assert.strictEqual(created.count, 2);
+  const week = await store.snapshot({ from: '2026-11-15', to: '2026-11-30', today: '2026-11-16' });
+  assert.strictEqual(week.jobs[0].staffId, petra.id);
+  assert.strictEqual(week.jobs[0].alertDate, '2026-11-15');
+  assert.strictEqual(week.jobs[1].alertDate, '2026-11-22');
+  await store.updateJob(week.jobs[0].id, { alertDate: '', alertTime: '', applyTo: 'one' });
+  const cleared = await store.snapshot({ from: '2026-11-15', to: '2026-11-30', today: '2026-11-16' });
+  assert.strictEqual(cleared.jobs[0].alertDate, '');
+  assert.strictEqual(cleared.jobs[1].alertDate, '2026-11-22');
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
+async function testCustomers() {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'elite-tasks-customers-'));
+  const store = createStore(dir);
+  const first = await store.seedCustomers([{ id: '85', name: 'Tracy', address: 'Siesta', doorCode: '1111' }]);
+  assert.strictEqual(first.seeded, true);
+  assert.strictEqual(first.count, 1);
+  const second = await store.seedCustomers([{ id: 'x', name: 'Other', address: 'Nope' }]);
+  assert.strictEqual(second.seeded, false);
+  assert.strictEqual(second.count, 1);
+  const added = await store.addCustomer({ name: 'Beach House', address: '10 Gulf Dr' });
+  const updated = await store.updateCustomer(added.id, { address: '12 Gulf Dr' });
+  assert.strictEqual(updated.name, 'Beach House');
+  assert.strictEqual(updated.address, '12 Gulf Dr');
+  await store.deleteCustomer(added.id);
+  const list = await store.listCustomers();
+  assert.deepStrictEqual(list.map((item) => item.name), ['Tracy']);
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
@@ -133,10 +209,11 @@ async function testHttp() {
     const weekRes = await fetch(`${base}/api/elite-tasks/week?from=2026-11-16&to=2026-12-31&today=2026-11-16`, { headers });
     const week = await weekRes.json();
     assert.strictEqual(week.role, 'manager');
-    assert.ok(week.properties.some((item) => item.clientId === '#85' && item.doorCode === '1111'));
+    assert.ok(week.properties.some((item) => item.name === 'Tracy' && item.doorCode === '1111' && item.address === 'Siesta Key'));
+    assert.ok(!JSON.stringify(week.properties).match(/Price per Visit|"Pay"/));
     const petr = week.staff.find((person) => person.name === 'Petr');
     const jill = week.staff.find((person) => person.name === 'Jill');
-    const property = week.properties.find((item) => item.clientId === '#85');
+    const property = week.properties.find((item) => item.name === 'Tracy');
     const adminPage = await fetch(`${base}/Elite-TaskMgmt`);
     assert.match(adminPage.headers.get('x-robots-tag') || '', /noindex/i);
     await adminPage.text();
@@ -151,7 +228,7 @@ async function testHttp() {
         propertyId: property.id,
         staffId: petr.id,
         date: '2026-11-16',
-        startTime: '09:00',
+        startTime: '10:00',
         durationMinutes: 90,
         recurrence: 'biweekly',
         weeksAhead: 8,
@@ -166,6 +243,9 @@ async function testHttp() {
     assert.strictEqual(booked.jobs.length, 4);
     assert.strictEqual(booked.jobs[0].status, 'scheduled');
     assert.strictEqual(booked.jobs[0].doorCode, '1111');
+    assert.strictEqual(booked.jobs[0].propertyName, 'Tracy');
+    assert.strictEqual(booked.jobs[0].address, 'Siesta Key');
+    assert.ok(!JSON.stringify(booked.jobs).match(/Price per Visit|"Pay"/));
     const wrongAck = await fetch(`${base}/api/elite-tasks/me/jobs/${booked.jobs[0].id}/ack`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': jill.token },
@@ -188,6 +268,21 @@ async function testHttp() {
     assert.ok(mine.jobs.every((job) => job.staffId === petr.id));
     assert.strictEqual(mine.jobs[0].status, 'acknowledged');
     assert.strictEqual(mine.jobs[0].doorCode, '1111');
+    const unackRes = await fetch(`${base}/api/elite-tasks/me/jobs/${mine.jobs[0].id}/unack`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': petr.token },
+      body: '{}'
+    });
+    assert.strictEqual(unackRes.status, 200);
+    const unacked = await unackRes.json();
+    assert.strictEqual(unacked.status, 'scheduled');
+    assert.strictEqual(unacked.acknowledgedAt, null);
+    const reackRes = await fetch(`${base}/api/elite-tasks/me/jobs/${mine.jobs[0].id}/ack`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': petr.token },
+      body: '{}'
+    });
+    assert.strictEqual(reackRes.status, 200);
     const doneRes = await fetch(`${base}/api/elite-tasks/me/jobs/${mine.jobs[0].id}/complete`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': petr.token },
@@ -208,6 +303,28 @@ async function testHttp() {
     const refreshed = await refreshedRes.json();
     assert.strictEqual(refreshed.jobs[0].doorCode, '4321');
     assert.strictEqual(refreshed.jobs[0].propertyNotes, 'Lockbox on the left');
+    assert.strictEqual(db.rows[0]['Access Code'], '1111');
+    const renamedRes = await fetch(`${base}/api/elite-tasks/properties/${property.id}`, {
+      method: 'PUT',
+      headers,
+      body: JSON.stringify({ name: 'Siesta House', address: '100 Beach Rd', doorCode: '4321', notes: 'Lockbox on the left' })
+    });
+    assert.strictEqual(renamedRes.status, 200);
+    const renamedWeek = await (await fetch(`${base}/api/elite-tasks/week?from=2026-11-16&to=2026-11-22&today=2026-11-16`, { headers })).json();
+    assert.strictEqual(renamedWeek.jobs[0].propertyName, 'Siesta House');
+    assert.strictEqual(renamedWeek.jobs[0].address, '100 Beach Rd');
+    const addedRes = await fetch(`${base}/api/elite-tasks/properties`, {
+      method: 'POST',
+      headers,
+      body: JSON.stringify({ name: 'Gulf Cottage', address: '4 Bay St' })
+    });
+    assert.strictEqual(addedRes.status, 201);
+    const added = await addedRes.json();
+    const deleteRes = await fetch(`${base}/api/elite-tasks/properties/${added.property.id}`, { method: 'DELETE', headers });
+    assert.strictEqual(deleteRes.status, 200);
+    const afterDelete = await (await fetch(`${base}/api/elite-tasks/week?from=2026-11-16&to=2026-11-22&today=2026-11-16`, { headers })).json();
+    assert.ok(afterDelete.properties.some((item) => item.name === 'Siesta House'));
+    assert.ok(!afterDelete.properties.some((item) => item.name === 'Gulf Cottage'));
     const blockRes = await fetch(`${base}/api/elite-tasks/me/blocks`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': petr.token },
@@ -256,6 +373,8 @@ async function main() {
   testDates();
   testProperties();
   await testStore();
+  await testPetraAndAlerts();
+  await testCustomers();
   await testHttp();
   console.log('elite tasks tests passed');
 }

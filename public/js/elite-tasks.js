@@ -10,20 +10,22 @@
     every3: 'Every 3 weeks',
     every4: 'Every 4 weeks'
   };
-  const TIMES = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00'];
+  const TIMES = ['10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'];
   const DURATIONS = [60, 90, 120, 150, 180, 240];
 
   const state = {
     password: localStorage.getItem(PASS_KEY) || '',
-    weekStart: sundayOf(todayISO()),
+    weekStart: todayISO(),
     screen: 'week',
     filter: 'all',
     propertyQuery: '',
     data: null,
     saving: false,
     staffPicked: false,
-    recurrencePicked: false
+    recurrencePicked: false,
+    alertPreset: 'hour'
   };
+  let alertTimer = 0;
 
   const gate = document.getElementById('gate');
   const shell = document.getElementById('shell');
@@ -109,6 +111,40 @@
     return `${n} min`;
   }
 
+  function defaultAlert(date, startTime) {
+    const total = minutesOf(startTime) - 60;
+    if (total < 0) return { alertDate: addDays(date, -1), alertTime: minutesToClock(total + 24 * 60) };
+    return { alertDate: date, alertTime: minutesToClock(total) };
+  }
+
+  function minutesToClock(total) {
+    const hour = Math.floor(total / 60) % 24;
+    const minute = total % 60;
+    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
+  }
+
+  function localStamp(date) {
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  }
+
+  function alertStamp(job) {
+    if (!job || !job.alertDate || !job.alertTime) return '';
+    return `${job.alertDate}T${job.alertTime}`;
+  }
+
+  function upcomingAlerts() {
+    const now = new Date();
+    const start = localStamp(new Date(now.getTime() - 12 * 60 * 60 * 1000));
+    const end = localStamp(new Date(now.getTime() + 36 * 60 * 60 * 1000));
+    return ((state.data && state.data.jobs) || [])
+      .filter((job) => {
+        const stamp = alertStamp(job);
+        return stamp && job.status !== 'completed' && stamp >= start && stamp <= end;
+      })
+      .sort((a, b) => alertStamp(a).localeCompare(alertStamp(b)));
+  }
+
   function formatRange(start, minutes) {
     const [hour, minute] = String(start).split(':').map(Number);
     const total = hour * 60 + minute + Number(minutes || 0);
@@ -143,7 +179,7 @@
   }
 
   function suggestStaffId(cleanerField, staff) {
-    const aliases = { petr: 'petr', petra: 'petr', maya: 'maya', maja: 'maya', sarah: 'sarah', jill: 'jill', kylie: 'kylie' };
+    const aliases = { petr: 'petr', petra: 'petra', maya: 'maya', maja: 'maya', sarah: 'sarah', jill: 'jill', kylie: 'kylie' };
     const hits = [];
     String(cleanerField || '').toLowerCase().split(/[^a-z]+/).forEach((part) => {
       const name = aliases[part];
@@ -245,8 +281,8 @@
   }
 
   function weekQuery() {
-    const from = state.weekStart;
-    const to = addDays(from, 6);
+    const from = addDays(state.weekStart, -14);
+    const to = addDays(state.weekStart, 13);
     const today = todayISO();
     const params = new URLSearchParams({ from, to, today });
     if (MODE === 'cleaner') {
@@ -258,6 +294,8 @@
 
   async function loadWeek(options) {
     const keep = options && options.keepScroll;
+    const previous = document.getElementById('gcal');
+    state.savedScroll = keep && previous ? { left: previous.scrollLeft, top: previous.scrollTop } : null;
     const y = window.scrollY;
     const path = MODE === 'cleaner' ? '/api/elite-tasks/me' : '/api/elite-tasks/week';
     state.data = await api(`${path}?${weekQuery()}`);
@@ -307,17 +345,20 @@
 
   function render() {
     const who = document.getElementById('who');
-    const signOut = document.getElementById('signOut');
     if (MODE === 'cleaner') {
       const name = state.data && state.data.staff ? state.data.staff.name : 'Cleaner';
       who.textContent = `${name} · your cleans`;
-      signOut.hidden = true;
+      who.hidden = false;
     } else {
-      who.textContent = 'Management';
-      signOut.hidden = false;
+      who.textContent = '';
+      who.hidden = true;
     }
     renderNav();
     renderToolbar();
+    if (state.data) {
+      showDueAlerts();
+      if (!alertTimer) alertTimer = setInterval(showDueAlerts, 60000);
+    }
     if (state.screen === 'properties' && MODE === 'manager') renderProperties();
     else if (state.screen === 'staff' && MODE === 'manager') renderStaff();
     else renderWeek();
@@ -337,12 +378,17 @@
     bottomNav.hidden = false;
   }
 
+  function placeLabel(job) {
+    return job.clientId || job.propertyName || 'Property';
+  }
+
   function renderToolbar() {
     if (state.screen !== 'week') {
       toolbar.innerHTML = '';
       return;
     }
-    const jobs = visibleJobs();
+    const end = addDays(state.weekStart, 6);
+    const jobs = visibleJobs().filter((job) => job.date >= state.weekStart && job.date <= end);
     const waiting = jobs.filter((job) => job.status === 'scheduled').length;
     const skipped = jobs.filter((job) => job.status === 'completed' && !job.acknowledgedAt).length;
     const summary = !jobs.length
@@ -353,7 +399,13 @@
           ? `<span class="summary warn">${skipped} completed without acknowledgement</span>`
           : '<span class="summary ok">All acknowledged</span>';
     const filters = MODE === 'manager' ? renderFilters() : '';
+    const phoneAlerts = typeof Notification === 'undefined' || Notification.permission === 'granted'
+      ? ''
+      : Notification.permission === 'denied'
+        ? '<p class="hint">Phone alerts are blocked in the browser settings.</p>'
+        : '<button type="button" class="btn ghost small" data-action="enable-alerts">Turn on phone alerts</button>';
     toolbar.innerHTML = `
+      ${renderAlertList()}
       <div class="weekbar">
         <div class="week-nav">
           <button type="button" class="btn ghost" data-action="prev-week" aria-label="Previous week">‹</button>
@@ -365,6 +417,7 @@
           ${summary}
         </div>
       </div>
+      ${phoneAlerts}
       ${filters}`;
   }
 
@@ -381,11 +434,41 @@
     ).join('')}</div>`;
   }
 
+  function renderAlertList() {
+    const now = localStamp(new Date());
+    const rows = upcomingAlerts();
+    if (!rows.length) return '';
+    return `<div class="alert-list">${rows.map((job) => {
+      const due = alertStamp(job) <= now;
+      const place = placeLabel(job);
+      const who = MODE === 'manager' && job.staffName ? ` · ${job.staffName}` : '';
+      return `<button type="button" class="alert-item ${due ? 'due' : ''}" data-action="open-job" data-id="${esc(job.id)}">
+        <strong>${due ? 'Alert due' : 'Alert'} ${esc(prettyDate(job.alertDate))} · ${esc(formatTime(job.alertTime))}</strong>
+        <span>${esc(place)}${job.address ? ` · ${esc(job.address)}` : ''}${esc(who)} · clean ${esc(prettyDate(job.date))} at ${esc(formatTime(job.startTime))}</span>
+      </button>`;
+    }).join('')}</div>`;
+  }
+
+  function showDueAlerts() {
+    if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
+    const now = localStamp(new Date());
+    upcomingAlerts().forEach((job) => {
+      const stamp = alertStamp(job);
+      if (!stamp || stamp > now) return;
+      const key = `eliteAlert:${job.id}:${stamp}`;
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, '1');
+      const place = placeLabel(job);
+      const body = `${prettyDate(job.date)} at ${formatTime(job.startTime)}${job.address ? ` · ${job.address}` : ''}`;
+      try { new Notification(place, { body, tag: key }); } catch (err) { /* the banner still shows */ }
+    });
+  }
+
   function renderWeek() {
     const jobs = visibleJobs();
     const allJobs = (state.data && state.data.jobs) || [];
     const today = todayISO();
-    const days = Array.from({ length: 7 }, (_, index) => addDays(state.weekStart, index));
+    const days = Array.from({ length: 28 }, (_, index) => addDays(state.weekStart, index - 14));
     const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const span = gridWindow(jobs);
     const hours = [];
@@ -396,7 +479,7 @@
     view.innerHTML = `<div class="gcal" id="gcal">
       <div class="gcal-head">
         <div class="gcal-time"></div>
-        ${days.map((date) => `<div class="gcal-dayhead ${date === today ? 'today' : ''}">
+        ${days.map((date) => `<div class="gcal-dayhead ${date === today ? 'today' : ''}" data-date="${date}">
           <span class="gcal-dow">${names[weekdayIndex(date)]}</span>
           <span class="gcal-dom ${date === today ? 'today' : ''}">${dateParts(date).getDate()}</span>
           ${MODE === 'manager' ? `<button type="button" class="gcal-plus" data-action="add" data-date="${date}" aria-label="Add a clean on ${esc(prettyDate(date))}">+</button>` : ''}
@@ -420,17 +503,31 @@
       </div>
     </div>${renderBlockedList()}`;
     const scroller = document.getElementById('gcal');
-    const line = scroller && scroller.querySelector('.gcal-now');
-    if (scroller && line) {
+    if (!scroller) return;
+    const col = Math.max(112, Math.floor((scroller.clientWidth - 56) / 7));
+    scroller.style.setProperty('--day-count', String(days.length));
+    scroller.style.setProperty('--day-col', `${col}px`);
+    if (state.savedScroll) {
+      scroller.scrollLeft = state.savedScroll.left;
+      scroller.scrollTop = state.savedScroll.top;
+      state.savedScroll = null;
+      return;
+    }
+    const head = scroller.querySelector(`.gcal-dayhead[data-date="${state.weekStart}"]`);
+    const gutter = scroller.querySelector('.gcal-head .gcal-time');
+    if (head && gutter) {
+      const delta = head.getBoundingClientRect().left - (scroller.getBoundingClientRect().left + gutter.getBoundingClientRect().width);
+      scroller.scrollLeft += delta;
+    }
+    const line = scroller.querySelector('.gcal-now');
+    if (line) {
       const lineTop = line.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
       scroller.scrollTop = Math.max(0, lineTop - 90);
-    } else if (scroller) {
-      scroller.scrollTop = 0;
     }
   }
 
   function gridWindow(jobs) {
-    let start = 7 * 60;
+    let start = 10 * 60;
     let end = 19 * 60;
     jobs.forEach((job) => {
       const begin = minutesOf(job.startTime);
@@ -450,7 +547,9 @@
   }
 
   function nowLineTop(today, span, hourPx) {
-    if (state.weekStart > today || addDays(state.weekStart, 6) < today) return null;
+    const first = addDays(state.weekStart, -14);
+    const last = addDays(state.weekStart, 13);
+    if (today < first || today > last) return null;
     const now = new Date();
     const minutes = now.getHours() * 60 + now.getMinutes();
     if (minutes < span.start || minutes > span.end) return null;
@@ -481,15 +580,16 @@
     const top = ((item.start - span.start) / 60) * hourPx;
     const height = Math.max(22, ((item.end - item.start) / 60) * hourPx - 3);
     const width = 100 / item.laneCount;
-    const color = safeColor(job.staffColor);
+    const tone = job.status === 'acknowledged' || job.status === 'completed' ? job.status : 'scheduled';
     const flags = [];
     if (overlaps(job, allJobs)) flags.push('Overlaps');
     if (blocksOn(job.date).some((block) => !block.staffId || block.staffId === job.staffId)) flags.push('Unavailable');
     const who = MODE === 'manager' ? job.staffName || '' : '';
-    const place = job.clientId ? `${job.clientId} ${job.propertyName || ''}`.trim() : (job.propertyName || 'Clean');
-    return `<button type="button" class="gcal-event" data-action="open-job" data-id="${esc(job.id)}" title="${esc(`${formatRange(job.startTime, job.durationMinutes)} ${place}`)}" style="top:${top}px;height:${height}px;left:calc(${item.lane * width}% + 2px);width:calc(${width}% - 4px);background:${color}22;border-left:3px solid ${color};color:#1c1917">
+    const place = placeLabel(job);
+    return `<button type="button" class="gcal-event ${tone}" data-action="open-job" data-id="${esc(job.id)}" title="${esc(`${formatRange(job.startTime, job.durationMinutes)} ${place}`)}" style="top:${top}px;height:${height}px;left:calc(${item.lane * width}% + 2px);width:calc(${width}% - 4px)">
       <strong>${esc(formatTime(job.startTime))}${who ? ` · ${esc(who)}` : ''}</strong>
       <span>${esc(place)}</span>
+      ${job.address ? `<span>${esc(job.address)}</span>` : ''}
       ${flags.length && height > 46 ? `<span>${esc(flags.join(' · '))}</span>` : ''}
     </button>`;
   }
@@ -506,10 +606,19 @@
   function renderProperties() {
     const query = state.propertyQuery;
     view.innerHTML = `
-      <label>Find a property
-        <input id="propFilter" type="search" placeholder="Name, client, address" value="${esc(query)}">
+      <p class="hint">This customer list is only for scheduling.</p>
+      <label>Find a customer
+        <input id="propFilter" type="search" placeholder="Name or address" value="${esc(query)}">
       </label>
-      <div id="propertyList" class="stack"></div>`;
+      <div id="propertyList" class="stack"></div>
+      <form id="addPropertyForm" class="panel" style="margin-top:12px">
+        <h2>Add a customer</h2>
+        <label>Name<input name="name" type="text" maxlength="160" required placeholder="Customer or property name"></label>
+        <label>Address<input name="address" type="text" maxlength="240" required placeholder="Street address"></label>
+        <label>Phone<input name="phone" type="text" maxlength="80" placeholder="Optional"></label>
+        <label>Door code<input name="doorCode" type="text" maxlength="80" autocomplete="off" placeholder="Optional"></label>
+        <button class="btn primary block" type="submit">Add customer</button>
+      </form>`;
     renderPropertyList();
   }
 
@@ -519,18 +628,21 @@
     const q = state.propertyQuery.trim().toLowerCase();
     const list = ((state.data && state.data.properties) || []).filter((property) => {
       if (!q) return true;
-      return `${property.label} ${property.address} ${property.doorCode} ${property.notes}`.toLowerCase().includes(q);
+      return `${property.name || ''} ${property.label || ''} ${property.address || ''} ${property.doorCode || ''} ${property.notes || ''}`.toLowerCase().includes(q);
     });
     if (!list.length) {
-      box.innerHTML = '<p class="hint">No properties yet. Add clients in Elite Management.</p>';
+      box.innerHTML = '<p class="hint">No customers yet. Add one below.</p>';
       return;
     }
     box.innerHTML = list.map((property) => `<article class="prop-card">
-      <h3>${esc(property.label)}</h3>
-      <p class="hint">${esc(property.address || 'No address')}${property.frequency ? ` · ${esc(property.frequency)}` : ''}</p>
+      <h3>${esc(property.name || property.label || 'Customer')}</h3>
+      <p class="hint">${esc(property.address || 'No address')}</p>
       <p><strong>Door code:</strong> ${property.doorCode ? esc(property.doorCode) : '<span class="hint">not set</span>'}</p>
       ${property.notes ? `<p class="pre">${esc(property.notes)}</p>` : ''}
-      <div class="row-actions"><button type="button" class="btn primary" data-action="edit-property" data-id="${esc(property.id)}">Door code & notes</button></div>
+      <div class="row-actions">
+        <button type="button" class="btn primary" data-action="edit-property" data-id="${esc(property.id)}">Edit</button>
+        <button type="button" class="btn danger" data-action="delete-property" data-id="${esc(property.id)}" data-name="${esc(property.name || 'this customer')}">Delete</button>
+      </div>
     </article>`).join('');
   }
 
@@ -549,7 +661,7 @@
         const url = staffUrl(person);
         return `<article class="staff-card">
           <h3 class="person"><span class="dot" style="background:${safeColor(person.color)}"></span>${esc(person.name)}${person.active ? '' : ' · inactive'}</h3>
-          <p class="hint">${person.upcoming || 0} upcoming · ${person.needsAck || 0} not acknowledged</p>
+          <p class="hint">${person.upcoming || 0} upcoming · ${person.needsAck || 0} not acknowledged${person.name === 'Petra' ? ' · admin, can be assigned cleans' : ''}</p>
           <label>Private link for ${esc(person.name)}<input type="text" readonly value="${esc(url)}" data-link-for="${esc(person.id)}"></label>
           <div class="row-actions">
             <button type="button" class="btn primary" data-action="copy-link" data-id="${esc(person.id)}">Copy ${esc(person.name)}'s link</button>
@@ -592,21 +704,26 @@
     const preset = state.filter !== 'all' && state.filter !== 'needs' ? state.filter : '';
     state.staffPicked = Boolean(preset);
     state.recurrencePicked = false;
+    state.alertPreset = 'hour';
+    const alert = defaultAlert(date, '10:00');
     openSheet(jobForm({
       mode: 'create',
       date,
       staffId: preset,
-      startTime: '09:00',
+      startTime: '10:00',
       durationMinutes: 120,
       recurrence: 'once',
       weeksAhead: 26,
-      visitNote: ''
+      visitNote: '',
+      alertDate: alert.alertDate,
+      alertTime: alert.alertTime
     }));
   }
 
   function openEdit(job) {
     state.staffPicked = true;
     state.recurrencePicked = true;
+    state.alertPreset = job.alertDate && job.alertTime ? 'custom' : 'none';
     openSheet(jobForm({ mode: 'edit', ...job }));
   }
 
@@ -619,19 +736,26 @@
       <input type="hidden" name="staffId" value="${esc(job.staffId || '')}">
       <input type="hidden" name="recurrence" value="${esc(job.recurrence || 'once')}">
       <label>Property
-        <input id="propertySearch" type="search" placeholder="Search the client list" autocomplete="off">
+        <input id="propertySearch" type="search" placeholder="Property or address" autocomplete="off">
       </label>
-      <div id="propertyChosen">${job.propertyId ? `<p class="hint">Selected: ${esc(job.clientId ? `${job.clientId} · ` : '')}${esc(job.propertyName || '')}</p>` : '<p class="hint">Search by client, name, or address.</p>'}</div>
+      <div id="propertyChosen">${job.propertyId ? `<p class="hint">Selected: ${esc(placeLabel(job))}${job.address ? ` · ${esc(job.address)}` : ''}</p>` : '<p class="hint">Search by property or address.</p>'}</div>
       <div id="propertyResults"></div>
       <label>Date<input name="date" type="date" required value="${esc(job.date || '')}"></label>
       <label>Start time</label>
-      ${choiceButtons('time', TIMES.map((time) => [time, formatTime(time)]), job.startTime || '09:00')}
-      <input name="startTime" type="time" required value="${esc(job.startTime || '09:00')}" style="margin-top:8px">
+      ${choiceButtons('time', TIMES.map((time) => [time, formatTime(time)]), job.startTime || '10:00')}
+      <input name="startTime" type="time" min="10:00" required value="${esc(job.startTime || '10:00')}" style="margin-top:8px">
       <label>Likely duration</label>
       ${choiceButtons('duration', DURATIONS.map((mins) => [String(mins), formatDuration(mins)]), String(job.durationMinutes || 120))}
       <input name="durationMinutes" type="number" min="15" max="480" step="15" required value="${esc(job.durationMinutes || 120)}" style="margin-top:8px">
       <label>Cleaner</label>
       ${peopleButtons.length ? choiceButtons('staffId', peopleButtons, job.staffId || '') : '<p class="hint">Add a cleaner on the Staff tab first.</p>'}
+      <label>Alert</label>
+      ${choiceButtons('alert', [['none', 'No alert'], ['hour', '1 hour before'], ['morning', 'Morning of the clean'], ['night', 'Night before']], state.alertPreset === 'custom' ? '' : state.alertPreset)}
+      <div id="alertBox" ${state.alertPreset === 'none' ? 'hidden' : ''}>
+        <label>Alert date<input name="alertDate" type="date" value="${esc(job.alertDate || '')}"></label>
+        <label>Alert time<input name="alertTime" type="time" value="${esc(job.alertTime || '')}"></label>
+        <p class="hint">The cleaner sees the alert with this clean's date, time, and address. Repeats keep the same gap before each visit.</p>
+      </div>
       ${editing ? '' : `<label>Repeat</label>${choiceButtons('recurrence', Object.entries(REC), job.recurrence || 'once')}
         <div id="aheadBox" ${job.recurrence && job.recurrence !== 'once' ? '' : 'hidden'}>
           <label>Schedule ahead
@@ -669,11 +793,13 @@
       ${job.seriesId ? `<button type="button" class="btn danger" data-action="delete-job" data-id="${esc(job.id)}" data-scope="future">Delete this and future visits</button>` : ''}
     </div>` : `<div class="stack">
       ${job.status === 'scheduled' ? `<button type="button" class="btn blue" data-action="ack" data-id="${esc(job.id)}">Acknowledge</button>` : ''}
+      ${job.status === 'acknowledged' ? `<button type="button" class="btn ghost" data-action="unack" data-id="${esc(job.id)}">Un-acknowledge</button>` : ''}
       ${job.status !== 'completed' ? `<button type="button" class="btn primary" data-action="complete" data-id="${esc(job.id)}">Mark completed</button>` : ''}
     </div>`;
     openSheet(`<div>
-      ${sheetHead(esc(job.clientId ? `${job.clientId} · ${job.propertyName}` : (job.propertyName || 'Clean')))}
+      ${sheetHead(esc(placeLabel(job)))}
       <p><strong>${esc(prettyDate(job.date))}</strong> · ${esc(formatRange(job.startTime, job.durationMinutes))}</p>
+      ${job.alertDate && job.alertTime ? `<p class="summary warn">Alert ${esc(prettyDate(job.alertDate))} at ${esc(formatTime(job.alertTime))}</p>` : '<p class="hint">No alert set.</p>'}
       ${job.address ? `<p>${esc(job.address)}</p>` : ''}
       ${MODE === 'manager' ? `<p class="person"><span class="dot" style="background:${safeColor(job.staffColor)}"></span>${esc(job.staffName || 'Unassigned')}</p>` : ''}
       <p><span class="pill ${esc(job.status)}">${esc(statusLabel(job.status))}</span> ${job.seriesId ? esc(REC[job.recurrence] || '') : ''}</p>
@@ -703,12 +829,14 @@
     const property = ((state.data && state.data.properties) || []).find((item) => item.id === id);
     if (!property) return;
     openSheet(`<form id="propertyForm" data-id="${esc(property.id)}">
-      ${sheetHead(esc(property.label))}
-      <p class="hint">${esc(property.address || '')}</p>
+      ${sheetHead('Edit customer')}
+      <label>Name<input name="name" type="text" maxlength="160" required value="${esc(property.name || '')}"></label>
+      <label>Address<input name="address" type="text" maxlength="240" required value="${esc(property.address || '')}"></label>
+      <label>Phone<input name="phone" type="text" maxlength="80" value="${esc(property.phone || '')}"></label>
       <label>Door code<input name="doorCode" type="text" maxlength="80" autocomplete="off" value="${esc(property.doorCode || '')}"></label>
-      <label>Freeform notes<textarea name="notes" maxlength="4000">${esc(property.notes || '')}</textarea></label>
-      <p class="hint">This updates Access Code and Notes on the Elite Management client list. Cleaners see it on their jobs.</p>
-      <button class="btn primary block" type="submit">Save property</button>
+      <label>Notes<textarea name="notes" maxlength="4000">${esc(property.notes || '')}</textarea></label>
+      <p class="hint">Saved only on this schedule.</p>
+      <button class="btn primary block" type="submit">Save customer</button>
     </form>`);
   }
 
@@ -768,11 +896,14 @@
       startTime: form.elements.namedItem('startTime').value,
       durationMinutes: Number(form.elements.namedItem('durationMinutes').value),
       visitNote: form.elements.namedItem('visitNote').value,
+      alertDate: state.alertPreset === 'none' ? '' : form.elements.namedItem('alertDate').value,
+      alertTime: state.alertPreset === 'none' ? '' : form.elements.namedItem('alertTime').value,
       applyTo
     };
     if (!body.propertyId) return toast('Choose a property.');
     if (!body.staffId) return toast('Choose a cleaner.');
     if (!body.date || !body.startTime) return toast('Choose a date and start time.');
+    if (minutesOf(body.startTime) < 10 * 60) return toast('The earliest start time is 10:00 AM.');
     if (form.dataset.mode === 'edit') {
       await api(`/api/elite-tasks/jobs/${encodeURIComponent(form.dataset.id)}`, { method: 'PATCH', body: JSON.stringify(body) });
       toast(applyTo === 'future' ? 'Updated this visit and the future visits.' : 'Visit updated.');
@@ -806,8 +937,14 @@
     if (action === 'next-week' || action === 'prev-week' || action === 'this-week') {
       if (action === 'next-week') state.weekStart = addDays(state.weekStart, 7);
       if (action === 'prev-week') state.weekStart = addDays(state.weekStart, -7);
-      if (action === 'this-week') state.weekStart = sundayOf(todayISO());
+      if (action === 'this-week') state.weekStart = todayISO();
       guard(() => loadWeek());
+      return;
+    }
+    if (action === 'enable-alerts') {
+      if (typeof Notification !== 'undefined' && Notification.requestPermission) {
+        Notification.requestPermission().then(() => render());
+      }
       return;
     }
     if (action === 'add') return openAdd(target.dataset.date);
@@ -818,6 +955,15 @@
       return;
     }
     if (action === 'edit-property') return openProperty(target.dataset.id);
+    if (action === 'delete-property') {
+      if (!window.confirm(`Delete ${target.dataset.name}? Cleans already booked stay on the calendar.`)) return;
+      guard(async () => {
+        await api(`/api/elite-tasks/properties/${encodeURIComponent(target.dataset.id)}`, { method: 'DELETE' });
+        toast('Customer deleted');
+        await loadWeek({ keepScroll: true });
+      });
+      return;
+    }
     if (action === 'block-day') return openBlock(target.dataset.date);
     if (action === 'block-range') return openBlock(todayISO());
     if (action === 'pick-choice') {
@@ -832,17 +978,11 @@
       }
       if (target.dataset.group === 'time') form.elements.namedItem('startTime').value = target.dataset.value;
       if (target.dataset.group === 'duration') form.elements.namedItem('durationMinutes').value = target.dataset.value;
+      if (target.dataset.group === 'alert') fillAlert(form, target.dataset.value);
+      if (target.dataset.group === 'time' && ['hour', 'morning', 'night'].includes(state.alertPreset)) fillAlert(form, state.alertPreset);
       return;
     }
     if (action === 'pick-property') return pickProperty(target.dataset.id);
-    if (action === 'sign-out') {
-      localStorage.removeItem(PASS_KEY);
-      state.password = '';
-      state.data = null;
-      closeSheet();
-      showLogin();
-      return;
-    }
     if (action === 'copy-text') {
       guard(async () => {
         await navigator.clipboard.writeText(target.dataset.text || '');
@@ -864,11 +1004,11 @@
       });
       return;
     }
-    if (action === 'ack' || action === 'complete') {
+    if (action === 'ack' || action === 'complete' || action === 'unack') {
       guard(async () => {
-        const path = action === 'ack' ? 'ack' : 'complete';
+        const path = action === 'ack' ? 'ack' : action === 'unack' ? 'unack' : 'complete';
         await api(`/api/elite-tasks/me/jobs/${encodeURIComponent(target.dataset.id)}/${path}`, { method: 'POST', body: '{}' });
-        toast(action === 'ack' ? 'Acknowledged' : 'Marked completed');
+        toast(action === 'ack' ? 'Acknowledged' : action === 'unack' ? 'Not acknowledged' : 'Marked completed');
         closeSheet();
         await loadWeek({ keepScroll: true });
       });
@@ -967,7 +1107,41 @@
     if (!form) return;
     if (event.target.name === 'startTime') setChoice(form, 'time', event.target.value);
     if (event.target.name === 'durationMinutes') setChoice(form, 'duration', event.target.value);
+    if (event.target.name === 'date' && ['hour', 'morning', 'night'].includes(state.alertPreset)) fillAlert(form, state.alertPreset);
+    if (event.target.name === 'startTime' && state.alertPreset === 'hour') fillAlert(form, 'hour');
+    if (event.target.name === 'alertDate' || event.target.name === 'alertTime') state.alertPreset = 'custom';
   });
+
+  function fillAlert(form, preset) {
+    state.alertPreset = preset;
+    const box = document.getElementById('alertBox');
+    const date = form.elements.namedItem('date').value;
+    const start = form.elements.namedItem('startTime').value || '10:00';
+    form.querySelectorAll('[data-group="alert"]').forEach((button) => {
+      button.setAttribute('aria-pressed', button.dataset.value === preset ? 'true' : 'false');
+    });
+    if (preset === 'none' || !date) {
+      if (box) box.hidden = preset === 'none';
+      if (preset === 'none') {
+        form.elements.namedItem('alertDate').value = '';
+        form.elements.namedItem('alertTime').value = '';
+      }
+      return;
+    }
+    if (box) box.hidden = false;
+    let alertDate = date;
+    let alertTime = '08:00';
+    if (preset === 'hour') {
+      const shift = defaultAlert(date, start);
+      alertDate = shift.alertDate;
+      alertTime = shift.alertTime;
+    } else if (preset === 'night') {
+      alertDate = addDays(date, -1);
+      alertTime = '18:00';
+    }
+    form.elements.namedItem('alertDate').value = alertDate;
+    form.elements.namedItem('alertTime').value = alertTime;
+  }
 
   document.addEventListener('submit', (event) => {
     const form = event.target;
@@ -1018,12 +1192,33 @@
         await api(`/api/elite-tasks/properties/${encodeURIComponent(form.dataset.id)}`, {
           method: 'PUT',
           body: JSON.stringify({
+            name: form.elements.namedItem('name').value,
+            address: form.elements.namedItem('address').value,
+            phone: form.elements.namedItem('phone').value,
             doorCode: form.elements.namedItem('doorCode').value,
             notes: form.elements.namedItem('notes').value
           })
         });
-        toast('Saved to the client list');
+        toast('Customer saved');
         closeSheet();
+        await loadWeek({ keepScroll: true });
+      });
+      return;
+    }
+    if (form.id === 'addPropertyForm') {
+      event.preventDefault();
+      guard(async () => {
+        await api('/api/elite-tasks/properties', {
+          method: 'POST',
+          body: JSON.stringify({
+            name: form.elements.namedItem('name').value,
+            address: form.elements.namedItem('address').value,
+            phone: form.elements.namedItem('phone').value,
+            doorCode: form.elements.namedItem('doorCode').value
+          })
+        });
+        toast('Customer added');
+        state.propertyQuery = '';
         await loadWeek({ keepScroll: true });
       });
       return;
