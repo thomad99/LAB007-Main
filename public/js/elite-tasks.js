@@ -315,28 +315,6 @@
     });
   }
 
-  function blocksOn(date) {
-    return ((state.data && state.data.blocks) || []).filter((block) => {
-      if (block.startDate > date || block.endDate < date) return false;
-      if (state.filter !== 'all' && state.filter !== 'needs' && block.staffId !== state.filter) return false;
-      return true;
-    });
-  }
-
-  function overlaps(job, jobs) {
-    const start = (value) => {
-      const [hour, minute] = String(value).split(':').map(Number);
-      return hour * 60 + minute;
-    };
-    return jobs.some((other) => {
-      if (other.id === job.id || other.date !== job.date) return false;
-      if (!jobStaffIds(job).some((id) => jobStaffIds(other).includes(id))) return false;
-      const a = start(job.startTime);
-      const b = start(other.startTime);
-      return a < b + other.durationMinutes && b < a + job.durationMinutes;
-    });
-  }
-
   function render() {
     const who = document.getElementById('who');
     if (MODE === 'cleaner') {
@@ -430,7 +408,6 @@
 
   function renderWeek() {
     const jobs = visibleJobs();
-    const allJobs = (state.data && state.data.jobs) || [];
     const today = todayISO();
     const days = Array.from({ length: 28 }, (_, index) => addDays(state.weekStart, index - 14));
     const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
@@ -455,7 +432,7 @@
           const placed = placeJobs(jobs.filter((job) => job.date === date)).placed;
           return `<div class="gcal-col ${date === today ? 'today' : ''}" style="height:${height}px">
             ${date === today && nowTop != null ? `<div class="gcal-now" style="top:${nowTop}px"></div>` : ''}
-            ${placed.map((item) => renderEvent(item, span, hourPx, allJobs)).join('')}
+            ${placed.map((item) => renderEvent(item, span, hourPx)).join('')}
           </div>`;
         }).join('')}
       </div>
@@ -679,22 +656,18 @@
     return { placed: items, lanes: maxLanes };
   }
 
-  function renderEvent(item, span, hourPx, allJobs) {
+  function renderEvent(item, span, hourPx) {
     const job = item.job;
     const top = ((item.start - span.start) / 60) * hourPx;
     const height = Math.max(22, ((item.end - item.start) / 60) * hourPx - 3);
     const width = 100 / item.laneCount;
     const tone = job.status === 'acknowledged' || job.status === 'completed' ? job.status : 'scheduled';
-    const flags = [];
-    if (overlaps(job, allJobs)) flags.push('Overlaps');
-    if (blocksOn(job.date).some((block) => !block.staffId || jobStaffIds(job).includes(block.staffId))) flags.push('Unavailable');
-    const who = MODE === 'manager' ? job.staffName || '' : '';
+    const who = job.staffName || '';
     const place = placeLabel(job);
-    return `<button type="button" class="gcal-event ${tone}" data-action="open-job" data-id="${esc(job.id)}" title="${esc(`${formatRange(job.startTime, job.durationMinutes)} ${place}`)}" style="top:${top}px;height:${height}px;left:calc(${item.lane * width}% + 2px);width:calc(${width}% - 4px)">
-      <strong>${esc(formatTime(job.startTime))}${who ? ` · ${esc(who)}` : ''}</strong>
-      ${job.deepClean ? '<span>Deep clean</span>' : ''}
+    const label = `${place}${who ? `, ${who}` : ''}`;
+    return `<button type="button" class="gcal-event ${tone}" data-action="open-job" data-id="${esc(job.id)}" title="${esc(label)}" aria-label="${esc(label)}" style="top:${top}px;height:${height}px;left:calc(${item.lane * width}% + 2px);width:calc(${width}% - 4px)">
       <span>${esc(place)}</span>
-      ${flags.length && height > 46 ? `<span>${esc(flags.join(' · '))}</span>` : ''}
+      ${who ? `<span>${esc(who)}</span>` : ''}
     </button>`;
   }
 
