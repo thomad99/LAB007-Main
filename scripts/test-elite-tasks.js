@@ -561,6 +561,9 @@ async function testAssignmentEmail() {
     assert.ok(sent[0].text.includes('Beach road'));
     assert.ok(sent[0].text.includes('10 Gulf Dr'));
     assert.ok(sent[0].text.includes('Door code: 4321'));
+    assert.ok(sent[0].text.includes('date=2026-11-18'));
+    assert.ok(sent[0].text.includes('time=10%3A00'));
+    assert.ok(sent[0].html.includes('date=2026-11-18'));
     assert.ok(!sent[0].text.includes('Owner Person'));
     const booked = await (await fetch(`${base}/api/elite-tasks/week?from=2026-11-18&to=2026-12-31&today=2026-11-18`, { headers })).json();
     const visits = booked.jobs.filter((job) => job.propertyName === 'Beach road').sort((a, b) => a.date.localeCompare(b.date));

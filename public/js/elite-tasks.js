@@ -15,7 +15,9 @@
 
   const state = {
     password: localStorage.getItem(PASS_KEY) || '',
-    weekStart: todayISO(),
+    weekStart: linkedVisit().date || todayISO(),
+    openedOn: linkedVisit().date,
+    openedAt: linkedVisit().time,
     screen: 'week',
     filter: 'all',
     propertyQuery: '',
@@ -46,6 +48,16 @@
     return String(value ?? '').replace(/[&<>"']/g, (ch) => ({
       '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[ch]));
+  }
+
+  function linkedVisit() {
+    const params = new URLSearchParams(location.search);
+    const date = params.get('date') || '';
+    const time = params.get('time') || '';
+    return {
+      date: /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : '',
+      time: /^\d{2}:\d{2}$/.test(time) ? time : ''
+    };
   }
 
   function todayISO() {
@@ -368,23 +380,25 @@
           ? `<span class="summary warn">${skipped} completed without acknowledgement</span>`
           : '<span class="summary ok">All acknowledged</span>';
     const filters = MODE === 'manager' ? renderFilters() : '';
-    const fitIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
-    const zoomIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6" fill="none" stroke="currentColor" stroke-width="2.2"></circle><path d="M15.2 15.2L20 20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>';
+    const listIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 7h14M5 12h14M5 17h14" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"></path></svg>';
+    const zoomIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 4H4v5M15 4h5v5M9 20H4v-5M15 20h5v-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
     const days = defaultDays();
-    const cogIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"></circle><path d="M12 3.5v2.2M12 18.3V21M3.5 12H5.7M18.3 12H21M5.8 5.8l1.6 1.6M16.6 16.6l1.6 1.6M18.2 5.8l-1.6 1.6M7.4 16.6l-1.6 1.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path></svg>';
+    const sliderIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="15" cy="7" r="2.3" fill="currentColor"></circle><circle cx="9" cy="12" r="2.3" fill="currentColor"></circle><circle cx="14" cy="17" r="2.3" fill="currentColor"></circle></svg>';
+    const prevIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5L8.5 12l6 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
+    const nextIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6.5L15.5 12l-6 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
     const viewButtons = MODE === 'manager'
-      ? `<button type="button" class="btn ghost icon-btn" data-action="zoom-two" aria-label="Zoom, next ${days} days" aria-pressed="${state.calendarMode === 'zoom' ? 'true' : 'false'}">${zoomIcon}</button>
-          <button type="button" class="btn ghost icon-btn" data-action="fit-calendar" aria-label="Fit, next 7 days" aria-pressed="${state.calendarMode === 'fit' ? 'true' : 'false'}">${fitIcon}</button>`
+      ? `<button type="button" class="btn ghost icon-btn" data-action="fit-calendar" aria-label="Fit, next 7 days" aria-pressed="${state.calendarMode === 'fit' ? 'true' : 'false'}">${listIcon}</button>
+          <button type="button" class="btn ghost icon-btn" data-action="zoom-two" aria-label="Zoom, next ${days} days" aria-pressed="${state.calendarMode === 'zoom' ? 'true' : 'false'}">${zoomIcon}</button>`
       : `<button type="button" class="btn ghost" data-action="zoom-out" aria-label="Zoom out">−</button>
           <button type="button" class="btn ghost" data-action="zoom-in" aria-label="Zoom in">+</button>`;
     toolbar.innerHTML = `
       <div class="weekbar">
         <div class="week-nav">
-          <button type="button" class="btn ghost week-arrow" data-action="prev-week" aria-label="Previous week">‹</button>
+          <button type="button" class="btn ghost week-arrow icon-btn" data-action="prev-week" aria-label="Previous week">${prevIcon}</button>
           <button type="button" class="btn ghost" data-action="this-week">Today</button>
-          <button type="button" class="btn ghost week-arrow" data-action="next-week" aria-label="Next week">›</button>
+          <button type="button" class="btn ghost week-arrow icon-btn" data-action="next-week" aria-label="Next week">${nextIcon}</button>
           ${viewButtons}
-          <button type="button" class="btn ghost icon-btn" data-action="open-settings" aria-label="Settings">${cogIcon}</button>
+          <button type="button" class="btn ghost icon-btn" data-action="open-settings" aria-label="Settings">${sliderIcon}</button>
         </div>
         <div class="week-title">
           ${summary}
@@ -404,6 +418,21 @@
     return `<div class="filters">${chips.map(([id, label]) =>
       `<button type="button" class="chip ${state.filter === id ? 'on' : ''}" data-action="filter" data-filter="${esc(id)}">${esc(label)}</button>`
     ).join('')}</div>`;
+  }
+
+  function scrollToLinkedVisit(scroller) {
+    if (!state.openedOn || state.openedOn !== state.weekStart || !state.openedAt) return false;
+    const heads = [...scroller.querySelectorAll('.gcal-dayhead')];
+    const cols = [...scroller.querySelectorAll('.gcal-col')];
+    const index = heads.findIndex((head) => head.dataset.date === state.openedOn);
+    const col = cols[index];
+    if (!col) return false;
+    const event = [...col.querySelectorAll('.gcal-event')].find((button) => button.dataset.time === state.openedAt);
+    if (!event) return false;
+    const top = event.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
+    const header = scroller.querySelector('.gcal-head');
+    scroller.scrollTop = Math.max(0, top - (header ? header.offsetHeight : 0) - 8);
+    return true;
   }
 
   function renderWeek() {
@@ -474,6 +503,7 @@
       const delta = head.getBoundingClientRect().left - (scroller.getBoundingClientRect().left + gutter.getBoundingClientRect().width);
       scroller.scrollLeft += delta;
     }
+    if (scrollToLinkedVisit(scroller)) return;
     if (state.calendarMode === 'fit') {
       scroller.scrollTop = 0;
       return;
@@ -665,7 +695,7 @@
     const who = job.staffName || '';
     const place = placeLabel(job);
     const label = `${place}${who ? `, ${who}` : ''}`;
-    return `<button type="button" class="gcal-event ${tone}" data-action="open-job" data-id="${esc(job.id)}" title="${esc(label)}" aria-label="${esc(label)}" style="top:${top}px;height:${height}px;left:calc(${item.lane * width}% + 2px);width:calc(${width}% - 4px)">
+    return `<button type="button" class="gcal-event ${tone}" data-action="open-job" data-id="${esc(job.id)}" data-time="${esc(job.startTime)}" title="${esc(label)}" aria-label="${esc(label)}" style="top:${top}px;height:${height}px;left:calc(${item.lane * width}% + 2px);width:calc(${width}% - 4px)">
       <span>${esc(place)}</span>
       ${who ? `<span>${esc(who)}</span>` : ''}
     </button>`;
@@ -766,20 +796,6 @@
     </div>`);
   }
 
-  function openPhoneCalendar(token, label) {
-    if (!token) return toast('The calendar link is not ready yet.');
-    const https = calendarHttps(token);
-    const webcal = https.replace(/^https?:/i, 'webcal:');
-    openSheet(`<div>
-      ${sheetHead('Phone calendar')}
-      <p class="hint">${esc(label)} A clean shows on the phone after it is acknowledged, and leaves the phone calendar if it is un-acknowledged. The phone refreshes the list about once an hour.</p>
-      <a class="btn primary block" href="${esc(webcal)}">Subscribe on this phone</a>
-      <label>Google Calendar link<input type="text" readonly value="${esc(https)}"></label>
-      <button type="button" class="btn ghost block" data-action="copy-text" data-text="${esc(https)}">Copy link</button>
-      <p class="hint">iPhone: tap Subscribe. Android: open Google Calendar, choose Add calendar, then From URL, and paste the link.</p>
-    </div>`);
-  }
-
   function renderStaff() {
     const list = people();
     view.innerHTML = `<p class="hint">Copy a private link and text it to that cleaner. The link is their sign-in. These pages are hidden from Google.</p>
@@ -798,7 +814,6 @@
           <div class="row-actions">
             <button type="button" class="btn primary" data-action="edit-staff" data-id="${esc(person.id)}">Edit</button>
             <button type="button" class="btn ghost" data-action="copy-link" data-id="${esc(person.id)}">Copy ${esc(person.name)}'s link</button>
-            <button type="button" class="btn ghost" data-action="phone-calendar" data-id="${esc(person.id)}">Phone calendar</button>
             <button type="button" class="btn ghost" data-action="toggle-staff" data-id="${esc(person.id)}" data-name="${esc(person.name)}" data-next="${person.active ? 'false' : 'true'}">${person.active ? 'Deactivate' : 'Activate'}</button>
           </div>
         </article>`;
@@ -986,14 +1001,12 @@
     const mapQuery = encodeURIComponent(address || place);
     const acked = job.status === 'acknowledged' || job.status === 'completed';
     const done = job.status === 'completed';
-    const ackStep = MODE === 'cleaner' && job.status === 'scheduled'
-      ? `<button type="button" class="visit-step" data-action="ack" data-id="${esc(job.id)}"><span class="visit-dot"></span><span>Cleaner acknowledged</span></button>`
-      : `<div class="visit-step"><span class="visit-dot ${acked ? 'on' : ''}"></span><span>Cleaner acknowledged</span></div>`;
+    const ackTone = done ? 'completed' : acked ? 'acknowledged' : 'scheduled';
+    const doneTone = done ? 'completed' : 'scheduled';
     const doneAction = MODE === 'manager' ? 'manager-status' : 'complete';
     const doneStatus = MODE === 'manager' ? ' data-status="completed"' : '';
-    const doneStep = done
-      ? '<div class="visit-step"><span class="visit-dot on"></span><span>Cleaning completed</span></div>'
-      : `<button type="button" class="visit-step" data-action="${doneAction}" data-id="${esc(job.id)}"${doneStatus}><span class="visit-dot"></span><span>Cleaning completed</span></button>`;
+    const ackStep = progressStep('Cleaner acknowledged', ackTone, MODE === 'cleaner' && job.status === 'scheduled' ? `data-action="ack" data-id="${esc(job.id)}"` : '');
+    const doneStep = progressStep('Cleaning completed', doneTone, done ? '' : `data-action="${doneAction}" data-id="${esc(job.id)}"${doneStatus}`);
     const doneButton = done
       ? ''
       : `<button type="button" class="visit-done" data-action="${doneAction}" data-id="${esc(job.id)}"${doneStatus}>${visitIcon('check')} Mark completed</button>`;
@@ -1057,6 +1070,12 @@
     </div>`;
   }
 
+  function progressStep(label, tone, attrs) {
+    const body = `<span class="visit-dot ${tone}"></span><span>${label}</span>`;
+    if (!attrs) return `<div class="visit-step ${tone}">${body}</div>`;
+    return `<button type="button" class="visit-step ${tone}" ${attrs}>${body}</button>`;
+  }
+
   function billingCards(job) {
     if (MODE !== 'manager') return '';
     const invoiced = job.payment === 'invoiced' || job.payment === 'paid';
@@ -1065,15 +1084,13 @@
     const paidPayment = paid ? 'invoiced' : 'paid';
     return `<h3 class="visit-section">Billing</h3>
       <div class="visit-bill">
-        <button type="button" class="visit-pay" data-action="payment" data-id="${esc(job.id)}" data-payment="${invoicePayment}" ${paid ? 'disabled' : ''}>
-          <span class="visit-pay-top">${visitIcon('doc')}<span class="visit-dot ${invoiced ? 'on' : ''}"></span></span>
-          <strong>${invoiced ? 'Invoice sent' : 'Invoice not sent'}</strong>
-        </button>
-        <button type="button" class="visit-pay" data-action="payment" data-id="${esc(job.id)}" data-payment="${paidPayment}">
-          <span class="visit-pay-top">${visitIcon('doc')}<span class="visit-dot ${paid ? 'on' : ''}"></span></span>
-          <strong>${paid ? 'Paid' : 'Not paid'}</strong>
-        </button>
+        ${tickBox('Invoice sent', invoiced, `data-action="payment" data-id="${esc(job.id)}" data-payment="${invoicePayment}"${paid ? ' disabled' : ''}`)}
+        ${tickBox('Paid', paid, `data-action="payment" data-id="${esc(job.id)}" data-payment="${paidPayment}"`)}
       </div>`;
+  }
+
+  function tickBox(label, on, attrs) {
+    return `<button type="button" class="visit-tick ${on ? 'on' : ''}" aria-pressed="${on ? 'true' : 'false'}" ${attrs}><span class="box" aria-hidden="true"></span><span>${label}</span></button>`;
   }
 
   function weekLabel(start, end) {
@@ -1462,17 +1479,6 @@
         await navigator.clipboard.writeText(target.dataset.text || '');
         toast('Copied');
       });
-      return;
-    }
-    if (action === 'phone-calendar') {
-      if (target.dataset.id) {
-        const person = people().find((item) => item.id === target.dataset.id);
-        if (!person) return;
-        openPhoneCalendar(person.token, `${person.name}'s accepted cleans.`);
-        return;
-      }
-      const token = MODE === 'cleaner' ? TOKEN : (state.data && state.data.calendarToken);
-      openPhoneCalendar(token, MODE === 'cleaner' ? 'Your accepted cleans.' : 'Every accepted clean.');
       return;
     }
     if (action === 'edit-staff') {
