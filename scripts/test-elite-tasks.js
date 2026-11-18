@@ -327,6 +327,9 @@ async function testHttp() {
     assert.strictEqual(staffPage.status, 200);
     assert.match(staffPage.headers.get('x-robots-tag') || '', /noindex/i);
     await staffPage.text();
+    assert.match(sarah.token, /^[a-f0-9]{8}$/);
+    const shortPage = await fetch(`${base}/Elite-TaskMgmt/${sarah.token}`);
+    assert.strictEqual(shortPage.status, 200);
     const createdRes = await fetch(`${base}/api/elite-tasks/jobs`, {
       method: 'POST',
       headers,
@@ -564,7 +567,14 @@ async function testAssignmentEmail() {
     assert.ok(sent[0].text.includes('date=2026-11-18'));
     assert.ok(sent[0].text.includes('time=10%3A00'));
     assert.ok(sent[0].html.includes('date=2026-11-18'));
+    assert.ok(sent[0].html.includes('New Cleaning Assignment'));
+    assert.ok(sent[0].html.includes('View My Cleaning Schedule'));
+    assert.ok(sent[0].html.includes('elite-invoice-logo-rectangle.png'));
+    assert.ok(sent[0].html.includes('10:00 AM'));
+    assert.ok(sent[0].html.includes('Door code'));
     assert.ok(!sent[0].text.includes('Owner Person'));
+    assert.ok(!sent[0].html.includes('Owner Person'));
+    assert.ok(!sent[0].html.includes('9415550100'));
     const booked = await (await fetch(`${base}/api/elite-tasks/week?from=2026-11-18&to=2026-12-31&today=2026-11-18`, { headers })).json();
     const visits = booked.jobs.filter((job) => job.propertyName === 'Beach road').sort((a, b) => a.date.localeCompare(b.date));
     const quiet = await fetch(`${base}/api/elite-tasks/jobs/${visits[1].id}`, {

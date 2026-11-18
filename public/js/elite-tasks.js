@@ -1,5 +1,5 @@
 (() => {
-  const TOKEN_MATCH = location.pathname.match(/\/Elite-TaskMgmt\/(?:c|[a-z0-9-]+)\/([a-f0-9]{32,})\/?$/i);
+  const TOKEN_MATCH = location.pathname.match(/\/Elite-TaskMgmt\/(?:(?:c|[a-z0-9-]+)\/)?([a-f0-9]{8})\/?$/i);
   const TOKEN = TOKEN_MATCH ? decodeURIComponent(TOKEN_MATCH[1]) : '';
   const MODE = TOKEN ? 'cleaner' : 'manager';
   const PASS_KEY = 'eliteTasksPassword';
@@ -182,22 +182,51 @@
     if (boot) boot.hidden = true;
   }
 
+  const kioskQuery = window.matchMedia('(max-width: 899px), (hover: none) and (pointer: coarse)');
+  function mobileKiosk() {
+    return kioskQuery.matches;
+  }
+
+  let kioskEntered = false;
   function enterKiosk() {
+    if (!mobileKiosk()) return;
     const root = document.documentElement;
     if (document.fullscreenElement || typeof root.requestFullscreen !== 'function') return;
     try {
       const pending = root.requestFullscreen({ navigationUI: 'hide' });
-      if (pending && typeof pending.catch === 'function') pending.catch(() => {});
+      kioskEntered = true;
+      if (pending && typeof pending.catch === 'function') pending.catch(() => { kioskEntered = false; });
     } catch {
-      try { root.requestFullscreen(); } catch { /* the page still fills the window */ }
+      try { root.requestFullscreen(); kioskEntered = true; } catch { /* the page still fills the window */ }
     }
   }
 
   let kioskArmed = false;
   function armKiosk() {
-    if (kioskArmed) return;
+    if (!mobileKiosk() || kioskArmed) return;
     kioskArmed = true;
     document.addEventListener('pointerdown', () => enterKiosk(), { once: true });
+  }
+
+  function applyKiosk() {
+    const on = mobileKiosk();
+    document.body.classList.toggle('kiosk', on);
+    if (on) {
+      armKiosk();
+      return;
+    }
+    if (kioskEntered && document.fullscreenElement && document.exitFullscreen) {
+      kioskEntered = false;
+      const pending = document.exitFullscreen();
+      if (pending && typeof pending.catch === 'function') pending.catch(() => {});
+    }
+  }
+
+  if (typeof kioskQuery.addEventListener === 'function') {
+    kioskQuery.addEventListener('change', () => {
+      if (shell.hidden) return;
+      applyKiosk();
+    });
   }
 
   function showLogin(message) {
@@ -225,10 +254,9 @@
   function showShell() {
     hideBoot();
     document.body.classList.remove('login');
-    document.body.classList.add('kiosk');
     gate.hidden = true;
     shell.hidden = false;
-    armKiosk();
+    applyKiosk();
   }
 
   async function api(url, options) {
@@ -755,12 +783,8 @@
     </article>`).join('');
   }
 
-  function staffSlug(name) {
-    return String(name || 'cleaner').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'cleaner';
-  }
-
   function staffUrl(person) {
-    return `${location.origin}/Elite-TaskMgmt/${staffSlug(person.name)}/${person.token}`;
+    return `${location.origin}/Elite-TaskMgmt/${person.token}`;
   }
 
   function calendarHttps(token) {
