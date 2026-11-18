@@ -8,6 +8,7 @@ const express = require('express');
 const {
   addDays,
   mondayOf,
+  invoiceMonday,
   occurrenceDates,
   buildProperties,
   buildManagementCustomers,
@@ -30,6 +31,10 @@ function testCalendarTime() {
 function testDates() {
   assert.strictEqual(mondayOf('2026-11-16'), '2026-11-16');
   assert.strictEqual(mondayOf('2026-11-15'), '2026-11-09');
+  assert.strictEqual(invoiceMonday('2026-11-16'), '2026-11-16');
+  assert.strictEqual(invoiceMonday('2026-11-15'), '2026-11-16');
+  assert.strictEqual(invoiceMonday('2026-11-17'), '2026-11-23');
+  assert.strictEqual(invoiceMonday('2026-11-18'), '2026-11-23');
   assert.strictEqual(addDays('2026-11-16', 14), '2026-11-30');
   assert.deepStrictEqual(occurrenceDates('2026-11-16', 'weekly', 4), [
     '2026-11-16',
@@ -705,7 +710,7 @@ async function testPaymentReport() {
   });
   await store.setPayment(created.assignments[0].jobs[0].id, 'invoiced');
   await store.setPayment(saturday.assignments[0].jobs[0].id, 'paid');
-  const report = await store.report();
+  const report = await store.report('2026-11-22');
   const first = report.weeks.find((week) => week.start === '2026-11-15');
   assert.strictEqual(first.end, '2026-11-21');
   assert.strictEqual(first.total, 2);
@@ -720,8 +725,24 @@ async function testPaymentReport() {
   assert.strictEqual(later.outstandingCount, 0);
   const undone = await store.setPayment(created.assignments[0].jobs[0].id, 'none');
   assert.strictEqual(undone.payment, '');
-  const cleared = await store.report();
+  const cleared = await store.report('2026-11-22');
   assert.strictEqual(cleared.weeks.find((week) => week.start === '2026-11-15').outstandingCount, 0);
+  const current = report.invoices.find((period) => period.monday === '2026-11-23');
+  assert.strictEqual(current.start, '2026-11-17');
+  assert.strictEqual(current.end, '2026-11-23');
+  assert.strictEqual(current.toBillCustomers, 1);
+  assert.strictEqual(current.toBillCleans, 1);
+  assert.strictEqual(current.customers[0].propertyName, 'Beach road');
+  const earlier = report.invoices.find((period) => period.monday === '2026-11-16');
+  assert.strictEqual(earlier.start, '2026-11-10');
+  assert.strictEqual(earlier.toBillCleans, 0);
+  assert.strictEqual(earlier.customers[0].cleans[0].payment, 'invoiced');
+  const midweek = await store.report('2026-11-18');
+  assert.strictEqual(midweek.invoices.find((period) => period.monday === '2026-11-23').customers.length, 0);
+  const direct = await store.setPayment(next.assignments[0].jobs[0].id, 'paid');
+  assert.strictEqual(direct.payment, 'paid');
+  assert.ok(direct.invoicedAt);
+  assert.ok(direct.paidAt);
   assert.ok(next.assignments[0].jobs[0].id);
   fs.rmSync(dir, { recursive: true, force: true });
 }

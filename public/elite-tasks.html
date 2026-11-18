@@ -14,7 +14,7 @@
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
     html, body { height: 100%; }
-    body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, -apple-system, sans-serif; line-height: 1.35; padding-bottom: calc(84px + env(safe-area-inset-bottom)); }
+    body { margin: 0; background: var(--bg); color: var(--ink); font-family: "Segoe UI", system-ui, -apple-system, sans-serif; line-height: 1.35; padding-bottom: calc(36px + env(safe-area-inset-bottom)); }
     body.login, body.mode-cleaner { padding-bottom: 24px; }
     button, input, textarea { font: inherit; color: inherit; }
     button { cursor: pointer; }
@@ -142,11 +142,22 @@
     .pick.add { text-align: center; font-weight: 800; color: var(--green); border-style: dashed; }
     .pay-box { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 12px; margin: 12px 0; }
     .pay-mark { margin: 0 0 8px; font-size: 1.35rem; font-weight: 800; }
-    .report h2 { margin: 18px 0 8px; }
     .report-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 12px 0; }
     .report-kpi { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 14px; }
     .report-kpi span { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; }
     .report-kpi strong { display: block; margin-top: 4px; font-size: 2rem; }
+    .invoice-report { margin-bottom: 28px; }
+    .invoice-report h2, .report h2 { margin: 18px 0 8px; }
+    .invoice-who { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+    .invoice-who li, .invoice-card { background: #fff; border: 1px solid var(--line); border-radius: 16px; }
+    .invoice-who li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; }
+    .invoice-who .visit-bill, .invoice-card header .visit-bill { grid-template-columns: 140px 110px; }
+    .invoice-card { padding: 14px; margin-top: 10px; }
+    .invoice-card header { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .invoice-card h3 { margin: 0; }
+    .invoice-card .hint { margin: 4px 0 0; }
+    .invoice-card .visit-bill { grid-template-columns: 150px 110px; }
+    .invoice-card .visit-tick { min-height: 44px; padding: 8px 10px; }
     .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 12px 0; }
     .detail-tile { background: #f8fafc; border: 1px solid var(--line); border-radius: 16px; padding: 12px; min-width: 0; }
     .detail-tile.wide { grid-column: 1 / -1; }
@@ -213,10 +224,17 @@
     .code-box { background: #f0fdf8; border: 1px solid #bbf7d0; border-radius: 16px; padding: 14px; margin: 12px 0; }
     .code-box span { color: var(--muted); font-size: 13px; font-weight: 800; text-transform: uppercase; }
     .code-box strong { display: block; font-size: 32px; letter-spacing: .04em; margin: 4px 0 8px; word-break: break-word; }
-    .toast { position: fixed; left: 50%; bottom: calc(92px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30000; width: min(460px, calc(100% - 24px)); background: #1c1917; color: #fff; padding: 12px 14px; border-radius: 14px; text-align: center; }
-    .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); background: #fff; border-top: 1px solid var(--line); }
-    .bottom-nav button { min-height: 48px; border: 0; border-radius: 12px; background: transparent; font-weight: 800; }
-    .bottom-nav button.on { background: #e7f6f1; color: var(--green); }
+    .toast { position: fixed; left: 50%; bottom: calc(48px + env(safe-area-inset-bottom)); transform: translateX(-50%); z-index: 30000; width: min(460px, calc(100% - 24px)); background: #1c1917; color: #fff; padding: 12px 14px; border-radius: 14px; text-align: center; }
+    .bottom-nav { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; pointer-events: none; padding: 0 0 calc(8px + env(safe-area-inset-bottom)); }
+    .bottom-nav.open { padding-bottom: 0; }
+    .bottom-backdrop { position: fixed; inset: 0; z-index: -1; border: 0; background: rgba(28, 25, 23, .28); pointer-events: auto; }
+    .bottom-panel { width: 100%; pointer-events: auto; background: #fff; border-top: 1px solid var(--line); border-radius: 20px 20px 0 0; box-shadow: 0 -12px 40px rgba(28, 25, 23, .16); padding: 8px 12px calc(10px + env(safe-area-inset-bottom)); }
+    .bottom-handle { pointer-events: auto; width: 72px; height: 28px; border: 1px solid var(--line); border-radius: 999px; background: #fff; box-shadow: 0 6px 18px rgba(28, 25, 23, .16); display: grid; place-items: center; padding: 0; }
+    .bottom-nav.open .bottom-handle { width: 100%; height: 28px; margin-bottom: 4px; border: 0; border-radius: 0; background: transparent; box-shadow: none; }
+    .bottom-handle span { width: 36px; height: 4px; border-radius: 999px; background: #a8a29e; }
+    .bottom-sheet { display: flex; flex-direction: column; gap: 6px; }
+    .bottom-sheet button { min-height: 48px; border: 0; border-radius: 12px; background: transparent; font-weight: 800; text-align: left; padding: 0 14px; }
+    .bottom-sheet button.on { background: #e7f6f1; color: var(--green); }
     @media (min-width: 800px) {
       body { padding-bottom: 24px; }
       .tabs { display: flex; }
@@ -232,7 +250,7 @@
     body.kiosk { height: 100dvh; overflow: hidden; padding-bottom: 0; }
     body.kiosk #shell { height: 100dvh; display: flex; flex-direction: column; }
     body.kiosk .wrap { width: 100%; max-width: none; height: 100%; margin: 0; padding: 8px 10px; display: flex; flex-direction: column; min-height: 0; }
-    body.kiosk.mode-manager .wrap { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+    body.kiosk.mode-manager .wrap { padding-bottom: calc(44px + env(safe-area-inset-bottom)); }
     body.kiosk .top { align-items: center; }
     body.kiosk .eyebrow { display: none; }
     body.kiosk h1 { font-size: 1.05rem; margin: 0; }
@@ -291,6 +309,6 @@
     </div>
   </div>
   <div id="toast" class="toast" hidden></div>
-  <script src="/js/elite-tasks.js?v=55"></script>
+  <script src="/js/elite-tasks.js?v=58"></script>
 </body>
 </html>

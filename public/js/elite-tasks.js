@@ -33,7 +33,8 @@
     fitTrimmed: false,
     report: null,
     reportLoading: false,
-    reportWeek: sundayOf(todayISO())
+    reportWeek: sundayOf(todayISO()),
+    invoiceMonday: invoiceMonday(todayISO())
   };
 
   const gate = document.getElementById('gate');
@@ -85,6 +86,15 @@
     const [year, month, day] = String(iso).split('-').map(Number);
     const date = new Date(Date.UTC(year, month - 1, day));
     date.setUTCDate(date.getUTCDate() - date.getUTCDay());
+    return date.toISOString().slice(0, 10);
+  }
+
+  function invoiceMonday(iso) {
+    const [year, month, day] = String(iso).split('-').map(Number);
+    const date = new Date(Date.UTC(year, month - 1, day));
+    const weekday = date.getUTCDay();
+    const add = weekday === 1 ? 0 : (8 - weekday) % 7;
+    date.setUTCDate(date.getUTCDate() + add);
     return date.toISOString().slice(0, 10);
   }
 
@@ -374,16 +384,23 @@
     else renderWeek();
   }
 
+  let menuOpen = false;
+
   function renderNav() {
     if (MODE !== 'manager') {
       tabs.innerHTML = '';
       bottomNav.hidden = true;
+      menuOpen = false;
       return;
     }
     const main = [['week', 'Tasks'], ['properties', 'Properties'], ['staff', 'Staff']];
     const button = ([id, label]) => `<button type="button" data-action="screen" data-screen="${id}" class="${state.screen === id ? 'on' : ''}">${label}</button>`;
     tabs.innerHTML = main.concat([['reports', 'Reports']]).map(button).join('');
-    bottomNav.innerHTML = main.map(button).join('');
+    const handle = `<button type="button" class="bottom-handle" data-action="toggle-menu" aria-expanded="${menuOpen ? 'true' : 'false'}" aria-label="${menuOpen ? 'Close menu' : 'Open menu'}"><span></span></button>`;
+    bottomNav.classList.toggle('open', menuOpen);
+    bottomNav.innerHTML = menuOpen
+      ? `<button type="button" class="bottom-backdrop" data-action="close-menu" aria-label="Close menu"></button><div class="bottom-panel">${handle}<div class="bottom-sheet">${main.map(button).join('')}</div></div>`
+      : handle;
     bottomNav.hidden = false;
   }
 
@@ -1207,13 +1224,120 @@
     const paidPayment = paid ? 'invoiced' : 'paid';
     return `<h3 class="visit-section">Billing</h3>
       <div class="visit-bill">
-        ${tickBox('Invoice sent', invoiced, `data-action="payment" data-id="${esc(job.id)}" data-payment="${invoicePayment}"${paid ? ' disabled' : ''}`)}
+        ${tickBox('Invoiced', invoiced, `data-action="payment" data-id="${esc(job.id)}" data-payment="${invoicePayment}"${paid ? ' disabled' : ''}`)}
         ${tickBox('Paid', paid, `data-action="payment" data-id="${esc(job.id)}" data-payment="${paidPayment}"`)}
       </div>`;
   }
 
   function tickBox(label, on, attrs) {
     return `<button type="button" class="visit-tick ${on ? 'on' : ''}" aria-pressed="${on ? 'true' : 'false'}" ${attrs}><span class="box" aria-hidden="true"></span><span>${label}</span></button>`;
+  }
+
+  function weekdayName(iso) {
+    return ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][weekdayIndex(iso)];
+  }
+
+  function invoiceBounds() {
+    const current = invoiceMonday(todayISO());
+    const mondays = ((state.report && state.report.invoices) || []).map((period) => period.monday).sort();
+    const earliest = mondays.length ? mondays[0] : current;
+    return { min: earliest < current ? earliest : current, max: current };
+  }
+
+  function selectedInvoice() {
+    const monday = state.invoiceMonday || invoiceMonday(todayISO());
+    const found = ((state.report && state.report.invoices) || []).find((period) => period.monday === monday);
+    return found || { monday, start: addDays(monday, -6), end: monday, toBillCustomers: 0, toBillCleans: 0, customers: [] };
+  }
+
+  function invoiceRangeLabel(period) {
+    const year = String(period.end).slice(0, 4);
+    return `${weekdayName(period.start)}, ${prettyDate(period.start)} – ${weekdayName(period.end)}, ${prettyDate(period.end)}, ${year}`;
+  }
+
+  function invoiceCleanRow(job) {
+    const invoiced = job.payment === 'invoiced' || job.payment === 'paid';
+    const paid = job.payment === 'paid';
+    return `<tr>
+      <td>${esc(prettyDate(job.date))}</td>
+      <td>${esc(formatTime(job.startTime))}</td>
+      <td>${esc(job.staffName || 'Unassigned')}</td>
+      <td>${billingTags(invoiced, paid, `data-id="${esc(job.id)}" data-action="payment"`)}</td>
+    </tr>`;
+  }
+
+  function billingTags(invoiced, paid, attrs) {
+    const invoicePayment = invoiced && !paid ? 'none' : 'invoiced';
+    const paidPayment = paid ? (String(attrs).includes('tag-customer') ? 'unpay' : 'invoiced') : 'paid';
+    return `<div class="visit-bill">
+      ${tickBox('Invoiced', invoiced, `${attrs} data-payment="${invoicePayment}"${paid ? ' disabled' : ''}`)}
+      ${tickBox('Paid', paid, `${attrs} data-payment="${paidPayment}"`)}
+    </div>`;
+  }
+
+  function customerBilling(customer) {
+    const cleans = customer.cleans || [];
+    const invoiced = cleans.length > 0 && cleans.every((job) => job.payment === 'invoiced' || job.payment === 'paid');
+    const paid = cleans.length > 0 && cleans.every((job) => job.payment === 'paid');
+    return billingTags(invoiced, paid, `data-action="tag-customer" data-property="${esc(customer.propertyId || customer.propertyName)}"`);
+  }
+
+  function customerStatus(customer) {
+    const cleans = customer.cleans || [];
+    const paid = cleans.filter((job) => job.payment === 'paid').length;
+    const open = cleans.filter((job) => !job.payment).length;
+    if (cleans.length && paid === cleans.length) return 'Paid';
+    if (!open) return 'Invoiced';
+    return `${open} clean${open === 1 ? '' : 's'} to tag`;
+  }
+
+  function invoiceCustomerCard(customer) {
+    const address = String(customer.address || '').split('\n').map((line) => line.trim()).filter(Boolean)[0] || '';
+    return `<article class="invoice-card">
+      <header>
+        <div>
+          <h3>${esc(customer.propertyName || 'Property')}</h3>
+          ${address ? `<p class="hint">${esc(address)}</p>` : ''}
+          <p class="hint">${esc(customerStatus(customer))}</p>
+        </div>
+        ${customerBilling(customer)}
+      </header>
+      <table class="report-table"><thead><tr><th>Date</th><th>Time</th><th>Cleaner</th><th>Billing</th></tr></thead><tbody>
+        ${customer.cleans.map(invoiceCleanRow).join('')}
+      </tbody></table>
+    </article>`;
+  }
+
+  function renderInvoiceReport() {
+    const bounds = invoiceBounds();
+    const period = selectedInvoice();
+    const customers = period.customers || [];
+    const toBill = customers.filter((customer) => customer.toBill > 0);
+    const invoiced = customers.filter((customer) => !customer.toBill && customer.paid < (customer.cleans || []).length);
+    const paid = customers.filter((customer) => (customer.cleans || []).length && customer.paid === customer.cleans.length);
+    const who = toBill.length
+      ? `<ul class="invoice-who">${toBill.map((customer) => `<li><div><strong>${esc(customer.propertyName)}</strong><span>${esc(customerStatus(customer))}</span></div>${customerBilling(customer)}</li>`).join('')}</ul>`
+      : '<p class="hint">No one left to bill for this period.</p>';
+    const section = (title, list) => (list.length ? `<h2>${title}</h2>${list.map(invoiceCustomerCard).join('')}` : '');
+    return `<section class="invoice-report">
+      <h2>Invoice report</h2>
+      <div class="week-nav">
+        <button type="button" class="btn ghost week-arrow" data-action="invoice-prev" aria-label="Previous invoice period" ${period.monday <= bounds.min ? 'disabled' : ''}>‹</button>
+        <strong>${esc(invoiceRangeLabel(period))}</strong>
+        <button type="button" class="btn ghost week-arrow" data-action="invoice-next" aria-label="Next invoice period" ${period.monday >= bounds.max ? 'disabled' : ''}>›</button>
+      </div>
+      <p class="hint">Tag a customer Invoiced or Paid. Paid also closes Invoiced, for people who pay without an invoice.</p>
+      <div class="report-grid">
+        <div class="report-kpi"><span>To bill</span><strong>${toBill.length}</strong></div>
+        <div class="report-kpi"><span>Invoiced</span><strong>${invoiced.length}</strong></div>
+        <div class="report-kpi"><span>Paid</span><strong>${paid.length}</strong></div>
+      </div>
+      <h2>Who to bill</h2>
+      ${who}
+      ${section('Still to tag', toBill)}
+      ${section('Invoiced', invoiced)}
+      ${section('Paid', paid)}
+    </section>`;
   }
 
   function weekLabel(start, end) {
@@ -1240,10 +1364,14 @@
   }
 
   async function loadReport() {
-    state.report = await api('/api/elite-tasks/report');
+    state.report = await api(`/api/elite-tasks/report?today=${encodeURIComponent(todayISO())}`);
     const bounds = reportBounds();
     if (state.reportWeek < bounds.min) state.reportWeek = bounds.min;
     if (state.reportWeek > bounds.max) state.reportWeek = bounds.max;
+    const invoice = invoiceBounds();
+    if (!state.invoiceMonday) state.invoiceMonday = invoice.max;
+    if (state.invoiceMonday < invoice.min) state.invoiceMonday = invoice.min;
+    if (state.invoiceMonday > invoice.max) state.invoiceMonday = invoice.max;
     renderReports();
   }
 
@@ -1275,7 +1403,7 @@
       <td>${item.outstandingCount}</td>
       <td>${item.paid}</td>
     </tr>`).join('');
-    view.innerHTML = `<div class="report">
+    view.innerHTML = `${renderInvoiceReport()}<div class="report">
       <div class="week-nav">
         <button type="button" class="btn ghost week-arrow" data-action="report-prev" aria-label="Previous report week" ${week.start <= bounds.min ? 'disabled' : ''}>‹</button>
         <strong>${esc(weekLabel(week.start, week.end))}</strong>
@@ -1497,7 +1625,18 @@
     if (!target) return;
     const action = target.dataset.action;
     if (action === 'close-sheet') return closeSheet();
+    if (action === 'toggle-menu') {
+      menuOpen = !menuOpen;
+      renderNav();
+      return;
+    }
+    if (action === 'close-menu') {
+      menuOpen = false;
+      renderNav();
+      return;
+    }
     if (action === 'screen') {
+      menuOpen = false;
       state.screen = target.dataset.screen;
       render();
       return;
@@ -1698,6 +1837,39 @@
       if (lightbox) lightbox.hidden = true;
       return;
     }
+    if (action === 'invoice-prev' || action === 'invoice-next') {
+      const bounds = invoiceBounds();
+      const next = addDays(state.invoiceMonday || invoiceMonday(todayISO()), action === 'invoice-next' ? 7 : -7);
+      if (next < bounds.min || next > bounds.max) return;
+      state.invoiceMonday = next;
+      renderReports();
+      return;
+    }
+    if (action === 'tag-customer') {
+      const period = selectedInvoice();
+      const key = target.dataset.property;
+      const customer = (period.customers || []).find((item) => (item.propertyId || item.propertyName) === key);
+      const requested = target.dataset.payment;
+      const payment = requested === 'unpay' ? 'invoiced' : requested;
+      const ids = !customer ? [] : customer.cleans.filter((job) => {
+        if (requested === 'paid') return job.payment !== 'paid';
+        if (requested === 'invoiced') return !job.payment;
+        if (requested === 'unpay') return job.payment === 'paid';
+        return job.payment === 'invoiced';
+      }).map((job) => job.id);
+      if (!ids.length) return;
+      guard(async () => {
+        for (const id of ids) {
+          await api(`/api/elite-tasks/jobs/${encodeURIComponent(id)}/payment`, {
+            method: 'POST',
+            body: JSON.stringify({ payment })
+          });
+        }
+        await loadWeek({ keepScroll: true });
+        await loadReport();
+      });
+      return;
+    }
     if (action === 'report-prev' || action === 'report-next') {
       const bounds = reportBounds();
       const next = addDays(state.reportWeek, action === 'report-next' ? 7 : -7);
@@ -1720,7 +1892,8 @@
           body: JSON.stringify({ payment })
         });
         await loadWeek({ keepScroll: true });
-        openJob(id);
+        if (state.screen === 'reports') await loadReport();
+        else openJob(id);
       });
       return;
     }
@@ -1925,7 +2098,16 @@
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape') closeSheet();
+    if (event.key !== 'Escape') return;
+    const sheet = document.getElementById('sheet');
+    if (sheet && !sheet.hidden) {
+      closeSheet();
+      return;
+    }
+    if (menuOpen) {
+      menuOpen = false;
+      renderNav();
+    }
   });
 
   if (MODE === 'cleaner') {
