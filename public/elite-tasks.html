@@ -50,18 +50,15 @@
     .hint { color: var(--muted); font-weight: 500; font-size: 14px; }
     .pre { white-space: pre-wrap; }
     .tabs { display: none; gap: 8px; margin: 14px 0; }
-    .weekbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 14px 0; }
-    .week-title { display: flex; flex-direction: column; gap: 2px; }
+    .weekbar { display: flex; flex-direction: column; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px; margin: 14px 0; }
+    .week-title { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 2px; }
     .week-title strong { font-size: 1.35rem; }
-    .week-nav { display: flex; align-items: center; gap: 8px; }
+    .week-nav { display: flex; align-items: center; justify-content: center; flex-wrap: wrap; gap: 8px; }
     .week-nav .btn { min-height: 40px; min-width: 44px; padding: 8px 12px; }
     .week-nav .icon-btn { min-width: 48px; padding: 8px; }
     .week-nav svg { width: 22px; height: 22px; display: block; }
     .week-nav .btn[aria-pressed="true"] { background: var(--ink); color: #fff; border-color: var(--ink); }
-    body.mode-manager .weekbar { flex-direction: column; align-items: center; justify-content: center; }
-    body.mode-manager .week-nav { justify-content: center; flex-wrap: wrap; }
-    body.mode-manager .week-title { align-items: center; text-align: center; }
-    body.mode-manager .week-arrow { min-height: 44px; min-width: 48px; }
+    .week-arrow { min-height: 44px; min-width: 48px; }
     body.mode-manager .filters { justify-content: center; }
     .filters { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; }
     .chip { flex: 0 0 auto; min-height: 40px; border-radius: 999px; border: 1px solid #d6d3d1; background: #fff; padding: 8px 12px; font-weight: 750; }
@@ -115,8 +112,13 @@
     .clash { margin: 14px 0; background: #fff7ed; border: 1px solid #fdba74; border-radius: 14px; padding: 12px; }
     .clash p { margin: 0 0 8px; }
     .stack { display: flex; flex-direction: column; gap: 10px; }
-    .prop-card, .staff-card, .panel { padding: 14px; }
-    .prop-card h3, .staff-card h3 { margin: 0; font-size: 1.05rem; }
+    .staff-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+    .staff-card { display: flex; flex-direction: column; padding: 16px; box-shadow: 0 8px 24px rgba(28, 25, 23, .06); }
+    .staff-card .totals { flex-direction: column; gap: 6px; }
+    .staff-card .totals span { display: flex; align-items: center; justify-content: space-between; min-width: 0; font-size: 12px; letter-spacing: .04em; line-height: 1.2; }
+    .staff-card .totals strong { margin-top: 0; font-size: 1.25rem; }
+    .prop-card, .panel { padding: 14px; }
+    .prop-card h3 { margin: 0; font-size: 1.05rem; }
     .totals { display: flex; gap: 8px; margin: 10px 0 4px; }
     .totals span { flex: 1; background: #f5f5f4; border-radius: 12px; padding: 8px; font-size: 11px; font-weight: 800; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
     .totals strong { display: block; margin-top: 2px; font-size: 1.35rem; letter-spacing: 0; text-transform: none; color: var(--ink); }
@@ -137,6 +139,7 @@
     .pick { width: 100%; text-align: left; border: 1px solid var(--line); background: #fff; border-radius: 14px; padding: 10px 12px; margin-top: 8px; }
     .pick strong, .pick span { display: block; }
     .pick.on { border-color: var(--green); background: #f0fdf8; }
+    .pick.add { text-align: center; font-weight: 800; color: var(--green); border-style: dashed; }
     .pay-box { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 12px; margin: 12px 0; }
     .pay-mark { margin: 0 0 8px; font-size: 1.35rem; font-weight: 800; }
     .report h2 { margin: 18px 0 8px; }
@@ -185,11 +188,23 @@
     .visit-bill { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .visit-tick { display: flex; align-items: center; gap: 10px; min-height: 72px; padding: 12px; text-align: left; background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; font-weight: 800; }
     .visit-tick .box { width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; background: #fecaca; border: 2px solid #b91c1c; color: transparent; font-size: 18px; line-height: 1; }
+    .visit-tick.on { background: #dcfce7; border-color: #166534; color: #14532d; }
     .visit-tick.on .box { background: #166534; border-color: #166534; color: #fff; }
     .visit-tick.on .box::before { content: "✓"; }
     .visit-tick:disabled { opacity: 1; }
     .visit-done { width: 100%; min-height: 54px; margin-top: 16px; border: 0; border-radius: 999px; background: #111827; color: #fff; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
     .visit-done .visit-ico { width: 18px; height: 18px; }
+    .visit-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+    .visit-actions .visit-done { margin-top: 0; }
+    .visit-done:disabled { background: #166534; opacity: 1; }
+    .visit-upload { background: #fff; color: #111827; border: 1px solid #d6d3d1; }
+    .visit-photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .visit-photos button { border: 0; padding: 0; background: transparent; border-radius: 12px; overflow: hidden; }
+    .visit-photos img { display: block; width: 100%; height: 96px; object-fit: cover; background: #e5e7eb; }
+    .photo-lightbox { position: fixed; inset: 0; z-index: 25000; display: grid; place-items: center; padding: 24px; background: rgba(17, 24, 39, .88); }
+    .photo-lightbox[hidden] { display: none; }
+    .photo-lightbox img { max-width: min(960px, 100%); max-height: calc(100vh - 80px); border-radius: 12px; background: #fff; }
+    .photo-lightbox button { position: absolute; top: 16px; right: 16px; width: 44px; height: 44px; border: 0; border-radius: 999px; background: #fff; font-size: 28px; line-height: 1; }
     .report-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
     .report-table th, .report-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
     .report-table th { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
@@ -276,6 +291,6 @@
     </div>
   </div>
   <div id="toast" class="toast" hidden></div>
-  <script src="/js/elite-tasks.js?v=48"></script>
+  <script src="/js/elite-tasks.js?v=55"></script>
 </body>
 </html>

@@ -414,11 +414,8 @@
     const sliderIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"></path><circle cx="15" cy="7" r="2.3" fill="currentColor"></circle><circle cx="9" cy="12" r="2.3" fill="currentColor"></circle><circle cx="14" cy="17" r="2.3" fill="currentColor"></circle></svg>';
     const prevIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M14.5 6.5L8.5 12l6 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
     const nextIcon = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9.5 6.5L15.5 12l-6 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path></svg>';
-    const viewButtons = MODE === 'manager'
-      ? `<button type="button" class="btn ghost icon-btn" data-action="fit-calendar" aria-label="Fit, next 7 days" aria-pressed="${state.calendarMode === 'fit' ? 'true' : 'false'}">${listIcon}</button>
-          <button type="button" class="btn ghost icon-btn" data-action="zoom-two" aria-label="Zoom, next ${days} days" aria-pressed="${state.calendarMode === 'zoom' ? 'true' : 'false'}">${zoomIcon}</button>`
-      : `<button type="button" class="btn ghost" data-action="zoom-out" aria-label="Zoom out">−</button>
-          <button type="button" class="btn ghost" data-action="zoom-in" aria-label="Zoom in">+</button>`;
+    const viewButtons = `<button type="button" class="btn ghost icon-btn" data-action="fit-calendar" aria-label="Fit, next 7 days" aria-pressed="${state.calendarMode === 'fit' ? 'true' : 'false'}">${listIcon}</button>
+          <button type="button" class="btn ghost icon-btn" data-action="zoom-two" aria-label="Zoom, next ${days} days" aria-pressed="${state.calendarMode === 'zoom' ? 'true' : 'false'}">${zoomIcon}</button>`;
     toolbar.innerHTML = `
       <div class="weekbar">
         <div class="week-nav">
@@ -493,7 +490,7 @@
           </div>`;
         }).join('')}
       </div>
-    </div>${renderBlockedList()}`;
+    </div>`;
     const scroller = document.getElementById('gcal');
     if (!scroller) return;
     layoutCalendar();
@@ -559,14 +556,14 @@
   }
 
   function zoomDays() {
-    if (MODE === 'manager' && state.calendarMode === 'fit' && state.fitDays >= 1) return state.fitDays;
+    if (state.calendarMode === 'fit' && state.fitDays >= 1) return state.fitDays;
     const chosen = Number(state.zoomDays);
     if (chosen >= 1 && chosen <= 7) return chosen;
     return defaultDays();
   }
 
   function calendarHourPx() {
-    if (MODE === 'manager' && state.calendarMode === 'fit' && state.fitHourPx) return state.fitHourPx;
+    if (state.calendarMode === 'fit' && state.fitHourPx) return state.fitHourPx;
     const base = mobileCalendar() ? 2 : 7;
     return Math.max(40, Math.min(110, Math.round(52 * base / zoomDays())));
   }
@@ -729,15 +726,6 @@
     </button>`;
   }
 
-  function renderBlockedList() {
-    if (MODE !== 'cleaner') return '';
-    const today = todayISO();
-    const blocks = ((state.data && state.data.blocks) || []).filter((block) => block.endDate >= today);
-    const rows = blocks.length ? blocks.map((block) => `<div class="unavail">${esc(prettyDate(block.startDate))}${block.endDate === block.startDate ? '' : ` – ${esc(prettyDate(block.endDate))}`}${block.note ? ` · ${esc(block.note)}` : ''}
-      <div><button type="button" class="btn danger small" data-action="delete-block" data-id="${esc(block.id)}">Remove</button></div></div>`).join('') : '<p class="hint">No upcoming days blocked.</p>';
-    return `<section class="panel" style="margin-top:14px"><h2>Days you cannot work</h2>${rows}<div class="row-actions"><button type="button" class="btn ghost" data-action="block-range">Block dates</button></div></section>`;
-  }
-
   function renderProperties() {
     const query = state.propertyQuery;
     view.innerHTML = `
@@ -823,9 +811,9 @@
   function renderStaff() {
     const list = people();
     view.innerHTML = `<p class="hint">Copy a private link and text it to that cleaner. The link is their sign-in. These pages are hidden from Google.</p>
-      <div class="stack">${list.map((person) => {
+      <div class="staff-grid">${list.map((person) => {
         const url = staffUrl(person);
-        return `<article class="staff-card">
+        return `<article class="staff-card" style="border-top:4px solid ${safeColor(person.color)}">
           <h3 class="person"><span class="dot" style="background:${safeColor(person.color)}"></span>${esc(person.name)}${person.active ? '' : ' · inactive'}</h3>
           <div class="totals">
             <span class="completed">Completed<strong>${person.completed || 0}</strong></span>
@@ -834,10 +822,9 @@
           </div>
           <p class="hint">${person.email ? esc(person.email) : 'No email saved'} · Email alerts ${person.emailAlerts ? 'on' : 'off'}</p>
           ${person.name === 'Petra' ? '<p class="hint">Admin, can be assigned cleans</p>' : ''}
-          <label>Private link for ${esc(person.name)}<input type="text" readonly value="${esc(url)}" data-link-for="${esc(person.id)}"></label>
           <div class="row-actions">
             <button type="button" class="btn primary" data-action="edit-staff" data-id="${esc(person.id)}">Edit</button>
-            <button type="button" class="btn ghost" data-action="copy-link" data-id="${esc(person.id)}">Copy ${esc(person.name)}'s link</button>
+            <button type="button" class="btn ghost" data-action="copy-link" data-id="${esc(person.id)}" data-url="${esc(url)}">Copy link</button>
             <button type="button" class="btn ghost" data-action="toggle-staff" data-id="${esc(person.id)}" data-name="${esc(person.name)}" data-next="${person.active ? 'false' : 'true'}">${person.active ? 'Deactivate' : 'Activate'}</button>
           </div>
         </article>`;
@@ -879,6 +866,9 @@
   }
 
   function closeSheet() {
+    photoUrls.splice(0).forEach((url) => URL.revokeObjectURL(url));
+    const lightbox = document.getElementById('photoLightbox');
+    if (lightbox) lightbox.hidden = true;
     document.querySelector('.sheet-card').classList.remove('visit-card');
     document.getElementById('sheet').hidden = true;
     document.getElementById('sheetBody').innerHTML = '';
@@ -941,6 +931,7 @@
     state.staffPicked = true;
     state.recurrencePicked = true;
     openSheet(jobForm({ mode: 'edit', ...job }));
+    if (job.propertyId) pickProperty(job.propertyId);
   }
 
   function jobForm(job) {
@@ -951,10 +942,10 @@
       <input type="hidden" name="propertyId" value="${esc(job.propertyId || '')}">
       <input type="hidden" name="staffIds" value="${esc(chosen.join(','))}">
       <input type="hidden" name="recurrence" value="${esc(job.recurrence || 'once')}">
-      <label>Property
-        <input id="propertySearch" type="search" placeholder="Search or type a new name" autocomplete="off">
+      <label id="propertySearchLabel">Property
+        <input id="propertySearch" type="search" placeholder="Search customers" autocomplete="off">
       </label>
-      <div id="propertyChosen">${job.propertyId ? `<p class="hint">Selected: ${esc(placeLabel(job))}${job.address ? ` · ${esc(job.address)}` : ''}</p>` : '<p class="hint">Search an existing customer, or type a new name to add one.</p>'}</div>
+      <div id="propertyChosen"><p class="hint">Search an existing customer.</p></div>
       <div id="propertyResults"></div>
       <label>Date<input name="date" type="date" required value="${esc(job.date || '')}"></label>
       <label>Start time</label>
@@ -992,6 +983,7 @@
     const job = ((state.data && state.data.jobs) || []).find((item) => item.id === id);
     if (!job) return;
     openSheet(visitSheet(job), 'visit');
+    hydratePhotos();
   }
 
   function visitIcon(name) {
@@ -1085,13 +1077,120 @@
       ${phone}
       ${job.propertyNotes ? `<div class="visit-row"><div class="grow"><span class="tile-label">Property notes</span><strong class="pre">${esc(job.propertyNotes)}</strong></div></div>` : ''}
       ${job.visitNote ? `<div class="visit-row"><div class="grow"><span class="tile-label">This visit</span><strong class="pre">${esc(job.visitNote)}</strong></div></div>` : ''}
-      <h3 class="visit-section">Visit progress</h3>
+      ${photoGallery(job)}
+      ${MODE === 'cleaner' ? staffActions(job) : `<h3 class="visit-section">Visit progress</h3>
       ${ackStep}
       ${doneStep}
       ${job.seriesId && job.status === 'scheduled' ? '<p class="hint">Acknowledging covers every visit on this schedule with the same cleaner.</p>' : ''}
       ${billingCards(job)}
-      ${doneButton}
+      ${doneButton}`}
     </div>`;
+  }
+
+  function staffActions(job) {
+    const acked = job.status === 'acknowledged' || job.status === 'completed';
+    const done = job.status === 'completed';
+    return `<div class="visit-actions">
+      <button type="button" class="visit-done" data-action="ack" data-id="${esc(job.id)}" ${acked ? 'disabled' : ''}>${visitIcon('check')} ${acked ? 'Acknowledged' : 'Acknowledge'}</button>
+      <button type="button" class="visit-done" data-action="complete" data-id="${esc(job.id)}" ${done ? 'disabled' : ''}>${visitIcon('check')} ${done ? 'Completed' : 'Mark completed'}</button>
+      <button type="button" class="visit-done visit-upload" data-action="pick-photos" data-id="${esc(job.id)}">Upload photos</button>
+      <input id="visitPhotoInput" type="file" accept="image/*" multiple hidden>
+    </div>
+    ${job.seriesId && job.status === 'scheduled' ? '<p class="hint">Acknowledging covers every visit on this schedule with the same cleaner.</p>' : ''}`;
+  }
+
+  function photoGallery(job) {
+    const photos = Array.isArray(job.photos) ? job.photos : [];
+    if (!photos.length) return '';
+    return `<h3 class="visit-section">Photos</h3><div class="visit-photos">${photos.map((photo) => `<button type="button" data-action="view-photo" data-id="${esc(job.id)}" data-photo="${esc(photo.id)}" data-name="${esc(photo.name || 'Photo')}"><img alt="${esc(photo.name || 'Photo')}" data-photo-src="${esc(job.id)}:${esc(photo.id)}"></button>`).join('')}</div>`;
+  }
+
+  const photoUrls = [];
+  function trackPhotoUrl(url) {
+    photoUrls.push(url);
+    return url;
+  }
+
+  async function photoBlob(jobId, photoId) {
+    const headers = {};
+    if (MODE === 'manager' && state.password) headers['x-elite-tasks-password'] = state.password;
+    if (MODE === 'cleaner') headers['x-elite-tasks-token'] = TOKEN;
+    const response = await fetch(`/api/elite-tasks/jobs/${encodeURIComponent(jobId)}/photos/${encodeURIComponent(photoId)}`, { headers, cache: 'no-store' });
+    if (!response.ok) throw new Error('Photo unavailable');
+    return response.blob();
+  }
+
+  function hydratePhotos() {
+    document.querySelectorAll('#sheetBody img[data-photo-src]').forEach((img) => {
+      const [jobId, photoId] = String(img.dataset.photoSrc || '').split(':');
+      if (!jobId || !photoId) return;
+      photoBlob(jobId, photoId).then((blob) => {
+        img.src = trackPhotoUrl(URL.createObjectURL(blob));
+      }).catch(() => {
+        img.alt = 'Photo unavailable';
+      });
+    });
+  }
+
+  function preparePhoto(file) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('Could not read that photo.'));
+      reader.onload = () => {
+        const img = new Image();
+        img.onload = () => {
+          const max = 1800;
+          const scale = Math.min(1, max / Math.max(img.width, img.height));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(img.width * scale));
+          canvas.height = Math.max(1, Math.round(img.height * scale));
+          canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+          canvas.toBlob((blob) => {
+            if (!blob) {
+              reject(new Error('Could not prepare that photo.'));
+              return;
+            }
+            resolve(new File([blob], 'photo.jpg', { type: 'image/jpeg' }));
+          }, 'image/jpeg', 0.82);
+        };
+        img.onerror = () => reject(new Error('Use a JPEG or PNG photo.'));
+        img.src = reader.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  async function uploadVisitPhotos(jobId, files) {
+    const body = new FormData();
+    for (const file of [...files].slice(0, 8)) body.append('photos', await preparePhoto(file), 'photo.jpg');
+    const headers = {};
+    if (MODE === 'cleaner') headers['x-elite-tasks-token'] = TOKEN;
+    const response = await fetch(`/api/elite-tasks/me/jobs/${encodeURIComponent(jobId)}/photos`, { method: 'POST', headers, body });
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const err = new Error(data.error || 'Could not upload the photos.');
+      err.status = response.status;
+      throw err;
+    }
+    toast(files.length === 1 ? 'Photo added' : 'Photos added');
+    await loadWeek({ keepScroll: true });
+    openJob(jobId);
+  }
+
+  function showPhoto(url, name) {
+    let box = document.getElementById('photoLightbox');
+    if (!box) {
+      box = document.createElement('div');
+      box.id = 'photoLightbox';
+      box.className = 'photo-lightbox';
+      box.hidden = true;
+      box.innerHTML = '<button type="button" data-action="close-photo" aria-label="Close photo">×</button><img alt="">';
+      document.body.appendChild(box);
+    }
+    const image = box.querySelector('img');
+    image.src = url;
+    image.alt = name || 'Photo';
+    box.hidden = false;
   }
 
   function progressStep(label, tone, attrs) {
@@ -1232,32 +1331,48 @@
     });
   }
 
+  function propertyTitle(property) {
+    return property.propertyName || property.label || property.name || 'Property';
+  }
+
   function renderPropertyResults(query) {
     const box = document.getElementById('propertyResults');
     const form = document.getElementById('jobForm');
-    if (!box || !form) return;
-    const selected = form.elements.namedItem('propertyId').value;
+    if (!box || !form || form.dataset.propertyMode === 'locked') return;
     const raw = String(query || '').trim();
     const q = raw.toLowerCase();
+    if (!q) {
+      box.innerHTML = '';
+      return;
+    }
     const props = (state.data && state.data.properties) || [];
-    let list = [];
-    if (q) list = props.filter((property) => `${property.propertyName || ''} ${property.name || ''} ${property.label || ''} ${property.address || ''}`.toLowerCase().includes(q)).slice(0, 12);
-    else if (selected) list = props.filter((property) => property.id === selected);
-    const keptAddress = document.getElementById('newPropertyAddress')?.value || '';
-    const matches = list.map((property) => `<button type="button" class="pick ${property.id === selected ? 'on' : ''}" data-action="pick-property" data-id="${esc(property.id)}">
-      <strong>${esc(property.label || property.name)}</strong><span>${esc(property.address || 'No address')}</span>
+    const list = props.filter((property) => `${property.propertyName || ''} ${property.name || ''} ${property.label || ''} ${property.address || ''}`.toLowerCase().includes(q)).slice(0, 12);
+    const matches = list.map((property) => `<button type="button" class="pick" data-action="pick-property" data-id="${esc(property.id)}">
+      <strong>${esc(propertyTitle(property))}</strong><span>${esc(property.address || 'No address')}</span>
     </button>`).join('');
-    const addNew = raw ? `<div class="pick">
-      <strong>Add ${esc(raw)}</strong>
-      <label>Address lines<textarea id="newPropertyAddress" maxlength="1000" rows="3" placeholder="Street, city, postal code">${esc(keptAddress)}</textarea></label>
-      <button type="button" class="btn primary" data-action="add-booking-property" data-name="${esc(raw)}">Add customer</button>
-    </div>` : '';
-    box.innerHTML = matches || addNew ? `${matches}${addNew}` : (q ? '<p class="hint">No matching customer.</p>' : '');
+    const add = '<button type="button" class="pick add" data-action="show-add-customer">+ Add customer</button>';
+    box.innerHTML = `${matches || '<p class="hint">No matching customer.</p>'}${add}`;
   }
 
-  async function addBookingProperty(name) {
+  function showAddCustomer() {
+    const form = document.getElementById('jobForm');
+    const box = document.getElementById('propertyResults');
+    if (!form || !box) return;
+    form.dataset.propertyMode = 'add';
+    const raw = String(document.getElementById('propertySearch')?.value || '').trim();
+    box.innerHTML = `<div class="pick">
+      <strong>New customer</strong>
+      <label>Name<input id="newPropertyName" type="text" maxlength="160" value="${esc(raw)}"></label>
+      <label>Address lines<textarea id="newPropertyAddress" maxlength="1000" rows="3" placeholder="Street, city, postal code"></textarea></label>
+      <button type="button" class="btn primary" data-action="add-booking-property">Add customer</button>
+    </div>`;
+    document.getElementById('newPropertyName')?.focus();
+  }
+
+  async function addBookingProperty() {
+    const name = String(document.getElementById('newPropertyName')?.value || '').trim();
     const address = document.getElementById('newPropertyAddress')?.value || '';
-    if (!String(name || '').trim()) return toast('Type the customer name.');
+    if (!name) return toast('Type the customer name.');
     if (!String(address).trim()) return toast('Enter the address.');
     const created = await api('/api/elite-tasks/properties', {
       method: 'POST',
@@ -1266,21 +1381,48 @@
     const property = { ...created.property, label: created.property.name };
     if (!state.data.properties) state.data.properties = [];
     state.data.properties.push(property);
-    state.data.properties.sort((a, b) => String(a.name || a.label).localeCompare(String(b.name || b.label), undefined, { numeric: true, sensitivity: 'base' }));
-    const search = document.getElementById('propertySearch');
-    if (search) search.value = '';
+    state.data.properties.sort((a, b) => String(a.propertyName || a.name || a.label).localeCompare(String(b.propertyName || b.name || b.label), undefined, { numeric: true, sensitivity: 'base' }));
     pickProperty(property.id);
     toast('Customer added');
+  }
+
+  function clearProperty() {
+    const form = document.getElementById('jobForm');
+    if (!form) return;
+    form.elements.namedItem('propertyId').value = '';
+    form.dataset.propertyMode = 'search';
+    const searchLabel = document.getElementById('propertySearchLabel');
+    if (searchLabel) searchLabel.hidden = false;
+    const chosen = document.getElementById('propertyChosen');
+    if (chosen) chosen.innerHTML = '<p class="hint">Search an existing customer.</p>';
+    const results = document.getElementById('propertyResults');
+    if (results) results.innerHTML = '';
+    const search = document.getElementById('propertySearch');
+    if (search) {
+      search.value = '';
+      search.focus();
+    }
   }
 
   function pickProperty(id) {
     const form = document.getElementById('jobForm');
     if (!form) return;
     form.elements.namedItem('propertyId').value = id;
+    form.dataset.propertyMode = 'locked';
     const property = ((state.data && state.data.properties) || []).find((item) => item.id === id);
+    const searchLabel = document.getElementById('propertySearchLabel');
+    if (searchLabel) searchLabel.hidden = true;
+    const search = document.getElementById('propertySearch');
+    if (search) search.value = '';
+    const results = document.getElementById('propertyResults');
+    if (results) results.innerHTML = '';
     const chosen = document.getElementById('propertyChosen');
     if (property && chosen) {
-      chosen.innerHTML = `<p class="hint">Selected: ${esc(property.label)}. ${property.frequency ? `Frequency on file: ${esc(property.frequency)}. ` : ''}${property.cleaner ? `Cleaner on file: ${esc(property.cleaner)}.` : ''}</p>`;
+      chosen.innerHTML = `<div class="pick on">
+        <strong>${esc(propertyTitle(property))}</strong>
+        <span>${esc(property.address || 'No address')}</span>
+      </div>
+      <button type="button" class="btn ghost small" data-action="clear-property">Change</button>`;
     }
     if (property && !state.staffPicked) {
       const suggested = suggestStaffId(property.cleaner, people());
@@ -1291,7 +1433,6 @@
       const ahead = document.getElementById('aheadBox');
       if (ahead) ahead.hidden = form.elements.namedItem('recurrence').value === 'once';
     }
-    renderPropertyResults(document.getElementById('propertySearch')?.value || '');
   }
 
   async function submitJob(form, applyTo) {
@@ -1494,8 +1635,10 @@
       return;
     }
     if (action === 'pick-property') return pickProperty(target.dataset.id);
+    if (action === 'clear-property') return clearProperty();
+    if (action === 'show-add-customer') return showAddCustomer();
     if (action === 'add-booking-property') {
-      guard(() => addBookingProperty(target.dataset.name));
+      guard(() => addBookingProperty());
       return;
     }
     if (action === 'copy-text') {
@@ -1510,16 +1653,14 @@
       return;
     }
     if (action === 'copy-link') {
-      const input = document.querySelector(`[data-link-for="${CSS.escape(target.dataset.id)}"]`);
-      const text = input ? input.value : '';
+      const text = target.dataset.url || '';
       guard(async () => {
         try {
           await navigator.clipboard.writeText(text);
-          toast('Link copied');
         } catch {
-          if (input) input.select();
-          toast('Select the link and copy it');
+          throw new Error('Could not copy the link.');
         }
+        toast('Link copied');
       });
       return;
     }
@@ -1531,6 +1672,30 @@
         closeSheet();
         await loadWeek({ keepScroll: true });
       });
+      return;
+    }
+    if (action === 'pick-photos') {
+      const input = document.getElementById('visitPhotoInput');
+      if (!input) return;
+      input.onchange = () => {
+        const files = [...input.files];
+        input.value = '';
+        if (!files.length) return;
+        guard(() => uploadVisitPhotos(target.dataset.id, files));
+      };
+      input.click();
+      return;
+    }
+    if (action === 'view-photo') {
+      guard(async () => {
+        const blob = await photoBlob(target.dataset.id, target.dataset.photo);
+        showPhoto(trackPhotoUrl(URL.createObjectURL(blob)), target.dataset.name);
+      });
+      return;
+    }
+    if (action === 'close-photo') {
+      const lightbox = document.getElementById('photoLightbox');
+      if (lightbox) lightbox.hidden = true;
       return;
     }
     if (action === 'report-prev' || action === 'report-next') {
@@ -1554,7 +1719,6 @@
           method: 'POST',
           body: JSON.stringify({ payment })
         });
-        toast(payment === 'paid' ? 'Marked paid' : payment === 'invoiced' ? 'Invoice sent' : 'Invoice cleared');
         await loadWeek({ keepScroll: true });
         openJob(id);
       });
@@ -1624,14 +1788,18 @@
   });
 
   document.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' || event.target.id !== 'newPropertyAddress') return;
+    if (event.key !== 'Enter' || (event.target.id !== 'newPropertyAddress' && event.target.id !== 'newPropertyName')) return;
     event.preventDefault();
     const button = document.querySelector('[data-action="add-booking-property"]');
     if (button) button.click();
   });
 
   document.addEventListener('input', (event) => {
-    if (event.target.id === 'propertySearch') renderPropertyResults(event.target.value);
+    if (event.target.id === 'propertySearch') {
+      const form = document.getElementById('jobForm');
+      if (form) form.dataset.propertyMode = 'search';
+      renderPropertyResults(event.target.value);
+    }
     if (event.target.id === 'propFilter') {
       state.propertyQuery = event.target.value;
       renderPropertyList();

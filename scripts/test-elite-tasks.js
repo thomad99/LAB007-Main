@@ -401,6 +401,29 @@ async function testHttp() {
     assert.strictEqual(mine.jobs[0].payment, undefined);
     assert.strictEqual(mine.jobs[0].phone, undefined);
     assert.strictEqual(booked.jobs[0].phone, '9415550100');
+    const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+    const photoForm = new FormData();
+    photoForm.append('photos', new Blob([png], { type: 'image/png' }), 'dot.png');
+    const photoRes = await fetch(`${base}/api/elite-tasks/me/jobs/${booked.jobs[0].id}/photos`, {
+      method: 'POST',
+      headers: { 'x-elite-tasks-token': sarah.token },
+      body: photoForm
+    });
+    assert.strictEqual(photoRes.status, 201);
+    const photoBody = await photoRes.json();
+    assert.strictEqual(photoBody.photos.length, 1);
+    const managerPhoto = await fetch(`${base}/api/elite-tasks/jobs/${booked.jobs[0].id}/photos/${photoBody.photos[0].id}`, { headers });
+    assert.strictEqual(managerPhoto.status, 200);
+    assert.match(managerPhoto.headers.get('content-type') || '', /image\/png/);
+    assert.strictEqual((await managerPhoto.arrayBuffer()).byteLength, png.length);
+    const strangerPhoto = await fetch(`${base}/api/elite-tasks/jobs/${booked.jobs[0].id}/photos/${photoBody.photos[0].id}`, {
+      headers: { 'x-elite-tasks-token': jill.token }
+    });
+    assert.strictEqual(strangerPhoto.status, 404);
+    const withPhotos = await (await fetch(`${base}/api/elite-tasks/me?from=2026-11-16&to=2026-12-31&today=2026-11-16`, {
+      headers: { 'x-elite-tasks-token': sarah.token }
+    })).json();
+    assert.strictEqual(withPhotos.jobs.find((job) => job.id === booked.jobs[0].id).photos.length, 1);
     const unackRes = await fetch(`${base}/api/elite-tasks/me/jobs/${mine.jobs[0].id}/unack`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': sarah.token },
