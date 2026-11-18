@@ -152,6 +152,36 @@
     .detail-tile strong.person { display: flex; align-items: center; }
     .detail-tile.code strong { font-size: 1.45rem; letter-spacing: .04em; }
     .detail-tile .btn { margin-top: 8px; }
+    .sheet-card.visit-card { width: min(440px, 100%); background: #f3f4f6; }
+    .visit-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+    .visit-date { margin: 0; color: #6b7280; font-size: 12px; font-weight: 800; letter-spacing: .08em; }
+    .visit-card h2 { margin: 2px 0 0; font-size: 1.7rem; }
+    .visit-tools { display: flex; gap: 8px; }
+    .visit-close, .visit-menu summary { width: 42px; height: 42px; border-radius: 999px; border: 1px solid #e5e7eb; background: #fff; display: grid; place-items: center; font-weight: 800; }
+    .visit-menu { position: relative; }
+    .visit-menu summary { list-style: none; cursor: pointer; }
+    .visit-menu summary::-webkit-details-marker { display: none; }
+    .visit-menu-list { position: absolute; right: 0; top: 48px; z-index: 2; min-width: 220px; display: flex; flex-direction: column; gap: 6px; padding: 8px; background: #fff; border: 1px solid var(--line); border-radius: 14px; box-shadow: 0 12px 30px rgba(28,25,23,.12); }
+    .visit-when { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin: 14px 0; }
+    .visit-time { display: flex; align-items: center; gap: 8px; margin: 0; font-size: 1.05rem; font-weight: 800; }
+    .visit-ico { width: 20px; height: 20px; flex: 0 0 auto; }
+    .visit-cleaner, .visit-row, .visit-pay { background: #fff; border: 1px solid #e5e7eb; border-radius: 16px; }
+    .visit-cleaner { display: flex; align-items: center; gap: 12px; padding: 12px; }
+    .visit-avatar { width: 42px; height: 42px; border-radius: 14px; background: #e5e7eb; display: grid; place-items: center; font-weight: 800; }
+    .visit-cleaner .tile-label, .visit-row .tile-label, .visit-pay .tile-label { color: #6b7280; font-size: 11px; font-weight: 800; letter-spacing: .06em; text-transform: uppercase; }
+    .visit-row { display: flex; align-items: center; gap: 12px; padding: 12px; margin-top: 8px; }
+    .visit-row .grow, .visit-cleaner .grow { flex: 1; min-width: 0; }
+    .visit-row strong, .visit-cleaner strong, .visit-pay strong { display: block; margin-top: 2px; }
+    .visit-chip { min-height: 36px; border: 1px solid #e5e7eb; border-radius: 999px; background: #fff; padding: 6px 12px; font-weight: 750; text-decoration: none; color: inherit; display: inline-flex; align-items: center; gap: 6px; }
+    .visit-section { margin: 18px 0 8px; font-size: 1.05rem; }
+    .visit-step { width: 100%; display: flex; align-items: center; gap: 12px; border: 0; background: transparent; padding: 10px 2px; text-align: left; font-weight: 750; }
+    .visit-dot { width: 18px; height: 18px; border-radius: 50%; background: #d1d5db; flex: 0 0 auto; }
+    .visit-dot.on { background: #111827; }
+    .visit-bill { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .visit-pay { min-height: 88px; padding: 12px; text-align: left; }
+    .visit-pay-top { display: flex; align-items: center; justify-content: space-between; }
+    .visit-done { width: 100%; min-height: 54px; margin-top: 16px; border: 0; border-radius: 999px; background: #111827; color: #fff; font-weight: 800; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+    .visit-done .visit-ico { width: 18px; height: 18px; }
     .report-table { width: 100%; border-collapse: collapse; background: #fff; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; }
     .report-table th, .report-table td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
     .report-table th { font-size: 12px; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); }
@@ -238,6 +268,6 @@
     </div>
   </div>
   <div id="toast" class="toast" hidden></div>
-  <script src="/js/elite-tasks.js?v=40"></script>
+  <script src="/js/elite-tasks.js?v=41"></script>
 </body>
 </html>

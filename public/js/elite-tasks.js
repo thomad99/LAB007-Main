@@ -831,7 +831,8 @@
     </form>`);
   }
 
-  function openSheet(html) {
+  function openSheet(html, kind) {
+    document.querySelector('.sheet-card').classList.toggle('visit-card', kind === 'visit');
     document.getElementById('sheetBody').innerHTML = html;
     document.getElementById('sheet').hidden = false;
     const title = document.getElementById('sheetTitle');
@@ -839,6 +840,7 @@
   }
 
   function closeSheet() {
+    document.querySelector('.sheet-card').classList.remove('visit-card');
     document.getElementById('sheet').hidden = true;
     document.getElementById('sheetBody').innerHTML = '';
   }
@@ -950,65 +952,128 @@
   function openJob(id) {
     const job = ((state.data && state.data.jobs) || []).find((item) => item.id === id);
     if (!job) return;
-    const ackLine = job.acknowledgedAt ? `<p class="hint">Acknowledged ${esc(formatStamp(job.acknowledgedAt))}</p>` : (job.status === 'completed' ? '<p class="hint">Completed without a separate acknowledgement.</p>' : '<p class="summary warn">Not acknowledged yet.</p>');
-    const doneLine = job.completedAt ? `<p class="hint">Completed ${esc(formatStamp(job.completedAt))}</p>` : '';
-    const managerActions = MODE === 'manager' ? `<div class="stack">
-      <button type="button" class="btn ghost" data-action="edit-job" data-id="${esc(job.id)}">Edit</button>
-      ${job.status !== 'completed' ? `<button type="button" class="btn primary" data-action="manager-status" data-id="${esc(job.id)}" data-status="completed">Mark completed</button>` : ''}
-      ${job.status !== 'scheduled' ? `<button type="button" class="btn ghost" data-action="manager-status" data-id="${esc(job.id)}" data-status="scheduled">Mark not acknowledged</button>` : ''}
-      ${job.seriesId ? `<button type="button" class="btn ghost" data-action="extend-job" data-id="${esc(job.id)}">Add 12 more weeks</button>` : ''}
-      <button type="button" class="btn danger" data-action="delete-job" data-id="${esc(job.id)}" data-scope="one">Delete this visit</button>
-      ${job.seriesId ? `<button type="button" class="btn danger" data-action="delete-job" data-id="${esc(job.id)}" data-scope="future">Delete this and future visits</button>` : ''}
-    </div>` : `<div class="stack">
-      ${job.status === 'scheduled' ? `<button type="button" class="btn blue" data-action="ack" data-id="${esc(job.id)}">Acknowledge</button>` : ''}
-      ${job.status === 'acknowledged' ? `<button type="button" class="btn ghost" data-action="unack" data-id="${esc(job.id)}">Un-acknowledge</button>` : ''}
-      ${job.status !== 'completed' ? `<button type="button" class="btn primary" data-action="complete" data-id="${esc(job.id)}">Mark completed</button>` : ''}
-    </div>`;
-    openSheet(`<div>
-      ${sheetHead(esc(placeLabel(job)))}
-      ${job.seriesId ? `<p class="hint">${esc(REC[job.recurrence] || '')}</p>` : ''}
-      ${detailTiles(job)}
-      ${paymentDetail(job)}
-      ${ackLine}${doneLine}
-      ${job.seriesId && job.status === 'scheduled' ? '<p class="hint">Acknowledging covers every visit on this schedule with the same cleaner.</p>' : ''}
-      ${managerActions}
-    </div>`);
+    openSheet(visitSheet(job), 'visit');
   }
 
-  function detailTiles(job) {
-    const href = phoneHref(job.phone);
-    const tiles = [
-      `<div class="detail-tile"><span class="tile-label">Date</span><strong>${esc(prettyDate(job.date))}</strong></div>`,
-      `<div class="detail-tile"><span class="tile-label">Time</span><strong>${esc(formatRange(job.startTime, job.durationMinutes))}${job.deepClean ? ' · Deep clean' : ''}</strong></div>`
-    ];
-    if (MODE === 'manager') {
-      tiles.push(`<div class="detail-tile"><span class="tile-label">Cleaner</span><strong class="person"><span class="dot" style="background:${safeColor(job.staffColor)}"></span>${esc(job.staffName || 'Unassigned')}</strong></div>`);
-    }
-    tiles.push(`<div class="detail-tile"><span class="tile-label">Status</span><strong><span class="pill ${esc(job.status)}">${esc(statusLabel(job.status))}</span></strong></div>`);
-    tiles.push(`<div class="detail-tile wide"><span class="tile-label">Address</span><strong class="pre">${job.address ? esc(job.address) : 'No address on file'}</strong></div>`);
-    tiles.push(`<div class="detail-tile wide code"><span class="tile-label">Door code</span><strong>${job.doorCode ? esc(job.doorCode) : 'None on file'}</strong>${job.doorCode ? `<button type="button" class="btn ghost small" data-action="copy-text" data-text="${esc(job.doorCode)}">Copy code</button>` : ''}</div>`);
-    if (job.phone) tiles.push(`<div class="detail-tile wide"><span class="tile-label">Phone</span><strong>${href ? `<a href="${esc(href)}">${esc(job.phone)}</a>` : esc(job.phone)}</strong></div>`);
-    if (job.propertyNotes) tiles.push(`<div class="detail-tile wide"><span class="tile-label">Property notes</span><strong class="pre">${esc(job.propertyNotes)}</strong></div>`);
-    if (job.visitNote) tiles.push(`<div class="detail-tile wide"><span class="tile-label">This visit</span><strong class="pre">${esc(job.visitNote)}</strong></div>`);
-    return `<div class="detail-grid">${tiles.join('')}</div>`;
+  function visitIcon(name) {
+    const paths = {
+      clock: '<circle cx="12" cy="12" r="8"></circle><path d="M12 8v5l3 2"></path>',
+      pin: '<path d="M12 21s7-6.2 7-11a7 7 0 1 0-14 0c0 4.8 7 11 7 11z"></path><circle cx="12" cy="10" r="2.2"></circle>',
+      key: '<circle cx="8" cy="14" r="3"></circle><path d="M11 14h10l-2 2 2 2"></path>',
+      phone: '<path d="M8 5h3l1 4-2 1a12 12 0 0 0 5 5l1-2 4 1v3c0 1-1 2-2 2A15 15 0 0 1 5 7c0-1 1-2 2-2z"></path>',
+      check: '<path d="M5 12l5 5L20 7"></path>',
+      doc: '<path d="M7 3h7l5 5v13H7z"></path><path d="M14 3v5h5"></path>'
+    };
+    return `<svg class="visit-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${paths[name] || ''}</svg>`;
   }
 
-  function paymentDetail(job) {
-    if (MODE !== 'manager') return '';
-    const mark = job.payment === 'paid'
-      ? '<p class="pay-mark">$$ Paid</p>'
-      : job.payment === 'invoiced'
-        ? '<p class="pay-mark">$ Payment requested</p>'
-        : '<p class="hint">No invoice sent</p>';
-    const paidButton = job.payment === 'paid'
+  function visitDate(iso) {
+    const [year, month, day] = String(iso).split('-').map(Number);
+    return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString('en-US', {
+      weekday: 'long', month: 'long', day: 'numeric', timeZone: 'UTC'
+    }).toUpperCase();
+  }
+
+  function initials(name) {
+    const letters = String(name || '').split(',').map((part) => part.trim()[0]).filter(Boolean).join('').slice(0, 2);
+    return letters.toUpperCase() || '?';
+  }
+
+  function visitSheet(job) {
+    const place = placeLabel(job);
+    const address = String(job.address || '').trim();
+    const showAddress = address && address.toLowerCase() !== place.toLowerCase();
+    const mapQuery = encodeURIComponent(address || place);
+    const acked = job.status === 'acknowledged' || job.status === 'completed';
+    const done = job.status === 'completed';
+    const ackStep = MODE === 'cleaner' && job.status === 'scheduled'
+      ? `<button type="button" class="visit-step" data-action="ack" data-id="${esc(job.id)}"><span class="visit-dot"></span><span>Cleaner acknowledged</span></button>`
+      : `<div class="visit-step"><span class="visit-dot ${acked ? 'on' : ''}"></span><span>Cleaner acknowledged</span></div>`;
+    const doneAction = MODE === 'manager' ? 'manager-status' : 'complete';
+    const doneStatus = MODE === 'manager' ? ' data-status="completed"' : '';
+    const doneStep = done
+      ? '<div class="visit-step"><span class="visit-dot on"></span><span>Cleaning completed</span></div>'
+      : `<button type="button" class="visit-step" data-action="${doneAction}" data-id="${esc(job.id)}"${doneStatus}><span class="visit-dot"></span><span>Cleaning completed</span></button>`;
+    const doneButton = done
       ? ''
-      : `<button type="button" class="btn primary" data-action="payment" data-id="${esc(job.id)}" data-payment="paid">Paid</button>`;
-    const invoiceButton = job.payment === 'paid'
-      ? `<button type="button" class="btn ghost" data-action="payment" data-id="${esc(job.id)}" data-payment="invoiced">Undo paid</button>`
-      : job.payment === 'invoiced'
-        ? `<button type="button" class="btn ghost" data-action="payment" data-id="${esc(job.id)}" data-payment="none">Undo invoice</button>`
-        : `<button type="button" class="btn ghost" data-action="payment" data-id="${esc(job.id)}" data-payment="invoiced">Invoice sent</button>`;
-    return `<div class="pay-box">${mark}<div class="row-actions">${invoiceButton}${paidButton}</div></div>`;
+      : `<button type="button" class="visit-done" data-action="${doneAction}" data-id="${esc(job.id)}"${doneStatus}>${visitIcon('check')} Mark completed</button>`;
+    const more = [];
+    if (MODE === 'manager') {
+      more.push(`<button type="button" class="btn ghost" data-action="edit-job" data-id="${esc(job.id)}">Edit</button>`);
+      if (job.status !== 'scheduled') more.push(`<button type="button" class="btn ghost" data-action="manager-status" data-id="${esc(job.id)}" data-status="scheduled">Mark not acknowledged</button>`);
+      if (job.seriesId) more.push(`<button type="button" class="btn ghost" data-action="extend-job" data-id="${esc(job.id)}">Add 12 more weeks</button>`);
+      more.push(`<button type="button" class="btn danger" data-action="delete-job" data-id="${esc(job.id)}" data-scope="one">Delete this visit</button>`);
+      if (job.seriesId) more.push(`<button type="button" class="btn danger" data-action="delete-job" data-id="${esc(job.id)}" data-scope="future">Delete this and future visits</button>`);
+    } else if (job.status === 'acknowledged') {
+      more.push(`<button type="button" class="btn ghost" data-action="unack" data-id="${esc(job.id)}">Un-acknowledge</button>`);
+    }
+    const menu = more.length
+      ? `<details class="visit-menu"><summary aria-label="More actions">···</summary><div class="visit-menu-list">${more.join('')}</div></details>`
+      : '';
+    const phone = MODE === 'manager' && job.phone ? (() => {
+      const href = phoneHref(job.phone);
+      const text = href ? href.replace(/^tel:/, 'sms:') : '';
+      return `<div class="visit-row">${visitIcon('phone')}<div class="grow"><span class="tile-label">Contact phone</span><strong>${esc(job.phone)}</strong></div>${text ? `<a class="visit-chip" href="${esc(text)}">Text</a>` : ''}${href ? `<a class="visit-chip" href="${esc(href)}">Call</a>` : ''}</div>`;
+    })() : '';
+    return `<div class="visit">
+      <div class="visit-top">
+        <div>
+          <p class="visit-date">${esc(visitDate(job.date))}</p>
+          <h2 id="sheetTitle" tabindex="-1">${esc(place)}</h2>
+        </div>
+        <div class="visit-tools">
+          ${menu}
+          <button type="button" class="visit-close" data-action="close-sheet" aria-label="Close">×</button>
+        </div>
+      </div>
+      <div class="visit-when">
+        <p class="visit-time">${visitIcon('clock')}<span>${esc(formatRange(job.startTime, job.durationMinutes))}${job.deepClean ? ' · Deep clean' : ''}</span></p>
+        <span class="pill ${esc(job.status)}">${esc(statusLabel(job.status))}</span>
+      </div>
+      ${job.seriesId ? `<p class="hint">${esc(REC[job.recurrence] || 'Repeating')}</p>` : ''}
+      <div class="visit-cleaner">
+        <span class="visit-avatar">${esc(initials(job.staffName))}</span>
+        <div class="grow"><span class="tile-label">Assigned cleaner</span><strong>${esc(job.staffName || 'Unassigned')}</strong></div>
+      </div>
+      <div class="visit-row">
+        ${visitIcon('pin')}
+        <div class="grow"><span class="tile-label">Property / address</span><strong>${esc(place)}</strong>${showAddress ? `<span class="pre">${esc(address)}</span>` : ''}</div>
+        <a class="visit-chip" href="https://www.google.com/maps/search/?api=1&query=${mapQuery}" target="_blank" rel="noopener">Map</a>
+      </div>
+      <div class="visit-row">
+        ${visitIcon('key')}
+        <div class="grow"><span class="tile-label">Door code</span><strong>${job.doorCode ? esc(job.doorCode) : 'None on file'}</strong></div>
+        ${job.doorCode ? `<button type="button" class="visit-chip" data-action="copy-text" data-text="${esc(job.doorCode)}">Copy</button>` : ''}
+      </div>
+      ${phone}
+      ${job.propertyNotes ? `<div class="visit-row"><div class="grow"><span class="tile-label">Property notes</span><strong class="pre">${esc(job.propertyNotes)}</strong></div></div>` : ''}
+      ${job.visitNote ? `<div class="visit-row"><div class="grow"><span class="tile-label">This visit</span><strong class="pre">${esc(job.visitNote)}</strong></div></div>` : ''}
+      <h3 class="visit-section">Visit progress</h3>
+      ${ackStep}
+      ${doneStep}
+      ${job.seriesId && job.status === 'scheduled' ? '<p class="hint">Acknowledging covers every visit on this schedule with the same cleaner.</p>' : ''}
+      ${billingCards(job)}
+      ${doneButton}
+    </div>`;
+  }
+
+  function billingCards(job) {
+    if (MODE !== 'manager') return '';
+    const invoiced = job.payment === 'invoiced' || job.payment === 'paid';
+    const paid = job.payment === 'paid';
+    const invoicePayment = invoiced ? 'none' : 'invoiced';
+    const paidPayment = paid ? 'invoiced' : 'paid';
+    return `<h3 class="visit-section">Billing</h3>
+      <div class="visit-bill">
+        <button type="button" class="visit-pay" data-action="payment" data-id="${esc(job.id)}" data-payment="${invoicePayment}" ${paid ? 'disabled' : ''}>
+          <span class="visit-pay-top">${visitIcon('doc')}<span class="visit-dot ${invoiced ? 'on' : ''}"></span></span>
+          <strong>${invoiced ? 'Invoice sent' : 'Invoice not sent'}</strong>
+        </button>
+        <button type="button" class="visit-pay" data-action="payment" data-id="${esc(job.id)}" data-payment="${paidPayment}">
+          <span class="visit-pay-top">${visitIcon('doc')}<span class="visit-dot ${paid ? 'on' : ''}"></span></span>
+          <strong>${paid ? 'Paid' : 'Not paid'}</strong>
+        </button>
+      </div>`;
   }
 
   function weekLabel(start, end) {

@@ -396,6 +396,8 @@ async function testHttp() {
     assert.strictEqual(mine.jobs[0].status, 'acknowledged');
     assert.strictEqual(mine.jobs[0].doorCode, '1111');
     assert.strictEqual(mine.jobs[0].payment, undefined);
+    assert.strictEqual(mine.jobs[0].phone, undefined);
+    assert.strictEqual(booked.jobs[0].phone, '9415550100');
     const unackRes = await fetch(`${base}/api/elite-tasks/me/jobs/${mine.jobs[0].id}/unack`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-elite-tasks-token': sarah.token },
