@@ -480,15 +480,9 @@
   function renderWeek() {
     const jobs = visibleJobs();
     const today = todayISO();
-    const days = Array.from({ length: 28 }, (_, index) => addDays(state.weekStart, index - 14));
+    const days = Array.from({ length: zoomDays() }, (_, index) => addDays(state.weekStart, index));
     const names = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const span = gridWindow(jobs);
-    const hours = [];
-    for (let minute = span.start; minute < span.end; minute += 60) hours.push(minute);
-    const hourPx = calendarHourPx();
-    const height = hours.length * hourPx;
-    const nowTop = nowLineTop(today, span, hourPx);
-    view.innerHTML = `<div class="gcal" id="gcal" data-hours="${hours.length}">
+    view.innerHTML = `<div class="gcal" id="gcal">
       <div class="gcal-head">
         ${days.map((date) => `<div class="gcal-dayhead ${date === today ? 'today' : ''}" data-date="${date}">
           <span class="gcal-dow">${names[weekdayIndex(date)]}</span>
@@ -498,10 +492,13 @@
       </div>
       <div class="gcal-body">
         ${days.map((date) => {
-          const placed = placeJobs(jobs.filter((job) => job.date === date)).placed;
-          return `<div class="gcal-col ${date === today ? 'today' : ''}" style="height:${height}px">
-            ${date === today && nowTop != null ? `<div class="gcal-now" style="top:${nowTop}px"></div>` : ''}
-            ${placed.map((item) => renderEvent(item, span, hourPx)).join('')}
+          const dayJobs = jobs.filter((job) => job.date === date).sort((a, b) =>
+            minutesOf(a.startTime) - minutesOf(b.startTime) ||
+            String(a.staffName || '').localeCompare(String(b.staffName || '')) ||
+            String(a.id).localeCompare(String(b.id))
+          );
+          return `<div class="gcal-col ${date === today ? 'today' : ''}">
+            ${dayJobs.map((job) => renderEvent(job)).join('')}
           </div>`;
         }).join('')}
       </div>
@@ -510,27 +507,6 @@
     if (!scroller) return;
     layoutCalendar();
     bindCalendarZoom(scroller);
-    if (state.calendarMode === 'fit' && !state.fitLocked) {
-      const next = measureFitHour();
-      if (next && next !== state.fitHourPx) {
-        state.fitHourPx = next;
-        state.fitLocked = true;
-        renderWeek();
-        state.fitLocked = false;
-        return;
-      }
-    }
-    if (state.calendarMode === 'fit' && state.fitLocked && !state.fitTrimmed) {
-      const overflow = scroller.scrollHeight - scroller.clientHeight;
-      if (overflow > 4) {
-        const hourCount = Number(scroller.dataset.hours) || 1;
-        state.fitHourPx = Math.max(16, state.fitHourPx - Math.ceil(overflow / hourCount));
-        state.fitTrimmed = true;
-        renderWeek();
-        state.fitTrimmed = false;
-        return;
-      }
-    }
     if (state.savedScroll) {
       scroller.scrollLeft = state.savedScroll.left;
       scroller.scrollTop = state.savedScroll.top;
@@ -543,15 +519,7 @@
       scroller.scrollLeft += delta;
     }
     if (scrollToLinkedVisit(scroller)) return;
-    if (state.calendarMode === 'fit') {
-      scroller.scrollTop = 0;
-      return;
-    }
-    const line = scroller.querySelector('.gcal-now');
-    if (line) {
-      const lineTop = line.getBoundingClientRect().top - scroller.getBoundingClientRect().top + scroller.scrollTop;
-      scroller.scrollTop = Math.max(0, lineTop - 90);
-    }
+    scroller.scrollTop = 0;
   }
 
   function mobileCalendar() {
@@ -571,22 +539,6 @@
     return defaultDays();
   }
 
-  function calendarHourPx() {
-    if (state.calendarMode === 'fit' && state.fitHourPx) return state.fitHourPx;
-    if (mobileCalendar()) return 58;
-    return Math.max(48, Math.min(100, Math.round(56 * 7 / zoomDays())));
-  }
-
-  function measureFitHour() {
-    const scroller = document.getElementById('gcal');
-    if (!scroller) return 0;
-    const head = scroller.querySelector('.gcal-head');
-    const headH = head ? head.offsetHeight : 52;
-    const hours = Number(scroller.dataset.hours) || 1;
-    const available = Math.max(48, scroller.clientHeight - headH - 2);
-    return Math.max(16, Math.floor(available / hours));
-  }
-
   function setZoomDays(days) {
     state.calendarMode = 'zoom';
     const next = Math.min(7, Math.max(1, days));
@@ -603,7 +555,6 @@
     const slot = scroller.clientWidth / Math.max(1, zoomDays());
     const columns = Array.from({ length: count }, () => `${slot}px`).join(' ');
     scroller.classList.toggle('gcal-narrow', slot < 96);
-    scroller.style.setProperty('--hour-px', `${calendarHourPx()}px`);
     scroller.querySelectorAll('.gcal-head, .gcal-body').forEach((row) => {
       row.style.gridTemplateColumns = columns;
     });
@@ -642,95 +593,15 @@
       renderReports();
       return;
     }
-    if (state.calendarMode === 'fit' && document.getElementById('gcal')) {
-      state.fitHourPx = 0;
-      state.fitLocked = false;
-      renderWeek();
-      return;
-    }
     layoutCalendar();
   });
 
-  function gridWindow(jobs) {
-    const start = 10 * 60;
-    let end = 19 * 60;
-    const list = state.calendarMode === 'fit'
-      ? jobs.filter((job) => job.date >= state.weekStart && job.date <= addDays(state.weekStart, 6))
-      : jobs;
-    list.forEach((job) => {
-      const finish = minutesOf(job.startTime) + (Number(job.durationMinutes) || 60);
-      end = Math.max(end, Math.ceil(finish / 60) * 60);
-    });
-    return { start, end: Math.min(24 * 60, Math.max(end, start + 60)) };
-  }
-
-  function minutesToTime(total) {
-    const hour = Math.floor(total / 60) % 24;
-    const minute = total % 60;
-    return `${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`;
-  }
-
-  function nowLineTop(today, span, hourPx) {
-    const first = addDays(state.weekStart, -14);
-    const last = addDays(state.weekStart, 13);
-    if (today < first || today > last) return null;
-    const now = new Date();
-    const minutes = now.getHours() * 60 + now.getMinutes();
-    if (minutes < span.start || minutes > span.end) return null;
-    return ((minutes - span.start) / 60) * hourPx;
-  }
-
-  function placeJobs(dayJobs) {
-    const sorted = [...dayJobs].sort((a, b) =>
-      minutesOf(a.startTime) - minutesOf(b.startTime) ||
-      String(a.staffName || '').localeCompare(String(b.staffName || '')) ||
-      String(a.id).localeCompare(String(b.id))
-    );
-    const items = sorted.map((job) => {
-      const start = minutesOf(job.startTime);
-      const end = start + (Number(job.durationMinutes) || 60);
-      return { job, start, end, lane: 0, laneCount: 1 };
-    });
-    let maxLanes = 1;
-    let index = 0;
-    while (index < items.length) {
-      let clusterEnd = items[index].end;
-      let next = index + 1;
-      const cluster = [items[index]];
-      while (next < items.length && items[next].start < clusterEnd) {
-        cluster.push(items[next]);
-        clusterEnd = Math.max(clusterEnd, items[next].end);
-        next += 1;
-      }
-      const laneEnds = [];
-      cluster.forEach((item) => {
-        let lane = laneEnds.findIndex((until) => until <= item.start);
-        if (lane < 0) {
-          lane = laneEnds.length;
-          laneEnds.push(item.end);
-        } else {
-          laneEnds[lane] = item.end;
-        }
-        item.lane = lane;
-      });
-      const laneCount = Math.max(1, laneEnds.length);
-      cluster.forEach((item) => { item.laneCount = laneCount; });
-      maxLanes = Math.max(maxLanes, laneCount);
-      index = next;
-    }
-    return { placed: items, lanes: maxLanes };
-  }
-
-  function renderEvent(item, span, hourPx) {
-    const job = item.job;
-    const top = ((item.start - span.start) / 60) * hourPx;
-    const height = Math.max(36, ((item.end - item.start) / 60) * hourPx - 3);
-    const width = 100 / item.laneCount;
+  function renderEvent(job) {
     const tone = job.status === 'acknowledged' || job.status === 'completed' ? job.status : 'scheduled';
     const who = job.staffName || '';
     const place = placeLabel(job);
     const label = `${place}${who ? `, ${who}` : ''}`;
-    return `<button type="button" class="gcal-event ${tone}" data-action="open-job" data-id="${esc(job.id)}" data-time="${esc(job.startTime)}" title="${esc(label)}" aria-label="${esc(label)}" style="top:${top}px;height:${height}px;left:calc(${item.lane * width}% + 2px);width:calc(${width}% - 4px)">
+    return `<button type="button" class="gcal-event ${tone}" data-action="open-job" data-id="${esc(job.id)}" data-time="${esc(job.startTime)}" title="${esc(label)}" aria-label="${esc(label)}">
       <span>${esc(place)}</span>
       ${who ? `<span>${esc(who)}</span>` : ''}
     </button>`;
