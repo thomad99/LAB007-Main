@@ -64,29 +64,25 @@
     .chip { flex: 0 0 auto; min-height: 40px; border-radius: 999px; border: 1px solid #d6d3d1; background: #fff; padding: 8px 12px; font-weight: 750; }
     .chip.on { background: var(--ink); color: #fff; border-color: var(--ink); }
     .gcal { background: #fff; border: 1px solid #dadce0; border-radius: 12px; overflow: auto; max-height: calc(100dvh - 250px); min-height: 460px; }
-    .gcal-head, .gcal-body { display: grid; grid-template-columns: 56px repeat(var(--day-count, 28), var(--day-col, 140px)); width: max-content; }
+    .gcal-head, .gcal-body { display: grid; grid-template-columns: repeat(var(--day-count, 28), var(--day-col, 140px)); width: max-content; }
     .gcal-head { position: sticky; top: 0; z-index: 5; background: #fff; border-bottom: 1px solid #dadce0; }
-    .gcal-time { position: sticky; left: 0; z-index: 4; background: #fff; }
-    .gcal-head .gcal-time { z-index: 6; }
-    .gcal-dayhead { position: relative; text-align: center; padding: 8px 18px 6px 4px; }
-    .gcal-dow { display: block; color: #70757a; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
-    .gcal-dom { width: 32px; height: 32px; margin: 2px auto 0; border-radius: 50%; display: grid; place-items: center; font-size: 18px; font-weight: 500; }
+    .gcal-dayhead { position: relative; text-align: center; padding: 6px 2px 6px; }
+    .gcal-dow { display: block; color: #70757a; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+    .gcal-dom { width: 28px; height: 28px; margin: 2px auto 0; border-radius: 50%; display: grid; place-items: center; font-size: 15px; font-weight: 650; }
     .gcal-dayhead.today .gcal-dow, .gcal-dayhead.today .gcal-dom { color: var(--green); }
     .gcal-dom.today { background: var(--green); color: #fff !important; font-weight: 700; }
-    .gcal-plus { position: absolute; top: 8px; right: 4px; width: 22px; height: 22px; border: 1px solid #dadce0; border-radius: 50%; background: #fff; color: var(--green); font-weight: 800; line-height: 1; padding: 0; }
-    .gcal-hour { height: var(--hour-px, 52px); }
-    .gcal-hour span { position: relative; top: -8px; display: block; text-align: right; padding-right: 8px; color: #70757a; font-size: 11px; }
-    .gcal-hour:first-child span { top: 4px; }
-    .gcal-col { position: relative; border-left: 1px solid #e8eaed; background-image: linear-gradient(to bottom, transparent calc(var(--hour-px, 52px) - 1px), #e8eaed var(--hour-px, 52px)); background-size: 100% var(--hour-px, 52px); }
+    .gcal-plus { position: absolute; top: 2px; right: 1px; width: 16px; height: 16px; border: 1px solid #dadce0; border-radius: 50%; background: #fff; color: var(--green); font-size: 12px; font-weight: 800; line-height: 1; padding: 0; }
+    .gcal-col { position: relative; border-left: 1px solid #e8eaed; background-image: linear-gradient(to bottom, transparent calc(var(--hour-px, 56px) - 1px), #e8eaed var(--hour-px, 56px)); background-size: 100% var(--hour-px, 56px); }
     .gcal-col.today { background-color: #f6fbf9; }
-    .gcal-event { position: absolute; overflow: hidden; border: 0; border-radius: 4px; padding: 3px 5px; text-align: left; line-height: 1.15; font-size: 12px; font-weight: 650; box-shadow: inset 0 0 0 1px rgba(255,255,255,.7); z-index: 1; }
+    .gcal-event { position: absolute; overflow: hidden; border: 0; border-radius: 6px; padding: 2px 3px; text-align: left; line-height: 1.15; font-size: 11px; font-weight: 700; z-index: 1; }
     .gcal-event.scheduled { background: #fecaca; color: #7f1d1d; }
     .gcal-event.acknowledged { background: #bbf7d0; color: #14532d; }
     .gcal-event.completed { background: #166534; color: #f0fdf4; }
-    .gcal-event strong, .gcal-event span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .gcal-event strong { font-size: 11px; }
+    .gcal-event span { display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 3; overflow: hidden; white-space: normal; word-break: break-word; }
+    .gcal.gcal-narrow .gcal-event { font-size: 10px; padding: 1px 2px; }
+    .gcal.gcal-narrow .gcal-dow { font-size: 10px; letter-spacing: 0; }
+    .gcal.gcal-narrow .gcal-dom { width: 24px; height: 24px; font-size: 13px; }
     .gcal-now { position: absolute; left: 0; right: 0; height: 2px; background: #ea4335; z-index: 2; pointer-events: none; }
-    .gcal-now::before { content: ""; position: absolute; left: -4px; top: -4px; width: 10px; height: 10px; border-radius: 50%; background: #ea4335; }
     .jobs { display: flex; flex-direction: column; gap: 8px; }
     .job { background: #fff; border: 1px solid var(--line); border-left-width: 6px; border-radius: 16px; overflow: hidden; }
     .job.scheduled { border-left-color: #ea580c; }
@@ -309,6 +305,6 @@
     </div>
   </div>
   <div id="toast" class="toast" hidden></div>
-  <script src="/js/elite-tasks.js?v=58"></script>
+  <script src="/js/elite-tasks.js?v=61"></script>
 </body>
 </html>

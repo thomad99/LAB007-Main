@@ -488,9 +488,8 @@
     const hourPx = calendarHourPx();
     const height = hours.length * hourPx;
     const nowTop = nowLineTop(today, span, hourPx);
-    view.innerHTML = `<div class="gcal" id="gcal">
+    view.innerHTML = `<div class="gcal" id="gcal" data-hours="${hours.length}">
       <div class="gcal-head">
-        <div class="gcal-time"></div>
         ${days.map((date) => `<div class="gcal-dayhead ${date === today ? 'today' : ''}" data-date="${date}">
           <span class="gcal-dow">${names[weekdayIndex(date)]}</span>
           <span class="gcal-dom ${date === today ? 'today' : ''}">${dateParts(date).getDate()}</span>
@@ -498,7 +497,6 @@
         </div>`).join('')}
       </div>
       <div class="gcal-body">
-        <div class="gcal-time">${hours.map((minute) => `<div class="gcal-hour"><span>${esc(formatTime(minutesToTime(minute)))}</span></div>`).join('')}</div>
         ${days.map((date) => {
           const placed = placeJobs(jobs.filter((job) => job.date === date)).placed;
           return `<div class="gcal-col ${date === today ? 'today' : ''}" style="height:${height}px">
@@ -525,8 +523,8 @@
     if (state.calendarMode === 'fit' && state.fitLocked && !state.fitTrimmed) {
       const overflow = scroller.scrollHeight - scroller.clientHeight;
       if (overflow > 4) {
-        const hours = scroller.querySelectorAll('.gcal-hour').length || 1;
-        state.fitHourPx = Math.max(16, state.fitHourPx - Math.ceil(overflow / hours));
+        const hourCount = Number(scroller.dataset.hours) || 1;
+        state.fitHourPx = Math.max(16, state.fitHourPx - Math.ceil(overflow / hourCount));
         state.fitTrimmed = true;
         renderWeek();
         state.fitTrimmed = false;
@@ -540,9 +538,8 @@
       return;
     }
     const head = scroller.querySelector(`.gcal-dayhead[data-date="${state.weekStart}"]`);
-    const gutter = scroller.querySelector('.gcal-head .gcal-time');
-    if (head && gutter) {
-      const delta = head.getBoundingClientRect().left - (scroller.getBoundingClientRect().left + gutter.getBoundingClientRect().width);
+    if (head) {
+      const delta = head.getBoundingClientRect().left - scroller.getBoundingClientRect().left;
       scroller.scrollLeft += delta;
     }
     if (scrollToLinkedVisit(scroller)) return;
@@ -562,14 +559,9 @@
   }
 
   function defaultDays() {
-    const saved = Number(localStorage.getItem('eliteTasksDefaultDays'));
+    const saved = Number(localStorage.getItem('eliteTasksDays'));
     if (saved >= 1 && saved <= 7) return saved;
-    if (MODE !== 'manager') {
-      const legacy = Number(localStorage.getItem('eliteTasksZoomDays'));
-      if (legacy >= 1 && legacy <= 7) return legacy;
-      return mobileCalendar() ? 2 : 7;
-    }
-    return 2;
+    return 7;
   }
 
   function zoomDays() {
@@ -581,8 +573,8 @@
 
   function calendarHourPx() {
     if (state.calendarMode === 'fit' && state.fitHourPx) return state.fitHourPx;
-    const base = mobileCalendar() ? 2 : 7;
-    return Math.max(40, Math.min(110, Math.round(52 * base / zoomDays())));
+    if (mobileCalendar()) return 58;
+    return Math.max(48, Math.min(100, Math.round(56 * 7 / zoomDays())));
   }
 
   function measureFitHour() {
@@ -590,7 +582,7 @@
     if (!scroller) return 0;
     const head = scroller.querySelector('.gcal-head');
     const headH = head ? head.offsetHeight : 52;
-    const hours = scroller.querySelectorAll('.gcal-hour').length || 1;
+    const hours = Number(scroller.dataset.hours) || 1;
     const available = Math.max(48, scroller.clientHeight - headH - 2);
     return Math.max(16, Math.floor(available / hours));
   }
@@ -600,7 +592,7 @@
     const next = Math.min(7, Math.max(1, days));
     if (next === zoomDays() && state.zoomDays === next) return;
     state.zoomDays = next;
-    localStorage.setItem('eliteTasksDefaultDays', String(next));
+    localStorage.setItem('eliteTasksDays', String(next));
     render();
   }
 
@@ -608,8 +600,9 @@
     const scroller = document.getElementById('gcal');
     if (!scroller) return;
     const count = scroller.querySelectorAll('.gcal-dayhead').length || 28;
-    const slot = Math.max(1, Math.floor((scroller.clientWidth - 56) / zoomDays()));
-    const columns = `56px ${Array.from({ length: count }, () => `${slot}px`).join(' ')}`;
+    const slot = scroller.clientWidth / Math.max(1, zoomDays());
+    const columns = Array.from({ length: count }, () => `${slot}px`).join(' ');
+    scroller.classList.toggle('gcal-narrow', slot < 96);
     scroller.style.setProperty('--hour-px', `${calendarHourPx()}px`);
     scroller.querySelectorAll('.gcal-head, .gcal-body').forEach((row) => {
       row.style.gridTemplateColumns = columns;
@@ -731,7 +724,7 @@
   function renderEvent(item, span, hourPx) {
     const job = item.job;
     const top = ((item.start - span.start) / 60) * hourPx;
-    const height = Math.max(22, ((item.end - item.start) / 60) * hourPx - 3);
+    const height = Math.max(36, ((item.end - item.start) / 60) * hourPx - 3);
     const width = 100 / item.laneCount;
     const tone = job.status === 'acknowledged' || job.status === 'completed' ? job.status : 'scheduled';
     const who = job.staffName || '';
@@ -1743,7 +1736,7 @@
     }
     if (action === 'pick-choice' && target.dataset.group === 'defaultDays') {
       const days = Math.min(7, Math.max(1, Number(target.dataset.value) || 2));
-      localStorage.setItem('eliteTasksDefaultDays', String(days));
+      localStorage.setItem('eliteTasksDays', String(days));
       state.calendarMode = 'zoom';
       state.zoomDays = days;
       state.fitHourPx = 0;
